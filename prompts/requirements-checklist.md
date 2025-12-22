@@ -22,6 +22,24 @@ Use this checklist to track implementation progress across all stages.
 - [ ] TR-003: Python implementation
 - [ ] TR-004: Core data storage
 
+### Deployment Requirements
+- [ ] DR-001: AWS SAM infrastructure deployment
+- [ ] DR-002: Environment management (test/prod)
+- [ ] DR-004: Parameter Store configuration
+- [ ] IR-001: SAM template structure
+- [ ] IR-002: Webhook endpoint configuration
+- [ ] IR-003: Bot token management
+- [ ] IR-004: Deployment commands setup
+- [ ] IR-005: Environment configuration files
+
+### Telegram Integration Requirements
+- [ ] TI-001: Bot registration with @BotFather
+- [ ] TI-002: Webhook configuration to API Gateway
+- [ ] TI-003: Webhook security validation
+- [ ] TI-004: Webhook reliability and retry logic
+- [ ] TI-005: Bot commands setup via @BotFather
+- [ ] TI-006: Group integration and permissions
+
 ### Business Rules
 - [ ] BR-001: Orders cannot exceed box capacity
 - [ ] BR-002: Orders cannot be placed on inactive offers
@@ -37,6 +55,14 @@ Use this checklist to track implementation progress across all stages.
 ### Security Requirements
 - [ ] SR-001: Admin access control (ID: 15005473)
 - [ ] SR-002: Customer data privacy
+- [ ] SR-014: Webhook security (HTTPS, secret validation)
+- [ ] SR-015: Token security (Parameter Store)
+- [ ] SR-016: API security (throttling, validation)
+
+### Monitoring Requirements
+- [ ] MR-001: Deployment monitoring
+- [ ] MR-002: Webhook monitoring
+- [ ] MR-003: Bot performance monitoring
 
 ## Stage 2: Advanced Features
 ### Functional Requirements
@@ -62,6 +88,9 @@ Use this checklist to track implementation progress across all stages.
 - [ ] TR-013: Image compression
 - [ ] TR-014: Scheduled notification system
 - [ ] TR-015: CE(S)T timezone support
+
+### Deployment Requirements
+- [ ] DR-003: CI/CD pipeline implementation
 
 ### Business Rules
 - [ ] BR-011: Only one default group
@@ -169,3 +198,11 @@ Use this checklist to track implementation progress across all stages.
 - [ ] SC-003: Immediate order confirmations
 - [ ] SC-004: Zero data loss during processing
 - [ ] SC-005: Peak load handling during announcements
+
+## Deployment Success Criteria
+- [ ] Successful deployment to test environment
+- [ ] Successful deployment to production environment
+- [ ] Webhook properly configured and validated
+- [ ] Bot commands registered with @BotFather
+- [ ] Environment-specific configuration working
+- [ ] Monitoring and alerting operational
