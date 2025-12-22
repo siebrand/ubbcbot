@@ -590,6 +590,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **TR-002**: All deployments must be staged to test environment first
 - **TR-003**: Production deployments require human approval after test validation
 - **TR-004**: Environment-specific configuration management
+- **TR-005**: All messages in test environment must be prefixed with "TEST - "
 
 ## 10. Error Handling
 
