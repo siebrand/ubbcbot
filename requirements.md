@@ -583,14 +583,22 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **SR-012**: Audit log integrity protection
 - **SR-013**: Immutable audit trail storage
 
-## 9. Error Handling
+## 9. Technical Requirements
 
-### 9.1 User Errors
+### 9.1 Environment Management
+- **TR-001**: Two environments required: test and production
+- **TR-002**: All deployments must be staged to test environment first
+- **TR-003**: Production deployments require human approval after test validation
+- **TR-004**: Environment-specific configuration management
+
+## 10. Error Handling
+
+### 10.1 User Errors
 - **EH-001**: Clear error messages for invalid orders
 - **EH-002**: Graceful handling of cancelled/completed offers
 - **EH-003**: Validation feedback for incorrect command usage
 
-### 9.2 System Errors
+### 10.2 System Errors
 - **EH-004**: Database connection error handling
 - **EH-005**: Telegram API error recovery
 - **EH-006**: Logging for debugging and monitoring
@@ -602,9 +610,9 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **EH-012**: Data integrity check failure recovery
 - **EH-013**: Referential integrity violation handling
 
-## 10. Future Enhancements
+## 11. Future Enhancements
 
-### 10.1 Phase 2 Features
+### 11.1 Phase 2 Features
 - Payment integration
 - Delivery tracking
 - Customer notifications
@@ -617,13 +625,13 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - Recurring discount schedules
 - Customer-specific discounts
 
-### 10.2 Integration Possibilities
+### 11.2 Integration Possibilities
 - Inventory management systems
 - Accounting software
 - Customer relationship management (CRM)
 - Analytics and reporting tools
 
-## 11. Success Criteria
+## 12. Success Criteria
 
 - **SC-001**: Bot successfully processes 95% of valid orders
 - **SC-002**: Admin can track box status in real-time
