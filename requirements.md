@@ -44,6 +44,18 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Offer status (active)
 - **FR-007**: Bot assigns orders to specific wholesale boxes
 - **FR-008**: Bot tracks order fulfillment progress per box
+- **FR-034**: System sends public order confirmation in default channel:
+  - Shows customer name if user is member of default channel
+  - Shows "anonymous" if user is not member of default channel
+  - Includes pre-order disclaimer that orders are not guaranteed
+- **FR-035**: System validates channel membership in real-time:
+  - Checks if user is member of default channel
+  - Handles private/restricted channel permissions
+  - Caches membership status for performance
+- **FR-036**: Admin can place orders on behalf of customers:
+  - Admin selects customer from registered users
+  - System sends private notification to customer about admin-placed order
+  - Tracks order initiator (customer vs admin) in order record
 
 ### 2.3 Box Management
 - **FR-009**: System automatically creates new boxes when:
@@ -55,6 +67,14 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Full (no more orders accepted)
   - Ordered (from wholesaler)
   - Delivered
+- **FR-037**: System manages pre-order status transitions:
+  - Automatically sets offers to "ordered" status when minimum quantity reached
+  - Stores expected delivery date (free text field) when offer is ordered
+  - Maintains status history with timestamps for audit trail
+- **FR-038**: System sends vendor order confirmation to customers:
+  - Notifies all customers when offer moves to "ordered" status
+  - Includes expected delivery date if available
+  - Distinguishes from initial order confirmation messages
 
 ### 2.4 Customer Management
 - **FR-011**: Bot registers customer information:
@@ -63,6 +83,14 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Order history
 - **FR-012**: Customers can view their active orders
 - **FR-013**: Customers can cancel orders (if box not yet ordered)
+- **FR-039**: System provides enhanced order tracking:
+  - Shows pre-order status and disclaimers
+  - Displays expected delivery dates when available
+  - Tracks order status history for customer visibility
+- **FR-040**: System manages admin-initiated orders:
+  - Records order initiator (customer vs admin)
+  - Sends private notifications for admin-placed orders
+  - Maintains full audit trail of order source
 
 ### 2.5 Group Management
 - **FR-014**: Admin can configure multiple groups:
@@ -140,12 +168,14 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Group configuration changes
   - Discount activation and deactivation
   - Delivery status updates
+  - Admin proxy orders and customer notifications
 
 - **FR-031**: System tracks order modification history:
   - Original order details and timestamps
   - All modifications with user ID and timestamp
   - Cancellation reasons and timestamps
   - Status change audit trail
+  - Order initiator tracking (customer vs admin)
 
 - **FR-032**: System maintains data retention policies:
   - Archive completed orders after 2 years
@@ -153,7 +183,39 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Automatic cleanup of temporary files
   - Configurable retention periods per data type
 
-### 2.11 Reporting & Analytics
+### 2.11 Channel Membership & Notifications
+- **FR-041**: System validates and manages channel membership:
+  - Real-time membership checks for default channel
+  - Handles permission errors for private/restricted channels
+  - Caches membership status for performance optimization
+  - Provides fallback logic when membership cannot be determined
+
+- **FR-042**: System manages notification templates:
+  - Public order confirmation format with name/anonymous logic
+  - Private admin-placed order notification template
+  - Vendor order confirmation message format
+  - Expected delivery date formatting and display
+
+- **FR-043**: System handles notification delivery errors:
+  - Retry logic for failed private messages
+  - Fallback notifications for delivery failures
+  - Error logging for notification system issues
+  - Admin alerts for critical notification failures
+
+### 2.12 Admin Order Management
+- **FR-044**: Admin interface for proxy ordering:
+  - Customer selection from registered users
+  - Order placement workflow for admins
+  - Bulk ordering capabilities for multiple customers
+  - Order confirmation and tracking for admin-placed orders
+
+- **FR-045**: System manages data model extensions:
+  - Order initiator field (customer_id vs admin_id)
+  - Expected delivery date storage and updates
+  - Channel membership validation cache
+  - Enhanced order status tracking with timestamps
+
+### 2.13 Reporting & Analytics
 - **FR-033**: Admin can view:
   - Current box status for all offers
   - Order summary per customer per group
@@ -166,6 +228,8 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Delivery status and pick lists
   - Data integrity reports and inconsistencies
   - Audit trail summaries and activity logs
+  - Admin proxy order statistics and history
+  - Channel membership validation reports
 
 ## 3. Technical Requirements
 
@@ -220,9 +284,18 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **US-010**: As an admin, I want to view order history per supplier
 - **US-011**: As an admin, I want to activate discount mode for all open offers with automatic notifications
 - **US-012**: As an admin, I want to mark offers as delivered and automatically notify customers with payment links
+- **US-014**: As an admin, I want to place orders on behalf of customers so I can help members who have difficulty ordering or when customers have indicated they always want to buy a certain type of product (BIN/Buy It Now)
+- **US-015**: As an admin, I want to set expected delivery dates when ordering from vendors so customers know when to expect their products
+- **US-016**: As an admin, I want to see which orders were placed by me vs customers for proper tracking and accountability
 
 ### 4.2 Customer Stories
-- **US-013**: As a customer, I want to see images of beer offers to make informed decisions
+- **US-013**: As a customer, I want to see images of beer offers so I can make informed decisions
+- **US-017**: As a customer, I want to receive order confirmation in the group so I can verify my order was placed
+- **US-018**: As a customer, I want my name to show in confirmations only if I'm a group member for privacy
+- **US-019**: As a customer, I want to be notified privately when an admin places an order for me
+- **US-020**: As a customer, I want to know when my pre-order is actually ordered from the vendor
+- **US-021**: As a customer, I want to see expected delivery dates when available so I can plan accordingly
+- **US-022**: As a customer, I want to understand that all orders are pre-orders and not guaranteedf beer offers to make informed decisions
 - **US-014**: As a customer, I want to see specific images for different options when available
 - **US-015**: As a customer, I want to place orders for beer offers
 - **US-016**: As a customer, I want to see which box my order is assigned to
