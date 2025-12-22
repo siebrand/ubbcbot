@@ -168,6 +168,8 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - `/add_image <offer_id> [option]` - Add/update images for offers or specific options
 - `/list_offers` - View all active offers
 - `/close_offer <offer_id>` - Close an offer
+- `/exclude_discount <offer_id>` - Exclude offer from all discount periods
+- `/include_discount <offer_id>` - Include offer in discount periods
 - `/discount_mode <percentage> <end_time_cest>` - Activate discount mode for all open offers
 - `/end_discount` - Manually end active discount mode
 - `/box_status` - View status of all boxes
@@ -216,6 +218,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - max_quantity (Integer, Optional)
 - main_image_url (String, Optional) // Main offer image
 - options (JSON) // For A, B, C variants with optional image URLs
+- exclude_from_discounts (Boolean, Default: false)
 - status (Enum: active, inactive, completed)
 - created_at (DateTime)
 - updated_at (DateTime)
@@ -337,13 +340,14 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-022**: Breakeven = Wholesale_Box_Cost / (Customer_Price - Unit_Wholesale_Cost)
 
 ### 7.6 Discount Management
-- **BR-023**: Discount mode applies to all open offers simultaneously
+- **BR-023**: Discount mode applies to all open offers except those excluded from discounts
 - **BR-024**: Discount pricing calculated as: Original_Price * (1 - Discount_Percentage/100)
 - **BR-025**: Only one active discount period allowed at a time
 - **BR-026**: Discount notifications sent to all groups with published offers
 - **BR-027**: 10-minute warning notification scheduled automatically
 - **BR-028**: All times handled in CE(S)T timezone
 - **BR-029**: Profit calculations always use original prices, not discounted prices
+- **BR-030**: Offers with exclude_from_discounts=true maintain original pricing during discount periods
 
 ## 8. Security Requirements
 
