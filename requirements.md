@@ -1,5 +1,7 @@
 # Telegram Beer Ordering Bot - Requirements Document
 
+**License:** MIT - This document and associated architecture documentation are publicly available.
+
 ## 1. Project Overview
 
 ### 1.1 Purpose
@@ -337,6 +339,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - `/order <offer_id> <option> <quantity>` - Place order
 - `/my_orders` - View personal orders
 - `/cancel_order <order_id>` - Cancel order
+- `/info` - View project documentation links
 
 ### 5.3 Inline Commands
 - Order placement via inline buttons on offer messages
@@ -593,6 +596,11 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **TR-003**: Production deployments require human approval after test validation
 - **TR-004**: Environment-specific configuration management
 - **TR-005**: All messages in test environment must be prefixed with "TEST - "
+
+### 9.2 Documentation Publishing
+- **TR-006**: Requirements document must be publicly accessible via CloudFront
+- **TR-007**: AWS architecture document must be publicly accessible via CloudFront
+- **TR-008**: Bot must provide /info command with URLs to public documentation
 
 ## 10. Error Handling
 
