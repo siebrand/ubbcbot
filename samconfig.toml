@@ -2,7 +2,7 @@ version = 0.1
 
 [default.global.parameters]
 stack_name = "ubbc-bot"
-region = "us-east-1"
+region = "eu-north-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 image_repositories = []
