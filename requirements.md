@@ -337,10 +337,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 ## 10. Future Enhancements
 
 ### 10.1 Phase 2 Features
-- Payment integration
-- Delivery tracking
 - Customer notifications
-- Automated wholesale ordering
 - Multi-language support
 - Web dashboard for admin
 - Advanced group management (member verification)
