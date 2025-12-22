@@ -113,8 +113,48 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Multiple payment links for larger batches
   - Automatic batching and link assignment
 
-### 2.9 Reporting & Analytics
-- **FR-027**: Admin can view:
+### 2.9 Data Validation & Integrity
+- **FR-027**: System validates all user inputs:
+  - Sanitize text inputs to prevent injection attacks
+  - Validate numeric inputs within acceptable ranges
+  - Verify image file formats and sizes before upload
+  - Check referential integrity before creating relationships
+
+- **FR-028**: System maintains data consistency:
+  - Validate offer-box relationships before order assignment
+  - Check supplier status before creating offers
+  - Verify group membership before publishing offers
+  - Prevent orphaned records through cascade operations
+
+- **FR-029**: System performs integrity checks:
+  - Daily validation of order-box assignments
+  - Cleanup of expired temporary data
+  - Verification of image file accessibility
+  - Detection and reporting of data inconsistencies
+
+### 2.10 Audit Trail & Compliance
+- **FR-030**: System logs all administrative actions:
+  - Offer creation, modification, and deletion
+  - Order cancellations and modifications
+  - Supplier management operations
+  - Group configuration changes
+  - Discount activation and deactivation
+  - Delivery status updates
+
+- **FR-031**: System tracks order modification history:
+  - Original order details and timestamps
+  - All modifications with user ID and timestamp
+  - Cancellation reasons and timestamps
+  - Status change audit trail
+
+- **FR-032**: System maintains data retention policies:
+  - Archive completed orders after 2 years
+  - Retain audit logs for 5 years
+  - Automatic cleanup of temporary files
+  - Configurable retention periods per data type
+
+### 2.11 Reporting & Analytics
+- **FR-033**: Admin can view:
   - Current box status for all offers
   - Order summary per customer per group
   - Order summary per supplier
@@ -124,6 +164,8 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Supplier performance analytics
   - Discount period performance metrics
   - Delivery status and pick lists
+  - Data integrity reports and inconsistencies
+  - Audit trail summaries and activity logs
 
 ## 3. Technical Requirements
 
@@ -147,6 +189,21 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **TR-013**: Image compression for optimal Telegram delivery
 - **TR-014**: Scheduled notification system for discount alerts
 - **TR-015**: CE(S)T timezone support for discount timing
+
+### 3.4 Data Validation
+- **TR-016**: Input validation for all user data
+- **TR-017**: SQL injection prevention
+- **TR-018**: XSS protection for text inputs
+- **TR-019**: File upload validation and sanitization
+- **TR-020**: Referential integrity enforcement
+- **TR-021**: Data consistency checks across operations
+
+### 3.5 Audit & Compliance
+- **TR-022**: Comprehensive audit logging system
+- **TR-023**: Immutable audit trail storage
+- **TR-024**: Configurable data retention policies
+- **TR-025**: Automated data archival processes
+- **TR-026**: Audit log query and reporting capabilities
 
 ## 4. User Stories
 
@@ -197,6 +254,9 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - `/configure_groups` - Set up default and exclusive groups
 - `/schedule_publish <offer_id> <group_id> <hours>` - Schedule delayed publishing
 - `/group_stats` - View order statistics per group
+- `/audit_log [user_id] [action_type] [date_range]` - View audit trail
+- `/data_integrity` - Run data consistency checks
+- `/cleanup_data` - Remove expired temporary data
 
 ### 5.2 Customer Commands
 - `/start` - Register as customer and view help
@@ -334,6 +394,31 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - created_at (DateTime)
 ```
 
+### 6.11 Audit_Log
+```
+- audit_id (Primary Key)
+- user_id (Foreign Key)
+- action_type (Enum: create_offer, update_offer, delete_offer, create_order, cancel_order, update_supplier, etc.)
+- entity_type (Enum: offer, order, supplier, customer, group)
+- entity_id (String)
+- old_values (JSON, Nullable)
+- new_values (JSON, Nullable)
+- timestamp (DateTime)
+- ip_address (String, Optional)
+- user_agent (String, Optional)
+```
+
+### 6.12 Data_Integrity_Check
+```
+- check_id (Primary Key)
+- check_type (Enum: orphaned_orders, missing_images, invalid_references)
+- status (Enum: pending, completed, failed)
+- issues_found (Integer)
+- details (JSON)
+- executed_at (DateTime)
+- completed_at (DateTime, Nullable)
+```
+
 ## 7. Business Rules
 
 ### 7.1 Order Validation
@@ -386,6 +471,25 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-035**: CSV pick list includes: Customer Name, Product, Option, Quantity, Unit Price, Total Price
 - **BR-036**: Private messages sent only to customers with delivered orders
 - **BR-037**: Order aggregation combines same products with quantities and totals
+
+### 7.8 Data Validation & Integrity
+- **BR-038**: All user inputs must be validated and sanitized before processing
+- **BR-039**: Numeric inputs must be within defined ranges (quantities > 0, prices > 0)
+- **BR-040**: Text inputs limited to maximum lengths and safe characters only
+- **BR-041**: Image uploads must be validated for format, size, and content safety
+- **BR-042**: Referential integrity enforced before creating relationships
+- **BR-043**: Daily automated checks for orphaned records and data inconsistencies
+- **BR-044**: System prevents creation of orders for inactive offers or suppliers
+- **BR-045**: Cascade deletions maintain data consistency across related entities
+
+### 7.9 Audit Trail & Compliance
+- **BR-046**: All administrative actions must be logged with timestamp and user ID
+- **BR-047**: Order modifications tracked with complete before/after state
+- **BR-048**: Audit logs are immutable and cannot be deleted by users
+- **BR-049**: Data retention: orders archived after 2 years, audit logs kept for 5 years
+- **BR-050**: Automated cleanup of temporary data older than 24 hours
+- **BR-051**: System maintains complete chain of custody for all order state changes
+- **BR-052**: Audit trail includes IP address and user agent when available
 
 ## 8. Security Requirements
 
