@@ -31,11 +31,18 @@ This folder contains prompts for implementing the Telegram Beer Ordering Bot.
 - Higher complexity and risk
 - Use only if you prefer all-at-once approach
 
+## Requirements Tracking
+**File:** `requirements-checklist.md`
+- Complete checklist of all requirements
+- Track implementation progress
+- Ensure nothing is missed
+
 ## Usage
 1. Start with Stage 1 and test thoroughly
 2. Once Stage 1 is working, proceed to Stage 2
 3. Complete with Stage 3 for full production system
 4. Each stage builds on the previous one
+5. Use requirements-checklist.md to track implementation progress
 
 ## Dependencies
 - Ensure you have access to requirements.md and aws-architecture.md
