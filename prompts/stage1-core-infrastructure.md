@@ -24,6 +24,15 @@ Implement a Telegram beer ordering bot with AWS serverless architecture. Focus o
 - Webhook endpoint: POST /webhook with Lambda proxy integration
 - Bot registered with @BotFather for test and production environments
 
+## RESOURCE NAMING & TAGGING:
+- All resources follow naming convention: `ubbc-bot-{environment}-{resource-type}`
+- Required tags: Project, Environment, Owner, CostCenter, Application, ManagedBy
+- Lambda: `ubbc-bot-test-webhook-handler`, `ubbc-bot-prod-webhook-handler`
+- DynamoDB: `ubbc-bot-test-offers`, `ubbc-bot-prod-customers`
+- S3: `ubbc-bot-test-{account-id}-images`, `ubbc-bot-prod-{account-id}-images`
+- API Gateway: `ubbc-bot-test-api`, `ubbc-bot-prod-api`
+- Parameter Store: `/ubbc-bot/test/telegram-token`, `/ubbc-bot/prod/telegram-token`
+
 ## ESSENTIAL COMMANDS:
 Admin: /add_supplier, /create_offer, /list_offers, /box_status
 Customer: /start, /order, /my_orders
@@ -54,6 +63,13 @@ Use the exact data models from requirements.md and follow aws-architecture.md sp
 - DR-001: AWS SAM infrastructure deployment
 - DR-002: Environment management (test/prod)
 - DR-004: Parameter Store configuration
+- IR-001: SAM template structure
+- IR-002: Webhook endpoint configuration
+- IR-003: Bot token management
+- IR-004: Deployment commands setup
+- IR-005: Environment configuration files
+- IR-006: Resource naming convention
+- IR-007: Required AWS tags
 
 **Telegram Integration:**
 - TI-001: Bot registration with @BotFather
@@ -79,3 +95,5 @@ After Stage 1, the system must:
 ✓ Track box status and capacity
 ✓ Store all data persistently in DynamoDB
 ✓ Restrict admin functions to authorized user
+✓ All AWS resources follow naming convention and have required tags
+✓ Environment-specific configuration working correctly

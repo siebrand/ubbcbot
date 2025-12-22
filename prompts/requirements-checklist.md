@@ -31,6 +31,8 @@ Use this checklist to track implementation progress across all stages.
 - [ ] IR-003: Bot token management
 - [ ] IR-004: Deployment commands setup
 - [ ] IR-005: Environment configuration files
+- [ ] IR-006: Resource naming convention implementation
+- [ ] IR-007: Required AWS tags on all resources
 
 ### Telegram Integration Requirements
 - [ ] TI-001: Bot registration with @BotFather
@@ -39,6 +41,16 @@ Use this checklist to track implementation progress across all stages.
 - [ ] TI-004: Webhook reliability and retry logic
 - [ ] TI-005: Bot commands setup via @BotFather
 - [ ] TI-006: Group integration and permissions
+
+### AWS Resource Naming & Tagging
+- [ ] Lambda functions follow naming: `ubbc-bot-{env}-{function}`
+- [ ] DynamoDB tables follow naming: `ubbc-bot-{env}-{table}`
+- [ ] S3 buckets follow naming: `ubbc-bot-{env}-{account-id}-{purpose}`
+- [ ] API Gateway follows naming: `ubbc-bot-{env}-api`
+- [ ] Parameter Store paths: `/ubbc-bot/{env}/{parameter}`
+- [ ] All resources have mandatory tags: Project, Environment, Owner, CostCenter, Application, ManagedBy
+- [ ] Cost allocation tags properly configured
+- [ ] Environment-specific tag values applied
 
 ### Business Rules
 - [ ] BR-001: Orders cannot exceed box capacity
@@ -91,6 +103,13 @@ Use this checklist to track implementation progress across all stages.
 
 ### Deployment Requirements
 - [ ] DR-003: CI/CD pipeline implementation
+
+### AWS Resource Naming & Tagging (Stage 2)
+- [ ] CloudFront distribution: `ubbc-bot-{env}-cdn`
+- [ ] Additional Lambda functions follow naming convention
+- [ ] EventBridge rules: `ubbc-bot-{env}-{schedule-type}`
+- [ ] SQS queues: `ubbc-bot-{env}-{queue-purpose}`
+- [ ] All new resources have required tags
 
 ### Business Rules
 - [ ] BR-011: Only one default group
@@ -153,6 +172,12 @@ Use this checklist to track implementation progress across all stages.
 - [ ] TR-025: Automated archival
 - [ ] TR-026: Audit log querying
 
+### AWS Resource Naming & Tagging (Stage 3)
+- [ ] CloudWatch alarms: `ubbc-bot-{env}-{metric}-alarm`
+- [ ] Log groups: `/aws/lambda/ubbc-bot-{env}-{function}`
+- [ ] SNS topics: `ubbc-bot-{env}-{purpose}-notifications`
+- [ ] All monitoring resources properly named and tagged
+
 ### Business Rules
 - [ ] BR-032: Delivered offers only after completion
 - [ ] BR-033: Delivery aggregation per customer
@@ -206,3 +231,6 @@ Use this checklist to track implementation progress across all stages.
 - [ ] Bot commands registered with @BotFather
 - [ ] Environment-specific configuration working
 - [ ] Monitoring and alerting operational
+- [ ] All resources follow naming convention
+- [ ] All resources have required tags
+- [ ] Cost allocation tags enable proper billing tracking
