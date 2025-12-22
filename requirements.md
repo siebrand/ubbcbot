@@ -497,7 +497,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 ### 7.1 Order Validation
 - **BR-001**: Orders cannot exceed remaining box capacity
 - **BR-002**: Orders cannot be placed on inactive offers
-- **BR-003**: Customers cannot place duplicate orders for same offer/option
+- **BR-003**: Customers can place multiple orders for same offer/option with confirmation
 - **BR-004**: Orders can only be cancelled if box status is "open" or "minimum_reached"
 - **BR-005**: Offers must have valid active supplier to be created
 - **BR-006**: Wholesale box size must be one of: 1, 2, 6, 8, 10, 12, 15, 16, 18, 20, 24
