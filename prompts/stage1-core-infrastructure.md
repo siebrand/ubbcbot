@@ -23,6 +23,7 @@ Implement a Telegram beer ordering bot with AWS serverless architecture. Focus o
 - Test environment messages prefixed with "TEST - "
 - Webhook endpoint: POST /webhook with Lambda proxy integration
 - Bot registered with @BotFather for test and production environments
+- Executable scripts must have git executable flag: `git update-index --chmod=+x script.sh`
 
 ## RESOURCE NAMING & TAGGING:
 - All resources follow naming convention: `ubbc-bot-{environment}-{resource-type}`

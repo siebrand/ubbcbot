@@ -1,0 +1,281 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: UBBC Bot - Telegram Beer Ordering Bot
+
+Parameters:
+  Environment:
+    Type: String
+    Default: test
+    AllowedValues: [test, prod]
+  TelegramToken:
+    Type: String
+    NoEcho: true
+
+Globals:
+  Function:
+    Runtime: python3.11
+    MemorySize: 512
+    Timeout: 30
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        DYNAMODB_TABLE_PREFIX: !Sub 'ubbc-bot-${Environment}'
+        S3_BUCKET_NAME: !Ref ImageBucket
+        ADMIN_USER_ID: '15005473'
+
+Resources:
+  # API Gateway
+  BotApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'ubbc-bot-${Environment}-api'
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'POST'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+        AllowOrigin: "'*'"
+      Tags:
+        Project: UBBCBot
+        Environment: !Ref Environment
+        Owner: siebrand
+        CostCenter: personal
+        Application: telegram-bot
+        ManagedBy: sam
+
+  # Lambda Functions
+  WebhookHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'ubbc-bot-${Environment}-webhook-handler'
+      CodeUri: src/
+      Handler: handlers.webhook.handler
+      Events:
+        WebhookApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BotApi
+            Path: /webhook
+            Method: post
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub 'ubbc-bot-${Environment}-*'
+        - S3ReadPolicy:
+            BucketName: !Ref ImageBucket
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub '/ubbc-bot/${Environment}/*'
+      Tags:
+        Project: UBBCBot
+        Environment: !Ref Environment
+        Owner: siebrand
+        CostCenter: personal
+        Application: telegram-bot
+        ManagedBy: sam
+
+  # DynamoDB Tables
+  OffersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-offers'
+      BillingMode: ON_DEMAND
+      AttributeDefinitions:
+        - AttributeName: offer_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: offer_id
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
+  CustomersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-customers'
+      BillingMode: ON_DEMAND
+      AttributeDefinitions:
+        - AttributeName: customer_id
+          AttributeType: S
+        - AttributeName: telegram_user_id
+          AttributeType: N
+      KeySchema:
+        - AttributeName: customer_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: telegram-user-index
+          KeySchema:
+            - AttributeName: telegram_user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
+  OrdersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-orders'
+      BillingMode: ON_DEMAND
+      AttributeDefinitions:
+        - AttributeName: order_id
+          AttributeType: S
+        - AttributeName: customer_id
+          AttributeType: S
+        - AttributeName: offer_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: order_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: customer-index
+          KeySchema:
+            - AttributeName: customer_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: offer-index
+          KeySchema:
+            - AttributeName: offer_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
+  BoxesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-boxes'
+      BillingMode: ON_DEMAND
+      AttributeDefinitions:
+        - AttributeName: box_id
+          AttributeType: S
+        - AttributeName: offer_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: box_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: offer-index
+          KeySchema:
+            - AttributeName: offer_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
+  SuppliersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-suppliers'
+      BillingMode: ON_DEMAND
+      AttributeDefinitions:
+        - AttributeName: supplier_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: supplier_id
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
+  # S3 Bucket for Images
+  ImageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'ubbc-bot-${Environment}-${AWS::AccountId}-images'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
+  # Parameter Store
+  TelegramTokenParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/ubbc-bot/${Environment}/telegram-token'
+      Type: SecureString
+      Value: !Ref TelegramToken
+      Tags:
+        Project: UBBCBot
+        Environment: !Ref Environment
+        Owner: siebrand
+        CostCenter: personal
+        Application: telegram-bot
+        ManagedBy: sam
+
+Outputs:
+  WebhookUrl:
+    Description: Webhook URL for Telegram bot
+    Value: !Sub 'https://${BotApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/webhook'
+  
+  ApiGatewayId:
+    Description: API Gateway ID
+    Value: !Ref BotApi
