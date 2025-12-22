@@ -197,6 +197,8 @@ Telegram API → API Gateway → Lambda Functions → DynamoDB
 
 ## 8. Disaster Recovery
 
+Do not impement DR unless requested explicitly.
+
 ### 8.1 Backup Strategy
 - **DynamoDB**: Point-in-time recovery enabled
 - **S3**: Cross-region replication for critical images
