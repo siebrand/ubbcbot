@@ -24,13 +24,15 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Minimum quantity needed for breakeven
   - Maximum quantity (optional)
   - Multiple options (A, B, C) if applicable
+  - Main offer image (optional)
+  - Per-option images (optional)
   - Target groups (default + additional groups)
   - Publishing schedule (immediate or delayed)
   - Offer status (active/inactive/completed)
 
-- **FR-002**: Admin can post offers to specific Telegram groups
+- **FR-002**: Admin can post offers with text and images to specific Telegram groups
 - **FR-003**: Admin can schedule offers to publish in additional groups after delay
-- **FR-004**: Admin can update offer details
+- **FR-004**: Admin can update offer details including images
 - **FR-005**: Admin can close/deactivate offers
 
 ### 2.2 Order Processing
@@ -89,36 +91,44 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **TR-003**: Python-based implementation
 
 ### 3.2 Data Storage
-- **TR-004**: Store offers, orders, customers, and boxes data
+- **TR-004**: Store offers, orders, customers, boxes, and image data
 - **TR-005**: Maintain order history and audit trail
 - **TR-006**: Backup and recovery capabilities
+- **TR-007**: Image storage and retrieval system
+- **TR-008**: Support for common image formats (JPEG, PNG, WebP)
 
 ### 3.3 Performance
-- **TR-007**: Handle concurrent orders
-- **TR-008**: Response time < 2 seconds for order processing
-- **TR-009**: Support up to 100 concurrent users
+- **TR-009**: Handle concurrent orders
+- **TR-010**: Response time < 2 seconds for order processing
+- **TR-011**: Support up to 100 concurrent users
+- **TR-012**: Efficient image handling and caching
+- **TR-013**: Image compression for optimal Telegram delivery
 
 ## 4. User Stories
 
 ### 4.1 Admin Stories
-- **US-001**: As an admin, I want to create beer offers so customers can place orders
-- **US-002**: As an admin, I want to publish offers to specific groups for exclusive access
-- **US-003**: As an admin, I want to schedule offers to auto-publish in other groups after a delay
-- **US-004**: As an admin, I want to see which boxes are ready to order from wholesaler
-- **US-005**: As an admin, I want to track profit margins per box
-- **US-006**: As an admin, I want to manage customer orders and cancellations
-- **US-007**: As an admin, I want to configure default and exclusive groups
+- **US-001**: As an admin, I want to create beer offers with images so customers can see the products
+- **US-002**: As an admin, I want to add different images for each option (A, B, C) when available
+- **US-003**: As an admin, I want to publish offers to specific groups for exclusive access
+- **US-004**: As an admin, I want to schedule offers to auto-publish in other groups after a delay
+- **US-005**: As an admin, I want to see which boxes are ready to order from wholesaler
+- **US-006**: As an admin, I want to track profit margins per box
+- **US-007**: As an admin, I want to manage customer orders and cancellations
+- **US-008**: As an admin, I want to configure default and exclusive groups
 
 ### 4.2 Customer Stories
-- **US-005**: As a customer, I want to place orders for beer offers
-- **US-006**: As a customer, I want to see which box my order is assigned to
-- **US-007**: As a customer, I want to view my order status
-- **US-008**: As a customer, I want to cancel my order if the box hasn't been ordered yet
+- **US-009**: As a customer, I want to see images of beer offers to make informed decisions
+- **US-010**: As a customer, I want to see specific images for different options when available
+- **US-011**: As a customer, I want to place orders for beer offers
+- **US-012**: As a customer, I want to see which box my order is assigned to
+- **US-013**: As a customer, I want to view my order status
+- **US-014**: As a customer, I want to cancel my order if the box hasn't been ordered yet
 
 ## 5. Bot Commands
 
 ### 5.1 Admin Commands
-- `/create_offer` - Create new beer offer with group targeting
+- `/create_offer` - Create new beer offer with group targeting and image upload
+- `/add_image <offer_id> [option]` - Add/update images for offers or specific options
 - `/list_offers` - View all active offers
 - `/close_offer <offer_id>` - Close an offer
 - `/box_status` - View status of all boxes
@@ -150,13 +160,26 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - wholesale_box_size (Integer)
 - min_quantity_breakeven (Integer)
 - max_quantity (Integer, Optional)
-- options (JSON) // For A, B, C variants
+- main_image_url (String, Optional) // Main offer image
+- options (JSON) // For A, B, C variants with optional image URLs
 - status (Enum: active, inactive, completed)
 - created_at (DateTime)
 - updated_at (DateTime)
 ```
 
-### 6.2 Group
+### 6.2 Offer_Image
+```
+- image_id (Primary Key)
+- offer_id (Foreign Key)
+- option (String, Nullable) // null for main image, A/B/C for option images
+- image_url (String)
+- image_type (Enum: main, option)
+- file_size (Integer)
+- mime_type (String)
+- created_at (DateTime)
+```
+
+### 6.3 Group
 ```
 - group_id (Primary Key)
 - telegram_group_id (Integer, Unique)
@@ -166,7 +189,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - created_at (DateTime)
 ```
 
-### 6.3 Offer_Group
+### 6.4 Offer_Group
 ```
 - offer_group_id (Primary Key)
 - offer_id (Foreign Key)
@@ -177,7 +200,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - status (Enum: scheduled, published, failed)
 ```
 
-### 6.4 Box
+### 6.5 Box
 ```
 - box_id (Primary Key)
 - offer_id (Foreign Key)
@@ -189,7 +212,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - created_at (DateTime)
 ```
 
-### 6.5 Order
+### 6.6 Order
 ```
 - order_id (Primary Key)
 - customer_id (Foreign Key)
@@ -204,7 +227,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - created_at (DateTime)
 ```
 
-### 6.6 Customer
+### 6.7 Customer
 ```
 - customer_id (Primary Key)
 - telegram_user_id (Integer, Unique)
@@ -235,9 +258,16 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-012**: Orders tracked per group for analytics
 - **BR-013**: Bot must be admin in target groups to post offers
 
-### 7.4 Profit Calculation
-- **BR-014**: Profit = (Customer_Price - Wholesale_Cost) * Quantity
-- **BR-015**: Breakeven = Wholesale_Box_Cost / (Customer_Price - Unit_Wholesale_Cost)
+### 7.4 Image Management
+- **BR-014**: Main image displayed for all offer types
+- **BR-015**: Option images override main image when available
+- **BR-016**: Images must be under 20MB for Telegram compatibility
+- **BR-017**: Supported formats: JPEG, PNG, WebP
+- **BR-018**: Images automatically compressed if needed
+
+### 7.5 Profit Calculation
+- **BR-019**: Profit = (Customer_Price - Wholesale_Cost) * Quantity
+- **BR-020**: Breakeven = Wholesale_Box_Cost / (Customer_Price - Unit_Wholesale_Cost)
 
 ## 8. Security Requirements
 
@@ -250,6 +280,8 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **SR-004**: Secure storage of customer information
 - **SR-005**: Input validation for all user inputs
 - **SR-006**: Rate limiting to prevent spam
+- **SR-007**: Secure image storage with access controls
+- **SR-008**: Image content validation to prevent malicious uploads
 
 ## 9. Error Handling
 
@@ -262,6 +294,9 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **EH-004**: Database connection error handling
 - **EH-005**: Telegram API error recovery
 - **EH-006**: Logging for debugging and monitoring
+- **EH-007**: Image upload failure handling
+- **EH-008**: Image format validation errors
+- **EH-009**: Graceful degradation when images unavailableg for debugging and monitoring
 
 ## 10. Future Enhancements
 
