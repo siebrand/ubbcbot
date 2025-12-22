@@ -476,7 +476,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-038**: All user inputs must be validated and sanitized before processing
 - **BR-039**: Numeric inputs must be within defined ranges (quantities > 0, prices > 0)
 - **BR-040**: Text inputs limited to maximum lengths and safe characters only
-- **BR-041**: Image uploads must be validated for format, size, and content safety
+- **BR-041**: Image uploads restricted to admin user only (ID: 15005473)
 - **BR-042**: Referential integrity enforced before creating relationships
 - **BR-043**: Daily automated checks for orphaned records and data inconsistencies
 - **BR-044**: System prevents creation of orders for inactive offers or suppliers
@@ -494,7 +494,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 ## 8. Security Requirements
 
 ### 8.1 Access Control
-- **SR-001**: Admin commands restricted to authorized users
+- **SR-001**: Admin commands restricted to Telegram user ID 15005473 (siebrand)
 - **SR-002**: Customer data privacy protection
 - **SR-003**: Order modification restricted to order owner
 
@@ -504,6 +504,11 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **SR-006**: Rate limiting to prevent spam
 - **SR-007**: Secure image storage with access controls
 - **SR-008**: Image content validation to prevent malicious uploads
+- **SR-009**: SQL injection prevention through parameterized queries
+- **SR-010**: XSS protection for all text inputs
+- **SR-011**: File upload restricted to admin user only
+- **SR-012**: Audit log integrity protection
+- **SR-013**: Immutable audit trail storage
 
 ## 9. Error Handling
 
@@ -518,7 +523,11 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **EH-006**: Logging for debugging and monitoring
 - **EH-007**: Image upload failure handling
 - **EH-008**: Image format validation errors
-- **EH-009**: Graceful degradation when images unavailableg for debugging and monitoring
+- **EH-009**: Graceful degradation when images unavailable
+- **EH-010**: Data validation error reporting
+- **EH-011**: Audit log write failure handling
+- **EH-012**: Data integrity check failure recovery
+- **EH-013**: Referential integrity violation handling
 
 ## 10. Future Enhancements
 
