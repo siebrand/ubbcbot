@@ -9,24 +9,136 @@ Telegram beer ordering bot with AWS serverless architecture.
 - AWS SAM CLI installed
 - Telegram bot token from @BotFather
 
-### Deployment
+## Telegram Bot Setup
 
-1. **Deploy to test environment:**
+### Test Environment Setup
+
+1. **Create test bot with @BotFather:**
+   - Send `/newbot` to @BotFather
+   - Choose name ending with "Test" (e.g., "UBBC Test Bot")
+   - Choose username ending with "test_bot" (e.g., "ubbc_test_bot")
+   - Save the bot token for Parameter Store
+
+2. **Configure test bot:**
+   - Send `/setdescription` to @BotFather
+   - Select your test bot
+   - Set: "TEST - Beer ordering bot for UBBC (Test Environment)"
+
+3. **Set bot commands:**
+   - Send `/setcommands` to @BotFather
+   - Select your test bot
+   - Paste:
+   ```
+   start - Register and view help
+   order - Place order: /order <offer_id> <quantity>
+   my_orders - View your orders
+   add_supplier - [Admin] Add supplier: /add_supplier <name>
+   create_offer - [Admin] Create offer: /create_offer <supplier_id> <name> <price> <box_size>
+   list_offers - [Admin] View all offers
+   box_status - [Admin] View box status
+   ```
+
+4. **Add bot to test group:**
+   - Create or use existing test group (e.g., "UBBC Test Group")
+   - Add the test bot to the group
+   - Make the bot an admin with permissions:
+     - Delete messages
+     - Restrict members
+     - Pin messages
+     - Manage video chats
+
+### Production Environment Setup
+
+1. **Create production bot with @BotFather:**
+   - Send `/newbot` to @BotFather
+   - Choose production name (e.g., "UBBC Bot")
+   - Choose production username (e.g., "ubbc_bot")
+   - Save the bot token for Parameter Store
+
+2. **Configure production bot:**
+   - Send `/setdescription` to @BotFather
+   - Select your production bot
+   - Set: "Beer ordering bot for UBBC - Order craft beers by the box"
+
+3. **Set bot commands:**
+   - Send `/setcommands` to @BotFather
+   - Select your production bot
+   - Paste the same commands as test environment
+
+4. **Add bot to production groups:**
+   - Add the bot to UBBC main group/channel
+   - Make the bot an admin with permissions:
+     - Delete messages
+     - Restrict members
+     - Pin messages
+     - Manage video chats
+   - Consider adding to additional relevant groups (regional, special events)
+
+## Deployment
+
+1. **Store bot tokens in Parameter Store:**
 ```bash
-./deploy.sh test YOUR_TEST_BOT_TOKEN
+# For test environment (use token from test bot creation)
+aws ssm put-parameter \
+    --name "/ubbc-bot/test/telegram-bot-token" \
+    --value "YOUR_TEST_BOT_TOKEN" \
+    --type "SecureString"
+
+# For production environment (use token from production bot creation)
+aws ssm put-parameter \
+    --name "/ubbc-bot/prod/telegram-bot-token" \
+    --value "YOUR_PROD_BOT_TOKEN" \
+    --type "SecureString"
 ```
 
-2. **Deploy to production:**
+2. **Deploy to test environment:**
 ```bash
-./deploy.sh prod YOUR_PROD_BOT_TOKEN
+./deploy.sh test
 ```
 
-3. **Set Telegram webhook:**
+3. **Deploy to production:**
+```bash
+./deploy.sh prod
+```
+
+4. **Set Telegram webhook:**
 ```bash
 # Use the webhook URL from deployment output
 curl -X POST "https://api.telegram.org/botYOUR_BOT_TOKEN/setWebhook" \
      -d "url=YOUR_WEBHOOK_URL"
 ```
+
+## Post-Deployment Verification
+
+### Test Environment Verification
+
+1. **Test bot functionality:**
+   - Send `/start` to verify registration (both private and group)
+   - Admin (ID: 15005473): Test `/add_supplier Test Brewery`
+   - Verify all messages are prefixed with "TEST - "
+   - Test group functionality: orders, announcements
+
+### Production Environment Verification
+
+1. **Production verification:**
+   - Send `/start` to verify registration (both private and group)
+   - Admin (ID: 15005473): Add real suppliers
+   - Verify messages have NO "TEST - " prefix
+   - Test complete order flow in production groups
+   - Verify admin permissions work correctly
+
+### Webhook Verification
+
+After deployment, verify webhook is active:
+```bash
+# Check webhook status
+curl "https://api.telegram.org/botYOUR_BOT_TOKEN/getWebhookInfo"
+```
+
+Expected response should show:
+- `"url"`: Your API Gateway endpoint
+- `"has_custom_certificate"`: false
+- `"pending_update_count"`: 0
 
 ## Bot Commands
 
