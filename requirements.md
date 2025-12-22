@@ -636,7 +636,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 
 ## 12. Success Criteria
 
-- **SC-001**: Bot successfully processes 95% of valid orders
+- **SC-001**: Bot successfully processes 99.99% of valid orders
 - **SC-002**: Admin can track box status in real-time
 - **SC-003**: Customers receive immediate order confirmation
 - **SC-004**: Zero data loss during order processing
