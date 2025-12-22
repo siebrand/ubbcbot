@@ -430,6 +430,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - option (String)
 - quantity (Integer)
 - unit_price (Decimal)
+- discount_percentage (Decimal, Default: 0) // Discount applied at order time
 - total_price (Decimal)
 - status (Enum: pending, confirmed, cancelled, delivered)
 - created_at (DateTime)
@@ -535,34 +536,35 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-028**: All times handled in CE(S)T timezone
 - **BR-029**: Profit calculations always use original prices, not discounted prices
 - **BR-030**: Offers with exclude_from_discounts=true maintain original pricing during discount periods
+- **BR-031**: Discount percentage applied to order must be recorded in order record for reporting and customer messaging
 
 ### 7.7 Delivery Management
-- **BR-031**: Offers can be marked as delivered only after being completed
-- **BR-032**: Delivery process aggregates orders per customer for delivered offers
-- **BR-033**: Maximum 50 customers per payment link batch
-- **BR-034**: Payment links assigned sequentially to batches
-- **BR-035**: CSV pick list includes: Customer Name, Product, Option, Quantity, Unit Price, Total Price
-- **BR-036**: Private messages sent only to customers with delivered orders
-- **BR-037**: Order aggregation combines same products with quantities and totals
+- **BR-032**: Offers can be marked as delivered only after being completed
+- **BR-033**: Delivery process aggregates orders per customer for delivered offers
+- **BR-034**: Maximum 50 customers per payment link batch
+- **BR-035**: Payment links assigned sequentially to batches
+- **BR-036**: CSV pick list includes: Customer Name, Product, Option, Quantity, Unit Price, Discount %, Total Price
+- **BR-037**: Private messages sent only to customers with delivered orders
+- **BR-038**: Order aggregation combines same products with quantities and totals
 
 ### 7.8 Data Validation & Integrity
-- **BR-038**: All user inputs must be validated and sanitized before processing
-- **BR-039**: Numeric inputs must be within defined ranges (quantities > 0, prices > 0)
-- **BR-040**: Text inputs limited to maximum lengths and safe characters only
-- **BR-041**: Image uploads restricted to admin user only (ID: 15005473)
-- **BR-042**: Referential integrity enforced before creating relationships
-- **BR-043**: Daily automated checks for orphaned records and data inconsistencies
-- **BR-044**: System prevents creation of orders for inactive offers or suppliers
-- **BR-045**: Cascade deletions maintain data consistency across related entities
+- **BR-039**: All user inputs must be validated and sanitized before processing
+- **BR-040**: Numeric inputs must be within defined ranges (quantities > 0, prices > 0)
+- **BR-041**: Text inputs limited to maximum lengths and safe characters only
+- **BR-042**: Image uploads restricted to admin user only (ID: 15005473)
+- **BR-043**: Referential integrity enforced before creating relationships
+- **BR-044**: Daily automated checks for orphaned records and data inconsistencies
+- **BR-045**: System prevents creation of orders for inactive offers or suppliers
+- **BR-046**: Cascade deletions maintain data consistency across related entities
 
 ### 7.9 Audit Trail & Compliance
-- **BR-046**: All administrative actions must be logged with timestamp and user ID
-- **BR-047**: Order modifications tracked with complete before/after state
-- **BR-048**: Audit logs are immutable and cannot be deleted by users
-- **BR-049**: Data retention: orders archived after 2 years, audit logs kept for 5 years
-- **BR-050**: Automated cleanup of temporary data older than 24 hours
-- **BR-051**: System maintains complete chain of custody for all order state changes
-- **BR-052**: Audit trail includes IP address and user agent when available
+- **BR-047**: All administrative actions must be logged with timestamp and user ID
+- **BR-048**: Order modifications tracked with complete before/after state
+- **BR-049**: Audit logs are immutable and cannot be deleted by users
+- **BR-050**: Data retention: orders archived after 2 years, audit logs kept for 5 years
+- **BR-051**: Automated cleanup of temporary data older than 24 hours
+- **BR-052**: System maintains complete chain of custody for all order state changes
+- **BR-053**: Audit trail includes IP address and user agent when available
 
 ## 8. Security Requirements
 
