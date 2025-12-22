@@ -87,8 +87,21 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **FR-019**: Admin can view supplier order history
 - **FR-020**: System tracks orders per supplier for analytics
 
-### 2.7 Reporting & Analytics
-- **FR-021**: Admin can view:
+### 2.7 Discount Management
+- **FR-021**: Admin can activate discount mode for all open offers:
+  - Set discount percentage
+  - Set expiry time in CE(S)T timezone
+  - Apply to all currently open offers
+
+- **FR-022**: System automatically sends notifications:
+  - Discount start announcement to all groups with open offers
+  - 10-minute warning before discount expires
+  - Discount expiry notification to all affected groups
+
+- **FR-023**: Discount pricing automatically applied to new orders during discount period
+
+### 2.8 Reporting & Analytics
+- **FR-024**: Admin can view:
   - Current box status for all offers
   - Order summary per customer per group
   - Order summary per supplier
@@ -96,6 +109,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Orders ready for wholesale purchase
   - Group-specific order statistics
   - Supplier performance analytics
+  - Discount period performance metrics
 
 ## 3. Technical Requirements
 
@@ -117,6 +131,8 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **TR-011**: Support up to 100 concurrent users
 - **TR-012**: Efficient image handling and caching
 - **TR-013**: Image compression for optimal Telegram delivery
+- **TR-014**: Scheduled notification system for discount alerts
+- **TR-015**: CE(S)T timezone support for discount timing
 
 ## 4. User Stories
 
@@ -131,14 +147,16 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **US-008**: As an admin, I want to manage customer orders and cancellations
 - **US-009**: As an admin, I want to configure default and exclusive groups
 - **US-010**: As an admin, I want to view order history per supplier
+- **US-011**: As an admin, I want to activate discount mode for all open offers with automatic notifications
 
 ### 4.2 Customer Stories
-- **US-011**: As a customer, I want to see images of beer offers to make informed decisions
-- **US-012**: As a customer, I want to see specific images for different options when available
-- **US-013**: As a customer, I want to place orders for beer offers
-- **US-014**: As a customer, I want to see which box my order is assigned to
-- **US-015**: As a customer, I want to view my order status
-- **US-016**: As a customer, I want to cancel my order if the box hasn't been ordered yet
+- **US-012**: As a customer, I want to see images of beer offers to make informed decisions
+- **US-013**: As a customer, I want to see specific images for different options when available
+- **US-014**: As a customer, I want to place orders for beer offers
+- **US-015**: As a customer, I want to see which box my order is assigned to
+- **US-016**: As a customer, I want to view my order status
+- **US-017**: As a customer, I want to cancel my order if the box hasn't been ordered yet
+- **US-018**: As a customer, I want to be notified about discount periods and receive discounted pricing
 
 ## 5. Bot Commands
 
@@ -150,6 +168,8 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - `/add_image <offer_id> [option]` - Add/update images for offers or specific options
 - `/list_offers` - View all active offers
 - `/close_offer <offer_id>` - Close an offer
+- `/discount_mode <percentage> <end_time_cest>` - Activate discount mode for all open offers
+- `/end_discount` - Manually end active discount mode
 - `/box_status` - View status of all boxes
 - `/order_summary` - View orders ready for wholesale purchase
 - `/supplier_orders <supplier_id>` - View orders for specific supplier
@@ -271,6 +291,17 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - created_at (DateTime)
 ```
 
+### 6.9 Discount_Period
+```
+- discount_id (Primary Key)
+- discount_percentage (Decimal)
+- start_time (DateTime)
+- end_time (DateTime)
+- timezone (String) // CE(S)T
+- status (Enum: active, expired, cancelled)
+- created_at (DateTime)
+```
+
 ## 7. Business Rules
 
 ### 7.1 Order Validation
@@ -305,6 +336,15 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-021**: Profit = (Customer_Price - Wholesale_Cost) * Quantity
 - **BR-022**: Breakeven = Wholesale_Box_Cost / (Customer_Price - Unit_Wholesale_Cost)
 
+### 7.6 Discount Management
+- **BR-023**: Discount mode applies to all open offers simultaneously
+- **BR-024**: Discount pricing calculated as: Original_Price * (1 - Discount_Percentage/100)
+- **BR-025**: Only one active discount period allowed at a time
+- **BR-026**: Discount notifications sent to all groups with published offers
+- **BR-027**: 10-minute warning notification scheduled automatically
+- **BR-028**: All times handled in CE(S)T timezone
+- **BR-029**: Profit calculations always use original prices, not discounted prices
+
 ## 8. Security Requirements
 
 ### 8.1 Access Control
@@ -337,12 +377,17 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 ## 10. Future Enhancements
 
 ### 10.1 Phase 2 Features
+- Payment integration
+- Delivery tracking
 - Customer notifications
+- Automated wholesale ordering
 - Multi-language support
 - Web dashboard for admin
 - Advanced group management (member verification)
 - Cross-group order limits
 - Group-specific pricing
+- Recurring discount schedules
+- Customer-specific discounts
 
 ### 10.2 Integration Possibilities
 - Inventory management systems
