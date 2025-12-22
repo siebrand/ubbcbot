@@ -7,9 +7,6 @@ Parameters:
     Type: String
     Default: test
     AllowedValues: [test, prod]
-  TelegramToken:
-    Type: String
-    NoEcho: true
 
 Globals:
   Function:
@@ -260,9 +257,10 @@ Resources:
   TelegramTokenParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub '/ubbc-bot/${Environment}/telegram-token'
+      Name: !Sub '/ubbc-bot/${Environment}/telegram-bot-token'
       Type: SecureString
-      Value: !Ref TelegramToken
+      Value: 'PLACEHOLDER_TOKEN_SET_MANUALLY'
+      Description: !Sub 'Telegram bot token for UBBC ${Environment} environment'
       Tags:
         Project: UBBCBot
         Environment: !Ref Environment
