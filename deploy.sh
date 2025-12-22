@@ -3,6 +3,9 @@
 # UBBC Bot Deployment Script
 set -e
 
+# Disable SAM telemetry
+export SAM_CLI_TELEMETRY=0
+
 ENVIRONMENT=${1:-test}
 
 if [ "$ENVIRONMENT" != "test" ] && [ "$ENVIRONMENT" != "prod" ]; then
