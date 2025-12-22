@@ -51,6 +51,11 @@ TELEGRAM_TOKEN=$(aws ssm get-parameter \
 echo "✅ Deployment complete!"
 echo "📡 Webhook URL: $WEBHOOK_URL"
 echo ""
-echo "Next steps:"
-echo "1. Set webhook in Telegram: curl -X POST \"https://api.telegram.org/bot$TELEGRAM_TOKEN/setWebhook\" -d \"url=$WEBHOOK_URL\""
-echo "2. Test with /start command in Telegram"
+echo "🔗 Setting Telegram webhook..."
+curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setWebhook" \
+     -d "url=$WEBHOOK_URL" | jq .
+
+echo ""
+echo "✅ Setup complete! Next steps:"
+echo "1. Test with /start command in Telegram"
+echo "2. Verify webhook status: curl \"https://api.telegram.org/bot$TELEGRAM_TOKEN/getWebhookInfo\""

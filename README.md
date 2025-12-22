@@ -101,12 +101,7 @@ aws ssm put-parameter \
 ./deploy.sh prod
 ```
 
-4. **Set Telegram webhook:**
-```bash
-# Use the webhook URL from deployment output
-curl -X POST "https://api.telegram.org/botYOUR_BOT_TOKEN/setWebhook" \
-     -d "url=YOUR_WEBHOOK_URL"
-```
+*Note: The deployment script automatically sets the Telegram webhook using the bot token from Parameter Store.*
 
 ## Post-Deployment Verification
 
