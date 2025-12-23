@@ -72,6 +72,8 @@ class InfoCommands(BaseHandler):
         else:
             self._send_message(chat_id, "❌ Failed to unsubscribe")
             return {'status': 'error'}
+    
+    def handle_list_offers(self, chat_id: int, user_id: int) -> Dict[str, Any]:
         """Handle /list_offers command"""
         offers = self.db.list_offers()
         
