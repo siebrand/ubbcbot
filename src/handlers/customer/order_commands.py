@@ -232,9 +232,36 @@ class CustomerOrderCommands(BaseHandler):
                     f"Total    : €{order.total_price:.2f}\n"
                     f"Status   : pending")
             
+            # Send notification to default channel if order was placed in private chat
+            if chat_id > 0:  # Private chat has positive chat_id
+                self._notify_channel_order(customer, offer, quantity)
+            
             return {'status': 'success'}
             
         except Exception as e:
             logger.error(f"Error in execute_order: {e}")
             self._send_message(chat_id, "❌ Order processing failed")
             return {'status': 'error'}
+    
+    def _notify_channel_order(self, customer, offer, quantity):
+        """Send order notification to default group"""
+        import os
+        try:
+            group_id = os.environ.get('DEFAULT_GROUP_ID')
+            if not group_id:
+                return
+            
+            # Format customer name
+            name_parts = []
+            if customer.first_name:
+                name_parts.append(customer.first_name)
+            if customer.last_name:
+                name_parts.append(customer.last_name)
+            
+            customer_name = ' '.join(name_parts) if name_parts else customer.username or 'Unknown'
+            
+            message = f"🍺 {customer_name} ordered {quantity}x {offer.name}"
+            self._send_message(int(group_id), message)
+            
+        except Exception as e:
+            logger.error(f"Error sending group notification: {e}")
