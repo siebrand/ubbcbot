@@ -241,9 +241,21 @@ class OfferCommands(BaseHandler):
                     msg += f"We apologize for the inconvenience."
                     self._send_message(customer.telegram_user_id, msg)
             
-            # Update offer status to ordered
-            self.db.update_offer(offer_id, {'status': 'ordered'})
+            # Update offer status - keep active if there are still pending orders
+            remaining_pending = [o for o in all_orders if o.status == 'pending']
+            if not remaining_pending:
+                self.db.update_offer(offer_id, {'status': 'sold_out'})
+                offer_status_msg = "Offer marked as SOLD OUT (no pending orders remaining)"
+            else:
+                offer_status_msg = f"Offer remains ACTIVE ({len(remaining_pending)} pending orders remaining)"
             
+            # Clean up empty boxes (delete boxes with 0 orders)
+            boxes = self.db.get_boxes_by_offer(offer_id)
+            empty_boxes = [box for box in boxes if box.current_quantity == 0]
+            deleted_boxes = 0
+            for box in empty_boxes:
+                if self.db.delete_box(box.box_id):
+                    deleted_boxes += 1
             # Send summary to admin
             summary = f"✅ Offer {offer_id} fulfilled with {boxes_ordered} boxes:\n\n"
             summary += f"✅ Fulfilled: {len(fulfilled_orders)} orders\n"
@@ -251,7 +263,8 @@ class OfferCommands(BaseHandler):
                 summary += f"⚠️ Updated: {len(updated_orders)} orders (quantity reduced)\n"
             if cancelled_orders:
                 summary += f"❌ Cancelled: {len(cancelled_orders)} orders\n"
-            summary += f"\n📦 Total units allocated: {units_allocated}/{units_available}"
+            summary += f"\n📦 Total units allocated: {units_allocated}/{units_available}\n"
+            summary += f"📊 {offer_status_msg}"
             
             self._send_message(chat_id, summary)
             return {'status': 'success'}

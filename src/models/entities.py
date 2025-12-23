@@ -9,6 +9,7 @@ class OfferStatus(Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     ORDERED = "ordered"
+    SOLD_OUT = "sold_out"
     COMPLETED = "completed"
     DELIVERED = "delivered"
 

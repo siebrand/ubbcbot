@@ -93,8 +93,10 @@ class InfoCommands(BaseHandler):
             message += "\n"
         
         message += "📋 Active Offers:\n\n"
+        active_found = False
         for offer in offers:
             if offer.status == OfferStatus.ACTIVE.value:
+                active_found = True
                 # Get current order count for this offer
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
                 total_ordered = sum(box.current_quantity for box in boxes)
@@ -107,6 +109,10 @@ class InfoCommands(BaseHandler):
                     message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
                 else:
                     message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
+        
+        if not active_found:
+            self._send_message(chat_id, "🍺 No active offers available")
+            return {'status': 'no_offers'}
 
         self._send_message(chat_id, message, 'Markdown')
         return {'status': 'success'}
