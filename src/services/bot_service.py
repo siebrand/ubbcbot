@@ -95,7 +95,15 @@ class BotService:
         parts = text.split()
         command = parts[0].lower()
 
-        # Admin commands
+        # Universal commands (available to everyone)
+        if command == '/start' or command == '/help':
+            return self._handle_start(chat_id, user_id)
+        elif command == '/order':
+            return self._handle_order(chat_id, user_id, parts[1:])
+        elif command == '/my_orders':
+            return self._handle_my_orders(chat_id, user_id)
+
+        # Admin-only commands
         if self._is_admin(user_id):
             if command == '/add_supplier':
                 return self._handle_add_supplier(chat_id, parts[1:])
@@ -105,14 +113,6 @@ class BotService:
                 return self._handle_list_offers(chat_id)
             elif command == '/box_status':
                 return self._handle_box_status(chat_id)
-
-        # Customer commands
-        if command == '/start':
-            return self._handle_start(chat_id, user_id)
-        elif command == '/order':
-            return self._handle_order(chat_id, user_id, parts[1:])
-        elif command == '/my_orders':
-            return self._handle_my_orders(chat_id, user_id)
 
         return {'status': 'unknown_command'}
 
