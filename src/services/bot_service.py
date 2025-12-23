@@ -497,8 +497,17 @@ class BotService:
         if customer:
             return customer
         
-        # Try by display name
-        return self.db.get_customer_by_name(identifier)
+        # Try by first name
+        customers = self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value)
+        for customer in customers:
+            if customer.first_name and customer.first_name.lower() == identifier.lower():
+                return customer
+            # Try first + last name combination
+            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+            if full_name.lower() == identifier.lower():
+                return customer
+        
+        return None
 
     def _handle_list_suppliers(self, chat_id: int) -> Dict[str, Any]:
         """Handle /list_suppliers command"""
