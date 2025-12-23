@@ -145,7 +145,7 @@ Expected response should show:
 ### Customer Commands
 - `/start` - Register and view help
 - `/order <offer_id> [quantity]` - Place order
-- `/my_orders` - View personal orders
+- `/my_orders [id]` - View personal orders
 - `/list_offers` - View available offers
 - `/subscribe` - Subscribe to new offer notifications
 - `/unsubscribe` - Unsubscribe from offer notifications

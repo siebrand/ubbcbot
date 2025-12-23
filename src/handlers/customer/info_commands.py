@@ -19,7 +19,7 @@ class InfoCommands(BaseHandler):
         message += "/list_offers - View available offers\n"
         message += "/order <offer_id> [quantity] - Place an order\n"
         message += "/confirm_order <offer_id> <quantity> - Confirm duplicate order\n"
-        message += "/my_orders - View your orders\n\n"
+        message += "/my_orders [id] - View your orders\n\n"
         message += "🔔 Notifications:\n"
         message += "/subscribe - Subscribe to offer notifications\n"
         message += "/unsubscribe - Unsubscribe from notifications\n"
@@ -145,8 +145,10 @@ class InfoCommands(BaseHandler):
         self._send_message(chat_id, message, 'Markdown')
         return {'status': 'success'}
 
-    def handle_my_orders(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+    def handle_my_orders(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
         """Handle /my_orders command"""
+        show_ids = args and len(args) > 0 and args[0].lower() == 'id'
+        
         customer = self.db.get_customer_by_telegram_id(user_id)
         if not customer:
             self._send_message(chat_id, "❌ Customer not found")
@@ -175,11 +177,13 @@ class InfoCommands(BaseHandler):
                     'status': order.status,
                     'quantity': 0,
                     'total_price': Decimal('0.0'),
-                    'dates': set()
+                    'dates': set(),
+                    'order_ids': []
                 }
             
             aggregated[key]['quantity'] += order.quantity
             aggregated[key]['total_price'] += order.total_price
+            aggregated[key]['order_ids'].append(order.order_id)
             
             # Add date
             if isinstance(order.created_at, str):
@@ -205,7 +209,13 @@ class InfoCommands(BaseHandler):
             else:
                 date_display = "[multiple days]"
             
-            message += f"{status_emoji} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} ({status})\n"
+            order_line = f"{status_emoji} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} ({status})"
+            
+            if show_ids:
+                ids_display = ', '.join(data['order_ids'])
+                order_line += f" - {ids_display}"
+            
+            message += order_line + "\n"
 
         self._send_message(chat_id, message)
         return {'status': 'success'}

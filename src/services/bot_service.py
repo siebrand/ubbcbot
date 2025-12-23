@@ -248,7 +248,7 @@ class BotService:
         elif command == '/order':
             return self.customer_order_commands.handle_order(chat_id, user_id, parts[1:])  # Keep in group
         elif command == '/my_orders':
-            return self.info_commands.handle_my_orders(target_chat, user_id)
+            return self.info_commands.handle_my_orders(target_chat, user_id, parts[1:])
         elif command == '/list_offers':
             return self.info_commands.handle_list_offers(target_chat, user_id)
         elif command == '/subscribe':
