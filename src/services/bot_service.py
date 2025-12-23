@@ -262,6 +262,9 @@ class BotService:
             self._send_message(chat_id, "No offers found")
             return {'status': 'no_offers'}
 
+        # Sort offers by offer_id ascending
+        offers.sort(key=lambda x: x.offer_id)
+
         message = ""
         
         # Check for active discount
