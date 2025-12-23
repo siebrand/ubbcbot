@@ -107,7 +107,14 @@ class BotService:
             # Remove the keyboard buttons
             self._edit_message_remove_keyboard(chat_id, message_id)
             
-            if data.startswith('confirm_order_'):
+            if data.startswith('order_'):
+                # Parse order_<offer_id>_<quantity>
+                parts = data.split('_')
+                if len(parts) >= 3:
+                    offer_id = parts[1]
+                    quantity = parts[2]
+                    return self.customer_order_commands.handle_order(chat_id, user_id, [offer_id, quantity])
+            elif data.startswith('confirm_order_'):
                 # Parse confirm_order_<offer_id>_<quantity>
                 parts = data.split('_')
                 if len(parts) >= 4:

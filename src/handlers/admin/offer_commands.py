@@ -125,4 +125,15 @@ class OfferCommands(BaseHandler):
             announcement += f"Price: €{offer.price_per_unit:.2f} per unit\n"
             announcement += f"Box size: {offer.wholesale_box_size} units\n\n"
             announcement += f"Order with: /order {offer.offer_id} [quantity]"
-            self._send_message(int(default_group_id), announcement)
+            
+            # Create inline keyboard with order buttons
+            reply_markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": "🍺 Order 1", "callback_data": f"order_{offer.offer_id}_1"},
+                        {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
+                    ]
+                ]
+            }
+            
+            self._send_message(int(default_group_id), announcement, reply_markup=reply_markup)
