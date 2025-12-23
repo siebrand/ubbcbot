@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Dict, Any
 from enum import Enum
+from decimal import Decimal
 import uuid
 
 class OfferStatus(Enum):
@@ -42,7 +43,7 @@ class Offer:
     supplier_name: str = ""
     name: str = ""
     description: str = ""
-    price_per_unit: float = 0.0
+    price_per_unit: Decimal = Decimal('0.0')
     wholesale_box_size: int = 12
     min_quantity_breakeven: int = 10
     max_quantity: Optional[int] = None
@@ -75,15 +76,15 @@ class Order:
     box_id: str = ""
     offer_id: str = ""
     quantity: int = 1
-    unit_price: float = 0.0
-    total_price: float = 0.0
+    unit_price: Decimal = Decimal('0.0')
+    total_price: Decimal = Decimal('0.0')
     status: str = OrderStatus.PENDING.value
     created_at: datetime = field(default_factory=datetime.utcnow)
 
 @dataclass
 class DiscountPeriod:
     discount_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    discount_percentage: float = 0.0
+    discount_percentage: Decimal = Decimal('0.0')
     start_time: datetime = field(default_factory=datetime.utcnow)
     end_time: Optional[datetime] = None
     status: str = DiscountStatus.ACTIVE.value

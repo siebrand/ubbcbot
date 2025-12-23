@@ -184,10 +184,11 @@ class BotService:
                 return {'status': 'supplier_not_found'}
 
             # Create offer
+            from decimal import Decimal
             offer = Offer(
                 supplier_name=supplier_name,
                 name=name,
-                price_per_unit=price,
+                price_per_unit=Decimal(str(price)),
                 wholesale_box_size=box_size,
                 min_quantity_breakeven=max(1, int(box_size * 0.8))  # 80% of box size
             )
@@ -470,13 +471,14 @@ class BotService:
                 self.db.create_box(available_box)
 
             # Create order
+            from decimal import Decimal
             order = Order(
                 customer_id=customer.customer_id,
                 box_id=available_box.box_id,
                 offer_id=offer_id,
                 quantity=quantity,
-                unit_price=offer.price_per_unit,
-                total_price=offer.price_per_unit * quantity
+                unit_price=Decimal(str(offer.price_per_unit)),
+                total_price=Decimal(str(offer.price_per_unit)) * quantity
             )
 
             if self.db.create_order(order):
