@@ -117,23 +117,54 @@ class OfferCommands(BaseHandler):
         return {'status': 'success'}
 
     def _announce_offer(self, offer):
-        """Announce new offer to default group"""
+        """Announce new offer to default group and subscribers"""
         default_group_id = os.environ.get('DEFAULT_GROUP_ID')
-        if default_group_id:
-            announcement = f"🍺 New offer available!\n\n"
-            announcement += f"[{offer.offer_id}] {offer.name}\n"
-            announcement += f"Price: €{offer.price_per_unit:.2f} per unit\n"
-            announcement += f"Box size: {offer.wholesale_box_size} units\n\n"
-            announcement += f"Order with: /order {offer.offer_id} [quantity]"
-            
-            # Create inline keyboard with order buttons
-            reply_markup = {
-                "inline_keyboard": [
-                    [
-                        {"text": "🍺 Order 1", "callback_data": f"order_{offer.offer_id}_1"},
-                        {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
-                    ]
+        
+        announcement = f"🍺 New offer available!\n\n"
+        announcement += f"[{offer.offer_id}] {offer.name}\n"
+        announcement += f"Price: €{offer.price_per_unit:.2f} per unit\n"
+        announcement += f"Box size: {offer.wholesale_box_size} units\n\n"
+        announcement += f"Order with: /order {offer.offer_id} [quantity]"
+        
+        # Create inline keyboard with order buttons
+        reply_markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "🍺 Order 1", "callback_data": f"order_{offer.offer_id}_1"},
+                    {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
                 ]
-            }
-            
+            ]
+        }
+        
+        # Send to default group
+        if default_group_id:
             self._send_message(int(default_group_id), announcement, reply_markup=reply_markup)
+        
+        # Send to subscribers in batches
+        self._notify_subscribers(announcement, reply_markup)
+    
+    def _notify_subscribers(self, message: str, reply_markup: dict):
+        """Send offer notification to all subscribers in batches"""
+        import time
+        from models.entities import AuthorizationStatus
+        
+        # Get all approved customers
+        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        subscribers = [c for c in customers if getattr(c, 'subscribed_to_offers', False)]
+        
+        # Send in batches to avoid rate limits (30 messages per second max)
+        batch_size = 25
+        for i in range(0, len(subscribers), batch_size):
+            batch = subscribers[i:i + batch_size]
+            
+            for customer in batch:
+                try:
+                    self._send_message(customer.telegram_user_id, message, reply_markup=reply_markup)
+                except Exception as e:
+                    # Log error but continue with other subscribers
+                    import logging
+                    logging.error(f"Failed to notify subscriber {customer.customer_id}: {e}")
+            
+            # Rate limiting: wait 1 second between batches
+            if i + batch_size < len(subscribers):
+                time.sleep(1)

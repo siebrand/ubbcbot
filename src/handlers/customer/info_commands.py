@@ -43,7 +43,35 @@ class InfoCommands(BaseHandler):
         
         return {'status': 'success'}
 
-    def handle_list_offers(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+    def handle_subscribe(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /subscribe command"""
+        customer = self.db.get_customer_by_telegram_id(user_id)
+        if not customer:
+            self._send_message(chat_id, "❌ You must register first. Send /start")
+            return {'status': 'not_registered'}
+        
+        # Update subscription status
+        if self.db.update_customer(customer.customer_id, {'subscribed_to_offers': True}):
+            self._send_message(chat_id, "✅ Subscribed to new offer notifications! You'll receive private messages when new offers are available.")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to subscribe")
+            return {'status': 'error'}
+    
+    def handle_unsubscribe(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /unsubscribe command"""
+        customer = self.db.get_customer_by_telegram_id(user_id)
+        if not customer:
+            self._send_message(chat_id, "❌ You are not registered")
+            return {'status': 'not_registered'}
+        
+        # Update subscription status
+        if self.db.update_customer(customer.customer_id, {'subscribed_to_offers': False}):
+            self._send_message(chat_id, "✅ Unsubscribed from offer notifications")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to unsubscribe")
+            return {'status': 'error'}
         """Handle /list_offers command"""
         offers = self.db.list_offers()
         

@@ -144,6 +144,8 @@ Expected response should show:
 - `/order <offer_id> [quantity]` - Place order
 - `/my_orders` - View personal orders
 - `/list_offers` - View available offers
+- `/subscribe` - Subscribe to new offer notifications
+- `/unsubscribe` - Unsubscribe from offer notifications
 
 ## Architecture
 

@@ -66,7 +66,9 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
          {"command": "order", "description": "Place order: /order <offer_id> [quantity]"},
          {"command": "my_orders", "description": "View your orders"},
          {"command": "confirm_order", "description": "Confirm duplicate order"},
-         {"command": "list_offers", "description": "View available offers"}
+         {"command": "list_offers", "description": "View available offers"},
+         {"command": "subscribe", "description": "Subscribe to offer notifications"},
+         {"command": "unsubscribe", "description": "Unsubscribe from offer notifications"}
        ],
        "scope": {"type": "default"}
      }' | jq .

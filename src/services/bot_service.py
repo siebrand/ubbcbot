@@ -236,6 +236,10 @@ class BotService:
             return self.info_commands.handle_my_orders(chat_id, user_id)
         elif command == '/list_offers':
             return self.info_commands.handle_list_offers(chat_id, user_id)
+        elif command == '/subscribe':
+            return self.info_commands.handle_subscribe(chat_id, user_id)
+        elif command == '/unsubscribe':
+            return self.info_commands.handle_unsubscribe(chat_id, user_id)
         elif command == '/confirm_order':
             return self.customer_order_commands.handle_confirm_order(chat_id, user_id, parts[1:])
 

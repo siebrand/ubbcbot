@@ -63,6 +63,7 @@ class Customer:
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     authorization_status: str = AuthorizationStatus.UNAUTHORIZED.value
+    subscribed_to_offers: bool = False
     created_at: datetime = field(default_factory=datetime.utcnow)
 
 @dataclass
