@@ -127,6 +127,8 @@ class BotService:
             return self._handle_my_orders(chat_id, user_id)
         elif command == '/list_offers':
             return self._handle_list_offers(chat_id, user_id)
+        elif command == '/confirm_order':
+            return self._handle_confirm_order(chat_id, user_id, parts[1:])
 
         # Admin-only commands
         if self._is_admin(user_id):
@@ -620,6 +622,117 @@ class BotService:
             if not customer:
                 self._send_message(chat_id, "❌ Customer not found")
                 return {'status': 'customer_not_found'}
+
+            # Check for existing orders for this offer
+            existing_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.offer_id == offer_id and o.status != 'cancelled']
+            if existing_orders:
+                # Show existing orders and request confirmation
+                message = f"⚠️ You already have orders for {offer.name}:\n\n"
+                for order in existing_orders:
+                    if isinstance(order.created_at, str):
+                        from datetime import datetime
+                        order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+                    else:
+                        order_date = order.created_at.strftime('%Y-%m-%d')
+                    message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
+                
+                message += f"\nAre you sure you want to order {quantity}x more?\n"
+                message += f"Confirm with: /confirm_order {offer_id} {quantity}"
+                
+                self._send_message(chat_id, message)
+                return {'status': 'confirmation_required'}
+
+            # Find available box
+            boxes = self.db.get_boxes_by_offer(offer_id)
+            available_box = None
+            
+            for box in boxes:
+                if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value]:
+                    if box.current_quantity + quantity <= box.max_capacity:
+                        available_box = box
+                        break
+
+            # Create new box if needed
+            if not available_box:
+                available_box = Box(
+                    offer_id=offer_id,
+                    max_capacity=offer.wholesale_box_size,
+                    min_breakeven=offer.min_quantity_breakeven
+                )
+                self.db.create_box(available_box)
+
+            # Create order
+            from decimal import Decimal
+            order = Order(
+                customer_id=customer.customer_id,
+                box_id=available_box.box_id,
+                offer_id=offer_id,
+                quantity=quantity,
+                unit_price=Decimal(str(offer.price_per_unit)),
+                total_price=Decimal(str(offer.price_per_unit)) * quantity
+            )
+
+            if self.db.create_order(order):
+                # Update box quantity and status
+                new_quantity = available_box.current_quantity + quantity
+                updates = {'current_quantity': new_quantity}
+                
+                if new_quantity >= available_box.min_breakeven:
+                    updates['status'] = BoxStatus.MINIMUM_REACHED.value
+                if new_quantity >= available_box.max_capacity:
+                    updates['status'] = BoxStatus.FULL.value
+
+                self.db.update_box(available_box.box_id, updates)
+
+                self._send_message(chat_id, 
+                    f"✅ Order placed!\n"
+                    f"Order ID: {order.order_id}\n"
+                    f"Product: {offer.name}\n"
+                    f"Quantity: {quantity}\n"
+                    f"Total: €{order.total_price:.2f}")
+                return {'status': 'success'}
+            else:
+                self._send_message(chat_id, "❌ Failed to place order")
+                return {'status': 'error'}
+
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid quantity format")
+            return {'status': 'invalid_format'}
+
+    def _handle_confirm_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
+        """Handle /confirm_order command"""
+        if len(args) < 2:
+            self._send_message(chat_id, "Usage: /confirm_order <offer_id> <quantity>")
+            return {'status': 'invalid_args'}
+
+        try:
+            offer_id = int(args[0])
+            quantity = int(args[1])
+            
+            if quantity <= 0:
+                self._send_message(chat_id, "❌ Quantity must be positive")
+                return {'status': 'invalid_quantity'}
+
+            # Get offer and customer
+            offer = self.db.get_offer(offer_id)
+            if not offer or offer.status != OfferStatus.ACTIVE.value:
+                self._send_message(chat_id, "❌ Offer not found or inactive")
+                return {'status': 'offer_not_found'}
+
+            customer = self.db.get_customer_by_telegram_id(user_id)
+            if not customer:
+                self._send_message(chat_id, "❌ Customer not found")
+                return {'status': 'customer_not_found'}
+            
+            # Execute the order without duplicate check
+            return self._execute_order(chat_id, user_id, offer_id, quantity, offer, customer)
+            
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid format")
+            return {'status': 'invalid_format'}
+
+    def _execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer) -> Dict[str, Any]:
+        """Execute order placement"""
 
             # Find available box
             boxes = self.db.get_boxes_by_offer(offer_id)
