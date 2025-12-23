@@ -167,7 +167,9 @@ class BotService:
 
         # Admin-only commands
         if self._is_admin(user_id):
-            if command == '/add_supplier':
+            elif command == '/order_for':
+            return self._handle_order_for(chat_id, user_id, parts[1:])
+        elif command == '/add_supplier':
                 return self._handle_add_supplier(chat_id, parts[1:])
             elif command == '/create_offer':
                 return self._handle_create_offer(chat_id, parts[1:])
@@ -588,6 +590,7 @@ class BotService:
             message += "/list_suppliers - List all suppliers\n"
             message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
             message += "/box_status - View box status\n"
+            message += "/order_for <username> <offer_id> [quantity] - Place order for user\n"
             message += "/cancel_order <order_id> - Cancel customer order\n"
             message += "/confirm_cancel <order_id> - Confirm order cancellation\n"
             message += "/pending_users - View users awaiting approval\n"
@@ -830,7 +833,7 @@ class BotService:
             self._send_message(chat_id, "❌ Invalid format")
             return {'status': 'invalid_format'}
 
-    def _execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer) -> Dict[str, Any]:
+    def _execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
         """Execute order placement"""
         try:
             # Create single order
@@ -841,7 +844,8 @@ class BotService:
                 offer_id=offer_id,
                 quantity=quantity,
                 unit_price=Decimal(str(offer.price_per_unit)),
-                total_price=Decimal(str(offer.price_per_unit)) * quantity
+                total_price=Decimal(str(offer.price_per_unit)) * quantity,
+                placed_by_admin=placed_by_admin
             )
 
             if not self.db.create_order(order):
@@ -987,3 +991,75 @@ class BotService:
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
+    def _handle_order_for(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
+        """Handle /order_for command - admin places order for another user"""
+        if len(args) < 2:
+            self._send_message(chat_id, "Usage: /order_for <username> <offer_id> [quantity]")
+            return {'status': 'invalid_args'}
+
+        try:
+            username = args[0]
+            offer_id = int(args[1])
+            quantity = int(args[2]) if len(args) > 2 else 1
+
+            if quantity <= 0:
+                self._send_message(chat_id, "❌ Quantity must be positive")
+                return {'status': 'invalid_quantity'}
+
+            # Find target customer
+            target_customer = self._find_customer_by_identifier(username)
+            if not target_customer:
+                self._send_message(chat_id, f"❌ User '{username}' not found")
+                return {'status': 'user_not_found'}
+
+            # Get offer
+            offer = self.db.get_offer(offer_id)
+            if not offer or offer.status != OfferStatus.ACTIVE.value:
+                self._send_message(chat_id, "❌ Offer not found or inactive")
+                return {'status': 'offer_not_found'}
+
+            # Check 5-unit limit for target customer
+            existing_orders = [o for o in self.db.get_orders_by_customer(target_customer.customer_id) if o.offer_id == offer_id and o.status != 'cancelled']
+            total_existing = sum(order.quantity for order in existing_orders)
+            
+            if total_existing + quantity > 5:
+                message = f"❌ Order exceeds 5-unit limit for {target_customer.first_name or username}\n\n"
+                message += f"Their existing orders ({total_existing} units):\n"
+                for order in existing_orders:
+                    if isinstance(order.created_at, str):
+                        from datetime import datetime
+                        order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+                    else:
+                        order_date = order.created_at.strftime('%Y-%m-%d')
+                    message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
+                
+                remaining_allowed = 5 - total_existing
+                if remaining_allowed > 0:
+                    message += f"\nMaximum you can order for them: {remaining_allowed} units"
+                else:
+                    message += f"\nThey have reached the 5-unit limit for this offer"
+                
+                self._send_message(chat_id, message)
+                return {'status': 'limit_exceeded'}
+
+            # Execute the order for the target customer
+            result = self._execute_order(chat_id, user_id, offer_id, quantity, offer, target_customer, placed_by_admin=True)
+            
+            if result['status'] == 'success':
+                # Notify target customer
+                customer_message = f"🍺 An order has been placed for you by admin\n\n"
+                customer_message += f"Product: {offer.name}\n"
+                customer_message += f"Quantity: {quantity}\n"
+                customer_message += f"Total: €{offer.price_per_unit * quantity:.2f}\n"
+                customer_message += f"Status: pending"
+                self._send_message(target_customer.telegram_user_id, customer_message)
+                
+                # Confirm to admin
+                display_name = target_customer.first_name or username
+                self._send_message(chat_id, f"✅ Order placed for {display_name}")
+            
+            return result
+
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid format")
+            return {'status': 'invalid_format'}

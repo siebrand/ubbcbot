@@ -85,6 +85,7 @@ class Order:
     unit_price: Decimal = Decimal('0.0')
     total_price: Decimal = Decimal('0.0')
     status: str = OrderStatus.PENDING.value
+    placed_by_admin: bool = False
     created_at: datetime = field(default_factory=datetime.utcnow)
 
 @dataclass
