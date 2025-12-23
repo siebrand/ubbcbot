@@ -196,18 +196,31 @@ class BotService:
         # Remove bot mention from command if present
         if '@' in command:
             command = command.split('@')[0]
+        
+        # In production, redirect group commands to PM (except group-specific ones)
+        is_group_chat = chat_id < 0
+        group_allowed_commands = {'/start', '/order', '/confirm_order'}  # Commands allowed in groups
+        
+        if (self.environment == 'prod' and is_group_chat and 
+            command not in group_allowed_commands):
+            # Send PM redirect message
+            from handlers.base_handler import BaseHandler
+            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            base_handler._send_message(user_id, f"Please use commands in private messages. Send {command} here.")
+            return {'status': 'redirected_to_pm'}
 
         # Check user authorization (admin always approved)
         if not self._is_admin(user_id):
             customer = self.db.get_customer_by_telegram_id(user_id)
             if not customer or customer.authorization_status != AuthorizationStatus.APPROVED.value:
                 if command == '/start':
-                    return self.auth_commands.handle_unauthorized_start(chat_id)
+                    return self.auth_commands.handle_unauthorized_start(chat_id if not is_group_chat or self.environment == 'test' else user_id)
                 else:
                     # Use auth handler to send unauthorized message
                     from handlers.base_handler import BaseHandler
                     base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                    base_handler._send_message(chat_id, "❌ You are not authorized to use this bot. Send /start for more information.")
+                    target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
+                    base_handler._send_message(target_chat, "❌ You are not authorized to use this bot. Send /start for more information.")
                     return {'status': 'unauthorized'}
 
         # Handle deep link start parameters
@@ -228,61 +241,65 @@ class BotService:
                     pass  # Fall through to normal start handling
         
         # Universal commands (available to everyone)
+        target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
+        
         if command == '/start' or command == '/help':
-            return self.info_commands.handle_start(chat_id, user_id)
+            return self.info_commands.handle_start(target_chat, user_id)
         elif command == '/order':
-            return self.customer_order_commands.handle_order(chat_id, user_id, parts[1:])
+            return self.customer_order_commands.handle_order(chat_id, user_id, parts[1:])  # Keep in group
         elif command == '/my_orders':
-            return self.info_commands.handle_my_orders(chat_id, user_id)
+            return self.info_commands.handle_my_orders(target_chat, user_id)
         elif command == '/list_offers':
-            return self.info_commands.handle_list_offers(chat_id, user_id)
+            return self.info_commands.handle_list_offers(target_chat, user_id)
         elif command == '/subscribe':
-            return self.info_commands.handle_subscribe(chat_id, user_id)
+            return self.info_commands.handle_subscribe(target_chat, user_id)
         elif command == '/unsubscribe':
-            return self.info_commands.handle_unsubscribe(chat_id, user_id)
+            return self.info_commands.handle_unsubscribe(target_chat, user_id)
         elif command == '/confirm_order':
-            return self.customer_order_commands.handle_confirm_order(chat_id, user_id, parts[1:])
+            return self.customer_order_commands.handle_confirm_order(chat_id, user_id, parts[1:])  # Keep in group
 
         # Admin-only commands
         if self._is_admin(user_id):
+            admin_target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
+            
             # Test commands
             if command == '/setup_test_data':
-                return self.test_commands.handle_setup_test_data(chat_id)
+                return self.test_commands.handle_setup_test_data(admin_target_chat)
             
             # Supplier commands
             elif command == '/add_supplier':
-                return self.supplier_commands.handle_add_supplier(chat_id, parts[1:])
+                return self.supplier_commands.handle_add_supplier(admin_target_chat, parts[1:])
             elif command == '/list_suppliers':
-                return self.supplier_commands.handle_list_suppliers(chat_id)
+                return self.supplier_commands.handle_list_suppliers(admin_target_chat)
             
             # Offer commands
             elif command == '/create_offer':
-                return self.offer_commands.handle_create_offer(chat_id, parts[1:])
+                return self.offer_commands.handle_create_offer(admin_target_chat, parts[1:])
             elif command == '/box_status':
-                return self.offer_commands.handle_box_status(chat_id)
+                return self.offer_commands.handle_box_status(admin_target_chat)
             
             # Admin order commands
             elif command == '/order_for':
-                return self.admin_order_commands.handle_order_for(chat_id, user_id, parts[1:])
+                return self.admin_order_commands.handle_order_for(admin_target_chat, user_id, parts[1:])
             elif command == '/cancel_order':
-                return self.admin_order_commands.handle_cancel_order(chat_id, parts[1:])
+                return self.admin_order_commands.handle_cancel_order(admin_target_chat, parts[1:])
             elif command == '/confirm_cancel':
-                return self.admin_order_commands.handle_confirm_cancel(chat_id, parts[1:])
+                return self.admin_order_commands.handle_confirm_cancel(admin_target_chat, parts[1:])
             elif command == '/user_orders':
-                return self.admin_order_commands.handle_user_orders(chat_id, parts[1:])
+                return self.admin_order_commands.handle_user_orders(admin_target_chat, parts[1:])
             elif command == '/all_orders':
-                return self.admin_order_commands.handle_all_orders(chat_id, parts[1:])
+                return self.admin_order_commands.handle_all_orders(admin_target_chat, parts[1:])
             
             # User management commands
             elif command == '/pending_users':
-                return self.user_commands.handle_pending_users(chat_id)
+                return self.user_commands.handle_pending_users(admin_target_chat)
             elif command == '/approve_user':
-                return self.user_commands.handle_approve_user(chat_id, parts[1:])
+                return self.user_commands.handle_approve_user(admin_target_chat, parts[1:])
             elif command == '/reject_user':
-                return self.user_commands.handle_reject_user(chat_id, parts[1:])
+                return self.user_commands.handle_reject_user(admin_target_chat, parts[1:])
             elif command == '/user_status':
-                return self.user_commands.handle_user_status(chat_id, parts[1:])
+                return self.user_commands.handle_user_status(admin_target_chat, parts[1:])
             elif command == '/update_customer':
-                return self.user_commands.handle_update_customer(chat_id, parts[1:])
+                return self.user_commands.handle_update_customer(admin_target_chat, parts[1:])
 
         return {'status': 'unknown_command'}

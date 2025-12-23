@@ -138,7 +138,7 @@ class OfferCommands(BaseHandler):
         
         # Send to default group
         if default_group_id:
-            self._send_message(int(default_group_id), announcement, reply_markup=reply_markup)
+            self._send_message(int(default_group_id), announcement, reply_markup=reply_markup, force_group=True)
         
         # Send to subscribers in batches
         self._notify_subscribers(announcement, reply_markup)

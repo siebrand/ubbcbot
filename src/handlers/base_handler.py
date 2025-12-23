@@ -41,7 +41,7 @@ class BaseHandler:
             return ""
         return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#x27;')
 
-    def _send_message(self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None) -> bool:
+    def _send_message(self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False) -> bool:
         """Send message to Telegram chat"""
         import requests
         
@@ -50,6 +50,13 @@ class BaseHandler:
         
         if not self.telegram_token:
             logger.error("Telegram token is empty")
+            return False
+        
+        # In production, redirect to PM unless explicitly for group
+        if self.environment == 'prod' and chat_id < 0 and not force_group:
+            # This is a group chat in production - we need user_id to send PM
+            # For now, just log and don't send (caller should handle PM sending)
+            logger.info(f"Production group message blocked: {text[:50]}...")
             return False
             
         url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
