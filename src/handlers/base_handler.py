@@ -55,7 +55,8 @@ class BaseHandler:
         url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
         data = {
             'chat_id': chat_id,
-            'text': text
+            'text': text,
+            'disable_web_page_preview': True
         }
         
         if parse_mode:
