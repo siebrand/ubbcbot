@@ -277,6 +277,10 @@ class BotService:
                 return self.offer_commands.handle_create_offer(admin_target_chat, parts[1:])
             elif command == '/box_status':
                 return self.offer_commands.handle_box_status(admin_target_chat)
+            elif command == '/fulfill_offer':
+                return self.offer_commands.handle_fulfill_offer(admin_target_chat, parts[1:])
+            elif command == '/confirm_fulfill':
+                return self.offer_commands.handle_confirm_fulfill(admin_target_chat, parts[1:])
             
             # Admin order commands
             elif command == '/order_for':

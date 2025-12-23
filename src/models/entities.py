@@ -8,6 +8,7 @@ import uuid
 class OfferStatus(Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
+    ORDERED = "ordered"
     COMPLETED = "completed"
     DELIVERED = "delivered"
 

@@ -134,6 +134,8 @@ Expected response should show:
 - `/list_suppliers` - View all registered suppliers
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
 - `/box_status` - View box status and capacity
+- `/fulfill_offer <offer_id>` - Start fulfillment process for an offer
+- `/confirm_fulfill <offer_id> <boxes_ordered>` - Confirm fulfillment with box count
 - `/cancel_order <order_id>` - Cancel customer order (with confirmation for full boxes)
 - `/user_orders <username>` - View orders for specific user
 - `/all_orders [active|cancelled|all]` - Download CSV of all orders (default: active)
