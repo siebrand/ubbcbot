@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Optional, Dict, Any
 from enum import Enum
 from decimal import Decimal
@@ -42,7 +42,7 @@ class Supplier:
     name: str = ""
     contact_email: Optional[str] = None
     status: str = "active"
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 @dataclass
 class Offer:
@@ -55,7 +55,7 @@ class Offer:
     min_quantity_breakeven: int = 10
     max_quantity: Optional[int] = None
     status: str = OfferStatus.ACTIVE.value
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 @dataclass
 class Customer:
@@ -66,7 +66,7 @@ class Customer:
     last_name: Optional[str] = None
     authorization_status: str = AuthorizationStatus.UNAUTHORIZED.value
     subscribed_to_offers: bool = False
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 @dataclass
 class Box:
@@ -76,7 +76,7 @@ class Box:
     max_capacity: int = 12
     min_breakeven: int = 10
     status: str = BoxStatus.OPEN.value
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 @dataclass
 class Order:
@@ -89,13 +89,13 @@ class Order:
     total_price: Decimal = Decimal('0.0')
     status: str = OrderStatus.PENDING.value
     placed_by_admin: bool = False
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 @dataclass
 class DiscountPeriod:
     discount_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     discount_percentage: Decimal = Decimal('0.0')
-    start_time: datetime = field(default_factory=datetime.utcnow)
+    start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     end_time: Optional[datetime] = None
     status: str = DiscountStatus.ACTIVE.value
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

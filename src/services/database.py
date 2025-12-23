@@ -295,8 +295,8 @@ class DynamoDBService:
 
     def get_active_discount(self) -> Optional[DiscountPeriod]:
         try:
-            from datetime import datetime
-            now = datetime.utcnow()
+            from datetime import datetime, UTC
+            now = datetime.now(UTC)
             response = self.discounts_table.scan(
                 FilterExpression='#status = :status AND start_time <= :now AND (attribute_not_exists(end_time) OR end_time > :now)',
                 ExpressionAttributeNames={'#status': 'status'},
