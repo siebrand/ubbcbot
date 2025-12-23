@@ -13,29 +13,47 @@ class InfoCommands(BaseHandler):
             logger.info(f"Processing /start command for user {user_id}, chat {chat_id}")
         
         message = "🍺 Welcome to UBBC Bot!\n\n"
-        message += "Available commands:\n"
+        message += "Customer commands:\n"
         message += "/start - Show this help\n"
         message += "/list_offers - View available offers\n"
         message += "/order <offer_id> [quantity] - Place an order\n"
         message += "/confirm_order <offer_id> <quantity> - Confirm duplicate order\n"
         message += "/my_orders - View your orders\n"
+        message += "/subscribe - Subscribe to offer notifications\n"
+        message += "/unsubscribe - Unsubscribe from notifications\n"
         
         if self._is_admin(user_id):
             if self.environment == 'test':
                 logger.info(f"User {user_id} is admin, adding admin commands")
             message += "\n👑 Admin commands:\n"
-            message += "/setup_test_data - Setup test data (test env only)\n"
+            
+            # Test environment only
+            if self.environment == 'test':
+                message += "/setup_test_data - Setup test data\n"
+            
+            # Supplier management
             message += "/add_supplier <name> - Add supplier\n"
             message += "/list_suppliers - List all suppliers\n"
-            message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
+            
+            # Offer management
+            message += "/create_offer <supplier> <name> <price> <box_size> - Create offer\n"
             message += "/box_status - View box status\n"
+            message += "/fulfill_offer <offer_id> - Start fulfillment process\n"
+            message += "/confirm_fulfill <offer_id> <boxes> - Confirm fulfillment\n"
+            
+            # Order management
             message += "/order_for <username> <offer_id> [quantity] - Place order for user\n"
             message += "/cancel_order <order_id> - Cancel customer order\n"
             message += "/confirm_cancel <order_id> - Confirm order cancellation\n"
+            message += "/user_orders <username> - View orders for specific user\n"
+            message += "/all_orders [active|cancelled|all] - Download CSV of orders\n"
+            
+            # User management
             message += "/pending_users - View users awaiting approval\n"
-            message += "/approve_user <name_or_username> - Approve user\n"
-            message += "/reject_user <name_or_username> - Reject user\n"
-            message += "/user_status <name_or_username> - Check user status\n"
+            message += "/approve_user <username> - Approve user\n"
+            message += "/reject_user <username> - Reject user\n"
+            message += "/user_status <username> - Check user status\n"
+            message += "/update_customer <username> <first_name> [last_name] - Update customer name\n"
 
         success = self._send_message(chat_id, message)
         if self.environment == 'test':
