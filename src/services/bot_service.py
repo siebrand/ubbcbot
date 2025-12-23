@@ -691,27 +691,54 @@ class BotService:
             self._send_message(chat_id, "You have no orders")
             return {'status': 'no_orders'}
 
-        message = "📋 Your Orders:\n\n"
+        # Sort orders by offer_id ascending
+        orders.sort(key=lambda x: x.offer_id)
+        
+        # Aggregate orders by offer, price and status
+        from decimal import Decimal
+        aggregated = {}
         for order in orders:
             offer = self.db.get_offer(order.offer_id)
             offer_name = offer.name if offer else "Unknown"
             
+            key = (order.offer_id, order.unit_price, order.status)
+            if key not in aggregated:
+                aggregated[key] = {
+                    'offer_name': offer_name,
+                    'unit_price': order.unit_price,
+                    'status': order.status,
+                    'quantity': 0,
+                    'total_price': Decimal('0.0'),
+                    'dates': set()
+                }
+            
+            aggregated[key]['quantity'] += order.quantity
+            aggregated[key]['total_price'] += order.total_price
+            
+            # Add date
+            if isinstance(order.created_at, str):
+                from datetime import datetime
+                order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+            else:
+                order_date = order.created_at.strftime('%Y-%m-%d')
+            aggregated[key]['dates'].add(order_date)
+
+        message = "📋 Your Orders:\n\n"
+        for (offer_id, unit_price, status), data in aggregated.items():
             status_emoji = {
                 'pending': '⏳',
                 'confirmed': '✅',
                 'cancelled': '❌',
                 'delivered': '📦'
-            }.get(order.status, '❓')
+            }.get(status, '❓')
             
-            # Format date as YYYY-MM-DD
-            if isinstance(order.created_at, str):
-                # Parse ISO string to datetime
-                from datetime import datetime
-                order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+            # Determine date display
+            if len(data['dates']) == 1:
+                date_display = f"[{list(data['dates'])[0]}]"
             else:
-                order_date = order.created_at.strftime('%Y-%m-%d')
+                date_display = "[multiple days]"
             
-            message += f"{status_emoji} {order_date} {offer_name} €{order.unit_price:.2f} {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
+            message += f"{status_emoji} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} ({status})\n"
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
