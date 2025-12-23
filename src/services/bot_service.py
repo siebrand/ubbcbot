@@ -491,6 +491,9 @@ class BotService:
             if offer.status == OfferStatus.ACTIVE.value:
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
                 
+                # Sort boxes by creation time (box_id contains timestamp)
+                boxes.sort(key=lambda x: x.box_id)
+                
                 for box in boxes:
                     status_emoji = {
                         BoxStatus.OPEN.value: "🟢",
@@ -726,7 +729,7 @@ class BotService:
             created_orders = []
             
             while remaining_quantity > 0:
-                # Find available box
+                # Find available box (refresh data each time)
                 boxes = self.db.get_boxes_by_offer(offer_id)
                 available_box = None
                 
@@ -772,7 +775,10 @@ class BotService:
                     if new_quantity >= available_box.max_capacity:
                         updates['status'] = BoxStatus.FULL.value
 
-                    self.db.update_box(available_box.box_id, updates)
+                    if not self.db.update_box(available_box.box_id, updates):
+                        self._send_message(chat_id, "❌ Failed to update box")
+                        return {'status': 'error'}
+                    
                     remaining_quantity -= order_quantity
                 else:
                     self._send_message(chat_id, "❌ Failed to place order")
