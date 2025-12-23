@@ -87,13 +87,13 @@ class AdminOrderCommands(BaseHandler):
                 self._send_message(chat_id, "❌ Offer not found or inactive")
                 return {'status': 'offer_not_found'}
 
-            # Check 5-unit limit for target customer
+            # Check 10-unit admin limit for target customer
             existing_orders = [o for o in self.db.get_orders_by_customer(target_customer.customer_id) 
                              if o.offer_id == offer_id and o.status != 'cancelled']
             total_existing = sum(order.quantity for order in existing_orders)
             
-            if total_existing + quantity > 5:
-                message = f"❌ Order exceeds 5-unit limit for {target_customer.first_name or username}\n\n"
+            if total_existing + quantity > 10:
+                message = f"❌ Order exceeds 10-unit admin limit for {target_customer.first_name or username}\n\n"
                 message += f"Their existing orders ({total_existing} units):\n"
                 for order in existing_orders:
                     if isinstance(order.created_at, str):
@@ -103,11 +103,11 @@ class AdminOrderCommands(BaseHandler):
                         order_date = order.created_at.strftime('%Y-%m-%d')
                     message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
                 
-                remaining_allowed = 5 - total_existing
+                remaining_allowed = 10 - total_existing
                 if remaining_allowed > 0:
                     message += f"\nMaximum you can order for them: {remaining_allowed} units"
                 else:
-                    message += f"\nThey have reached the 5-unit limit for this offer"
+                    message += f"\nThey have reached the 10-unit admin limit for this offer"
                 
                 self._send_message(chat_id, message)
                 return {'status': 'limit_exceeded'}
