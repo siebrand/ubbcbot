@@ -20,7 +20,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 ### 2.1 Offer Management
 - **FR-001**: Admin can create offers with the following attributes:
   - Offer ID (auto-generated)
-  - Supplier (from registered suppliers)
+  - Supplier name (from registered suppliers)
   - Beer name/description
   - Price per unit
   - Wholesale box size (e.g., 12 units)
@@ -363,7 +363,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 ### 6.2 Offer
 ```
 - offer_id (Primary Key)
-- supplier_id (Foreign Key)
+- supplier_name (String)
 - name (String)
 - description (Text)
 - price_per_unit (Decimal)
@@ -503,7 +503,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-002**: Orders cannot be placed on inactive offers
 - **BR-003**: Customers can place multiple orders for same offer/option with confirmation
 - **BR-004**: Orders can only be cancelled if box status is "open" or "minimum_reached"
-- **BR-005**: Offers must have valid active supplier to be created
+- **BR-005**: Offers must reference valid registered supplier name to be created
 - **BR-006**: Wholesale box size must be one of: 1, 2, 6, 8, 10, 12, 15, 16, 18, 20, 24
 
 ### 7.2 Box Management

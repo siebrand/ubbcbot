@@ -34,7 +34,7 @@ class Supplier:
 @dataclass
 class Offer:
     offer_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    supplier_id: str = ""
+    supplier_name: str = ""
     name: str = ""
     description: str = ""
     price_per_unit: float = 0.0

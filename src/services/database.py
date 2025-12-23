@@ -54,6 +54,21 @@ class DynamoDBService:
             print(f"Error getting supplier: {e}")
             return None
 
+    def get_supplier_by_name(self, name: str) -> Optional[Supplier]:
+        try:
+            response = self.suppliers_table.scan(
+                FilterExpression='#name = :name',
+                ExpressionAttributeNames={'#name': 'name'},
+                ExpressionAttributeValues={':name': name}
+            )
+            items = response.get('Items', [])
+            if items:
+                return Supplier(**items[0])
+            return None
+        except Exception as e:
+            print(f"Error getting supplier by name: {e}")
+            return None
+
     def list_suppliers(self) -> List[Supplier]:
         try:
             response = self.suppliers_table.scan()

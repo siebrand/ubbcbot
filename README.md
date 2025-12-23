@@ -33,7 +33,7 @@ Telegram beer ordering bot with AWS serverless architecture.
    order - Place order: /order <offer_id> [quantity]
    my_orders - View your orders
    add_supplier - [Admin] Add supplier: /add_supplier <name>
-   create_offer - [Admin] Create offer: /create_offer <supplier_id> <name> <price> <box_size>
+   create_offer - [Admin] Create offer: /create_offer <supplier_name> <name> <price> <box_size>
    list_offers - [Admin] View all offers
    box_status - [Admin] View box status
    ```
@@ -139,7 +139,7 @@ Expected response should show:
 
 ### Admin Commands (User ID: 15005473)
 - `/add_supplier <name>` - Register new supplier
-- `/create_offer <supplier_id> <name> <price> <box_size>` - Create beer offer
+- `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
 - `/list_offers` - View all active offers
 - `/box_status` - View box status and capacity
 

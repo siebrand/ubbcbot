@@ -135,11 +135,11 @@ class BotService:
     def _handle_create_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /create_offer command"""
         if len(args) < 4:
-            self._send_message(chat_id, "Usage: /create_offer <supplier_id> <name> <price> <box_size>")
+            self._send_message(chat_id, "Usage: /create_offer <supplier_name> <name> <price> <box_size>")
             return {'status': 'invalid_args'}
 
         try:
-            supplier_id = args[0]
+            supplier_name = args[0]
             name = args[1]
             price = float(args[2])
             box_size = int(args[3])
@@ -151,14 +151,14 @@ class BotService:
                 return {'status': 'invalid_box_size'}
 
             # Check supplier exists
-            supplier = self.db.get_supplier(supplier_id)
+            supplier = self.db.get_supplier_by_name(supplier_name)
             if not supplier:
                 self._send_message(chat_id, "❌ Supplier not found")
                 return {'status': 'supplier_not_found'}
 
             # Create offer
             offer = Offer(
-                supplier_id=supplier_id,
+                supplier_name=supplier_name,
                 name=name,
                 price_per_unit=price,
                 wholesale_box_size=box_size,
@@ -195,12 +195,9 @@ class BotService:
         message = "📋 <b>Active Offers:</b>\n\n"
         for offer in offers:
             if offer.status == OfferStatus.ACTIVE.value:
-                supplier = self.db.get_supplier(offer.supplier_id)
-                supplier_name = supplier.name if supplier else "Unknown"
-                
                 message += f"🍺 <b>{offer.name}</b>\n"
                 message += f"   ID: {offer.offer_id}\n"
-                message += f"   Supplier: {supplier_name}\n"
+                message += f"   Supplier: {offer.supplier_name}\n"
                 message += f"   Price: €{offer.price_per_unit:.2f}\n"
                 message += f"   Box Size: {offer.wholesale_box_size}\n\n"
 
@@ -243,7 +240,7 @@ class BotService:
         if self._is_admin(user_id):
             message += "\n👑 Admin commands:\n"
             message += "/add_supplier <name> - Add supplier\n"
-            message += "/create_offer <supplier_id> <name> <price> <box_size> - Create offer\n"
+            message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
             message += "/list_offers - List all offers\n"
             message += "/box_status - View box status\n"
 
