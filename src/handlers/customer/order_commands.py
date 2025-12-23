@@ -165,7 +165,7 @@ class CustomerOrderCommands(BaseHandler):
                 available_box = None
                 
                 for box in boxes:
-                    if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value]:
+                    if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
                         available_space = box.max_capacity - box.current_quantity
                         if available_space > 0:
                             available_box = box
@@ -188,10 +188,11 @@ class CustomerOrderCommands(BaseHandler):
                 new_quantity = available_box.current_quantity + box_quantity
                 updates = {'current_quantity': new_quantity}
                 
+                # Update box status based on new quantity
                 if new_quantity >= available_box.max_capacity:
-                    updates['status'] = BoxStatus.FULL.value
+                    updates['status'] = BoxStatus.FULL.value if available_box.status != BoxStatus.ORDERED.value else BoxStatus.ORDERED.value
                 elif new_quantity >= available_box.min_breakeven:
-                    updates['status'] = BoxStatus.MINIMUM_REACHED.value
+                    updates['status'] = BoxStatus.MINIMUM_REACHED.value if available_box.status != BoxStatus.ORDERED.value else BoxStatus.ORDERED.value
 
                 if not self.db.update_box(available_box.box_id, updates):
                     logger.error(f"Failed to update box {available_box.box_id}")
@@ -202,9 +203,18 @@ class CustomerOrderCommands(BaseHandler):
                 remaining_quantity -= box_quantity
                 logger.info(f"Assigned {box_quantity} units to box, remaining: {remaining_quantity}")
 
-            # Update order with first box_id (for reference)
+            # Update order with first box_id and appropriate status
             if boxes_used:
-                self.db.update_order(order.order_id, {'box_id': boxes_used[0]})
+                # Get updated box status to determine final order status
+                updated_box = self.db.get_box(boxes_used[0])
+                final_status = 'ordered' if updated_box.status == BoxStatus.ORDERED.value else 'pending'
+                self.db.update_order(order.order_id, {'box_id': boxes_used[0], 'status': final_status})
+                
+                # Update order object for confirmation message
+                order.status = final_status
+                
+                # Check if offer should be marked as sold out
+                self._check_and_update_offer_status(offer_id)
 
             # Send confirmation message
             if len(boxes_used) == 1:
@@ -233,6 +243,20 @@ class CustomerOrderCommands(BaseHandler):
             logger.error(f"Error in execute_order: {e}")
             self._send_message(chat_id, "❌ Order processing failed")
             return {'status': 'error'}
+    
+    def _check_and_update_offer_status(self, offer_id: int):
+        """Check if offer should be marked as sold out"""
+        try:
+            boxes = self.db.get_boxes_by_offer(offer_id)
+            total_capacity = sum(box.max_capacity for box in boxes)
+            total_ordered = sum(box.current_quantity for box in boxes)
+            
+            # Check if all units are ordered by customers
+            if total_ordered >= total_capacity:
+                self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
+                logger.info(f"Offer {offer_id} marked as sold out - all {total_capacity} units ordered")
+        except Exception as e:
+            logger.error(f"Error checking offer status: {e}")
     
     def _notify_channel_order(self, customer, offer, quantity):
         """Send order notification to default group"""
