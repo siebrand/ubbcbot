@@ -129,7 +129,7 @@ class OfferCommands(BaseHandler):
             message += f"📦 Box size: {offer.wholesale_box_size} units\n\n"
             message += f"📈 Total pending units: {total_units}\n"
             message += f"📦 Boxes needed: {boxes_needed}\n\n"
-            message += f"📋 Pending Orders ({len(pending_orders)}):"\n"
+            message += f"📋 Pending Orders ({len(pending_orders)} orders):\n"
             
             for i, order in enumerate(pending_orders[:10], 1):  # Show first 10
                 customer = self.db.get_customer(order.customer_id)
@@ -139,7 +139,7 @@ class OfferCommands(BaseHandler):
                     order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%m-%d %H:%M')
                 else:
                     order_date = order.created_at.strftime('%m-%d %H:%M')
-                message += f"{i}. {customer_name}: {order.quantity}x [{order_date}]\n"
+                message += f"{i}. {customer_name}: {order.quantity} units [{order_date}]\n"
             
             if len(pending_orders) > 10:
                 message += f"... and {len(pending_orders) - 10} more orders\n"
@@ -257,14 +257,27 @@ class OfferCommands(BaseHandler):
                 if self.db.delete_box(box.box_id):
                     deleted_boxes += 1
             # Send summary to admin
+            fulfilled_units = sum(order.quantity for order in fulfilled_orders)
             summary = f"✅ Offer {offer_id} fulfilled with {boxes_ordered} boxes:\n\n"
-            summary += f"✅ Fulfilled: {len(fulfilled_orders)} orders\n"
+            summary += f"✅ Fulfilled: {len(fulfilled_orders)} orders ({fulfilled_units} units)\n"
             if updated_orders:
-                summary += f"⚠️ Updated: {len(updated_orders)} orders (quantity reduced)\n"
+                order, old_qty, new_qty = updated_orders[0]
+                customer = self.db.get_customer(order.customer_id)
+                customer_name = customer.first_name if customer else "Unknown"
+                summary += f"⚠️ Reduced: {customer_name}'s order from {old_qty} to {new_qty} units\n"
             if cancelled_orders:
-                summary += f"❌ Cancelled: {len(cancelled_orders)} orders\n"
+                cancelled_details = []
+                cancelled_units = 0
+                for order in cancelled_orders:
+                    customer = self.db.get_customer(order.customer_id)
+                    customer_name = customer.first_name if customer else "Unknown"
+                    cancelled_details.append(f"{customer_name} ({order.quantity} units)")
+                    cancelled_units += order.quantity
+                summary += f"❌ Cancelled: {len(cancelled_orders)} orders ({cancelled_units} units) - {', '.join(cancelled_details)}\n"
             summary += f"\n📦 Total units allocated: {units_allocated}/{units_available}\n"
             summary += f"📊 {offer_status_msg}"
+            if deleted_boxes > 0:
+                summary += f"\n🗑️ Cleaned up {deleted_boxes} empty boxes"
             
             self._send_message(chat_id, summary)
             return {'status': 'success'}
