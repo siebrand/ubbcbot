@@ -169,6 +169,8 @@ class BotService:
         if self._is_admin(user_id):
             if command == '/order_for':
                 return self._handle_order_for(chat_id, user_id, parts[1:])
+            elif command == '/setup_test_data':
+                return self._handle_setup_test_data(chat_id)
             elif command == '/add_supplier':
                 return self._handle_add_supplier(chat_id, parts[1:])
             elif command == '/create_offer':
@@ -586,6 +588,7 @@ class BotService:
             if self.environment == 'test':
                 logger.info(f"User {user_id} is admin, adding admin commands")
             message += "\n👑 Admin commands:\n"
+            message += "/setup_test_data - Setup test data (test env only)\n"
             message += "/add_supplier <name> - Add supplier\n"
             message += "/list_suppliers - List all suppliers\n"
             message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
@@ -1063,3 +1066,96 @@ class BotService:
         except ValueError:
             self._send_message(chat_id, "❌ Invalid format")
             return {'status': 'invalid_format'}
+    def _handle_setup_test_data(self, chat_id: int) -> Dict[str, Any]:
+        """Handle /setup_test_data command - creates test suppliers and offers (test environment only)"""
+        # Only allow in test environment
+        if self.environment != 'test':
+            self._send_message(chat_id, "❌ Test data setup is only available in test environment")
+            return {'status': 'environment_restricted'}
+            
+        try:
+            from decimal import Decimal
+            
+            # Test suppliers
+            suppliers = [
+                {"name": "HD"},
+                {"name": "DK"}, 
+                {"name": "BW"},
+                {"name": "DM"}
+            ]
+            
+            # Create suppliers
+            created_suppliers = 0
+            for supplier_data in suppliers:
+                if not self.db.get_supplier_by_name(supplier_data["name"]):
+                    supplier = Supplier(name=supplier_data["name"])
+                    if self.db.create_supplier(supplier):
+                        created_suppliers += 1
+            
+            # Test offers
+            offers = [
+                {"supplier": "HD", "name": "Hopduvel Tripel", "price": 4.50, "box_size": 12},
+                {"supplier": "DK", "name": "De Koninck Bolleke", "price": 2.80, "box_size": 24},
+                {"supplier": "BW", "name": "West Coast IPA", "price": 5.20, "box_size": 6},
+                {"supplier": "DM", "name": "Duvel Golden Ale", "price": 3.90, "box_size": 12},
+                {"supplier": "HD", "name": "Hopduvel Saison", "price": 4.20, "box_size": 12},
+                {"supplier": "BW", "name": "Hazy IPA", "price": 5.50, "box_size": 6},
+                {"supplier": "HD", "name": "Limited Edition Barrel Aged", "price": 25.00, "box_size": 1},
+                {"supplier": "DK", "name": "Vintage Reserve", "price": 18.50, "box_size": 2}
+            ]
+            
+            # Create offers
+            created_offers = 0
+            for offer_data in offers:
+                offer = Offer(
+                    supplier_name=offer_data["supplier"],
+                    name=offer_data["name"],
+                    price_per_unit=Decimal(str(offer_data["price"])),
+                    wholesale_box_size=offer_data["box_size"],
+                    min_quantity_breakeven=max(1, int(offer_data["box_size"] * 0.8))
+                )
+                
+                if self.db.create_offer(offer):
+                    created_offers += 1
+                    
+                    # Create initial box
+                    box = Box(
+                        offer_id=offer.offer_id,
+                        max_capacity=offer_data["box_size"],
+                        min_breakeven=offer.min_quantity_breakeven
+                    )
+                    self.db.create_box(box)
+                    
+                    # Auto-order 1 unit for admin
+                    admin_customer = self.db.get_customer_by_telegram_id(self.admin_user_id)
+                    if admin_customer:
+                        admin_order = Order(
+                            customer_id=admin_customer.customer_id,
+                            box_id=box.box_id,
+                            offer_id=offer.offer_id,
+                            quantity=1,
+                            unit_price=Decimal(str(offer_data["price"])),
+                            total_price=Decimal(str(offer_data["price"]))
+                        )
+                        self.db.create_order(admin_order)
+                        
+                        # Update box quantity
+                        updates = {'current_quantity': 1}
+                        if 1 >= box.max_capacity:
+                            updates['status'] = BoxStatus.FULL.value
+                        elif 1 >= box.min_breakeven:
+                            updates['status'] = BoxStatus.MINIMUM_REACHED.value
+                        self.db.update_box(box.box_id, updates)
+            
+            message = f"✅ Test data created successfully!\n\n"
+            message += f"📦 Suppliers: {created_suppliers} created\n"
+            message += f"🍺 Offers: {created_offers} created\n"
+            message += f"📋 Use /list_offers to see all offers"
+            
+            self._send_message(chat_id, message)
+            return {'status': 'success'}
+            
+        except Exception as e:
+            logger.error(f"Error setting up test data: {e}")
+            self._send_message(chat_id, "❌ Failed to setup test data")
+            return {'status': 'error'}

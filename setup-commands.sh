@@ -37,6 +37,7 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
          {\"command\": \"my_orders\", \"description\": \"View your orders\"},
          {\"command\": \"confirm_order\", \"description\": \"Confirm duplicate order\"},
          {\"command\": \"list_offers\", \"description\": \"View available offers\"},
+         {\"command\": \"setup_test_data\", \"description\": \"Setup test data (test env only)\"},
          {\"command\": \"add_supplier\", \"description\": \"Add supplier\"},
          {\"command\": \"create_offer\", \"description\": \"Create offer\"},
          {\"command\": \"list_suppliers\", \"description\": \"View all suppliers\"},

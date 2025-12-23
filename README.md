@@ -100,7 +100,7 @@ aws ssm put-parameter \
 
 1. **Test bot functionality:**
    - Send `/start` to verify registration (both private and group)
-   - Admin (ID: 15005473): Test `/add_supplier Test Supplier`
+   - Admin (ID: 15005473): Use `/setup_test_data` to create test data
    - Verify all messages are prefixed with "TEST - "
    - Test group functionality: orders, announcements
 
@@ -129,6 +129,7 @@ Expected response should show:
 ## Bot Commands
 
 ### Admin Commands (User ID: 15005473)
+- `/setup_test_data` - Setup test data (test environment only)
 - `/add_supplier <name>` - Register new supplier
 - `/list_suppliers` - View all registered suppliers
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
