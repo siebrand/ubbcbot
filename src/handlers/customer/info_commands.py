@@ -1,0 +1,148 @@
+from typing import Dict, Any
+from decimal import Decimal
+from handlers.base_handler import BaseHandler
+from models.entities import OfferStatus
+
+class InfoCommands(BaseHandler):
+    def handle_start(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /start command"""
+        import logging
+        logger = logging.getLogger()
+        
+        if self.environment == 'test':
+            logger.info(f"Processing /start command for user {user_id}, chat {chat_id}")
+        
+        message = "🍺 Welcome to UBBC Bot!\n\n"
+        message += "Available commands:\n"
+        message += "/start - Show this help\n"
+        message += "/list_offers - View available offers\n"
+        message += "/order <offer_id> [quantity] - Place an order\n"
+        message += "/confirm_order <offer_id> <quantity> - Confirm duplicate order\n"
+        message += "/my_orders - View your orders\n"
+        
+        if self._is_admin(user_id):
+            if self.environment == 'test':
+                logger.info(f"User {user_id} is admin, adding admin commands")
+            message += "\n👑 Admin commands:\n"
+            message += "/setup_test_data - Setup test data (test env only)\n"
+            message += "/add_supplier <name> - Add supplier\n"
+            message += "/list_suppliers - List all suppliers\n"
+            message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
+            message += "/box_status - View box status\n"
+            message += "/order_for <username> <offer_id> [quantity] - Place order for user\n"
+            message += "/cancel_order <order_id> - Cancel customer order\n"
+            message += "/confirm_cancel <order_id> - Confirm order cancellation\n"
+            message += "/pending_users - View users awaiting approval\n"
+            message += "/approve_user <name_or_username> - Approve user\n"
+            message += "/reject_user <name_or_username> - Reject user\n"
+            message += "/user_status <name_or_username> - Check user status\n"
+
+        success = self._send_message(chat_id, message)
+        if self.environment == 'test':
+            logger.info(f"Message send result: {success}")
+        
+        return {'status': 'success'}
+
+    def handle_list_offers(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /list_offers command"""
+        offers = self.db.list_offers()
+        
+        if not offers:
+            self._send_message(chat_id, "No offers found")
+            return {'status': 'no_offers'}
+
+        # Sort offers by offer_id ascending
+        offers.sort(key=lambda x: x.offer_id)
+
+        message = ""
+        
+        # Check for active discount
+        active_discount = self.db.get_active_discount()
+        if active_discount:
+            message += f"🎉 DISCOUNT ACTIVE: {active_discount.discount_percentage}% OFF!\n"
+            if active_discount.end_time:
+                message += f"Valid until: {active_discount.end_time.strftime('%Y-%m-%d %H:%M')}\n"
+            message += "\n"
+        
+        message += "📋 Active Offers:\n\n"
+        for offer in offers:
+            if offer.status == OfferStatus.ACTIVE.value:
+                # Get current order count for this offer
+                boxes = self.db.get_boxes_by_offer(offer.offer_id)
+                total_ordered = sum(box.current_quantity for box in boxes)
+                
+                original_price = offer.price_per_unit
+                display_price = original_price
+                
+                if active_discount:
+                    display_price = original_price * (1 - active_discount.discount_percentage / 100)
+                    message += f"🍺 \\[{offer.offer_id}\\] {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size}) - [Order 1](https://t.me/ubbc_test_bot?start=order_{offer.offer_id}_1)\n"
+                else:
+                    message += f"🍺 \\[{offer.offer_id}\\] {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size}) - [Order 1](https://t.me/ubbc_test_bot?start=order_{offer.offer_id}_1)\n"
+
+        self._send_message(chat_id, message, 'Markdown')
+        return {'status': 'success'}
+
+    def handle_my_orders(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /my_orders command"""
+        customer = self.db.get_customer_by_telegram_id(user_id)
+        if not customer:
+            self._send_message(chat_id, "❌ Customer not found")
+            return {'status': 'customer_not_found'}
+
+        orders = self.db.get_orders_by_customer(customer.customer_id)
+        
+        if not orders:
+            self._send_message(chat_id, "You have no orders")
+            return {'status': 'no_orders'}
+
+        # Sort orders by offer_id ascending
+        orders.sort(key=lambda x: x.offer_id)
+        
+        # Aggregate orders by offer, price and status
+        aggregated = {}
+        for order in orders:
+            offer = self.db.get_offer(order.offer_id)
+            offer_name = offer.name if offer else "Unknown"
+            
+            key = (order.offer_id, order.unit_price, order.status)
+            if key not in aggregated:
+                aggregated[key] = {
+                    'offer_name': offer_name,
+                    'unit_price': order.unit_price,
+                    'status': order.status,
+                    'quantity': 0,
+                    'total_price': Decimal('0.0'),
+                    'dates': set()
+                }
+            
+            aggregated[key]['quantity'] += order.quantity
+            aggregated[key]['total_price'] += order.total_price
+            
+            # Add date
+            if isinstance(order.created_at, str):
+                from datetime import datetime
+                order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+            else:
+                order_date = order.created_at.strftime('%Y-%m-%d')
+            aggregated[key]['dates'].add(order_date)
+
+        message = "📋 Your Orders:\n\n"
+        for (offer_id, unit_price, status), data in aggregated.items():
+            status_emoji = {
+                'pending': '⏳',
+                'confirmed': '✅',
+                'cancelled': '❌',
+                'delivered': '📦'
+            }.get(status, '❓')
+            
+            # Determine date display
+            if len(data['dates']) == 1:
+                date_display = f"[{list(data['dates'])[0]}]"
+            else:
+                date_display = "[multiple days]"
+            
+            message += f"{status_emoji} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} ({status})\n"
+
+        self._send_message(chat_id, message)
+        return {'status': 'success'}
