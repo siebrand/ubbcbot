@@ -103,16 +103,19 @@ class DynamoDBService:
         try:
             update_expression = "SET "
             expression_values = {}
+            expression_names = {}
             
             for key, value in updates.items():
-                update_expression += f"{key} = :{key}, "
+                update_expression += f"#{key} = :{key}, "
                 expression_values[f":{key}"] = value
+                expression_names[f"#{key}"] = key
             
             update_expression = update_expression.rstrip(", ")
             
             self.suppliers_table.update_item(
                 Key={'supplier_id': supplier_id},
                 UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_names,
                 ExpressionAttributeValues=expression_values
             )
             return True
@@ -164,16 +167,19 @@ class DynamoDBService:
         try:
             update_expression = "SET "
             expression_values = {}
+            expression_names = {}
             
             for key, value in updates.items():
-                update_expression += f"{key} = :{key}, "
+                update_expression += f"#{key} = :{key}, "
                 expression_values[f":{key}"] = value
+                expression_names[f"#{key}"] = key
             
             update_expression = update_expression.rstrip(", ")
             
             self.offers_table.update_item(
                 Key={'offer_id': offer_id},
                 UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_names,
                 ExpressionAttributeValues=expression_values
             )
             return True
@@ -347,16 +353,19 @@ class DynamoDBService:
         try:
             update_expression = "SET "
             expression_values = {}
+            expression_names = {}
             
             for key, value in updates.items():
-                update_expression += f"{key} = :{key}, "
+                update_expression += f"#{key} = :{key}, "
                 expression_values[f":{key}"] = value
+                expression_names[f"#{key}"] = key
             
             update_expression = update_expression.rstrip(", ")
             
             self.orders_table.update_item(
                 Key={'order_id': order_id},
                 UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_names,
                 ExpressionAttributeValues=expression_values
             )
             return True
@@ -407,16 +416,19 @@ class DynamoDBService:
         try:
             update_expression = "SET "
             expression_values = {}
+            expression_names = {}
             
             for key, value in updates.items():
-                update_expression += f"{key} = :{key}, "
+                update_expression += f"#{key} = :{key}, "
                 expression_values[f":{key}"] = value
+                expression_names[f"#{key}"] = key
             
             update_expression = update_expression.rstrip(", ")
             
             self.customers_table.update_item(
                 Key={'customer_id': customer_id},
                 UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_names,
                 ExpressionAttributeValues=expression_values
             )
             return True
