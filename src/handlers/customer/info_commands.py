@@ -127,10 +127,14 @@ class InfoCommands(BaseHandler):
         for offer in offers:
             if offer.status == OfferStatus.ACTIVE.value:
                 active_found = True
-                # Get total ordered units vs total capacity
+                # Get total customer orders vs total capacity
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
-                total_ordered = sum(box.current_quantity for box in boxes)
                 total_capacity = sum(box.max_capacity for box in boxes)
+                
+                # Count actual customer orders (not box quantities)
+                all_orders = self.db.get_orders_by_offer(offer.offer_id)
+                active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
+                total_ordered = sum(order.quantity for order in active_orders)
                 
                 original_price = offer.price_per_unit
                 display_price = original_price
