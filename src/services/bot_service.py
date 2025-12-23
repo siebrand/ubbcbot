@@ -129,6 +129,10 @@ class BotService:
         """Handle bot commands"""
         parts = text.split()
         command = parts[0].lower()
+        
+        # Remove bot mention from command if present
+        if '@' in command:
+            command = command.split('@')[0]
 
         # Check user authorization (admin always approved)
         if not self._is_admin(user_id):
