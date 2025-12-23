@@ -76,9 +76,9 @@ class InfoCommands(BaseHandler):
                 
                 if active_discount:
                     display_price = original_price * (1 - active_discount.discount_percentage / 100)
-                    message += f"🍺 [{offer.offer_id}](https://t.me/ubbc_test_bot?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
+                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
                 else:
-                    message += f"🍺 [{offer.offer_id}](https://t.me/ubbc_test_bot?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
+                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
 
         self._send_message(chat_id, message, 'Markdown')
         return {'status': 'success'}

@@ -10,6 +10,26 @@ class BaseHandler:
         self.admin_user_id = admin_user_id
         self.environment = environment
         self.telegram_token = telegram_token
+        self._bot_username = None
+
+    def _get_bot_username(self) -> str:
+        """Get bot username from Telegram API"""
+        if self._bot_username:
+            return self._bot_username
+            
+        import requests
+        try:
+            url = f"https://api.telegram.org/bot{self.telegram_token}/getMe"
+            response = requests.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                self._bot_username = data['result']['username']
+                return self._bot_username
+        except Exception as e:
+            logger.error(f"Error getting bot username: {e}")
+        
+        # Fallback based on environment
+        return "ubbc_test_bot" if self.environment == 'test' else "ubbc_bot"
 
     def _is_admin(self, user_id: int) -> bool:
         """Check if user is admin"""
