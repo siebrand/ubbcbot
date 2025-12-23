@@ -69,10 +69,17 @@ class CustomerOrderCommands(BaseHandler):
                         order_date = order.created_at.strftime('%Y-%m-%d')
                     message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
                 
-                message += f"\nAre you sure you want to order {quantity}x more?\n"
-                message += f"[✅ Confirm order](https://t.me/{self._get_bot_username()}?start=confirm_{offer_id}_{quantity})"
+                message += f"\nAre you sure you want to order {quantity}x more?"
                 
-                self._send_message(chat_id, message, 'Markdown')
+                # Create inline keyboard with Confirm and Cancel buttons
+                keyboard = {
+                    "inline_keyboard": [[
+                        {"text": "✅ Confirm", "callback_data": f"confirm_order_{offer_id}_{quantity}"},
+                        {"text": "❌ Cancel", "callback_data": "cancel_confirmation"}
+                    ]]
+                }
+                
+                self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'confirmation_required'}
 
             # Execute the order

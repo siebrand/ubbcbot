@@ -61,6 +61,10 @@ class BotService:
     def process_update(self, update: Dict[str, Any]) -> Dict[str, Any]:
         """Process incoming Telegram update"""
         try:
+            # Handle callback queries (inline button presses)
+            if 'callback_query' in update:
+                return self._handle_callback_query(update['callback_query'])
+            
             if 'message' not in update:
                 return {'status': 'ignored'}
 
@@ -87,6 +91,48 @@ class BotService:
         except Exception as e:
             logger.error(f"Error processing update: {e}")
             return {'status': 'error', 'error': str(e)}
+
+    def _handle_callback_query(self, callback_query: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle inline button callbacks"""
+        try:
+            query_id = callback_query['id']
+            user_id = callback_query['from']['id']
+            chat_id = callback_query['message']['chat']['id']
+            data = callback_query['data']
+            
+            # Answer the callback query to remove loading state
+            self._answer_callback_query(query_id)
+            
+            if data.startswith('confirm_order_'):
+                # Parse confirm_order_<offer_id>_<quantity>
+                parts = data.split('_')
+                if len(parts) >= 4:
+                    offer_id = parts[2]
+                    quantity = parts[3]
+                    return self.customer_order_commands.handle_confirm_order(chat_id, user_id, [offer_id, quantity])
+            elif data == 'cancel_confirmation':
+                from handlers.base_handler import BaseHandler
+                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                base_handler._send_message(chat_id, "Order confirmation cancelled.")
+                return {'status': 'cancelled'}
+            
+            return {'status': 'unknown_callback'}
+            
+        except Exception as e:
+            logger.error(f"Error handling callback query: {e}")
+            return {'status': 'error', 'error': str(e)}
+    
+    def _answer_callback_query(self, query_id: str) -> bool:
+        """Answer callback query to remove loading state"""
+        import requests
+        try:
+            url = f"https://api.telegram.org/bot{self.telegram_token}/answerCallbackQuery"
+            data = {'callback_query_id': query_id}
+            response = requests.post(url, json=data)
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Error answering callback query: {e}")
+            return False
 
     def _register_customer_if_needed(self, user_data: Dict[str, Any]):
         """Register customer if they don't exist"""

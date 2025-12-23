@@ -41,7 +41,7 @@ class BaseHandler:
             return ""
         return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#x27;')
 
-    def _send_message(self, chat_id: int, text: str, parse_mode: str = None) -> bool:
+    def _send_message(self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None) -> bool:
         """Send message to Telegram chat"""
         import requests
         
@@ -61,6 +61,9 @@ class BaseHandler:
         
         if parse_mode:
             data['parse_mode'] = parse_mode
+        
+        if reply_markup:
+            data['reply_markup'] = reply_markup
         
         try:
             if self.environment == 'test':
