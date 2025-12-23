@@ -242,7 +242,9 @@ class OfferCommands(BaseHandler):
                     self._send_message(customer.telegram_user_id, msg)
             
             # Update offer status - keep active if there are still pending orders
-            remaining_pending = [o for o in all_orders if o.status == 'pending']
+            # Refresh the orders list to get current status after updates
+            updated_orders_list = self.db.get_orders_by_offer(offer_id)
+            remaining_pending = [o for o in updated_orders_list if o.status == 'pending']
             if not remaining_pending:
                 self.db.update_offer(offer_id, {'status': 'sold_out'})
                 offer_status_msg = "Offer marked as SOLD OUT (no pending orders remaining)"
