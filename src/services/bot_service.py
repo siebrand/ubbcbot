@@ -4,7 +4,7 @@ import requests
 import logging
 from typing import Dict, Any, Optional
 from services.database import DynamoDBService
-from models.entities import Supplier, Offer, Customer, Box, Order, BoxStatus, OfferStatus, DiscountPeriod, DiscountStatus
+from models.entities import Supplier, Offer, Customer, Box, Order, BoxStatus, OfferStatus, DiscountPeriod, DiscountStatus, AuthorizationStatus
 
 logger = logging.getLogger()
 
@@ -108,6 +108,16 @@ class BotService:
         parts = text.split()
         command = parts[0].lower()
 
+        # Check user authorization (admin always approved)
+        if not self._is_admin(user_id):
+            customer = self.db.get_customer_by_telegram_id(user_id)
+            if not customer or customer.authorization_status != AuthorizationStatus.APPROVED.value:
+                if command == '/start':
+                    return self._handle_unauthorized_start(chat_id)
+                else:
+                    self._send_message(chat_id, "❌ You are not authorized to use this bot. Send /start for more information.")
+                    return {'status': 'unauthorized'}
+
         # Universal commands (available to everyone)
         if command == '/start' or command == '/help':
             return self._handle_start(chat_id, user_id)
@@ -132,6 +142,14 @@ class BotService:
                 return self._handle_confirm_cancel(chat_id, parts[1:])
             elif command == '/list_suppliers':
                 return self._handle_list_suppliers(chat_id)
+            elif command == '/pending_users':
+                return self._handle_pending_users(chat_id)
+            elif command == '/approve_user':
+                return self._handle_approve_user(chat_id, parts[1:])
+            elif command == '/reject_user':
+                return self._handle_reject_user(chat_id, parts[1:])
+            elif command == '/user_status':
+                return self._handle_user_status(chat_id, parts[1:])
 
         return {'status': 'unknown_command'}
 
@@ -255,6 +273,133 @@ class BotService:
         self._send_message(chat_id, message)
         return {'status': 'success'}
 
+    def _handle_unauthorized_start(self, chat_id: int) -> Dict[str, Any]:
+        """Handle /start for unauthorized users"""
+        message = "🍺 Welcome to UBBC Bot!\n\n"
+        message += "⚠️ Your access is pending admin approval.\n"
+        message += "Please wait for approval to use the bot.\n\n"
+        message += "Contact admin if you need immediate access."
+        
+        self._send_message(chat_id, message)
+        return {'status': 'unauthorized'}
+
+    def _handle_pending_users(self, chat_id: int) -> Dict[str, Any]:
+        """Handle /pending_users command"""
+        customers = self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value)
+        
+        if not customers:
+            self._send_message(chat_id, "No users pending approval")
+            return {'status': 'no_pending'}
+
+        message = "📋 Pending Users:\n\n"
+        for customer in customers:
+            display_name = customer.first_name or "Unknown"
+            if customer.last_name:
+                display_name += f" {customer.last_name}"
+            
+            username_part = f" (@{customer.username})" if customer.username else " (no username)"
+            message += f"{display_name}{username_part}\n"
+
+        self._send_message(chat_id, message)
+        return {'status': 'success'}
+
+    def _handle_approve_user(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /approve_user command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /approve_user <name_or_username>")
+            return {'status': 'invalid_args'}
+
+        identifier = ' '.join(args)
+        customer = self._find_customer_by_identifier(identifier)
+        
+        if not customer:
+            self._send_message(chat_id, f"❌ User '{identifier}' not found")
+            return {'status': 'user_not_found'}
+
+        if customer.authorization_status == AuthorizationStatus.APPROVED.value:
+            self._send_message(chat_id, f"❌ User '{identifier}' is already approved")
+            return {'status': 'already_approved'}
+
+        # Update user status
+        if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.APPROVED.value}):
+            # Notify user
+            self._send_message(customer.telegram_user_id, "✅ You've been approved! Send /start to begin using the bot.")
+            
+            # Confirm to admin
+            display_name = customer.first_name or "Unknown"
+            self._send_message(chat_id, f"✅ User '{display_name}' approved")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to approve user")
+            return {'status': 'error'}
+
+    def _handle_reject_user(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /reject_user command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /reject_user <name_or_username>")
+            return {'status': 'invalid_args'}
+
+        identifier = ' '.join(args)
+        customer = self._find_customer_by_identifier(identifier)
+        
+        if not customer:
+            self._send_message(chat_id, f"❌ User '{identifier}' not found")
+            return {'status': 'user_not_found'}
+
+        # Update user status
+        if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.REJECTED.value}):
+            # Notify user
+            self._send_message(customer.telegram_user_id, "❌ Your access request has been rejected.")
+            
+            # Confirm to admin
+            display_name = customer.first_name or "Unknown"
+            self._send_message(chat_id, f"❌ User '{display_name}' rejected")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to reject user")
+            return {'status': 'error'}
+
+    def _handle_user_status(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /user_status command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /user_status <name_or_username>")
+            return {'status': 'invalid_args'}
+
+        identifier = ' '.join(args)
+        customer = self._find_customer_by_identifier(identifier)
+        
+        if not customer:
+            self._send_message(chat_id, f"❌ User '{identifier}' not found")
+            return {'status': 'user_not_found'}
+
+        display_name = customer.first_name or "Unknown"
+        if customer.last_name:
+            display_name += f" {customer.last_name}"
+        
+        username_part = f" (@{customer.username})" if customer.username else ""
+        status_emoji = {
+            AuthorizationStatus.UNAUTHORIZED.value: "⚠️",
+            AuthorizationStatus.APPROVED.value: "✅",
+            AuthorizationStatus.REJECTED.value: "❌"
+        }.get(customer.authorization_status, "❓")
+        
+        message = f"{status_emoji} {display_name}{username_part}\n"
+        message += f"Status: {customer.authorization_status}"
+        
+        self._send_message(chat_id, message)
+        return {'status': 'success'}
+
+    def _find_customer_by_identifier(self, identifier: str) -> Optional[Customer]:
+        """Find customer by username or display name"""
+        # Try by username first (remove @ if present)
+        username = identifier.lstrip('@').lower()
+        customer = self.db.get_customer_by_username(username)
+        if customer:
+            return customer
+        
+        # Try by display name
+        return self.db.get_customer_by_name(identifier)
+
     def _handle_list_suppliers(self, chat_id: int) -> Dict[str, Any]:
         """Handle /list_suppliers command"""
         suppliers = self.db.list_suppliers()
@@ -320,6 +465,10 @@ class BotService:
             message += "/list_suppliers - List all suppliers\n"
             message += "/box_status - View box status\n"
             message += "/cancel_order <order_id> - Cancel customer order\n"
+            message += "/pending_users - View users awaiting approval\n"
+            message += "/approve_user <name_or_username> - Approve user\n"
+            message += "/reject_user <name_or_username> - Reject user\n"
+            message += "/user_status <name_or_username> - Check user status\n"
 
         success = self._send_message(chat_id, message)
         if self.environment == 'test':

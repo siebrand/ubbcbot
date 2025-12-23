@@ -29,6 +29,11 @@ class DiscountStatus(Enum):
     EXPIRED = "expired"
     CANCELLED = "cancelled"
 
+class AuthorizationStatus(Enum):
+    UNAUTHORIZED = "unauthorized"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
 @dataclass
 class Supplier:
     supplier_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -57,6 +62,7 @@ class Customer:
     username: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    authorization_status: str = AuthorizationStatus.UNAUTHORIZED.value
     created_at: datetime = field(default_factory=datetime.utcnow)
 
 @dataclass

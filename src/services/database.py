@@ -307,3 +307,63 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error updating order: {e}")
             return False
+
+    def get_customers_by_status(self, status: str) -> List[Customer]:
+        try:
+            response = self.customers_table.scan(
+                FilterExpression='authorization_status = :status',
+                ExpressionAttributeValues={':status': status}
+            )
+            return [Customer(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting customers by status: {e}")
+            return []
+
+    def get_customer_by_username(self, username: str) -> Optional[Customer]:
+        try:
+            response = self.customers_table.scan(
+                FilterExpression='username = :username',
+                ExpressionAttributeValues={':username': username}
+            )
+            items = response.get('Items', [])
+            if items:
+                return Customer(**items[0])
+            return None
+        except Exception as e:
+            print(f"Error getting customer by username: {e}")
+            return None
+
+    def get_customer_by_name(self, name: str) -> Optional[Customer]:
+        try:
+            response = self.customers_table.scan(
+                FilterExpression='contains(first_name, :name) OR contains(last_name, :name)',
+                ExpressionAttributeValues={':name': name}
+            )
+            items = response.get('Items', [])
+            if items:
+                return Customer(**items[0])
+            return None
+        except Exception as e:
+            print(f"Error getting customer by name: {e}")
+            return None
+
+    def update_customer(self, customer_id: str, updates: Dict[str, Any]) -> bool:
+        try:
+            update_expression = "SET "
+            expression_values = {}
+            
+            for key, value in updates.items():
+                update_expression += f"{key} = :{key}, "
+                expression_values[f":{key}"] = value
+            
+            update_expression = update_expression.rstrip(", ")
+            
+            self.customers_table.update_item(
+                Key={'customer_id': customer_id},
+                UpdateExpression=update_expression,
+                ExpressionAttributeValues=expression_values
+            )
+            return True
+        except Exception as e:
+            print(f"Error updating customer: {e}")
+            return False
