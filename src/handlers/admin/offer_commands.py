@@ -138,11 +138,8 @@ class OfferCommands(BaseHandler):
             for i, order in enumerate(pending_orders[:10], 1):  # Show first 10
                 customer = self.db.get_customer(order.customer_id)
                 customer_name = customer.first_name if customer else "Unknown"
-                if isinstance(order.created_at, str):
-                    from datetime import datetime
-                    order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%m-%d %H:%M')
-                else:
-                    order_date = order.created_at.strftime('%m-%d %H:%M')
+                from utils.timezone import to_cet_string
+                order_date = to_cet_string(order.created_at, '%m-%d %H:%M')
                 message += f"{i}. {customer_name}: {order.quantity} units [{order_date}]\n"
             
             if len(pending_orders) > 10:

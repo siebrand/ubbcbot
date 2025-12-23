@@ -117,7 +117,8 @@ class InfoCommands(BaseHandler):
         if active_discount:
             message += f"🎉 DISCOUNT ACTIVE: {active_discount.discount_percentage}% OFF!\n"
             if active_discount.end_time:
-                message += f"Valid until: {active_discount.end_time.strftime('%Y-%m-%d %H:%M')}\n"
+                from utils.timezone import to_cet_string
+                message += f"Valid until: {to_cet_string(active_discount.end_time)}\n"
             message += "\n"
         
         message += "📋 Active Offers:\n\n"
@@ -186,12 +187,8 @@ class InfoCommands(BaseHandler):
             aggregated[key]['order_ids'].append(order.order_id)
             
             # Add date
-            if isinstance(order.created_at, str):
-                from datetime import datetime
-                order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
-            else:
-                order_date = order.created_at.strftime('%Y-%m-%d')
-            aggregated[key]['dates'].add(order_date)
+            from utils.timezone import to_cet_string
+            aggregated[key]['dates'].add(to_cet_string(order.created_at, '%Y-%m-%d'))
 
         message = "📋 Your Orders:\n\n"
         

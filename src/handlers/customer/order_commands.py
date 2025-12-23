@@ -42,11 +42,8 @@ class CustomerOrderCommands(BaseHandler):
                 message = f"❌ Order exceeds 5-unit limit for {offer.name}\n\n"
                 message += f"Your existing orders ({total_existing} units):\n"
                 for order in existing_orders:
-                    if isinstance(order.created_at, str):
-                        from datetime import datetime
-                        order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
-                    else:
-                        order_date = order.created_at.strftime('%Y-%m-%d')
+                    from utils.timezone import to_cet_string
+                    order_date = to_cet_string(order.created_at, '%Y-%m-%d')
                     message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
                 
                 remaining_allowed = 5 - total_existing
@@ -62,11 +59,8 @@ class CustomerOrderCommands(BaseHandler):
             if existing_orders:
                 message = f"⚠️ You already have orders for {offer.name}:\n\n"
                 for order in existing_orders:
-                    if isinstance(order.created_at, str):
-                        from datetime import datetime
-                        order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
-                    else:
-                        order_date = order.created_at.strftime('%Y-%m-%d')
+                    from utils.timezone import to_cet_string
+                    order_date = to_cet_string(order.created_at, '%Y-%m-%d')
                     message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
                 
                 message += f"\nAre you sure you want to order {quantity}x more?"
@@ -123,11 +117,8 @@ class CustomerOrderCommands(BaseHandler):
                 message = f"❌ Order exceeds 5-unit limit for {offer.name}\n\n"
                 message += f"Your existing orders ({total_existing} units):\n"
                 for order in existing_orders:
-                    if isinstance(order.created_at, str):
-                        from datetime import datetime
-                        order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
-                    else:
-                        order_date = order.created_at.strftime('%Y-%m-%d')
+                    from utils.timezone import to_cet_string
+                    order_date = to_cet_string(order.created_at, '%Y-%m-%d')
                     message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
                 
                 remaining_allowed = 5 - total_existing

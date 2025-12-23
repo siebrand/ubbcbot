@@ -96,11 +96,8 @@ class AdminOrderCommands(BaseHandler):
                 message = f"❌ Order exceeds 10-unit admin limit for {target_customer.first_name or username}\n\n"
                 message += f"Their existing orders ({total_existing} units):\n"
                 for order in existing_orders:
-                    if isinstance(order.created_at, str):
-                        from datetime import datetime
-                        order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
-                    else:
-                        order_date = order.created_at.strftime('%Y-%m-%d')
+                    from utils.timezone import to_cet_string
+                    order_date = to_cet_string(order.created_at, '%Y-%m-%d')
                     message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
                 
                 remaining_allowed = 10 - total_existing
@@ -210,11 +207,8 @@ class AdminOrderCommands(BaseHandler):
             for order in active_orders:
                 offer = self.db.get_offer(order.offer_id)
                 offer_name = offer.name if offer else "Unknown"
-                if isinstance(order.created_at, str):
-                    from datetime import datetime
-                    order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
-                else:
-                    order_date = order.created_at.strftime('%Y-%m-%d')
+                from utils.timezone import to_cet_string
+                order_date = to_cet_string(order.created_at, '%Y-%m-%d')
                 message += f"• [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f} ({order.status})\n"
                 message += f"  ID: {order.order_id}\n"
         
@@ -223,11 +217,8 @@ class AdminOrderCommands(BaseHandler):
             for order in cancelled_orders[-3:]:  # Show last 3 cancelled
                 offer = self.db.get_offer(order.offer_id)
                 offer_name = offer.name if offer else "Unknown"
-                if isinstance(order.created_at, str):
-                    from datetime import datetime
-                    order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
-                else:
-                    order_date = order.created_at.strftime('%Y-%m-%d')
+                from utils.timezone import to_cet_string
+                order_date = to_cet_string(order.created_at, '%Y-%m-%d')
                 message += f"• [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
         
         self._send_message(chat_id, message)
@@ -295,10 +286,8 @@ class AdminOrderCommands(BaseHandler):
             offer_name = offer.name if offer else "Unknown"
             unit_price = offer.price_per_unit if offer else 0
             
-            if isinstance(order.created_at, str):
-                order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M')
-            else:
-                order_date = order.created_at.strftime('%Y-%m-%d %H:%M')
+            from utils.timezone import to_cet_string
+            order_date = to_cet_string(order.created_at, '%Y-%m-%d %H:%M')
             
             customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
             username = customer.username or ""
