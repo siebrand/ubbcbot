@@ -32,11 +32,18 @@ Telegram beer ordering bot with AWS serverless architecture.
    start - Register and view help
    order - Place order: /order <offer_id> [quantity]
    my_orders - View your orders
+   confirm_order - Confirm duplicate order: /confirm_order <offer_id> <quantity>
+   list_offers - View available offers
    add_supplier - [Admin] Add supplier: /add_supplier <name>
    create_offer - [Admin] Create offer: /create_offer <supplier_name> <name> <price> <box_size>
-   list_offers - [Admin] View all offers
+   list_suppliers - [Admin] View all suppliers
    box_status - [Admin] View box status
    cancel_order - [Admin] Cancel order: /cancel_order <order_id>
+   confirm_cancel - [Admin] Confirm order cancellation: /confirm_cancel <order_id>
+   pending_users - [Admin] View users awaiting approval
+   approve_user - [Admin] Approve user: /approve_user <name_or_username>
+   reject_user - [Admin] Reject user: /reject_user <name_or_username>
+   user_status - [Admin] Check user status: /user_status <name_or_username>
    ```
 
 4. **Add bot to test group:**
