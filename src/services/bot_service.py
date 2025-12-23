@@ -486,12 +486,11 @@ class BotService:
         """Handle /box_status command"""
         offers = self.db.list_offers()
         
-        message = "📦 <b>Box Status:</b>\n\n"
+        message = "📦 Box Status:\n\n"
         for offer in offers:
             if offer.status == OfferStatus.ACTIVE.value:
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
                 
-                message += f"🍺 <b>{self._escape_html(offer.name)}</b>\n"
                 for box in boxes:
                     status_emoji = {
                         BoxStatus.OPEN.value: "🟢",
@@ -501,10 +500,9 @@ class BotService:
                         BoxStatus.DELIVERED.value: "✅"
                     }.get(box.status, "❓")
                     
-                    message += f"   {status_emoji} Box {box.box_id[:8]}: {box.current_quantity}/{box.max_capacity} ({box.status})\n"
-                message += "\n"
+                    message += f"🍺 {offer.name} €{offer.price_per_unit:.2f}\n   {status_emoji} Box {box.box_id[:8]}: {box.current_quantity}/{box.max_capacity} ({box.status})\n\n"
 
-        self._send_message(chat_id, message, 'HTML')
+        self._send_message(chat_id, message)
         return {'status': 'success'}
 
     def _handle_start(self, chat_id: int, user_id: int) -> Dict[str, Any]:
