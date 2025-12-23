@@ -18,6 +18,7 @@ class DynamoDBService:
         self.boxes_table = self.dynamodb.Table(f'{self.table_prefix}-boxes')
         self.orders_table = self.dynamodb.Table(f'{self.table_prefix}-orders')
         self.discounts_table = self.dynamodb.Table(f'{self.table_prefix}-discounts')
+        self.counters_table = self.dynamodb.Table(f'{self.table_prefix}-counters')
 
     def _serialize_datetime(self, obj):
         """Convert datetime objects to ISO strings"""
@@ -34,6 +35,29 @@ class DynamoDBService:
             elif value is not None:
                 prepared[key] = value
         return prepared
+
+    def _get_next_offer_id(self) -> int:
+        """Get next auto-incrementing offer ID"""
+        try:
+            response = self.counters_table.update_item(
+                Key={'counter_name': 'offer_id'},
+                UpdateExpression='ADD #val :inc',
+                ExpressionAttributeNames={'#val': 'value'},
+                ExpressionAttributeValues={':inc': 1},
+                ReturnValues='UPDATED_NEW'
+            )
+            return int(response['Attributes']['value'])
+        except Exception as e:
+            print(f"Error getting next offer ID: {e}")
+            # Initialize counter if it doesn't exist
+            try:
+                self.counters_table.put_item(
+                    Item={'counter_name': 'offer_id', 'value': 1},
+                    ConditionExpression='attribute_not_exists(counter_name)'
+                )
+                return 1
+            except Exception:
+                return 1
 
     # Supplier operations
     def create_supplier(self, supplier: Supplier) -> bool:
@@ -86,6 +110,10 @@ class DynamoDBService:
     # Offer operations
     def create_offer(self, offer: Offer) -> bool:
         try:
+            # Get next offer ID if not set
+            if offer.offer_id == 0:
+                offer.offer_id = self._get_next_offer_id()
+            
             item = self._prepare_item(offer.__dict__)
             self.offers_table.put_item(Item=item)
             return True
@@ -93,7 +121,7 @@ class DynamoDBService:
             print(f"Error creating offer: {e}")
             return False
 
-    def get_offer(self, offer_id: str) -> Optional[Offer]:
+    def get_offer(self, offer_id: int) -> Optional[Offer]:
         try:
             response = self.offers_table.get_item(Key={'offer_id': offer_id})
             if 'Item' in response:
@@ -145,7 +173,7 @@ class DynamoDBService:
             print(f"Error creating box: {e}")
             return False
 
-    def get_boxes_by_offer(self, offer_id: str) -> List[Box]:
+    def get_boxes_by_offer(self, offer_id: int) -> List[Box]:
         try:
             response = self.boxes_table.query(
                 IndexName='offer-index',
@@ -198,7 +226,7 @@ class DynamoDBService:
             print(f"Error getting orders by customer: {e}")
             return []
 
-    def get_orders_by_offer(self, offer_id: str) -> List[Order]:
+    def get_orders_by_offer(self, offer_id: int) -> List[Order]:
         try:
             response = self.orders_table.query(
                 IndexName='offer-index',

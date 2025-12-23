@@ -432,7 +432,7 @@ class BotService:
             return {'status': 'invalid_args'}
 
         try:
-            offer_id = args[0]
+            offer_id = int(args[0])
             quantity = int(args[1]) if len(args) > 1 else 1
 
             if quantity <= 0:

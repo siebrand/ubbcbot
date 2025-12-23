@@ -39,7 +39,7 @@ class Supplier:
 
 @dataclass
 class Offer:
-    offer_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    offer_id: int = 0
     supplier_name: str = ""
     name: str = ""
     description: str = ""
@@ -62,7 +62,7 @@ class Customer:
 @dataclass
 class Box:
     box_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    offer_id: str = ""
+    offer_id: int = 0
     current_quantity: int = 0
     max_capacity: int = 12
     min_breakeven: int = 10
@@ -74,7 +74,7 @@ class Order:
     order_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     customer_id: str = ""
     box_id: str = ""
-    offer_id: str = ""
+    offer_id: int = 0
     quantity: int = 1
     unit_price: Decimal = Decimal('0.0')
     total_price: Decimal = Decimal('0.0')

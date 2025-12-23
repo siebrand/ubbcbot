@@ -94,6 +94,31 @@ Resources:
         ManagedBy: sam
 
   # DynamoDB Tables
+  CountersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-counters'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: counter_name
+          AttributeType: S
+      KeySchema:
+        - AttributeName: counter_name
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
   OffersTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -101,7 +126,7 @@ Resources:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: offer_id
-          AttributeType: S
+          AttributeType: N
       KeySchema:
         - AttributeName: offer_id
           KeyType: HASH
@@ -164,7 +189,7 @@ Resources:
         - AttributeName: customer_id
           AttributeType: S
         - AttributeName: offer_id
-          AttributeType: S
+          AttributeType: N
       KeySchema:
         - AttributeName: order_id
           KeyType: HASH
@@ -204,7 +229,7 @@ Resources:
         - AttributeName: box_id
           AttributeType: S
         - AttributeName: offer_id
-          AttributeType: S
+          AttributeType: N
       KeySchema:
         - AttributeName: box_id
           KeyType: HASH
@@ -239,6 +264,31 @@ Resources:
           AttributeType: S
       KeySchema:
         - AttributeName: supplier_id
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
+  DiscountsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-discounts'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: discount_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: discount_id
           KeyType: HASH
       Tags:
         - Key: Project
