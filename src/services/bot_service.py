@@ -688,7 +688,7 @@ class BotService:
             self._send_message(chat_id, "You have no orders")
             return {'status': 'no_orders'}
 
-        message = "📋 <b>Your Orders:</b>\n\n"
+        message = "📋 Your Orders:\n\n"
         for order in orders:
             offer = self.db.get_offer(order.offer_id)
             offer_name = offer.name if offer else "Unknown"
@@ -700,10 +700,10 @@ class BotService:
                 'delivered': '📦'
             }.get(order.status, '❓')
             
-            message += f"{status_emoji} <b>{offer_name}</b>\n"
-            message += f"   Quantity: {order.quantity}\n"
-            message += f"   Total: €{order.total_price:.2f}\n"
-            message += f"   Status: {order.status}\n\n"
+            # Format date as YYYY-MM-DD
+            order_date = order.created_at.strftime('%Y-%m-%d')
+            
+            message += f"{status_emoji} {order_date} {offer_name} €{order.unit_price:.2f} {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
