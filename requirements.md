@@ -85,6 +85,9 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Order history
 - **FR-012**: Customers can view their active orders
 - **FR-013**: Customers can cancel orders (if box not yet ordered)
+- **FR-046**: Admin can cancel any customer order with confirmation required for full boxes
+- **FR-047**: System automatically corrects inventory when orders are cancelled
+- **FR-048**: System notifies customers when their orders are cancelled by admin
 - **FR-039**: System provides enhanced order tracking:
   - Shows pre-order status and disclaimers
   - Displays expected delivery dates when available
@@ -332,6 +335,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - `/audit_log [user_id] [action_type] [date_range]` - View audit trail
 - `/data_integrity` - Run data consistency checks
 - `/cleanup_data` - Remove expired temporary data
+- `/cancel_order <order_id>` - Cancel customer order (requires confirmation for full boxes)
 
 ### 5.2 Customer Commands
 - `/start` - Register as customer and view help
@@ -502,7 +506,10 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-001**: Orders cannot exceed remaining box capacity
 - **BR-002**: Orders cannot be placed on inactive offers
 - **BR-003**: Customers can place multiple orders for same offer/option with confirmation
-- **BR-004**: Orders can only be cancelled if box status is "open" or "minimum_reached"
+- **BR-046**: Orders can only be cancelled by customers if box status is "open" or "minimum_reached"
+- **BR-047**: Admin can cancel any order regardless of box status with confirmation required for full boxes
+- **BR-048**: Cancelled orders automatically reduce box quantity and recalculate box status
+- **BR-049**: Customer notification required for all admin-cancelled orders
 - **BR-005**: Offers must reference valid registered supplier name to be created
 - **BR-006**: Wholesale box size must be one of: 1, 2, 6, 8, 10, 12, 15, 16, 18, 20, 24
 - **BR-007**: Supplier names must be unique (case-insensitive)

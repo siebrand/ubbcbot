@@ -207,3 +207,54 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error getting orders by offer: {e}")
             return []
+
+    def get_order(self, order_id: str) -> Optional[Order]:
+        try:
+            response = self.orders_table.get_item(Key={'order_id': order_id})
+            if 'Item' in response:
+                return Order(**response['Item'])
+            return None
+        except Exception as e:
+            print(f"Error getting order: {e}")
+            return None
+
+    def get_customer(self, customer_id: str) -> Optional[Customer]:
+        try:
+            response = self.customers_table.get_item(Key={'customer_id': customer_id})
+            if 'Item' in response:
+                return Customer(**response['Item'])
+            return None
+        except Exception as e:
+            print(f"Error getting customer: {e}")
+            return None
+
+    def get_box(self, box_id: str) -> Optional[Box]:
+        try:
+            response = self.boxes_table.get_item(Key={'box_id': box_id})
+            if 'Item' in response:
+                return Box(**response['Item'])
+            return None
+        except Exception as e:
+            print(f"Error getting box: {e}")
+            return None
+
+    def update_order(self, order_id: str, updates: Dict[str, Any]) -> bool:
+        try:
+            update_expression = "SET "
+            expression_values = {}
+            
+            for key, value in updates.items():
+                update_expression += f"{key} = :{key}, "
+                expression_values[f":{key}"] = value
+            
+            update_expression = update_expression.rstrip(", ")
+            
+            self.orders_table.update_item(
+                Key={'order_id': order_id},
+                UpdateExpression=update_expression,
+                ExpressionAttributeValues=expression_values
+            )
+            return True
+        except Exception as e:
+            print(f"Error updating order: {e}")
+            return False

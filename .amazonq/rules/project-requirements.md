@@ -56,3 +56,5 @@ feat: add automatic webhook setup in deployment script
 - Supported box sizes: 1,2,6,8,10,12,15,16,18,20,24 units
 - Test environment: all messages prefixed with "TEST - "
 - Production environment: clean messages without prefixes
+- Order cancellation: Admin-only with confirmation for full boxes
+- Cancelled orders: Automatic inventory correction and customer notification

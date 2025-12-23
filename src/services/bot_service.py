@@ -113,6 +113,10 @@ class BotService:
                 return self._handle_list_offers(chat_id)
             elif command == '/box_status':
                 return self._handle_box_status(chat_id)
+            elif command == '/cancel_order':
+                return self._handle_cancel_order(chat_id, parts[1:])
+            elif command == '/confirm_cancel':
+                return self._handle_confirm_cancel(chat_id, parts[1:])
 
         return {'status': 'unknown_command'}
 
@@ -249,8 +253,107 @@ class BotService:
             message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
             message += "/list_offers - List all offers\n"
             message += "/box_status - View box status\n"
+            message += "/cancel_order <order_id> - Cancel customer order\n"
 
         self._send_message(chat_id, message)
+        return {'status': 'success'}
+
+    def _handle_cancel_order(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /cancel_order command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /cancel_order <order_id>")
+            return {'status': 'invalid_args'}
+
+        order_id = args[0]
+        order = self.db.get_order(order_id)
+        
+        if not order:
+            self._send_message(chat_id, "❌ Order not found")
+            return {'status': 'order_not_found'}
+        
+        if order.status == 'cancelled':
+            self._send_message(chat_id, "❌ Order already cancelled")
+            return {'status': 'already_cancelled'}
+
+        # Get box info
+        box = self.db.get_box(order.box_id)
+        if not box:
+            self._send_message(chat_id, "❌ Box not found")
+            return {'status': 'box_not_found'}
+
+        # Check if box is full - require confirmation
+        if box.status == BoxStatus.FULL.value:
+            self._send_message(chat_id, 
+                f"⚠️ WARNING: This order is from a FULL box!\n"
+                f"Order: {order_id}\n"
+                f"Quantity: {order.quantity}\n"
+                f"Cancelling will affect box status.\n\n"
+                f"Confirm with: /confirm_cancel {order_id}")
+            return {'status': 'confirmation_required'}
+
+        # Cancel directly for non-full boxes
+        return self._execute_cancel(order, box, chat_id)
+
+    def _handle_confirm_cancel(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /confirm_cancel command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /confirm_cancel <order_id>")
+            return {'status': 'invalid_args'}
+
+        order_id = args[0]
+        order = self.db.get_order(order_id)
+        
+        if not order:
+            self._send_message(chat_id, "❌ Order not found")
+            return {'status': 'order_not_found'}
+
+        box = self.db.get_box(order.box_id)
+        if not box:
+            self._send_message(chat_id, "❌ Box not found")
+            return {'status': 'box_not_found'}
+
+        return self._execute_cancel(order, box, chat_id)
+
+    def _execute_cancel(self, order, box, chat_id: int) -> Dict[str, Any]:
+        """Execute order cancellation"""
+        # Update order status
+        if not self.db.update_order(order.order_id, {'status': 'cancelled'}):
+            self._send_message(chat_id, "❌ Failed to cancel order")
+            return {'status': 'error'}
+
+        # Update box quantity and status
+        new_quantity = box.current_quantity - order.quantity
+        updates = {'current_quantity': new_quantity}
+        
+        # Recalculate box status
+        if new_quantity == 0:
+            updates['status'] = BoxStatus.OPEN.value
+        elif new_quantity < box.min_breakeven:
+            updates['status'] = BoxStatus.OPEN.value
+        elif new_quantity < box.max_capacity:
+            updates['status'] = BoxStatus.MINIMUM_REACHED.value
+        
+        self.db.update_box(box.box_id, updates)
+
+        # Get customer and offer info for notifications
+        customer = self.db.get_customer(order.customer_id)
+        offer = self.db.get_offer(order.offer_id)
+        
+        # Notify customer
+        if customer:
+            customer_message = f"❌ Your order has been cancelled by admin\n"
+            customer_message += f"Product: {offer.name if offer else 'Unknown'}\n"
+            customer_message += f"Quantity: {order.quantity}\n"
+            customer_message += f"Refund: €{order.total_price:.2f}"
+            self._send_message(customer.telegram_user_id, customer_message)
+
+        # Confirm to admin
+        self._send_message(chat_id, 
+            f"✅ Order cancelled\n"
+            f"Order ID: {order.order_id}\n"
+            f"Customer notified\n"
+            f"Box quantity updated: {new_quantity}/{box.max_capacity}")
+        
         return {'status': 'success'}
 
     def _handle_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:

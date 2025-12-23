@@ -36,6 +36,7 @@ Telegram beer ordering bot with AWS serverless architecture.
    create_offer - [Admin] Create offer: /create_offer <supplier_name> <name> <price> <box_size>
    list_offers - [Admin] View all offers
    box_status - [Admin] View box status
+   cancel_order - [Admin] Cancel order: /cancel_order <order_id>
    ```
 
 4. **Add bot to test group:**
@@ -142,6 +143,7 @@ Expected response should show:
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
 - `/list_offers` - View all active offers
 - `/box_status` - View box status and capacity
+- `/cancel_order <order_id>` - Cancel customer order (with confirmation for full boxes)
 
 ### Customer Commands
 - `/start` - Register and view help
@@ -189,3 +191,4 @@ Examples:
 - [x] Admin access control (ID: 15005473)
 - [x] Resource naming convention and tagging
 - [x] Environment-specific configuration
+- [x] Order cancellation with inventory correction and customer notification
