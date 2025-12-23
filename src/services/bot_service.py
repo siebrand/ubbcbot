@@ -562,19 +562,21 @@ class BotService:
         message = "🍺 Welcome to UBBC Bot!\n\n"
         message += "Available commands:\n"
         message += "/start - Show this help\n"
-        message += "/order <offer_id> [quantity] - Place an order\n"
-        message += "/my_orders - View your orders\n"
         message += "/list_offers - View available offers\n"
+        message += "/order <offer_id> [quantity] - Place an order\n"
+        message += "/confirm_order <offer_id> <quantity> - Confirm duplicate order\n"
+        message += "/my_orders - View your orders\n"
         
         if self._is_admin(user_id):
             if self.environment == 'test':
                 logger.info(f"User {user_id} is admin, adding admin commands")
             message += "\n👑 Admin commands:\n"
             message += "/add_supplier <name> - Add supplier\n"
-            message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
             message += "/list_suppliers - List all suppliers\n"
+            message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
             message += "/box_status - View box status\n"
             message += "/cancel_order <order_id> - Cancel customer order\n"
+            message += "/confirm_cancel <order_id> - Confirm order cancellation\n"
             message += "/pending_users - View users awaiting approval\n"
             message += "/approve_user <name_or_username> - Approve user\n"
             message += "/reject_user <name_or_username> - Reject user\n"
