@@ -138,13 +138,21 @@ class BotService:
                     return {'status': 'unauthorized'}
 
         # Handle deep link start parameters
-        if command == '/start' and len(parts) > 1 and parts[1].startswith('order_'):
-            # Parse order_<offer_id>_<quantity>
-            try:
-                _, offer_id_str, quantity_str = parts[1].split('_')
-                return self.customer_order_commands.handle_order(chat_id, user_id, [offer_id_str, quantity_str])
-            except ValueError:
-                pass  # Fall through to normal start handling
+        if command == '/start' and len(parts) > 1:
+            if parts[1].startswith('order_'):
+                # Parse order_<offer_id>_<quantity>
+                try:
+                    _, offer_id_str, quantity_str = parts[1].split('_')
+                    return self.customer_order_commands.handle_order(chat_id, user_id, [offer_id_str, quantity_str])
+                except ValueError:
+                    pass  # Fall through to normal start handling
+            elif parts[1].startswith('confirm_'):
+                # Parse confirm_<offer_id>_<quantity>
+                try:
+                    _, offer_id_str, quantity_str = parts[1].split('_')
+                    return self.customer_order_commands.handle_confirm_order(chat_id, user_id, [offer_id_str, quantity_str])
+                except ValueError:
+                    pass  # Fall through to normal start handling
         
         # Universal commands (available to everyone)
         if command == '/start' or command == '/help':
