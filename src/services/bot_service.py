@@ -237,7 +237,7 @@ class BotService:
         message = "🍺 Welcome to UBBC Bot!\n\n"
         message += "Available commands:\n"
         message += "/start - Show this help\n"
-        message += "/order <offer_id> <quantity> - Place an order\n"
+        message += "/order <offer_id> [quantity] - Place an order\n"
         message += "/my_orders - View your orders\n"
         
         if self._is_admin(user_id):
@@ -252,13 +252,13 @@ class BotService:
 
     def _handle_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /order command"""
-        if len(args) < 2:
-            self._send_message(chat_id, "Usage: /order <offer_id> <quantity>")
+        if len(args) < 1:
+            self._send_message(chat_id, "Usage: /order <offer_id> [quantity]")
             return {'status': 'invalid_args'}
 
         try:
             offer_id = args[0]
-            quantity = int(args[1])
+            quantity = int(args[1]) if len(args) > 1 else 1
 
             if quantity <= 0:
                 self._send_message(chat_id, "❌ Quantity must be positive")

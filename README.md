@@ -30,7 +30,7 @@ Telegram beer ordering bot with AWS serverless architecture.
    - Paste:
    ```
    start - Register and view help
-   order - Place order: /order <offer_id> <quantity>
+   order - Place order: /order <offer_id> [quantity]
    my_orders - View your orders
    add_supplier - [Admin] Add supplier: /add_supplier <name>
    create_offer - [Admin] Create offer: /create_offer <supplier_id> <name> <price> <box_size>
@@ -145,7 +145,7 @@ Expected response should show:
 
 ### Customer Commands
 - `/start` - Register and view help
-- `/order <offer_id> <quantity>` - Place order
+- `/order <offer_id> [quantity]` - Place order
 - `/my_orders` - View personal orders
 
 ## Architecture
