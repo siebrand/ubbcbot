@@ -130,6 +130,8 @@ class BotService:
                 return self._handle_cancel_order(chat_id, parts[1:])
             elif command == '/confirm_cancel':
                 return self._handle_confirm_cancel(chat_id, parts[1:])
+            elif command == '/list_suppliers':
+                return self._handle_list_suppliers(chat_id)
 
         return {'status': 'unknown_command'}
 
@@ -250,6 +252,22 @@ class BotService:
         self._send_message(chat_id, message)
         return {'status': 'success'}
 
+    def _handle_list_suppliers(self, chat_id: int) -> Dict[str, Any]:
+        """Handle /list_suppliers command"""
+        suppliers = self.db.list_suppliers()
+        
+        if not suppliers:
+            self._send_message(chat_id, "No suppliers found")
+            return {'status': 'no_suppliers'}
+
+        message = "📋 Registered Suppliers:\n\n"
+        for supplier in suppliers:
+            if supplier.status == "active":
+                message += f"✅ {supplier.name}\n"
+
+        self._send_message(chat_id, message)
+        return {'status': 'success'}
+
     def _handle_box_status(self, chat_id: int) -> Dict[str, Any]:
         """Handle /box_status command"""
         offers = self.db.list_offers()
@@ -293,6 +311,7 @@ class BotService:
             message += "\n👑 Admin commands:\n"
             message += "/add_supplier <name> - Add supplier\n"
             message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
+            message += "/list_suppliers - List all suppliers\n"
             message += "/box_status - View box status\n"
             message += "/cancel_order <order_id> - Cancel customer order\n"
 

@@ -140,6 +140,7 @@ Expected response should show:
 
 ### Admin Commands (User ID: 15005473)
 - `/add_supplier <name>` - Register new supplier
+- `/list_suppliers` - View all registered suppliers
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
 - `/box_status` - View box status and capacity
 - `/cancel_order <order_id>` - Cancel customer order (with confirmation for full boxes)
