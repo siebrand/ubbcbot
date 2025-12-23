@@ -132,7 +132,7 @@ class UserCommands(BaseHandler):
         
         if self.db.update_customer(customer.customer_id, updates):
             # Update username in all active orders
-            active_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.status != 'cancelled']
+            active_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.status in ['pending', 'ordered']]
             updated_orders = 0
             
             for order in active_orders:

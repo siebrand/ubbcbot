@@ -89,7 +89,7 @@ class AdminOrderCommands(BaseHandler):
 
             # Check 10-unit admin limit for target customer
             existing_orders = [o for o in self.db.get_orders_by_customer(target_customer.customer_id) 
-                             if o.offer_id == offer_id and o.status != 'cancelled']
+                             if o.offer_id == offer_id and o.status in ['pending', 'ordered']]
             total_existing = sum(order.quantity for order in existing_orders)
             
             if total_existing + quantity > 10:
@@ -195,7 +195,7 @@ class AdminOrderCommands(BaseHandler):
             return {'status': 'no_orders'}
 
         # Group orders by status
-        active_orders = [o for o in orders if o.status != 'cancelled']
+        active_orders = [o for o in orders if o.status in ['pending', 'ordered']]
         cancelled_orders = [o for o in orders if o.status == 'cancelled']
         
         display_name = self._escape_html(customer.first_name or identifier)
@@ -240,7 +240,7 @@ class AdminOrderCommands(BaseHandler):
         for customer in customers:
             orders = self.db.get_orders_by_customer(customer.customer_id)
             for order in orders:
-                if status_filter == 'active' and order.status == 'cancelled':
+                if status_filter == 'active' and order.status not in ['pending', 'ordered']:
                     continue
                 elif status_filter == 'cancelled' and order.status != 'cancelled':
                     continue

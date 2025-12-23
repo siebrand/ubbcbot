@@ -309,7 +309,7 @@ class OfferCommands(BaseHandler):
             
             # Get all orders for this offer
             all_orders = self.db.get_orders_by_offer(offer_id)
-            active_orders = [o for o in all_orders if o.status != 'cancelled']
+            active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
             
             if not active_orders:
                 # No active orders, just cancel the offer
@@ -347,9 +347,9 @@ class OfferCommands(BaseHandler):
                 self._send_message(chat_id, "❌ Offer not found")
                 return {'status': 'offer_not_found'}
             
-            # Get all active orders
+            # Get all pending orders
             all_orders = self.db.get_orders_by_offer(offer_id)
-            active_orders = [o for o in all_orders if o.status != 'cancelled']
+            active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
             
             # Cancel all active orders and notify customers
             cancelled_count = 0

@@ -35,7 +35,7 @@ class CustomerOrderCommands(BaseHandler):
 
             # Check for existing orders and enforce 5-unit limit
             existing_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) 
-                             if o.offer_id == offer_id and o.status != 'cancelled']
+                             if o.offer_id == offer_id and o.status in ['pending', 'ordered']]
             total_existing = sum(order.quantity for order in existing_orders)
             
             if total_existing + quantity > 5:
@@ -110,7 +110,7 @@ class CustomerOrderCommands(BaseHandler):
             
             # Check 5-unit limit for confirmed orders
             existing_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) 
-                             if o.offer_id == offer_id and o.status != 'cancelled']
+                             if o.offer_id == offer_id and o.status in ['pending', 'ordered']]
             total_existing = sum(order.quantity for order in existing_orders)
             
             if total_existing + quantity > 5:
