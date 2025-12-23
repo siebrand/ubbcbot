@@ -251,24 +251,18 @@ class BotService:
         message += "📋 Active Offers:\n\n"
         for offer in offers:
             if offer.status == OfferStatus.ACTIVE.value:
+                # Get current order count for this offer
+                boxes = self.db.get_boxes_by_offer(offer.offer_id)
+                total_ordered = sum(box.current_quantity for box in boxes)
+                
                 original_price = offer.price_per_unit
                 display_price = original_price
                 
                 if active_discount:
                     display_price = original_price * (1 - active_discount.discount_percentage / 100)
-                    message += f"🍺 {offer.name}\n"
-                    message += f"   ID: {offer.offer_id}\n"
-                    if self._is_admin(user_id):
-                        message += f"   Supplier: {offer.supplier_name}\n"
-                    message += f"   Price: €{display_price:.2f} (was €{original_price:.2f})\n"
-                    message += f"   Box Size: {offer.wholesale_box_size}\n\n"
+                    message += f"🍺 [{offer.offer_id}] {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
                 else:
-                    message += f"🍺 {offer.name}\n"
-                    message += f"   ID: {offer.offer_id}\n"
-                    if self._is_admin(user_id):
-                        message += f"   Supplier: {offer.supplier_name}\n"
-                    message += f"   Price: €{display_price:.2f}\n"
-                    message += f"   Box Size: {offer.wholesale_box_size}\n\n"
+                    message += f"🍺 [{offer.offer_id}] {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
