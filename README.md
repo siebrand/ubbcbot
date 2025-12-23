@@ -135,6 +135,8 @@ Expected response should show:
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
 - `/box_status` - View box status and capacity
 - `/cancel_order <order_id>` - Cancel customer order (with confirmation for full boxes)
+- `/user_orders <username>` - View orders for specific user
+- `/all_orders [active|cancelled|all]` - View all orders (default: active)
 
 ### Customer Commands
 - `/start` - Register and view help

@@ -257,6 +257,10 @@ class BotService:
                 return self.admin_order_commands.handle_cancel_order(chat_id, parts[1:])
             elif command == '/confirm_cancel':
                 return self.admin_order_commands.handle_confirm_cancel(chat_id, parts[1:])
+            elif command == '/user_orders':
+                return self.admin_order_commands.handle_user_orders(chat_id, parts[1:])
+            elif command == '/all_orders':
+                return self.admin_order_commands.handle_all_orders(chat_id, parts[1:])
             
             # User management commands
             elif command == '/pending_users':

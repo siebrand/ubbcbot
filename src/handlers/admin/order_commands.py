@@ -178,6 +178,144 @@ class AdminOrderCommands(BaseHandler):
         
         return {'status': 'success'}
 
+    def handle_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /user_orders command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /user_orders <username>")
+            return {'status': 'invalid_args'}
+
+        identifier = ' '.join(args)
+        customer = self._find_customer_by_identifier(identifier)
+        
+        if not customer:
+            self._send_message(chat_id, f"❌ User '{identifier}' not found")
+            return {'status': 'user_not_found'}
+
+        orders = self.db.get_orders_by_customer(customer.customer_id)
+        
+        if not orders:
+            display_name = customer.first_name or identifier
+            self._send_message(chat_id, f"📋 No orders found for {display_name}")
+            return {'status': 'no_orders'}
+
+        # Group orders by status
+        active_orders = [o for o in orders if o.status != 'cancelled']
+        cancelled_orders = [o for o in orders if o.status == 'cancelled']
+        
+        display_name = self._escape_html(customer.first_name or identifier)
+        message = f"📋 Orders for {display_name}:\n\n"
+        
+        if active_orders:
+            message += "🟢 Active Orders:\n"
+            for order in active_orders:
+                offer = self.db.get_offer(order.offer_id)
+                offer_name = offer.name if offer else "Unknown"
+                if isinstance(order.created_at, str):
+                    from datetime import datetime
+                    order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+                else:
+                    order_date = order.created_at.strftime('%Y-%m-%d')
+                message += f"• [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f} ({order.status})\n"
+                message += f"  ID: {order.order_id}\n"
+        
+        if cancelled_orders:
+            message += "\n❌ Cancelled Orders:\n"
+            for order in cancelled_orders[-3:]:  # Show last 3 cancelled
+                offer = self.db.get_offer(order.offer_id)
+                offer_name = offer.name if offer else "Unknown"
+                if isinstance(order.created_at, str):
+                    from datetime import datetime
+                    order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+                else:
+                    order_date = order.created_at.strftime('%Y-%m-%d')
+                message += f"• [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
+        
+        self._send_message(chat_id, message)
+        return {'status': 'success'}
+
+    def handle_all_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /all_orders command"""
+        # Get filter from args (active, cancelled, or all)
+        status_filter = args[0].lower() if args else 'active'
+        
+        if status_filter not in ['active', 'cancelled', 'all']:
+            self._send_message(chat_id, "Usage: /all_orders [active|cancelled|all]")
+            return {'status': 'invalid_args'}
+
+        # Get all customers and their orders
+        from models.entities import AuthorizationStatus
+        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        
+        all_orders = []
+        for customer in customers:
+            orders = self.db.get_orders_by_customer(customer.customer_id)
+            for order in orders:
+                if status_filter == 'active' and order.status == 'cancelled':
+                    continue
+                elif status_filter == 'cancelled' and order.status != 'cancelled':
+                    continue
+                all_orders.append((customer, order))
+        
+        if not all_orders:
+            self._send_message(chat_id, f"📋 No {status_filter} orders found")
+            return {'status': 'no_orders'}
+        
+        # Sort by date (newest first)
+        all_orders.sort(key=lambda x: x[1].created_at, reverse=True)
+        
+        # Generate CSV and upload
+        csv_content = self._generate_orders_csv(all_orders)
+        csv_filename = f"orders_{status_filter}_{self.environment}.csv"
+        
+        # Send CSV file
+        self._send_document(chat_id, csv_content, csv_filename, f"📊 {status_filter.title()} Orders CSV ({len(all_orders)} orders)")
+        
+        return {'status': 'success'}
+    
+    def _generate_orders_csv(self, orders_data: list) -> str:
+        """Generate CSV content from orders data"""
+        import csv
+        from io import StringIO
+        from datetime import datetime
+        
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        # CSV headers
+        writer.writerow([
+            'Order ID', 'Date', 'Customer Name', 'Username', 'Product', 
+            'Quantity', 'Unit Price', 'Total Price', 'Status', 'Box ID'
+        ])
+        
+        # CSV data
+        for customer, order in orders_data:
+            offer = self.db.get_offer(order.offer_id)
+            offer_name = offer.name if offer else "Unknown"
+            unit_price = offer.price_per_unit if offer else 0
+            
+            if isinstance(order.created_at, str):
+                order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d %H:%M')
+            else:
+                order_date = order.created_at.strftime('%Y-%m-%d %H:%M')
+            
+            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+            username = customer.username or ""
+            
+            writer.writerow([
+                order.order_id,
+                order_date,
+                customer_name,
+                username,
+                offer_name,
+                order.quantity,
+                f"{unit_price:.2f}",
+                f"{order.total_price:.2f}",
+                order.status,
+                order.box_id
+            ])
+        
+        return output.getvalue()
+
     def _find_customer_by_identifier(self, identifier: str):
         """Find customer by username or display name"""
         from models.entities import AuthorizationStatus
@@ -188,9 +326,9 @@ class AdminOrderCommands(BaseHandler):
         if customer:
             return customer
         
-        # Try by first name
-        customers = self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value)
-        for customer in customers:
+        # Try by first name across all customers (not just unauthorized)
+        all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        for customer in all_customers:
             if customer.first_name and customer.first_name.lower() == identifier.lower():
                 return customer
             # Try first + last name combination
