@@ -40,8 +40,28 @@ Resources:
         ManagedBy: sam
 
   # Lambda Functions
+  WebhookHandlerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/ubbc-bot-${Environment}-webhook-handler'
+      RetentionInDays: 7
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
   WebhookHandler:
     Type: AWS::Serverless::Function
+    DependsOn: WebhookHandlerLogGroup
     Properties:
       FunctionName: !Sub 'ubbc-bot-${Environment}-webhook-handler'
       CodeUri: src/
@@ -60,6 +80,7 @@ Resources:
             BucketName: !Ref ImageBucket
         - SSMParameterReadPolicy:
             ParameterName: !Sub '/ubbc-bot/${Environment}/*'
+        - CloudWatchLogsFullAccess
       Tags:
         Project: UBBCBot
         Environment: !Ref Environment
