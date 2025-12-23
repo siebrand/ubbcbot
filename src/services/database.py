@@ -242,7 +242,7 @@ class DynamoDBService:
             from datetime import datetime
             now = datetime.utcnow()
             response = self.discounts_table.scan(
-                FilterExpression='#status = :status AND start_time <= :now AND (end_time IS NULL OR end_time > :now)',
+                FilterExpression='#status = :status AND start_time <= :now AND (attribute_not_exists(end_time) OR end_time > :now)',
                 ExpressionAttributeNames={'#status': 'status'},
                 ExpressionAttributeValues={
                     ':status': DiscountStatus.ACTIVE.value,

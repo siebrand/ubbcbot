@@ -704,7 +704,12 @@ class BotService:
             }.get(order.status, '❓')
             
             # Format date as YYYY-MM-DD
-            order_date = order.created_at.strftime('%Y-%m-%d')
+            if isinstance(order.created_at, str):
+                # Parse ISO string to datetime
+                from datetime import datetime
+                order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+            else:
+                order_date = order.created_at.strftime('%Y-%m-%d')
             
             message += f"{status_emoji} {order_date} {offer_name} €{order.unit_price:.2f} {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
 
