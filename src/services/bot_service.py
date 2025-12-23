@@ -780,11 +780,14 @@ class BotService:
                         updates['status'] = BoxStatus.MINIMUM_REACHED.value
 
                     if not self.db.update_box(available_box.box_id, updates):
+                        logger.error(f"Failed to update box {available_box.box_id}")
                         self._send_message(chat_id, "❌ Failed to update box")
                         return {'status': 'error'}
                     
                     remaining_quantity -= order_quantity
+                    logger.info(f"Order created: {order_quantity} units, remaining: {remaining_quantity}")
                 else:
+                    logger.error(f"Failed to create order for {order_quantity} units")
                     self._send_message(chat_id, "❌ Failed to place order")
                     return {'status': 'error'}
 
