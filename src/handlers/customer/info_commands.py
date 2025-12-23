@@ -43,6 +43,7 @@ class InfoCommands(BaseHandler):
             # Offer management
             message += "🍺 Offers:\n"
             message += "/create_offer <supplier> <name> <price> <box_size> - Create offer\n"
+            message += "/cancel_offer <offer_id> - Cancel offer and all orders\n"
             message += "/box_status - View box status\n"
             message += "/fulfill_offer <offer_id> - Start fulfillment process\n"
             message += "/confirm_fulfill <offer_id> <boxes> - Confirm fulfillment\n\n"

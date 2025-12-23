@@ -163,7 +163,6 @@ class AdminOrderCommands(BaseHandler):
             customer_message = f"❌ Your order has been cancelled by admin\n"
             customer_message += f"Product: {offer.name if offer else 'Unknown'}\n"
             customer_message += f"Quantity: {order.quantity}\n"
-            customer_message += f"Refund: €{order.total_price:.2f}"
             self._send_message(customer.telegram_user_id, customer_message)
 
         # Confirm to admin

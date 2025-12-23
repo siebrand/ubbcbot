@@ -289,6 +289,113 @@ class OfferCommands(BaseHandler):
             self._send_message(chat_id, "❌ Invalid format")
             return {'status': 'invalid_format'}
     
+    def handle_cancel_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /cancel_offer command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /cancel_offer <offer_id>")
+            return {'status': 'invalid_args'}
+
+        try:
+            offer_id = int(args[0])
+            offer = self.db.get_offer(offer_id)
+            
+            if not offer:
+                self._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            if offer.status != OfferStatus.ACTIVE.value:
+                self._send_message(chat_id, "❌ Offer is not active")
+                return {'status': 'offer_not_active'}
+            
+            # Get all orders for this offer
+            all_orders = self.db.get_orders_by_offer(offer_id)
+            active_orders = [o for o in all_orders if o.status != 'cancelled']
+            
+            if not active_orders:
+                # No active orders, just cancel the offer
+                self.db.update_offer(offer_id, {'status': 'cancelled'})
+                self._delete_offer_boxes(offer_id)
+                self._send_message(chat_id, f"✅ Offer {offer_id} cancelled (no active orders)")
+                return {'status': 'success'}
+            
+            # Show confirmation with order details
+            message = f"⚠️ WARNING: Cancelling offer {offer_id} will:\n\n"
+            message += f"🍺 Cancel offer: {offer.name}\n"
+            message += f"📦 Delete all boxes\n"
+            message += f"❌ Cancel {len(active_orders)} active orders\n"
+            message += f"📧 Notify all affected customers\n\n"
+            message += f"Confirm with: /confirm_cancel_offer {offer_id}"
+            
+            self._send_message(chat_id, message)
+            return {'status': 'confirmation_required'}
+            
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_format'}
+    
+    def handle_confirm_cancel_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /confirm_cancel_offer command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /confirm_cancel_offer <offer_id>")
+            return {'status': 'invalid_args'}
+        
+        try:
+            offer_id = int(args[0])
+            offer = self.db.get_offer(offer_id)
+            
+            if not offer:
+                self._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            # Get all active orders
+            all_orders = self.db.get_orders_by_offer(offer_id)
+            active_orders = [o for o in all_orders if o.status != 'cancelled']
+            
+            # Cancel all active orders and notify customers
+            cancelled_count = 0
+            for order in active_orders:
+                if self.db.update_order(order.order_id, {'status': 'cancelled'}):
+                    cancelled_count += 1
+                    self._notify_customer_cancellation(order, offer)
+            
+            # Delete all boxes
+            deleted_boxes = self._delete_offer_boxes(offer_id)
+            
+            # Cancel the offer
+            self.db.update_offer(offer_id, {'status': 'cancelled'})
+            
+            # Send summary
+            summary = f"✅ Offer {offer_id} cancelled:\n\n"
+            summary += f"❌ Cancelled {cancelled_count} orders\n"
+            summary += f"🗑️ Deleted {deleted_boxes} boxes\n"
+            summary += f"📧 Notified {cancelled_count} customers"
+            
+            self._send_message(chat_id, summary)
+            return {'status': 'success'}
+            
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_format'}
+    
+    def _delete_offer_boxes(self, offer_id: int) -> int:
+        """Delete all boxes for an offer and return count"""
+        boxes = self.db.get_boxes_by_offer(offer_id)
+        deleted_count = 0
+        for box in boxes:
+            if self.db.delete_box(box.box_id):
+                deleted_count += 1
+        return deleted_count
+    
+    def _notify_customer_cancellation(self, order, offer):
+        """Notify customer about order cancellation"""
+        customer = self.db.get_customer(order.customer_id)
+        if customer:
+            message = f"❌ Your order has been cancelled due to offer cancellation:\n\n"
+            message += f"🍺 {offer.name}\n"
+            message += f"Quantity: {order.quantity} units\n\n"
+            message += f"We apologize for the inconvenience."
+            self._send_message(customer.telegram_user_id, message)
+
     def handle_box_status(self, chat_id: int) -> Dict[str, Any]:
         """Handle /box_status command"""
         offers = self.db.list_offers()

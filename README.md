@@ -134,6 +134,7 @@ Expected response should show:
 - `/retire_supplier <name>` - Retire supplier (no longer available for new offers)
 - `/list_suppliers` - View all registered suppliers
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
+- `/cancel_offer <offer_id>` - Cancel offer and all related orders
 - `/box_status` - View box status and capacity
 - `/fulfill_offer <offer_id>` - Start fulfillment process for an offer
 - `/confirm_fulfill <offer_id> <boxes_ordered>` - Confirm fulfillment with box count
