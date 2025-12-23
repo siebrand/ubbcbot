@@ -37,6 +37,11 @@ class DynamoDBService:
     # Supplier operations
     def create_supplier(self, supplier: Supplier) -> bool:
         try:
+            # Check for duplicate name (case-insensitive)
+            existing = self.get_supplier_by_name(supplier.name)
+            if existing:
+                return False
+            
             item = self._prepare_item(supplier.__dict__)
             self.suppliers_table.put_item(Item=item)
             return True
@@ -59,7 +64,7 @@ class DynamoDBService:
             response = self.suppliers_table.scan(
                 FilterExpression='#name = :name',
                 ExpressionAttributeNames={'#name': 'name'},
-                ExpressionAttributeValues={':name': name}
+                ExpressionAttributeValues={':name': name.strip()}
             )
             items = response.get('Items', [])
             if items:

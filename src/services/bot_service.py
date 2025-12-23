@@ -122,7 +122,13 @@ class BotService:
             self._send_message(chat_id, "Usage: /add_supplier <name>")
             return {'status': 'invalid_args'}
 
-        supplier_name = ' '.join(args)
+        supplier_name = ' '.join(args).strip()
+        
+        # Check for duplicate
+        if self.db.get_supplier_by_name(supplier_name):
+            self._send_message(chat_id, f"❌ Supplier '{supplier_name}' already exists")
+            return {'status': 'duplicate_supplier'}
+        
         supplier = Supplier(name=supplier_name)
         
         if self.db.create_supplier(supplier):
