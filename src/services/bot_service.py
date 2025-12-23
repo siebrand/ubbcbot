@@ -34,15 +34,22 @@ class BotService:
         if self.environment == 'test':
             text = f"TEST - {text}"
         
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
+            return False
+            
         url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
         data = {
             'chat_id': chat_id,
-            'text': text,
-            'parse_mode': 'HTML'
+            'text': text
         }
         
         try:
+            if self.environment == 'test':
+                logger.info(f"Sending message to chat {chat_id}: {text[:50]}...")
             response = requests.post(url, json=data)
+            if self.environment == 'test':
+                logger.info(f"Telegram API response: {response.status_code} - {response.text}")
             return response.status_code == 200
         except Exception as e:
             logger.error(f"Error sending message: {e}")
@@ -66,7 +73,7 @@ class BotService:
             first_name = message['from'].get('first_name', 'N/A')
             
             # Log incoming command
-            if text.startswith('/'):
+            if text.startswith('/') and self.environment == 'test':
                 logger.info(f"Command: {text.split()[0]} | User: {first_name} (@{username}) | ID: {user_id}")
 
             # Register customer if not exists
@@ -247,6 +254,9 @@ class BotService:
 
     def _handle_start(self, chat_id: int, user_id: int) -> Dict[str, Any]:
         """Handle /start command"""
+        if self.environment == 'test':
+            logger.info(f"Processing /start command for user {user_id}, chat {chat_id}")
+        
         message = "🍺 Welcome to UBBC Bot!\n\n"
         message += "Available commands:\n"
         message += "/start - Show this help\n"
@@ -254,6 +264,8 @@ class BotService:
         message += "/my_orders - View your orders\n"
         
         if self._is_admin(user_id):
+            if self.environment == 'test':
+                logger.info(f"User {user_id} is admin, adding admin commands")
             message += "\n👑 Admin commands:\n"
             message += "/add_supplier <name> - Add supplier\n"
             message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
@@ -261,7 +273,10 @@ class BotService:
             message += "/box_status - View box status\n"
             message += "/cancel_order <order_id> - Cancel customer order\n"
 
-        self._send_message(chat_id, message)
+        success = self._send_message(chat_id, message)
+        if self.environment == 'test':
+            logger.info(f"Message send result: {success}")
+        
         return {'status': 'success'}
 
     def _handle_cancel_order(self, chat_id: int, args: list) -> Dict[str, Any]:
