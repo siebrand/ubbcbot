@@ -733,58 +733,63 @@ class BotService:
 
     def _execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer) -> Dict[str, Any]:
         """Execute order placement"""
-        # Find available box
-        boxes = self.db.get_boxes_by_offer(offer_id)
-        available_box = None
-        
-        for box in boxes:
-            if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value]:
-                if box.current_quantity + quantity <= box.max_capacity:
-                    available_box = box
-                    break
-
-        # Create new box if needed
-        if not available_box:
-            available_box = Box(
-                offer_id=offer_id,
-                max_capacity=offer.wholesale_box_size,
-                min_breakeven=offer.min_quantity_breakeven
-            )
-            self.db.create_box(available_box)
-
-        # Create order
-        from decimal import Decimal
-        order = Order(
-            customer_id=customer.customer_id,
-            box_id=available_box.box_id,
-            offer_id=offer_id,
-            quantity=quantity,
-            unit_price=Decimal(str(offer.price_per_unit)),
-            total_price=Decimal(str(offer.price_per_unit)) * quantity
-        )
-
-        if self.db.create_order(order):
-            # Update box quantity and status
-            new_quantity = available_box.current_quantity + quantity
-            updates = {'current_quantity': new_quantity}
+        try:
+            # Find available box
+            boxes = self.db.get_boxes_by_offer(offer_id)
+            available_box = None
             
-            if new_quantity >= available_box.min_breakeven:
-                updates['status'] = BoxStatus.MINIMUM_REACHED.value
-            if new_quantity >= available_box.max_capacity:
-                updates['status'] = BoxStatus.FULL.value
+            for box in boxes:
+                if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value]:
+                    if box.current_quantity + quantity <= box.max_capacity:
+                        available_box = box
+                        break
 
-            self.db.update_box(available_box.box_id, updates)
+            # Create new box if needed
+            if not available_box:
+                available_box = Box(
+                    offer_id=offer_id,
+                    max_capacity=offer.wholesale_box_size,
+                    min_breakeven=offer.min_quantity_breakeven
+                )
+                self.db.create_box(available_box)
 
-            self._send_message(chat_id, 
-                f"✅ Order placed!\n"
-                f"Order ID : {order.order_id}\n"
-                f"Product  : {offer.name}\n"
-                f"Quantity : {quantity}\n"
-                f"Total    : €{order.total_price:.2f}\n"
-                f"Status   : {order.status}")
-            return {'status': 'success'}
-        else:
-            self._send_message(chat_id, "❌ Failed to place order")
+            # Create order
+            from decimal import Decimal
+            order = Order(
+                customer_id=customer.customer_id,
+                box_id=available_box.box_id,
+                offer_id=offer_id,
+                quantity=quantity,
+                unit_price=Decimal(str(offer.price_per_unit)),
+                total_price=Decimal(str(offer.price_per_unit)) * quantity
+            )
+
+            if self.db.create_order(order):
+                # Update box quantity and status
+                new_quantity = available_box.current_quantity + quantity
+                updates = {'current_quantity': new_quantity}
+                
+                if new_quantity >= available_box.min_breakeven:
+                    updates['status'] = BoxStatus.MINIMUM_REACHED.value
+                if new_quantity >= available_box.max_capacity:
+                    updates['status'] = BoxStatus.FULL.value
+
+                self.db.update_box(available_box.box_id, updates)
+
+                self._send_message(chat_id, 
+                    f"✅ Order placed!\n"
+                    f"Order ID : {order.order_id}\n"
+                    f"Product  : {offer.name}\n"
+                    f"Quantity : {quantity}\n"
+                    f"Total    : €{order.total_price:.2f}\n"
+                    f"Status   : {order.status}")
+                return {'status': 'success'}
+            else:
+                self._send_message(chat_id, "❌ Failed to place order")
+                return {'status': 'error'}
+        except Exception as e:
+            logger.error(f"Error in _execute_order: {e}")
+            self._send_message(chat_id, "❌ Order processing failed")
             return {'status': 'error'}
 
     def _handle_my_orders(self, chat_id: int, user_id: int) -> Dict[str, Any]:
