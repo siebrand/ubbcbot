@@ -190,14 +190,20 @@ class DynamoDBService:
             expression_values = {}
             
             for key, value in updates.items():
-                update_expression += f"{key} = :{key}, "
+                update_expression += f"#{key} = :{key}, "
                 expression_values[f":{key}"] = value
             
             update_expression = update_expression.rstrip(", ")
             
+            # Add expression attribute names for reserved keywords
+            expression_names = {}
+            for key in updates.keys():
+                expression_names[f"#{key}"] = key
+            
             self.boxes_table.update_item(
                 Key={'box_id': box_id},
                 UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_names,
                 ExpressionAttributeValues=expression_values
             )
             return True
