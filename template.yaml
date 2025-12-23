@@ -78,8 +78,12 @@ Resources:
             TableName: !Sub 'ubbc-bot-${Environment}-*'
         - S3ReadPolicy:
             BucketName: !Ref ImageBucket
-        - SSMParameterReadPolicy:
-            ParameterName: !Sub '/ubbc-bot/${Environment}/*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/*'
         - CloudWatchLogsFullAccess
       Tags:
         Project: UBBCBot
