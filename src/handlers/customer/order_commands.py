@@ -70,7 +70,7 @@ class CustomerOrderCommands(BaseHandler):
                     message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
                 
                 message += f"\nAre you sure you want to order {quantity}x more?\n"
-                message += f"[Confirm order](https://t.me/{self._get_bot_username()}?start=confirm_{offer_id}_{quantity})"
+                message += f"[✅ Confirm order](https://t.me/{self._get_bot_username()}?start=confirm_{offer_id}_{quantity})"
                 
                 self._send_message(chat_id, message, 'Markdown')
                 return {'status': 'confirmation_required'}
