@@ -271,5 +271,7 @@ class BotService:
                 return self.user_commands.handle_reject_user(chat_id, parts[1:])
             elif command == '/user_status':
                 return self.user_commands.handle_user_status(chat_id, parts[1:])
+            elif command == '/update_customer':
+                return self.user_commands.handle_update_customer(chat_id, parts[1:])
 
         return {'status': 'unknown_command'}

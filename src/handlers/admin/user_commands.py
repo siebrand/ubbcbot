@@ -30,7 +30,7 @@ class UserCommands(BaseHandler):
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer = self._find_customer_by_identifier(identifier)
+        customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
         if not customer:
             self._send_message(chat_id, f"❌ User '{identifier}' not found")
@@ -60,7 +60,7 @@ class UserCommands(BaseHandler):
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer = self._find_customer_by_identifier(identifier)
+        customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
         if not customer:
             self._send_message(chat_id, f"❌ User '{identifier}' not found")
@@ -86,7 +86,7 @@ class UserCommands(BaseHandler):
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer = self._find_customer_by_identifier(identifier)
+        customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
         if not customer:
             self._send_message(chat_id, f"❌ User '{identifier}' not found")
@@ -109,6 +109,36 @@ class UserCommands(BaseHandler):
         self._send_message(chat_id, message)
         return {'status': 'success'}
 
+    def handle_update_customer(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_customer command"""
+        if len(args) < 2:
+            self._send_message(chat_id, "Usage: /update_customer <username> <new_first_name> [new_last_name]")
+            return {'status': 'invalid_args'}
+
+        username = args[0]
+        new_first_name = args[1]
+        new_last_name = args[2] if len(args) > 2 else None
+        
+        customer = self._find_customer_with_ambiguity_check(username, chat_id)
+        
+        if not customer:
+            self._send_message(chat_id, f"❌ User '{username}' not found")
+            return {'status': 'user_not_found'}
+
+        # Update customer name
+        updates = {'first_name': new_first_name}
+        if new_last_name:
+            updates['last_name'] = new_last_name
+        
+        if self.db.update_customer(customer.customer_id, updates):
+            old_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+            new_name = f"{new_first_name} {new_last_name or ''}".strip()
+            self._send_message(chat_id, f"✅ Customer name updated: '{old_name}' → '{new_name}'")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to update customer")
+            return {'status': 'error'}
+
     def _find_customer_by_identifier(self, identifier: str) -> Optional:
         """Find customer by username or display name"""
         # Try by username first (remove @ if present)
@@ -117,14 +147,66 @@ class UserCommands(BaseHandler):
         if customer:
             return customer
         
-        # Try by first name
-        customers = self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value)
-        for customer in customers:
+        # Try by first name across all customers
+        from models.entities import AuthorizationStatus
+        all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
+        
+        matches = []
+        for customer in all_customers:
             if customer.first_name and customer.first_name.lower() == identifier.lower():
-                return customer
+                matches.append(customer)
             # Try first + last name combination
             full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
             if full_name.lower() == identifier.lower():
-                return customer
+                return customer  # Exact full name match takes priority
+        
+        # Return single match or None if multiple/no matches
+        return matches[0] if len(matches) == 1 else None
+    
+    def _find_customer_with_ambiguity_check(self, identifier: str, chat_id: int) -> Optional:
+        """Find customer with ambiguity handling for admin commands"""
+        # Try by username first (remove @ if present)
+        username = identifier.lstrip('@').lower()
+        customer = self.db.get_customer_by_username(username)
+        if customer:
+            return customer
+        
+        # Try by first name across all customers
+        from models.entities import AuthorizationStatus
+        all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
+        
+        matches = []
+        exact_full_name_match = None
+        
+        for customer in all_customers:
+            # Check for exact full name match first
+            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+            if full_name.lower() == identifier.lower():
+                exact_full_name_match = customer
+                break
+            
+            # Collect first name matches
+            if customer.first_name and customer.first_name.lower() == identifier.lower():
+                matches.append(customer)
+        
+        # Return exact full name match if found
+        if exact_full_name_match:
+            return exact_full_name_match
+        
+        # Handle first name matches
+        if len(matches) == 1:
+            return matches[0]
+        elif len(matches) > 1:
+            # Multiple matches - show options
+            message = f"❌ Multiple users found with name '{identifier}':\n\n"
+            for customer in matches:
+                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+                username_part = f" (@{customer.username})" if customer.username else " (no username)"
+                message += f"• {full_name}{username_part}\n"
+            message += "\nUse full name or @username to specify exactly which user."
+            self._send_message(chat_id, message)
+            return None
         
         return None
