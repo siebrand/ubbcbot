@@ -127,18 +127,19 @@ class InfoCommands(BaseHandler):
         for offer in offers:
             if offer.status == OfferStatus.ACTIVE.value:
                 active_found = True
-                # Get the current order count for this offer
+                # Get the current order count for this offer across all boxes
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
                 total_ordered = sum(box.current_quantity for box in boxes)
+                total_capacity = sum(box.max_capacity for box in boxes)
                 
                 original_price = offer.price_per_unit
                 display_price = original_price
                 
                 if active_discount:
                     display_price = original_price * (1 - active_discount.discount_percentage / 100)
-                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
+                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
                 else:
-                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
+                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
         
         if not active_found:
             self._send_message(chat_id, "🍺 No active offers available")
