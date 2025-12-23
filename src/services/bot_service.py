@@ -277,7 +277,9 @@ class BotService:
                     
                     # Update box quantity
                     updates = {'current_quantity': 1}
-                    if 1 >= box.min_breakeven:
+                    if 1 >= box.max_capacity:
+                        updates['status'] = BoxStatus.FULL.value
+                    elif 1 >= box.min_breakeven:
                         updates['status'] = BoxStatus.MINIMUM_REACHED.value
                     if not self.db.update_box(box.box_id, updates):
                         self._send_message(chat_id, "⚠️ Auto-order placed but box update failed")
@@ -772,10 +774,10 @@ class BotService:
                     new_quantity = available_box.current_quantity + order_quantity
                     updates = {'current_quantity': new_quantity}
                     
-                    if new_quantity >= available_box.min_breakeven:
-                        updates['status'] = BoxStatus.MINIMUM_REACHED.value
                     if new_quantity >= available_box.max_capacity:
                         updates['status'] = BoxStatus.FULL.value
+                    elif new_quantity >= available_box.min_breakeven:
+                        updates['status'] = BoxStatus.MINIMUM_REACHED.value
 
                     if not self.db.update_box(available_box.box_id, updates):
                         self._send_message(chat_id, "❌ Failed to update box")
