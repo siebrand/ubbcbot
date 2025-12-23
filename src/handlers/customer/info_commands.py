@@ -193,9 +193,10 @@ class InfoCommands(BaseHandler):
         for (offer_id, unit_price, status), data in aggregated.items():
             status_emoji = {
                 'pending': '⏳',
+                'ordered': '📦',
                 'confirmed': '✅',
                 'cancelled': '❌',
-                'delivered': '📦'
+                'delivered': '🚚'
             }.get(status, '❓')
             
             # Determine date display
