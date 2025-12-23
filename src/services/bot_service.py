@@ -29,7 +29,13 @@ class BotService:
             logger.error(f"Error getting Telegram token: {e}")
             return ""
 
-    def _send_message(self, chat_id: int, text: str) -> bool:
+    def _escape_html(self, text: str) -> str:
+        """Escape HTML special characters to prevent injection"""
+        if not text:
+            return ""
+        return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#x27;')
+
+    def _send_message(self, chat_id: int, text: str, parse_mode: str = None) -> bool:
         """Send message to Telegram chat"""
         if self.environment == 'test':
             text = f"TEST - {text}"
@@ -43,6 +49,9 @@ class BotService:
             'chat_id': chat_id,
             'text': text
         }
+        
+        if parse_mode:
+            data['parse_mode'] = parse_mode
         
         try:
             if self.environment == 'test':
@@ -95,11 +104,24 @@ class BotService:
         existing_customer = self.db.get_customer_by_telegram_id(telegram_user_id)
         
         if not existing_customer:
+            # Store original data - sanitization happens at output time
+            first_name = user_data.get('first_name', '')
+            last_name = user_data.get('last_name', '')
+            username = user_data.get('username', '')
+            
+            # Only limit length to prevent storage issues
+            if first_name:
+                first_name = first_name[:100]
+            if last_name:
+                last_name = last_name[:100]
+            if username:
+                username = username[:100]
+            
             customer = Customer(
                 telegram_user_id=telegram_user_id,
-                username=user_data.get('username'),
-                first_name=user_data.get('first_name'),
-                last_name=user_data.get('last_name')
+                username=username,
+                first_name=first_name,
+                last_name=last_name
             )
             self.db.create_customer(customer)
 
@@ -163,6 +185,15 @@ class BotService:
 
         supplier_name = ' '.join(args).strip()
         
+        # Validate supplier name
+        if len(supplier_name) > 50:
+            self._send_message(chat_id, "❌ Supplier name too long (max 50 characters)")
+            return {'status': 'invalid_name'}
+        
+        if '<' in supplier_name or '>' in supplier_name:
+            self._send_message(chat_id, "❌ Supplier name cannot contain < or > characters")
+            return {'status': 'invalid_name'}
+        
         # Check for duplicate
         if self.db.get_supplier_by_name(supplier_name):
             self._send_message(chat_id, f"❌ Supplier '{supplier_name}' already exists")
@@ -189,7 +220,15 @@ class BotService:
             supplier_name = args[0]
             price = float(args[-2])
             box_size = int(args[-1])
-            name = ' '.join(args[1:-2])
+            # Validate and sanitize name
+        name = ' '.join(args[1:-2]).strip()
+        if len(name) > 100:  # Prevent excessively long names
+            self._send_message(chat_id, "❌ Product name too long (max 100 characters)")
+            return {'status': 'invalid_name'}
+        
+        if '<' in name or '>' in name:  # Block HTML tags
+            self._send_message(chat_id, "❌ Product name cannot contain < or > characters")
+            return {'status': 'invalid_name'}
 
             # Validate box size
             valid_sizes = [1, 2, 6, 8, 10, 12, 15, 16, 18, 20, 24]
@@ -316,11 +355,11 @@ class BotService:
 
         message = "📋 Pending Users:\n\n"
         for customer in customers:
-            display_name = customer.first_name or "Unknown"
+            display_name = self._escape_html(customer.first_name or "Unknown")
             if customer.last_name:
-                display_name += f" {customer.last_name}"
+                display_name += f" {self._escape_html(customer.last_name)}"
             
-            username_part = f" (@{customer.username})" if customer.username else " (no username)"
+            username_part = f" (@{self._escape_html(customer.username)})" if customer.username else " (no username)"
             message += f"{display_name}{username_part}\n"
 
         self._send_message(chat_id, message)
@@ -395,11 +434,11 @@ class BotService:
             self._send_message(chat_id, f"❌ User '{identifier}' not found")
             return {'status': 'user_not_found'}
 
-        display_name = customer.first_name or "Unknown"
+        display_name = self._escape_html(customer.first_name or "Unknown")
         if customer.last_name:
-            display_name += f" {customer.last_name}"
+            display_name += f" {self._escape_html(customer.last_name)}"
         
-        username_part = f" (@{customer.username})" if customer.username else ""
+        username_part = f" (@{self._escape_html(customer.username)})" if customer.username else ""
         status_emoji = {
             AuthorizationStatus.UNAUTHORIZED.value: "⚠️",
             AuthorizationStatus.APPROVED.value: "✅",
@@ -451,7 +490,7 @@ class BotService:
             if offer.status == OfferStatus.ACTIVE.value:
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
                 
-                message += f"🍺 <b>{offer.name}</b>\n"
+                message += f"🍺 <b>{self._escape_html(offer.name)}</b>\n"
                 for box in boxes:
                     status_emoji = {
                         BoxStatus.OPEN.value: "🟢",
@@ -464,7 +503,7 @@ class BotService:
                     message += f"   {status_emoji} Box {box.box_id[:8]}: {box.current_quantity}/{box.max_capacity} ({box.status})\n"
                 message += "\n"
 
-        self._send_message(chat_id, message)
+        self._send_message(chat_id, message, 'HTML')
         return {'status': 'success'}
 
     def _handle_start(self, chat_id: int, user_id: int) -> Dict[str, Any]:
