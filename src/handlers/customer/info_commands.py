@@ -117,7 +117,7 @@ class InfoCommands(BaseHandler):
         for offer in offers:
             if offer.status == OfferStatus.ACTIVE.value:
                 active_found = True
-                # Get current order count for this offer
+                # Get the current order count for this offer
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
                 total_ordered = sum(box.current_quantity for box in boxes)
                 
