@@ -164,10 +164,12 @@ class BotService:
             return {'status': 'invalid_args'}
 
         try:
+            # Parse arguments: supplier_name name price box_size
+            # Everything except last 2 args is the name
             supplier_name = args[0]
-            name = args[1]
-            price = float(args[2])
-            box_size = int(args[3])
+            price = float(args[-2])
+            box_size = int(args[-1])
+            name = ' '.join(args[1:-2])
 
             # Validate box size
             valid_sizes = [1, 2, 6, 8, 10, 12, 15, 16, 18, 20, 24]
@@ -205,8 +207,8 @@ class BotService:
                 self._send_message(chat_id, "❌ Failed to create offer")
                 return {'status': 'error'}
 
-        except ValueError:
-            self._send_message(chat_id, "❌ Invalid price or box size format")
+        except (ValueError, IndexError) as e:
+            self._send_message(chat_id, f"❌ Invalid format. Error: {str(e)}")
             return {'status': 'invalid_format'}
 
     def _handle_list_offers(self, chat_id: int, user_id: int) -> Dict[str, Any]:
