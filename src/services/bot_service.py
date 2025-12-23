@@ -667,8 +667,31 @@ class BotService:
                 self._send_message(chat_id, "❌ Customer not found")
                 return {'status': 'customer_not_found'}
 
-            # Check for existing orders for this offer
+            # Check for existing orders and enforce 5 unit limit
             existing_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.offer_id == offer_id and o.status != 'cancelled']
+            total_existing = sum(order.quantity for order in existing_orders)
+            
+            if total_existing + quantity > 5:
+                message = f"❌ Order exceeds 5 unit limit for {offer.name}\n\n"
+                message += f"Your existing orders ({total_existing} units):\n"
+                for order in existing_orders:
+                    if isinstance(order.created_at, str):
+                        from datetime import datetime
+                        order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+                    else:
+                        order_date = order.created_at.strftime('%Y-%m-%d')
+                    message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
+                
+                remaining_allowed = 5 - total_existing
+                if remaining_allowed > 0:
+                    message += f"\nMaximum you can still order: {remaining_allowed} units"
+                else:
+                    message += f"\nYou have reached the 5 unit limit for this offer"
+                
+                self._send_message(chat_id, message)
+                return {'status': 'limit_exceeded'}
+            
+            # Check for existing orders for duplicate confirmation
             if existing_orders:
                 # Show existing orders and request confirmation
                 message = f"⚠️ You already have orders for {offer.name}:\n\n"
@@ -717,6 +740,30 @@ class BotService:
             if not customer:
                 self._send_message(chat_id, "❌ Customer not found")
                 return {'status': 'customer_not_found'}
+            
+            # Check 5 unit limit for confirmed orders
+            existing_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.offer_id == offer_id and o.status != 'cancelled']
+            total_existing = sum(order.quantity for order in existing_orders)
+            
+            if total_existing + quantity > 5:
+                message = f"❌ Order exceeds 5 unit limit for {offer.name}\n\n"
+                message += f"Your existing orders ({total_existing} units):\n"
+                for order in existing_orders:
+                    if isinstance(order.created_at, str):
+                        from datetime import datetime
+                        order_date = datetime.fromisoformat(order.created_at.replace('Z', '+00:00')).strftime('%Y-%m-%d')
+                    else:
+                        order_date = order.created_at.strftime('%Y-%m-%d')
+                    message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
+                
+                remaining_allowed = 5 - total_existing
+                if remaining_allowed > 0:
+                    message += f"\nMaximum you can still order: {remaining_allowed} units"
+                else:
+                    message += f"\nYou have reached the 5 unit limit for this offer"
+                
+                self._send_message(chat_id, message)
+                return {'status': 'limit_exceeded'}
             
             # Execute the order without duplicate check
             return self._execute_order(chat_id, user_id, offer_id, quantity, offer, customer)
