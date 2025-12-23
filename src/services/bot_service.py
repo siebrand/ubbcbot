@@ -98,10 +98,14 @@ class BotService:
             query_id = callback_query['id']
             user_id = callback_query['from']['id']
             chat_id = callback_query['message']['chat']['id']
+            message_id = callback_query['message']['message_id']
             data = callback_query['data']
             
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
+            
+            # Remove the keyboard buttons
+            self._edit_message_remove_keyboard(chat_id, message_id)
             
             if data.startswith('confirm_order_'):
                 # Parse confirm_order_<offer_id>_<quantity>
@@ -132,6 +136,22 @@ class BotService:
             return response.status_code == 200
         except Exception as e:
             logger.error(f"Error answering callback query: {e}")
+            return False
+    
+    def _edit_message_remove_keyboard(self, chat_id: int, message_id: int) -> bool:
+        """Remove inline keyboard from a message"""
+        import requests
+        try:
+            url = f"https://api.telegram.org/bot{self.telegram_token}/editMessageReplyMarkup"
+            data = {
+                'chat_id': chat_id,
+                'message_id': message_id,
+                'reply_markup': {'inline_keyboard': []}
+            }
+            response = requests.post(url, json=data)
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Error removing keyboard: {e}")
             return False
 
     def _register_customer_if_needed(self, user_data: Dict[str, Any]):
