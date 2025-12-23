@@ -46,7 +46,7 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
          {\"command\": \"cancel_order\", \"description\": \"Cancel order\"},
          {\"command\": \"confirm_cancel\", \"description\": \"Confirm order cancellation\"},
          {\"command\": \"user_orders\", \"description\": \"View user orders\"},
-         {\"command\": \"all_orders\", \"description\": \"View all orders\"},
+         {\"command\": \"all_orders\", \"description\": \"Download orders CSV\"},
          {\"command\": \"pending_users\", \"description\": \"View users awaiting approval\"},
          {\"command\": \"approve_user\", \"description\": \"Approve user\"},
          {\"command\": \"reject_user\", \"description\": \"Reject user\"},

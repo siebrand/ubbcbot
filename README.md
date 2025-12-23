@@ -136,7 +136,7 @@ Expected response should show:
 - `/box_status` - View box status and capacity
 - `/cancel_order <order_id>` - Cancel customer order (with confirmation for full boxes)
 - `/user_orders <username>` - View orders for specific user
-- `/all_orders [active|cancelled|all]` - View all orders (default: active)
+- `/all_orders [active|cancelled|all]` - Download CSV of all orders (default: active)
 
 ### Customer Commands
 - `/start` - Register and view help

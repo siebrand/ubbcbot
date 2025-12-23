@@ -75,3 +75,42 @@ class BaseHandler:
         except Exception as e:
             logger.error(f"Error sending message: {e}")
             return False
+
+    def _send_document(self, chat_id: int, content: str, filename: str, caption: str = None) -> bool:
+        """Send document to Telegram chat"""
+        import requests
+        from io import BytesIO
+        
+        if self.environment == 'test' and caption:
+            caption = f"TEST - {caption}"
+        
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
+            return False
+            
+        url = f"https://api.telegram.org/bot{self.telegram_token}/sendDocument"
+        
+        # Convert string content to bytes
+        file_data = BytesIO(content.encode('utf-8'))
+        
+        files = {
+            'document': (filename, file_data, 'text/csv')
+        }
+        
+        data = {
+            'chat_id': chat_id
+        }
+        
+        if caption:
+            data['caption'] = caption
+        
+        try:
+            if self.environment == 'test':
+                logger.info(f"Sending document to chat {chat_id}: {filename}")
+            response = requests.post(url, data=data, files=files)
+            if self.environment == 'test':
+                logger.info(f"Telegram API response: {response.status_code}")
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Error sending document: {e}")
+            return False
