@@ -13,42 +13,49 @@ class InfoCommands(BaseHandler):
             logger.info(f"Processing /start command for user {user_id}, chat {chat_id}")
         
         message = "🍺 Welcome to UBBC Bot!\n\n"
-        message += "Customer commands:\n"
-        message += "/start - Show this help\n"
+        message += "📋 General:\n"
+        message += "/start - Show this help\n\n"
+        message += "🛒 Orders:\n"
         message += "/list_offers - View available offers\n"
         message += "/order <offer_id> [quantity] - Place an order\n"
         message += "/confirm_order <offer_id> <quantity> - Confirm duplicate order\n"
-        message += "/my_orders - View your orders\n"
+        message += "/my_orders - View your orders\n\n"
+        message += "🔔 Notifications:\n"
         message += "/subscribe - Subscribe to offer notifications\n"
         message += "/unsubscribe - Unsubscribe from notifications\n"
         
         if self._is_admin(user_id):
             if self.environment == 'test':
                 logger.info(f"User {user_id} is admin, adding admin commands")
-            message += "\n👑 Admin commands:\n"
+            message += "\n👑 Admin Commands:\n\n"
             
             # Test environment only
             if self.environment == 'test':
-                message += "/setup_test_data - Setup test data\n"
+                message += "🧪 Test Data:\n"
+                message += "/setup_test_data - Setup test data\n\n"
             
             # Supplier management
+            message += "🏭 Suppliers:\n"
             message += "/add_supplier <name> - Add supplier\n"
-            message += "/list_suppliers - List all suppliers\n"
+            message += "/list_suppliers - List all suppliers\n\n"
             
             # Offer management
+            message += "🍺 Offers:\n"
             message += "/create_offer <supplier> <name> <price> <box_size> - Create offer\n"
             message += "/box_status - View box status\n"
             message += "/fulfill_offer <offer_id> - Start fulfillment process\n"
-            message += "/confirm_fulfill <offer_id> <boxes> - Confirm fulfillment\n"
+            message += "/confirm_fulfill <offer_id> <boxes> - Confirm fulfillment\n\n"
             
             # Order management
+            message += "📦 Order Management:\n"
             message += "/order_for <username> <offer_id> [quantity] - Place order for user\n"
             message += "/cancel_order <order_id> - Cancel customer order\n"
             message += "/confirm_cancel <order_id> - Confirm order cancellation\n"
             message += "/user_orders <username> - View orders for specific user\n"
-            message += "/all_orders [active|cancelled|all] - Download CSV of orders\n"
+            message += "/all_orders [active|cancelled|all] - Download CSV of orders\n\n"
             
             # User management
+            message += "👥 User Management:\n"
             message += "/pending_users - View users awaiting approval\n"
             message += "/approve_user <username> - Approve user\n"
             message += "/reject_user <username> - Reject user\n"
