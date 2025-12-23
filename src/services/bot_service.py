@@ -279,14 +279,15 @@ class BotService:
                     updates = {'current_quantity': 1}
                     if 1 >= box.min_breakeven:
                         updates['status'] = BoxStatus.MINIMUM_REACHED.value
-                    self.db.update_box(box.box_id, updates)
-                    
-                    # Notify admin about auto-order
-                    self._send_message(chat_id, f"✅ Auto-ordered 1 unit for you. Order ID: {admin_order.order_id}")
+                    if not self.db.update_box(box.box_id, updates):
+                        self._send_message(chat_id, "⚠️ Auto-order placed but box update failed")
+                    else:
+                        # Notify admin about auto-order
+                        self._send_message(chat_id, f"✅ Auto-ordered 1 unit for you. Order ID: {admin_order.order_id}")
 
                 else:
                     self._send_message(chat_id, f"✅ Offer '{name}' created with ID: {offer.offer_id}")
-                    self._send_message(chat_id, "⚠️ Could not auto-order: Admin customer not found")
+                    self._send_message(chat_id, "⚠️ Auto-order failed: Admin customer not found")
                 return {'status': 'success'}
             else:
                 self._send_message(chat_id, "❌ Failed to create offer")
