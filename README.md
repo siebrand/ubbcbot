@@ -109,7 +109,7 @@ aws ssm put-parameter \
 
 1. **Test bot functionality:**
    - Send `/start` to verify registration (both private and group)
-   - Admin (ID: 15005473): Test `/add_supplier Test Brewery`
+   - Admin (ID: 15005473): Test `/add_supplier Test Supplier`
    - Verify all messages are prefixed with "TEST - "
    - Test group functionality: orders, announcements
 
