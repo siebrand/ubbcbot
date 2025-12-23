@@ -21,7 +21,7 @@ class BotService:
         ssm = boto3.client('ssm')
         try:
             response = ssm.get_parameter(
-                Name=f'/ubbc-bot/{self.environment}/telegram-token',
+                Name=f'/ubbc-bot/{self.environment}/telegram-bot-token',
                 WithDecryption=True
             )
             return response['Parameter']['Value']
