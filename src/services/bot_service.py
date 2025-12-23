@@ -144,6 +144,15 @@ class BotService:
                     self._send_message(chat_id, "❌ You are not authorized to use this bot. Send /start for more information.")
                     return {'status': 'unauthorized'}
 
+        # Handle deep link start parameters
+        if command == '/start' and len(parts) > 1 and parts[1].startswith('order_'):
+            # Parse order_<offer_id>_<quantity>
+            try:
+                _, offer_id_str, quantity_str = parts[1].split('_')
+                return self._handle_order(chat_id, user_id, [offer_id_str, quantity_str])
+            except ValueError:
+                pass  # Fall through to normal start handling
+        
         # Universal commands (available to everyone)
         if command == '/start' or command == '/help':
             return self._handle_start(chat_id, user_id)
@@ -370,11 +379,11 @@ class BotService:
                 
                 if active_discount:
                     display_price = original_price * (1 - active_discount.discount_percentage / 100)
-                    message += f"🍺 [{offer.offer_id}] {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
+                    message += f"🍺 \[{offer.offer_id}\] {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size}) - [Order 1](https://t.me/ubbc_test_bot?start=order_{offer.offer_id}_1)\n"
                 else:
-                    message += f"🍺 [{offer.offer_id}] {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size})\n"
+                    message += f"🍺 \[{offer.offer_id}\] {offer.name} €{display_price:.2f} ({total_ordered}/{offer.wholesale_box_size}) - [Order 1](https://t.me/ubbc_test_bot?start=order_{offer.offer_id}_1)\n"
 
-        self._send_message(chat_id, message)
+        self._send_message(chat_id, message, 'Markdown')
         return {'status': 'success'}
 
     def _handle_unauthorized_start(self, chat_id: int) -> Dict[str, Any]:
