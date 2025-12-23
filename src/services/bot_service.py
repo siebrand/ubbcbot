@@ -167,9 +167,9 @@ class BotService:
 
         # Admin-only commands
         if self._is_admin(user_id):
-            elif command == '/order_for':
-            return self._handle_order_for(chat_id, user_id, parts[1:])
-        elif command == '/add_supplier':
+            if command == '/order_for':
+                return self._handle_order_for(chat_id, user_id, parts[1:])
+            elif command == '/add_supplier':
                 return self._handle_add_supplier(chat_id, parts[1:])
             elif command == '/create_offer':
                 return self._handle_create_offer(chat_id, parts[1:])
