@@ -131,9 +131,29 @@ class UserCommands(BaseHandler):
             updates['last_name'] = new_last_name
         
         if self.db.update_customer(customer.customer_id, updates):
+            # Update username in all active orders
+            active_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.status != 'cancelled']
+            updated_orders = 0
+            
+            for order in active_orders:
+                # Note: This assumes orders have a customer_name field to update
+                # If orders don't store customer names, this step can be skipped
+                try:
+                    new_customer_name = f"{new_first_name} {new_last_name or ''}".strip()
+                    if hasattr(order, 'customer_name'):
+                        self.db.update_order(order.order_id, {'customer_name': new_customer_name})
+                        updated_orders += 1
+                except Exception:
+                    pass  # Continue with other orders if one fails
+            
             old_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
             new_name = f"{new_first_name} {new_last_name or ''}".strip()
-            self._send_message(chat_id, f"✅ Customer name updated: '{old_name}' → '{new_name}'")
+            
+            message = f"✅ Customer name updated: '{old_name}' → '{new_name}'"
+            if updated_orders > 0:
+                message += f"\nUpdated {updated_orders} active orders"
+            
+            self._send_message(chat_id, message)
             return {'status': 'success'}
         else:
             self._send_message(chat_id, "❌ Failed to update customer")
