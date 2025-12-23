@@ -235,11 +235,11 @@ class AdminOrderCommands(BaseHandler):
 
     def handle_all_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /all_orders command"""
-        # Get filter from args (active, cancelled, or all)
+        # Get filter from args (active, cancelled, ordered, or all)
         status_filter = args[0].lower() if args else 'active'
         
-        if status_filter not in ['active', 'cancelled', 'all']:
-            self._send_message(chat_id, "Usage: /all_orders [active|cancelled|all]")
+        if status_filter not in ['active', 'cancelled', 'ordered', 'all']:
+            self._send_message(chat_id, "Usage: /all_orders [active|cancelled|ordered|all]")
             return {'status': 'invalid_args'}
 
         # Get all customers and their orders
@@ -253,6 +253,8 @@ class AdminOrderCommands(BaseHandler):
                 if status_filter == 'active' and order.status == 'cancelled':
                     continue
                 elif status_filter == 'cancelled' and order.status != 'cancelled':
+                    continue
+                elif status_filter == 'ordered' and order.status != 'ordered':
                     continue
                 all_orders.append((customer, order))
         

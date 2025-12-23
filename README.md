@@ -139,7 +139,7 @@ Expected response should show:
 - `/confirm_fulfill <offer_id> <boxes_ordered>` - Confirm fulfillment with box count
 - `/cancel_order <order_id>` - Cancel customer order (with confirmation for full boxes)
 - `/user_orders <username>` - View orders for specific user
-- `/all_orders [active|cancelled|all]` - Download CSV of all orders (default: active)
+- `/all_orders [active|cancelled|ordered|all]` - Download CSV of all orders (default: active)
 - `/update_customer <username> <new_first_name> [new_last_name]` - Update customer name
 
 ### Customer Commands

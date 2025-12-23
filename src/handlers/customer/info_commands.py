@@ -53,7 +53,7 @@ class InfoCommands(BaseHandler):
             message += "/cancel_order <order_id> - Cancel customer order\n"
             message += "/confirm_cancel <order_id> - Confirm order cancellation\n"
             message += "/user_orders <username> - View orders for specific user\n"
-            message += "/all_orders [active|cancelled|all] - Download CSV of orders\n\n"
+            message += "/all_orders [active|cancelled|ordered|all] - Download CSV of orders\n\n"
             
             # User management
             message += "👥 User Management:\n"
