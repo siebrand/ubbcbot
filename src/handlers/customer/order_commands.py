@@ -171,8 +171,14 @@ class CustomerOrderCommands(BaseHandler):
                             available_box = box
                             break
 
-                # Create new box if needed
+                # Create new box only if no boxes exist or all existing boxes are not ordered
                 if not available_box:
+                    # Check if any boxes are already ordered - if so, don't create new box
+                    has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes)
+                    if has_ordered_boxes:
+                        self._send_message(chat_id, "❌ No available capacity - offer is sold out")
+                        return {'status': 'sold_out'}
+                    
                     available_box = Box(
                         offer_id=offer_id,
                         max_capacity=offer.wholesale_box_size,
