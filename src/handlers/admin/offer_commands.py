@@ -228,6 +228,11 @@ class OfferCommands(BaseHandler):
                     msg += f"Your order is confirmed and will be delivered."
                     self._send_message(customer.telegram_user_id, msg)
             
+            # Update all boxes for this offer to 'ordered' status
+            boxes = self.db.get_boxes_by_offer(offer_id)
+            for box in boxes:
+                self.db.update_box(box.box_id, {'status': BoxStatus.ORDERED.value})
+            
             # Cancel remaining orders
             for order in cancelled_orders:
                 self.db.update_order(order.order_id, {'status': 'cancelled'})
@@ -242,13 +247,19 @@ class OfferCommands(BaseHandler):
                     msg += f"We apologize for the inconvenience."
                     self._send_message(customer.telegram_user_id, msg)
             
-            # Update offer status - keep active if there are still pending orders
+            # Update offer status - keep active if there's remaining capacity or pending orders
             # Refresh the orders list to get current status after updates
             updated_orders_list = self.db.get_orders_by_offer(offer_id)
             remaining_pending = [o for o in updated_orders_list if o.status == 'pending']
-            if not remaining_pending:
+            
+            # Check if there's remaining capacity
+            remaining_capacity = units_available - units_allocated
+            
+            if not remaining_pending and remaining_capacity == 0:
                 self.db.update_offer(offer_id, {'status': 'sold_out'})
-                offer_status_msg = "Offer marked as SOLD OUT (no pending orders remaining)"
+                offer_status_msg = "Offer marked as SOLD OUT (no capacity remaining)"
+            elif not remaining_pending:
+                offer_status_msg = f"Offer remains ACTIVE ({remaining_capacity} units capacity remaining)"
             else:
                 offer_status_msg = f"Offer remains ACTIVE ({len(remaining_pending)} pending orders remaining)"
             
