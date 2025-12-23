@@ -286,10 +286,30 @@ class BotService:
                     else:
                         # Notify admin about auto-order
                         self._send_message(chat_id, f"✅ Auto-ordered 1 unit for you. Order ID: {admin_order.order_id}")
+                    
+                    # Announce new offer to default group
+                    default_group_id = os.environ.get('DEFAULT_GROUP_ID')
+                    if default_group_id:
+                        announcement = f"🍺 New offer available!\n\n"
+                        announcement += f"[{offer.offer_id}] {offer.name}\n"
+                        announcement += f"Price: €{offer.price_per_unit:.2f} per unit\n"
+                        announcement += f"Box size: {offer.wholesale_box_size} units\n\n"
+                        announcement += f"Order with: /order {offer.offer_id} [quantity]"
+                        self._send_message(int(default_group_id), announcement)
 
                 else:
                     self._send_message(chat_id, f"✅ Offer '{name}' created with ID: {offer.offer_id}")
                     self._send_message(chat_id, "⚠️ Auto-order failed: Admin customer not found")
+                    
+                    # Announce new offer to default group
+                    default_group_id = os.environ.get('DEFAULT_GROUP_ID')
+                    if default_group_id:
+                        announcement = f"🍺 New offer available!\n\n"
+                        announcement += f"[{offer.offer_id}] {offer.name}\n"
+                        announcement += f"Price: €{offer.price_per_unit:.2f} per unit\n"
+                        announcement += f"Box size: {offer.wholesale_box_size} units\n\n"
+                        announcement += f"Order with: /order {offer.offer_id} [quantity]"
+                        self._send_message(int(default_group_id), announcement)
                 return {'status': 'success'}
             else:
                 self._send_message(chat_id, "❌ Failed to create offer")
@@ -298,6 +318,20 @@ class BotService:
         except (ValueError, IndexError) as e:
             self._send_message(chat_id, f"❌ Invalid format. Error: {str(e)}")
             return {'status': 'invalid_format'}
+
+        # Announce new offer to default group after successful creation
+        default_group_id = os.environ.get('DEFAULT_GROUP_ID')
+        if default_group_id:
+            logger.info(f"Announcing offer {offer.offer_id} to group {default_group_id}")
+            announcement = f"🍺 New offer available!\n\n"
+            announcement += f"[{offer.offer_id}] {offer.name}\n"
+            announcement += f"Price: €{offer.price_per_unit:.2f} per unit\n"
+            announcement += f"Box size: {offer.wholesale_box_size} units\n\n"
+            announcement += f"Order with: /order {offer.offer_id} [quantity]"
+            success = self._send_message(int(default_group_id), announcement)
+            logger.info(f"Group announcement result: {success}")
+        else:
+            logger.info("DEFAULT_GROUP_ID not set, skipping group announcement")
 
     def _handle_list_offers(self, chat_id: int, user_id: int) -> Dict[str, Any]:
         """Handle /list_offers command"""

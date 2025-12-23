@@ -8,6 +8,9 @@ Parameters:
     Default: test
     AllowedValues: [test, prod]
 
+Conditions:
+  IsTestEnvironment: !Equals [!Ref Environment, test]
+
 Globals:
   Function:
     Runtime: python3.14
@@ -19,6 +22,10 @@ Globals:
         DYNAMODB_TABLE_PREFIX: !Sub 'ubbc-bot-${Environment}'
         S3_BUCKET_NAME: !Ref ImageBucket
         ADMIN_USER_ID: '15005473'
+        DEFAULT_GROUP_ID: !If 
+          - IsTestEnvironment
+          - '-1003399818858'
+          - '-1001662432692'
 
 Resources:
   # API Gateway
