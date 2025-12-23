@@ -263,6 +263,22 @@ class OfferCommands(BaseHandler):
             else:
                 offer_status_msg = f"Offer remains ACTIVE ({len(remaining_pending)} pending orders remaining)"
             
+            # Create additional empty boxes if needed to match ordered capacity
+            current_boxes = self.db.get_boxes_by_offer(offer_id)
+            current_capacity = sum(box.max_capacity for box in current_boxes)
+            ordered_capacity = boxes_ordered * offer.wholesale_box_size
+            
+            if ordered_capacity > current_capacity:
+                boxes_to_create = boxes_ordered - len(current_boxes)
+                for _ in range(boxes_to_create):
+                    new_box = Box(
+                        offer_id=offer_id,
+                        max_capacity=offer.wholesale_box_size,
+                        min_breakeven=offer.min_quantity_breakeven,
+                        status=BoxStatus.ORDERED.value
+                    )
+                    self.db.create_box(new_box)
+            
             # Clean up empty boxes (delete boxes with 0 orders)
             boxes = self.db.get_boxes_by_offer(offer_id)
             empty_boxes = [box for box in boxes if box.current_quantity == 0]
