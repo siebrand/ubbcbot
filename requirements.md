@@ -46,6 +46,8 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Offer status (active)
 - **FR-007**: Bot assigns orders to specific wholesale boxes
 - **FR-008**: Bot tracks order fulfillment progress per box
+- **FR-049**: System displays active discount information at top of offer listings
+- **FR-050**: System shows original and discounted prices when discount is active
 - **FR-034**: System sends public order confirmation in default channel:
   - Shows customer name if user is member of default channel
   - Shows "anonymous" if user is not member of default channel
@@ -340,6 +342,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 ### 5.2 Customer Commands
 - `/start` - Register as customer and view help
 - `/offers` - View available offers
+- `/list_offers` - View available offers
 - `/order <offer_id> <option> <quantity>` - Place order
 - `/my_orders` - View personal orders
 - `/cancel_order <order_id>` - Cancel order
@@ -576,6 +579,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-051**: Automated cleanup of temporary data older than 24 hours
 - **BR-052**: System maintains complete chain of custody for all order state changes
 - **BR-053**: Audit trail includes IP address and user agent when available
+- **BR-054**: Supplier information is only displayed to admin users (ID: 15005473)
 
 ## 8. Security Requirements
 
@@ -583,6 +587,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **SR-001**: Admin commands restricted to Telegram user ID 15005473 (siebrand)
 - **SR-002**: Customer data privacy protection
 - **SR-003**: Order modification restricted to order owner
+- **SR-014**: Supplier information restricted to admin users only
 
 ### 8.2 Data Protection
 - **SR-004**: Secure storage of customer information

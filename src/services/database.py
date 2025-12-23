@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from boto3.dynamodb.conditions import Key
-from models.entities import Supplier, Offer, Customer, Box, Order
+from models.entities import Supplier, Offer, Customer, Box, Order, DiscountPeriod, DiscountStatus
 
 class DynamoDBService:
     def __init__(self):
@@ -17,6 +17,7 @@ class DynamoDBService:
         self.customers_table = self.dynamodb.Table(f'{self.table_prefix}-customers')
         self.boxes_table = self.dynamodb.Table(f'{self.table_prefix}-boxes')
         self.orders_table = self.dynamodb.Table(f'{self.table_prefix}-orders')
+        self.discounts_table = self.dynamodb.Table(f'{self.table_prefix}-discounts')
 
     def _serialize_datetime(self, obj):
         """Convert datetime objects to ISO strings"""
@@ -207,6 +208,26 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error getting orders by offer: {e}")
             return []
+
+    def get_active_discount(self) -> Optional[DiscountPeriod]:
+        try:
+            from datetime import datetime
+            now = datetime.utcnow()
+            response = self.discounts_table.scan(
+                FilterExpression='#status = :status AND start_time <= :now AND (end_time IS NULL OR end_time > :now)',
+                ExpressionAttributeNames={'#status': 'status'},
+                ExpressionAttributeValues={
+                    ':status': DiscountStatus.ACTIVE.value,
+                    ':now': now.isoformat()
+                }
+            )
+            items = response.get('Items', [])
+            if items:
+                return DiscountPeriod(**items[0])
+            return None
+        except Exception as e:
+            print(f"Error getting active discount: {e}")
+            return None
 
     def get_order(self, order_id: str) -> Optional[Order]:
         try:

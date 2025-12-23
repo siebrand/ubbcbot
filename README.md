@@ -141,7 +141,6 @@ Expected response should show:
 ### Admin Commands (User ID: 15005473)
 - `/add_supplier <name>` - Register new supplier
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
-- `/list_offers` - View all active offers
 - `/box_status` - View box status and capacity
 - `/cancel_order <order_id>` - Cancel customer order (with confirmation for full boxes)
 
@@ -149,6 +148,7 @@ Expected response should show:
 - `/start` - Register and view help
 - `/order <offer_id> [quantity]` - Place order
 - `/my_orders` - View personal orders
+- `/list_offers` - View available offers
 
 ## Architecture
 

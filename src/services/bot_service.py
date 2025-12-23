@@ -4,7 +4,7 @@ import requests
 import logging
 from typing import Dict, Any, Optional
 from services.database import DynamoDBService
-from models.entities import Supplier, Offer, Customer, Box, Order, BoxStatus, OfferStatus
+from models.entities import Supplier, Offer, Customer, Box, Order, BoxStatus, OfferStatus, DiscountPeriod, DiscountStatus
 
 logger = logging.getLogger()
 
@@ -115,6 +115,8 @@ class BotService:
             return self._handle_order(chat_id, user_id, parts[1:])
         elif command == '/my_orders':
             return self._handle_my_orders(chat_id, user_id)
+        elif command == '/list_offers':
+            return self._handle_list_offers(chat_id, user_id)
 
         # Admin-only commands
         if self._is_admin(user_id):
@@ -122,8 +124,6 @@ class BotService:
                 return self._handle_add_supplier(chat_id, parts[1:])
             elif command == '/create_offer':
                 return self._handle_create_offer(chat_id, parts[1:])
-            elif command == '/list_offers':
-                return self._handle_list_offers(chat_id)
             elif command == '/box_status':
                 return self._handle_box_status(chat_id)
             elif command == '/cancel_order':
@@ -207,7 +207,7 @@ class BotService:
             self._send_message(chat_id, "❌ Invalid price or box size format")
             return {'status': 'invalid_format'}
 
-    def _handle_list_offers(self, chat_id: int) -> Dict[str, Any]:
+    def _handle_list_offers(self, chat_id: int, user_id: int) -> Dict[str, Any]:
         """Handle /list_offers command"""
         offers = self.db.list_offers()
         
@@ -215,14 +215,37 @@ class BotService:
             self._send_message(chat_id, "No offers found")
             return {'status': 'no_offers'}
 
-        message = "📋 <b>Active Offers:</b>\n\n"
+        message = ""
+        
+        # Check for active discount
+        active_discount = self.db.get_active_discount()
+        if active_discount:
+            message += f"🎉 DISCOUNT ACTIVE: {active_discount.discount_percentage}% OFF!\n"
+            if active_discount.end_time:
+                message += f"Valid until: {active_discount.end_time.strftime('%Y-%m-%d %H:%M')}\n"
+            message += "\n"
+        
+        message += "📋 Active Offers:\n\n"
         for offer in offers:
             if offer.status == OfferStatus.ACTIVE.value:
-                message += f"🍺 <b>{offer.name}</b>\n"
-                message += f"   ID: {offer.offer_id}\n"
-                message += f"   Supplier: {offer.supplier_name}\n"
-                message += f"   Price: €{offer.price_per_unit:.2f}\n"
-                message += f"   Box Size: {offer.wholesale_box_size}\n\n"
+                original_price = offer.price_per_unit
+                display_price = original_price
+                
+                if active_discount:
+                    display_price = original_price * (1 - active_discount.discount_percentage / 100)
+                    message += f"🍺 {offer.name}\n"
+                    message += f"   ID: {offer.offer_id}\n"
+                    if self._is_admin(user_id):
+                        message += f"   Supplier: {offer.supplier_name}\n"
+                    message += f"   Price: €{display_price:.2f} (was €{original_price:.2f})\n"
+                    message += f"   Box Size: {offer.wholesale_box_size}\n\n"
+                else:
+                    message += f"🍺 {offer.name}\n"
+                    message += f"   ID: {offer.offer_id}\n"
+                    if self._is_admin(user_id):
+                        message += f"   Supplier: {offer.supplier_name}\n"
+                    message += f"   Price: €{display_price:.2f}\n"
+                    message += f"   Box Size: {offer.wholesale_box_size}\n\n"
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
@@ -262,6 +285,7 @@ class BotService:
         message += "/start - Show this help\n"
         message += "/order <offer_id> [quantity] - Place an order\n"
         message += "/my_orders - View your orders\n"
+        message += "/list_offers - View available offers\n"
         
         if self._is_admin(user_id):
             if self.environment == 'test':
@@ -269,7 +293,6 @@ class BotService:
             message += "\n👑 Admin commands:\n"
             message += "/add_supplier <name> - Add supplier\n"
             message += "/create_offer <supplier_name> <name> <price> <box_size> - Create offer\n"
-            message += "/list_offers - List all offers\n"
             message += "/box_status - View box status\n"
             message += "/cancel_order <order_id> - Cancel customer order\n"
 

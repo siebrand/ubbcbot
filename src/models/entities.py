@@ -23,6 +23,11 @@ class OrderStatus(Enum):
     CANCELLED = "cancelled"
     DELIVERED = "delivered"
 
+class DiscountStatus(Enum):
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+
 @dataclass
 class Supplier:
     supplier_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -73,4 +78,13 @@ class Order:
     unit_price: float = 0.0
     total_price: float = 0.0
     status: str = OrderStatus.PENDING.value
+    created_at: datetime = field(default_factory=datetime.utcnow)
+
+@dataclass
+class DiscountPeriod:
+    discount_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    discount_percentage: float = 0.0
+    start_time: datetime = field(default_factory=datetime.utcnow)
+    end_time: Optional[datetime] = None
+    status: str = DiscountStatus.ACTIVE.value
     created_at: datetime = field(default_factory=datetime.utcnow)
