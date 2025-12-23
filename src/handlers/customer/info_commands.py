@@ -194,7 +194,23 @@ class InfoCommands(BaseHandler):
             aggregated[key]['dates'].add(order_date)
 
         message = "📋 Your Orders:\n\n"
+        
+        # Group by status for totals
+        status_groups = {}
         for (offer_id, unit_price, status), data in aggregated.items():
+            if status not in status_groups:
+                status_groups[status] = {'total_price': Decimal('0.0'), 'items': []}
+            status_groups[status]['total_price'] += data['total_price']
+            status_groups[status]['items'].append(((offer_id, unit_price, status), data))
+        
+        # Display orders grouped by status
+        open_statuses = ['pending', 'ordered', 'confirmed']
+        open_total = Decimal('0.0')
+        
+        for status in ['pending', 'ordered', 'confirmed', 'delivered', 'cancelled']:
+            if status not in status_groups:
+                continue
+                
             status_emoji = {
                 'pending': '⏳',
                 'ordered': '📦',
@@ -203,19 +219,40 @@ class InfoCommands(BaseHandler):
                 'delivered': '🚚'
             }.get(status, '❓')
             
-            # Determine date display
-            if len(data['dates']) == 1:
-                date_display = f"[{list(data['dates'])[0]}]"
-            else:
-                date_display = "[multiple days]"
+            # Add status header if multiple statuses present
+            if len(status_groups) > 1:
+                message += f"{status_emoji} {status.upper()}:\n"
             
-            order_line = f"{status_emoji} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} ({status})"
+            for (offer_id, unit_price, order_status), data in status_groups[status]['items']:
+                # Determine date display
+                if len(data['dates']) == 1:
+                    date_display = f"[{list(data['dates'])[0]}]"
+                else:
+                    date_display = "[multiple days]"
+                
+                order_line = f"{status_emoji} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
+                
+                if show_ids:
+                    ids_display = ', '.join(data['order_ids'])
+                    order_line += f" - {ids_display}"
+                
+                message += order_line + "\n"
             
-            if show_ids:
-                ids_display = ', '.join(data['order_ids'])
-                order_line += f" - {ids_display}"
+            # Add status total if multiple statuses present
+            if len(status_groups) > 1:
+                message += f"Subtotal: €{status_groups[status]['total_price']:.2f}\n\n"
             
-            message += order_line + "\n"
+            # Add to open total if applicable
+            if status in open_statuses:
+                open_total += status_groups[status]['total_price']
+        
+        # Add grand totals
+        if len(status_groups) > 1:
+            if open_total > 0:
+                message += f"📊 Open Orders Total: €{open_total:.2f}\n"
+            
+            grand_total = sum(group['total_price'] for group in status_groups.values())
+            message += f"💰 Grand Total: €{grand_total:.2f}"
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
