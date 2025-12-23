@@ -73,7 +73,7 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub 'ubbc-bot-${Environment}-offers'
-      BillingMode: ON_DEMAND
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: offer_id
           AttributeType: S
@@ -98,7 +98,7 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub 'ubbc-bot-${Environment}-customers'
-      BillingMode: ON_DEMAND
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: customer_id
           AttributeType: S
@@ -132,7 +132,7 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub 'ubbc-bot-${Environment}-orders'
-      BillingMode: ON_DEMAND
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: order_id
           AttributeType: S
@@ -174,7 +174,7 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub 'ubbc-bot-${Environment}-boxes'
-      BillingMode: ON_DEMAND
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: box_id
           AttributeType: S
@@ -208,7 +208,7 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub 'ubbc-bot-${Environment}-suppliers'
-      BillingMode: ON_DEMAND
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: supplier_id
           AttributeType: S
