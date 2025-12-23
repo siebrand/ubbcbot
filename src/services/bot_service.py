@@ -736,7 +736,8 @@ class BotService:
                 
                 for box in boxes:
                     if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value]:
-                        if box.current_quantity < box.max_capacity:
+                        available_space = box.max_capacity - box.current_quantity
+                        if available_space > 0:
                             available_box = box
                             break
 
