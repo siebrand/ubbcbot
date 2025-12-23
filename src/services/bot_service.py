@@ -220,15 +220,16 @@ class BotService:
             supplier_name = args[0]
             price = float(args[-2])
             box_size = int(args[-1])
+            
             # Validate and sanitize name
-        name = ' '.join(args[1:-2]).strip()
-        if len(name) > 100:  # Prevent excessively long names
-            self._send_message(chat_id, "❌ Product name too long (max 100 characters)")
-            return {'status': 'invalid_name'}
-        
-        if '<' in name or '>' in name:  # Block HTML tags
-            self._send_message(chat_id, "❌ Product name cannot contain < or > characters")
-            return {'status': 'invalid_name'}
+            name = ' '.join(args[1:-2]).strip()
+            if len(name) > 100:  # Prevent excessively long names
+                self._send_message(chat_id, "❌ Product name too long (max 100 characters)")
+                return {'status': 'invalid_name'}
+            
+            if '<' in name or '>' in name:  # Block HTML tags
+                self._send_message(chat_id, "❌ Product name cannot contain < or > characters")
+                return {'status': 'invalid_name'}
 
             # Validate box size
             valid_sizes = [1, 2, 6, 8, 10, 12, 15, 16, 18, 20, 24]
