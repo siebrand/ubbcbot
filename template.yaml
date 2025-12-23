@@ -16,7 +16,7 @@ Globals:
     Runtime: python3.14
     Architectures:
       - arm64
-    MemorySize: 512
+    MemorySize: 256
     Timeout: 30
     Environment:
       Variables:
