@@ -34,6 +34,32 @@ class SupplierCommands(BaseHandler):
             self._send_message(chat_id, "❌ Failed to add supplier")
             return {'status': 'error'}
 
+    def handle_retire_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /retire_supplier command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /retire_supplier <name>")
+            return {'status': 'invalid_args'}
+
+        supplier_name = ' '.join(args).strip()
+        
+        # Find supplier by name
+        supplier = self.db.get_supplier_by_name(supplier_name)
+        if not supplier:
+            self._send_message(chat_id, f"❌ Supplier '{supplier_name}' not found")
+            return {'status': 'supplier_not_found'}
+        
+        if supplier.status == "retired":
+            self._send_message(chat_id, f"❌ Supplier '{supplier_name}' is already retired")
+            return {'status': 'already_retired'}
+        
+        # Update supplier status to retired
+        if self.db.update_supplier(supplier.supplier_id, {'status': 'retired'}):
+            self._send_message(chat_id, f"✅ Supplier '{supplier_name}' has been retired")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to retire supplier")
+            return {'status': 'error'}
+
     def handle_list_suppliers(self, chat_id: int) -> Dict[str, Any]:
         """Handle /list_suppliers command"""
         suppliers = self.db.list_suppliers()

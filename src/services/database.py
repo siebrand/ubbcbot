@@ -99,6 +99,27 @@ class DynamoDBService:
             print(f"Error getting supplier by name: {e}")
             return None
 
+    def update_supplier(self, supplier_id: str, updates: Dict[str, Any]) -> bool:
+        try:
+            update_expression = "SET "
+            expression_values = {}
+            
+            for key, value in updates.items():
+                update_expression += f"{key} = :{key}, "
+                expression_values[f":{key}"] = value
+            
+            update_expression = update_expression.rstrip(", ")
+            
+            self.suppliers_table.update_item(
+                Key={'supplier_id': supplier_id},
+                UpdateExpression=update_expression,
+                ExpressionAttributeValues=expression_values
+            )
+            return True
+        except Exception as e:
+            print(f"Error updating supplier: {e}")
+            return False
+
     def list_suppliers(self) -> List[Supplier]:
         try:
             response = self.suppliers_table.scan()
@@ -138,6 +159,35 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error listing offers: {e}")
             return []
+
+    def update_offer(self, offer_id: int, updates: Dict[str, Any]) -> bool:
+        try:
+            update_expression = "SET "
+            expression_values = {}
+            
+            for key, value in updates.items():
+                update_expression += f"{key} = :{key}, "
+                expression_values[f":{key}"] = value
+            
+            update_expression = update_expression.rstrip(", ")
+            
+            self.offers_table.update_item(
+                Key={'offer_id': offer_id},
+                UpdateExpression=update_expression,
+                ExpressionAttributeValues=expression_values
+            )
+            return True
+        except Exception as e:
+            print(f"Error updating offer: {e}")
+            return False
+
+    def delete_box(self, box_id: str) -> bool:
+        try:
+            self.boxes_table.delete_item(Key={'box_id': box_id})
+            return True
+        except Exception as e:
+            print(f"Error deleting box: {e}")
+            return False
 
     # Customer operations
     def create_customer(self, customer: Customer) -> bool:

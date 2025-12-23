@@ -269,6 +269,8 @@ class BotService:
             # Supplier commands
             elif command == '/add_supplier':
                 return self.supplier_commands.handle_add_supplier(admin_target_chat, parts[1:])
+            elif command == '/retire_supplier':
+                return self.supplier_commands.handle_retire_supplier(admin_target_chat, parts[1:])
             elif command == '/list_suppliers':
                 return self.supplier_commands.handle_list_suppliers(admin_target_chat)
             

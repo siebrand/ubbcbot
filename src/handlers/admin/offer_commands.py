@@ -32,11 +32,15 @@ class OfferCommands(BaseHandler):
                 self._send_message(chat_id, f"❌ Invalid box size. Valid sizes: {valid_sizes}")
                 return {'status': 'invalid_box_size'}
 
-            # Check supplier exists
+            # Check supplier exists and is active
             supplier = self.db.get_supplier_by_name(supplier_name)
             if not supplier:
                 self._send_message(chat_id, "❌ Supplier not found")
                 return {'status': 'supplier_not_found'}
+            
+            if supplier.status != "active":
+                self._send_message(chat_id, f"❌ Supplier '{supplier_name}' is retired and cannot be used for new offers")
+                return {'status': 'supplier_retired'}
 
             # Create offer
             offer = Offer(
@@ -287,6 +291,8 @@ class OfferCommands(BaseHandler):
         except ValueError:
             self._send_message(chat_id, "❌ Invalid format")
             return {'status': 'invalid_format'}
+    
+    def handle_box_status(self, chat_id: int) -> Dict[str, Any]:
         """Handle /box_status command"""
         offers = self.db.list_offers()
         

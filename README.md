@@ -131,6 +131,7 @@ Expected response should show:
 ### Admin Commands (User ID: 15005473)
 - `/setup_test_data` - Setup test data (test environment only)
 - `/add_supplier <name>` - Register new supplier
+- `/retire_supplier <name>` - Retire supplier (no longer available for new offers)
 - `/list_suppliers` - View all registered suppliers
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
 - `/box_status` - View box status and capacity

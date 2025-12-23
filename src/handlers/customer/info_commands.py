@@ -37,6 +37,7 @@ class InfoCommands(BaseHandler):
             # Supplier management
             message += "🏭 Suppliers:\n"
             message += "/add_supplier <name> - Add supplier\n"
+            message += "/retire_supplier <name> - Retire supplier\n"
             message += "/list_suppliers - List all suppliers\n\n"
             
             # Offer management
