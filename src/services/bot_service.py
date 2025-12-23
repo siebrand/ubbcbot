@@ -220,7 +220,31 @@ class BotService:
                 )
                 self.db.create_box(box)
 
-                self._send_message(chat_id, f"✅ Offer '{name}' created with ID: {offer.offer_id}")
+                # Auto-order 1 unit for admin
+                admin_customer = self.db.get_customer_by_telegram_id(self.admin_user_id)
+                if admin_customer:
+                    admin_order = Order(
+                        customer_id=admin_customer.customer_id,
+                        box_id=box.box_id,
+                        offer_id=offer.offer_id,
+                        quantity=1,
+                        unit_price=Decimal(str(price)),
+                        total_price=Decimal(str(price))
+                    )
+                    self.db.create_order(admin_order)
+                    
+                    # Update box quantity
+                    updates = {'current_quantity': 1}
+                    if 1 >= box.min_breakeven:
+                        updates['status'] = BoxStatus.MINIMUM_REACHED.value
+                    self.db.update_box(box.box_id, updates)
+                    
+                    # Notify admin about auto-order
+                    self._send_message(chat_id, f"✅ Auto-ordered 1 unit for you. Order ID: {admin_order.order_id}")
+
+                else:
+                    self._send_message(chat_id, f"✅ Offer '{name}' created with ID: {offer.offer_id}")
+                    self._send_message(chat_id, "⚠️ Could not auto-order: Admin customer not found")
                 return {'status': 'success'}
             else:
                 self._send_message(chat_id, "❌ Failed to create offer")
