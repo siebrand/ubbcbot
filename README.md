@@ -24,28 +24,10 @@ Telegram beer ordering bot with AWS serverless architecture.
    - Select your test bot
    - Set: "TEST - Beer ordering bot for UBBC (Test Environment)"
 
-3. **Set bot commands:**
-   - Send `/setcommands` to @BotFather
+3. **Set bot description:**
+   - Send `/setdescription` to @BotFather
    - Select your test bot
-   - Paste:
-   ```
-   start - Register and view help
-   order - Place order: /order <offer_id> [quantity]
-   my_orders - View your orders
-   confirm_order - Confirm duplicate order: /confirm_order <offer_id> <quantity>
-   list_offers - View available offers
-   add_supplier - [Admin] Add supplier: /add_supplier <name>
-   create_offer - [Admin] Create offer: /create_offer <supplier_name> <name> <price> <box_size>
-   list_suppliers - [Admin] View all suppliers
-   box_status - [Admin] View box status
-   order_for - [Admin] Place order for user: /order_for <username> <offer_id> [quantity]
-   cancel_order - [Admin] Cancel order: /cancel_order <order_id>
-   confirm_cancel - [Admin] Confirm order cancellation: /confirm_cancel <order_id>
-   pending_users - [Admin] View users awaiting approval
-   approve_user - [Admin] Approve user: /approve_user <name_or_username>
-   reject_user - [Admin] Reject user: /reject_user <name_or_username>
-   user_status - [Admin] Check user status: /user_status <name_or_username>
-   ```
+   - Set: "TEST - Beer ordering bot for UBBC (Test Environment)"
 
 4. **Add bot to test group:**
    - Create or use existing test group (e.g., "UBBC Test Group")
@@ -67,12 +49,12 @@ Telegram beer ordering bot with AWS serverless architecture.
 2. **Configure production bot:**
    - Send `/setdescription` to @BotFather
    - Select your production bot
-   - Set: "Beer ordering bot for UBBC - Order craft beers by the box"
+   - Set: "Beer ordering bot for UBBC - Order craft beers"
 
-3. **Set bot commands:**
-   - Send `/setcommands` to @BotFather
+3. **Set bot description:**
+   - Send `/setdescription` to @BotFather
    - Select your production bot
-   - Paste the same commands as test environment
+   - Set: "Beer ordering bot for UBBC - Order craft beers"
 
 4. **Add bot to production groups:**
    - Add the bot to UBBC main group/channel
@@ -110,7 +92,7 @@ aws ssm put-parameter \
 ./deploy.sh prod
 ```
 
-*Note: The deployment script automatically sets the Telegram webhook using the bot token from Parameter Store.*
+*Note: The deployment script automatically sets the Telegram webhook and configures bot commands with proper scopes (admin commands only visible to chat administrators).*
 
 ## Post-Deployment Verification
 
