@@ -2,7 +2,7 @@ import os
 from typing import Dict, Any
 from decimal import Decimal
 from handlers.base_handler import BaseHandler
-from models.entities import Offer, Box, Order, BoxStatus, OfferStatus
+from models.entities import Offer, Box, Order, BoxStatus, OfferStatus, OrderStatus
 
 class OfferCommands(BaseHandler):
     def handle_create_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
@@ -313,7 +313,7 @@ class OfferCommands(BaseHandler):
             
             if not active_orders:
                 # No active orders, just cancel the offer
-                self.db.update_offer(offer_id, {'status': 'cancelled'})
+                self.db.update_offer(offer_id, {'status': OfferStatus.INACTIVE.value})
                 self._delete_offer_boxes(offer_id)
                 self._send_message(chat_id, f"✅ Offer {offer_id} cancelled (no active orders)")
                 return {'status': 'success'}
@@ -354,7 +354,7 @@ class OfferCommands(BaseHandler):
             # Cancel all active orders and notify customers
             cancelled_count = 0
             for order in active_orders:
-                if self.db.update_order(order.order_id, {'status': 'cancelled'}):
+                if self.db.update_order(order.order_id, {'status': OrderStatus.CANCELLED.value}):
                     cancelled_count += 1
                     self._notify_customer_cancellation(order, offer)
             
@@ -362,7 +362,7 @@ class OfferCommands(BaseHandler):
             deleted_boxes = self._delete_offer_boxes(offer_id)
             
             # Cancel the offer
-            self.db.update_offer(offer_id, {'status': 'cancelled'})
+            self.db.update_offer(offer_id, {'status': OfferStatus.INACTIVE.value})
             
             # Send summary
             summary = f"✅ Offer {offer_id} cancelled:\n\n"
