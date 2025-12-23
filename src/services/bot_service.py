@@ -62,6 +62,12 @@ class BotService:
             chat_id = message['chat']['id']
             user_id = message['from']['id']
             text = message.get('text', '')
+            username = message['from'].get('username', 'N/A')
+            first_name = message['from'].get('first_name', 'N/A')
+            
+            # Log incoming command
+            if text.startswith('/'):
+                logger.info(f"Command: {text.split()[0]} | User: {first_name} (@{username}) | ID: {user_id}")
 
             # Register customer if not exists
             self._register_customer_if_needed(message['from'])
