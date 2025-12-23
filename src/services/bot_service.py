@@ -262,10 +262,13 @@ class BotService:
             self._send_message(chat_id, "No suppliers found")
             return {'status': 'no_suppliers'}
 
+        # Filter active suppliers and sort alphabetically
+        active_suppliers = [s for s in suppliers if s.status == "active"]
+        active_suppliers.sort(key=lambda x: x.name.lower())
+
         message = "📋 Registered Suppliers:\n\n"
-        for supplier in suppliers:
-            if supplier.status == "active":
-                message += f"✅ {supplier.name}\n"
+        for supplier in active_suppliers:
+            message += f"{supplier.name}\n"
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
