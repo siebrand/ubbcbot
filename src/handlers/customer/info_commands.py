@@ -275,14 +275,9 @@ class InfoCommands(BaseHandler):
                 
                 message += order_line + "\n"
         
-        # Add grand total only if no cancelled orders or if there are other statuses
-        if 'cancelled' not in status_groups or len(status_groups) > 1:
-            if open_total > 0 and 'cancelled' not in status_groups:
-                message += f"📊 Open Orders Total: €{open_total:.2f}\n"
-            
-            if len(status_groups) > 1:
-                grand_total = sum(group['total_price'] for group in status_groups.values())
-                message += f"💰 Grand Total: €{grand_total:.2f}"
+        # Add open orders total if no cancelled orders
+        elif open_total > 0:
+            message += f"📊 Open Orders Total: €{open_total:.2f}"
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
