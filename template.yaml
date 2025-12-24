@@ -313,6 +313,40 @@ Resources:
         - Key: ManagedBy
           Value: sam
 
+  NotificationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-notifications'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: notification_id
+          AttributeType: S
+        - AttributeName: offer_id
+          AttributeType: N
+      KeySchema:
+        - AttributeName: notification_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: offer-index
+          KeySchema:
+            - AttributeName: offer_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
   # S3 Bucket for Images
   ImageBucket:
     Type: AWS::S3::Bucket

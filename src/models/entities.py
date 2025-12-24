@@ -99,3 +99,11 @@ class DiscountPeriod:
     end_time: Optional[datetime] = None
     status: str = DiscountStatus.ACTIVE.value
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+@dataclass
+class NotificationMessage:
+    notification_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    offer_id: int = 0
+    chat_id: int = 0
+    message_id: int = 0
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

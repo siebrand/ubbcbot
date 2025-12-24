@@ -54,7 +54,8 @@ class InfoCommands(BaseHandler):
             message += "/cancel_order <order_id> - Cancel customer order\n"
             message += "/confirm_cancel <order_id> - Confirm order cancellation\n"
             message += "/user_orders <username> - View orders for specific user\n"
-            message += "/all_orders [active|cancelled|ordered|all] - Download CSV of orders\n\n"
+            message += "/all_orders [active|cancelled|ordered|all] - Download CSV of orders\n"
+            message += "/confirm_cancel_offer <offer_id> - Confirm offer cancellation\n\n"
             
             # User management
             message += "👥 User Management:\n"
@@ -64,7 +65,8 @@ class InfoCommands(BaseHandler):
             message += "/user_status <username> - Check user status\n"
             message += "/update_customer <username> <first_name> [last_name] - Update customer name\n"
 
-        success = self._send_message(chat_id, message)
+        result = self._send_message(chat_id, message)
+        success = result.get('success', False)
         if self.environment == 'test':
             logger.info(f"Message send result: {success}")
         

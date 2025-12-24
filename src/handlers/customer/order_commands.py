@@ -261,6 +261,9 @@ class CustomerOrderCommands(BaseHandler):
             if total_ordered >= total_capacity:
                 self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
                 logger.info(f"Offer {offer_id} marked as sold out - all {total_capacity} units ordered")
+                
+                # Delete notification messages for sold out offer
+                self._delete_offer_notifications(offer_id)
         except Exception as e:
             logger.error(f"Error checking offer status: {e}")
     
@@ -286,7 +289,23 @@ class CustomerOrderCommands(BaseHandler):
             sold_out_text = " - SOLD OUT" if updated_offer and updated_offer.status == OfferStatus.SOLD_OUT.value else ""
             
             message = f"🍺 {customer_name} ordered {quantity}x {offer.name}{sold_out_text}"
-            self._send_message(int(group_id), message)
+            result = self._send_message(int(group_id), message)
+            return result.get('success', False)
             
         except Exception as e:
             logger.error(f"Error sending group notification: {e}")
+    
+    def _delete_offer_notifications(self, offer_id: int):
+        """Delete notification messages for sold out offer"""
+        try:
+            notifications = self.db.get_notification_messages_by_offer(offer_id)
+            
+            for notification in notifications:
+                try:
+                    if self._delete_message(notification.chat_id, notification.message_id):
+                        self.db.delete_notification_message(notification.notification_id)
+                        logger.info(f"Deleted notification message {notification.message_id} for offer {offer_id}")
+                except Exception as e:
+                    logger.error(f"Failed to delete message {notification.message_id}: {e}")
+        except Exception as e:
+            logger.error(f"Error deleting offer notifications: {e}")

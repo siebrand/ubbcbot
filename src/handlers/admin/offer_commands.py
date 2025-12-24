@@ -388,6 +388,9 @@ class OfferCommands(BaseHandler):
             # Delete all boxes
             deleted_boxes = self._delete_offer_boxes(offer_id)
             
+            # Delete notification messages for cancelled offer
+            self._cleanup_offer_notifications(offer_id)
+            
             # Cancel the offer
             self.db.update_offer(offer_id, {'status': OfferStatus.INACTIVE.value})
             
@@ -422,6 +425,36 @@ class OfferCommands(BaseHandler):
             message += f"Quantity: {order.quantity} units\n\n"
             message += f"We apologize for the inconvenience."
             self._send_message(customer.telegram_user_id, message)
+
+    def _cleanup_offer_notifications(self, offer_id: int):
+        """Clean up notification messages for cancelled offer"""
+        try:
+            offer = self.db.get_offer(offer_id)
+            if not offer:
+                return
+            
+            notifications = self.db.get_notification_messages_by_offer(offer_id)
+            
+            # Check if offer is within 48 hours (172800 seconds)
+            from datetime import datetime, UTC, timedelta
+            now = datetime.now(UTC)
+            offer_age = now - offer.created_at
+            within_48_hours = offer_age < timedelta(hours=48)
+            
+            for notification in notifications:
+                try:
+                    if within_48_hours:
+                        # Delete message from Telegram
+                        self._delete_message(notification.chat_id, notification.message_id)
+                    
+                    # Always remove from database
+                    self.db.delete_notification_message(notification.notification_id)
+                except Exception as e:
+                    import logging
+                    logging.error(f"Failed to cleanup notification {notification.notification_id}: {e}")
+        except Exception as e:
+            import logging
+            logging.error(f"Error cleaning up offer notifications: {e}")
 
     def handle_box_status(self, chat_id: int) -> Dict[str, Any]:
         """Handle /box_status command"""
@@ -472,12 +505,12 @@ class OfferCommands(BaseHandler):
             self._send_message(int(default_group_id), announcement, reply_markup=reply_markup, force_group=True)
         
         # Send to subscribers in batches
-        self._notify_subscribers(announcement, reply_markup)
+        self._notify_subscribers(announcement, reply_markup, offer.offer_id)
     
-    def _notify_subscribers(self, message: str, reply_markup: dict):
-        """Send offer notification to all subscribers in batches"""
+    def _notify_subscribers(self, message: str, reply_markup: dict, offer_id: int):
+        """Send offer notification to all subscribers in batches and store message IDs"""
         import time
-        from models.entities import AuthorizationStatus
+        from models.entities import AuthorizationStatus, NotificationMessage
         
         # Get all approved customers
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
@@ -490,7 +523,15 @@ class OfferCommands(BaseHandler):
             
             for customer in batch:
                 try:
-                    self._send_message(customer.telegram_user_id, message, reply_markup=reply_markup)
+                    result = self._send_message(customer.telegram_user_id, message, reply_markup=reply_markup)
+                    if result.get('success') and result.get('message_id'):
+                        # Store notification message for later deletion
+                        notification = NotificationMessage(
+                            offer_id=offer_id,
+                            chat_id=customer.telegram_user_id,
+                            message_id=result['message_id']
+                        )
+                        self.db.create_notification_message(notification)
                 except Exception as e:
                     # Log error but continue with other subscribers
                     import logging

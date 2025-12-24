@@ -19,6 +19,7 @@ class DynamoDBService:
         self.orders_table = self.dynamodb.Table(f'{self.table_prefix}-orders')
         self.discounts_table = self.dynamodb.Table(f'{self.table_prefix}-discounts')
         self.counters_table = self.dynamodb.Table(f'{self.table_prefix}-counters')
+        self.notifications_table = self.dynamodb.Table(f'{self.table_prefix}-notifications')
 
     def _serialize_datetime(self, obj):
         """Convert datetime objects to ISO strings"""
@@ -434,4 +435,34 @@ class DynamoDBService:
             return True
         except Exception as e:
             print(f"Error updating customer: {e}")
+            return False
+
+    # Notification message operations
+    def create_notification_message(self, notification) -> bool:
+        try:
+            item = self._prepare_item(notification.__dict__)
+            self.notifications_table.put_item(Item=item)
+            return True
+        except Exception as e:
+            print(f"Error creating notification message: {e}")
+            return False
+
+    def get_notification_messages_by_offer(self, offer_id: int):
+        try:
+            response = self.notifications_table.query(
+                IndexName='offer-index',
+                KeyConditionExpression=Key('offer_id').eq(offer_id)
+            )
+            from models.entities import NotificationMessage
+            return [NotificationMessage(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting notification messages: {e}")
+            return []
+
+    def delete_notification_message(self, notification_id: str) -> bool:
+        try:
+            self.notifications_table.delete_item(Key={'notification_id': notification_id})
+            return True
+        except Exception as e:
+            print(f"Error deleting notification message: {e}")
             return False

@@ -135,6 +135,7 @@ Expected response should show:
 - `/list_suppliers` - View all registered suppliers
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders
+- `/confirm_cancel_offer <offer_id>` - Confirm offer cancellation
 - `/box_status` - View box status and capacity
 - `/fulfill_offer <offer_id>` - Start fulfillment process for an offer
 - `/confirm_fulfill <offer_id> <boxes_ordered>` - Confirm fulfillment with box count
@@ -155,9 +156,22 @@ Expected response should show:
 
 - **API Gateway**: Webhook endpoint
 - **Lambda**: Bot logic and command processing
-- **DynamoDB**: Data storage (offers, orders, customers, boxes, suppliers)
+- **DynamoDB**: Data storage (offers, orders, customers, boxes, suppliers, notifications)
 - **S3**: Image storage (ready for future use)
 - **Parameter Store**: Secure token storage
+
+## Features
+
+### Notification Management
+- **Automatic cleanup**: Notification messages deleted when offers become sold out
+- **Cancellation cleanup**: Messages deleted from subscribers when offers cancelled (within 48 hours)
+- **Database hygiene**: Notification records cleaned up to prevent data accumulation
+
+### Order Management
+- **5-unit customer limit**: Customers can order max 5 units per offer
+- **10-unit admin limit**: Admins can place up to 10 units for customers via `/order_for`
+- **Duplicate order confirmation**: Warns customers about existing orders before placing new ones
+- **Sold out notifications**: Group notifications include "SOLD OUT" status when last item ordered
 
 ## Business Rules
 
@@ -193,3 +207,6 @@ Examples:
 - [x] Resource naming convention and tagging
 - [x] Environment-specific configuration
 - [x] Order cancellation with inventory correction and customer notification
+- [x] Notification message cleanup for sold out and cancelled offers
+- [x] Order limits and duplicate order handling
+- [x] Sold out status in group notifications
