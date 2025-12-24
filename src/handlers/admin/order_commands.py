@@ -112,7 +112,7 @@ class AdminOrderCommands(BaseHandler):
             # Execute the order for the target customer
             from handlers.customer.order_commands import CustomerOrderCommands
             order_handler = CustomerOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            result = order_handler.execute_order(chat_id, user_id, offer_id, quantity, offer, target_customer, placed_by_admin=True)
+            result = order_handler.execute_order(chat_id, target_customer.telegram_user_id, offer_id, quantity, offer, target_customer, placed_by_admin=True)
             
             if result['status'] == 'success':
                 # Get the actual order to show correct status
