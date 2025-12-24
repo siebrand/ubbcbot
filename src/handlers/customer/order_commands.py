@@ -140,6 +140,21 @@ class CustomerOrderCommands(BaseHandler):
     def execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
         """Execute order placement"""
         try:
+            # Check total available capacity before accepting order
+            boxes = self.db.get_boxes_by_offer(offer_id)
+            total_available = 0
+            for box in boxes:
+                if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
+                    total_available += box.max_capacity - box.current_quantity
+            
+            # If no boxes exist, we can create one with full capacity
+            if not boxes:
+                total_available = offer.wholesale_box_size
+            
+            if quantity > total_available:
+                self._send_message(chat_id, f"❌ Only {total_available} units available for {offer.name}")
+                return {'status': 'insufficient_capacity'}
+
             # Create single order
             order = Order(
                 customer_id=customer.customer_id,
@@ -165,7 +180,7 @@ class CustomerOrderCommands(BaseHandler):
                 available_box = None
                 
                 for box in boxes:
-                    if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
+                    if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
                         available_space = box.max_capacity - box.current_quantity
                         if available_space > 0:
                             available_box = box
