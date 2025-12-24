@@ -281,7 +281,11 @@ class CustomerOrderCommands(BaseHandler):
             
             customer_name = ' '.join(name_parts) if name_parts else customer.username or 'Unknown'
             
-            message = f"🍺 {customer_name} ordered {quantity}x {offer.name}"
+            # Check if offer is now sold out
+            updated_offer = self.db.get_offer(offer.offer_id)
+            sold_out_text = " - SOLD OUT" if updated_offer and updated_offer.status == OfferStatus.SOLD_OUT.value else ""
+            
+            message = f"🍺 {customer_name} ordered {quantity}x {offer.name}{sold_out_text}"
             self._send_message(int(group_id), message)
             
         except Exception as e:
