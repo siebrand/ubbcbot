@@ -115,13 +115,21 @@ class AdminOrderCommands(BaseHandler):
             result = order_handler.execute_order(chat_id, user_id, offer_id, quantity, offer, target_customer, placed_by_admin=True)
             
             if result['status'] == 'success':
+                # Get the actual order to show correct status
+                orders = self.db.get_orders_by_customer(target_customer.customer_id)
+                latest_order = max(orders, key=lambda o: o.created_at) if orders else None
+                order_status = latest_order.status if latest_order else 'pending'
+                
                 # Notify target customer
                 customer_message = f"🍺 An order has been placed for you by admin\n\n"
                 customer_message += f"Product: {offer.name}\n"
                 customer_message += f"Quantity: {quantity}\n"
                 customer_message += f"Total: €{offer.price_per_unit * quantity:.2f}\n"
-                customer_message += f"Status: pending"
+                customer_message += f"Status: {order_status}"
                 self._send_message(target_customer.telegram_user_id, customer_message)
+                
+                # Send notification to default group (admin orders don't trigger this automatically)
+                order_handler._notify_channel_order(target_customer, offer, quantity)
                 
                 # Confirm to admin
                 display_name = target_customer.first_name or username

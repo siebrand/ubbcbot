@@ -239,8 +239,8 @@ class CustomerOrderCommands(BaseHandler):
                     f"Total    : €{order.total_price:.2f}\n"
                     f"Status   : pending")
             
-            # Send notification to default channel if order was placed in private chat
-            if chat_id > 0:  # Private chat has positive chat_id
+            # Send notification to default channel if order was placed in private chat and not by admin
+            if chat_id > 0 and not placed_by_admin:  # Private chat has positive chat_id
                 self._notify_channel_order(customer, offer, quantity)
             
             return {'status': 'success'}
