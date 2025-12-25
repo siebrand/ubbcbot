@@ -59,12 +59,17 @@ class OfferCommands(BaseHandler):
                 message += f"Price: €{offer.price_per_unit:.2f}\n"
                 message += f"Box size: {offer.wholesale_box_size}\n"
                 message += f"Status: {offer.status}\n\n"
-                message += f"Next steps:\n"
-                message += f"• /edit_offer_details {offer.offer_id} - Add description and images\n"
-                message += f"• /preview_offer {offer.offer_id} - Preview how it will look\n"
-                message += f"• /publish_offer {offer.offer_id} - Announce to customers"
+                message += f"Choose next step:"
                 
-                self._send_message(chat_id, message)
+                keyboard = {
+                    "inline_keyboard": [
+                        [{"text": "📝 Edit Details", "callback_data": f"edit_offer_details_{offer.offer_id}"}],
+                        [{"text": "👁️ Preview Offer", "callback_data": f"preview_offer_{offer.offer_id}"}],
+                        [{"text": "🚀 Publish Offer", "callback_data": f"publish_offer_{offer.offer_id}"}]
+                    ]
+                }
+                
+                self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
             else:
                 self._send_message(chat_id, "❌ Failed to create offer")
