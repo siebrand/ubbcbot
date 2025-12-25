@@ -261,6 +261,7 @@ class UserCommands(BaseHandler):
         
         matches = []
         exact_full_name_match = None
+        partial_matches = []
         
         for customer in all_customers:
             # Check for exact full name match first
@@ -269,6 +270,10 @@ class UserCommands(BaseHandler):
                 exact_full_name_match = customer
                 break
             
+            # Check if full name starts with identifier (for partial matches like "Rick H." matching "Rick H. 🍻")
+            if full_name.lower().startswith(identifier.lower()):
+                partial_matches.append(customer)
+            
             # Collect first name matches
             if customer.first_name and customer.first_name.lower() == identifier.lower():
                 matches.append(customer)
@@ -276,6 +281,20 @@ class UserCommands(BaseHandler):
         # Return exact full name match if found
         if exact_full_name_match:
             return exact_full_name_match
+        
+        # Return single partial match if found
+        if len(partial_matches) == 1:
+            return partial_matches[0]
+        elif len(partial_matches) > 1:
+            # Multiple partial matches - show options
+            message = f"❌ Multiple users found starting with '{identifier}':\n\n"
+            for customer in partial_matches:
+                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+                username_part = f" (@{customer.username})" if customer.username else " (no username)"
+                message += f"• {full_name}{username_part}\n"
+            message += "\nUse full name or @username to specify exactly which user."
+            self._send_message(chat_id, message)
+            return None
         
         # Handle first name matches
         if len(matches) == 1:
