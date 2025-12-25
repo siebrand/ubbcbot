@@ -203,6 +203,8 @@ class BotService:
                         return self._handle_supplier_edit(chat_id, field, entity_id)
                     elif entity_type == 'offer':
                         return self._handle_offer_edit(chat_id, field, entity_id)
+                    elif entity_type == 'customer':
+                        return self._handle_customer_edit(chat_id, field, entity_id)
                 
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -270,6 +272,23 @@ class BotService:
         
         return {'status': 'text_input_required'}
     
+    def _handle_customer_edit(self, chat_id: int, field: str, customer_id: str) -> Dict[str, Any]:
+        """Handle customer edit callbacks"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        if field == 'first_name':
+            self._store_edit_context(chat_id, 'customer_first_name', customer_id)
+            base_handler._send_message(chat_id, f"📝 Enter new first name for customer:", reply_markup={"force_reply": True, "input_field_placeholder": "Enter first name"})
+        elif field == 'last_name':
+            self._store_edit_context(chat_id, 'customer_last_name', customer_id)
+            base_handler._send_message(chat_id, f"📝 Enter new last name for customer:", reply_markup={"force_reply": True, "input_field_placeholder": "Enter last name"})
+        else:
+            base_handler._send_message(chat_id, "❌ Unknown edit field")
+            return {'status': 'unknown_field'}
+        
+        return {'status': 'text_input_required'}
+    
     def _store_edit_context(self, chat_id: int, edit_type: str, entity_id: str):
         """Store edit context in DynamoDB for processing replies"""
         from models.entities import EditContext
@@ -320,6 +339,10 @@ class BotService:
             return self.offer_commands.handle_update_offer_price(chat_id, [entity_id, text])
         elif edit_type == 'offer_description':
             return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, text])
+        elif edit_type == 'customer_first_name':
+            return self.user_commands.handle_update_customer_first_name(chat_id, [entity_id, text])
+        elif edit_type == 'customer_last_name':
+            return self.user_commands.handle_update_customer_last_name(chat_id, [entity_id, text])
         
         return {'status': 'unknown_edit_type'}
 
@@ -520,6 +543,10 @@ class BotService:
                 return self.user_commands.handle_user_status(admin_target_chat, parts[1:])
             elif command == '/update_customer':
                 return self.user_commands.handle_update_customer(admin_target_chat, parts[1:])
+            elif command == '/update_customer_first_name':
+                return self.user_commands.handle_update_customer_first_name(admin_target_chat, parts[1:])
+            elif command == '/update_customer_last_name':
+                return self.user_commands.handle_update_customer_last_name(admin_target_chat, parts[1:])
             elif command == '/list_customers':
                 # Parse optional status filter
                 status_filter = parts[1] if len(parts) > 1 and parts[1] in ['approved', 'unauthorized', 'rejected', 'all'] else 'all'

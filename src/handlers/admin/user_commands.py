@@ -137,52 +137,88 @@ class UserCommands(BaseHandler):
 
     def handle_update_customer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_customer command"""
-        if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_customer <username> <new_first_name> [new_last_name]")
+        if not args:
+            self._send_message(chat_id, "Usage: /update_customer <name_or_username>")
             return {'status': 'invalid_args'}
 
-        username = args[0]
-        new_first_name = args[1]
-        new_last_name = args[2] if len(args) > 2 else None
-        
-        customer = self._find_customer_with_ambiguity_check(username, chat_id)
+        identifier = ' '.join(args)
+        customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
         if not customer:
-            self._send_message(chat_id, f"❌ User '{username}' not found")
-            return {'status': 'user_not_found'}
-
-        # Update customer name
-        updates = {'first_name': new_first_name}
-        if new_last_name:
-            updates['last_name'] = new_last_name
+            self._send_message(chat_id, f"❌ Customer '{identifier}' not found")
+            return {'status': 'customer_not_found'}
         
-        if self.db.update_customer(customer.customer_id, updates):
-            # Update username in all active orders
-            active_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.status in ['pending', 'ordered']]
-            updated_orders = 0
-            
-            for order in active_orders:
-                # Note: This assumes orders have a customer_name field to update
-                # If orders don't store customer names, this step can be skipped
-                try:
-                    new_customer_name = f"{new_first_name} {new_last_name or ''}".strip()
-                    if hasattr(order, 'customer_name'):
-                        self.db.update_order(order.order_id, {'customer_name': new_customer_name})
-                        updated_orders += 1
-                except Exception:
-                    pass  # Continue with other orders if one fails
-            
-            old_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-            new_name = f"{new_first_name} {new_last_name or ''}".strip()
-            
-            message = f"✅ Customer name updated: '{old_name}' → '{new_name}'"
-            if updated_orders > 0:
-                message += f"\nUpdated {updated_orders} active orders"
-            
-            self._send_message(chat_id, message)
+        # Show current customer details with edit options
+        display_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+        username_part = f" (@{customer.username})" if customer.username else ""
+        
+        message = f"📝 Edit Customer: {display_name}{username_part}\n\n"
+        message += f"First Name: {customer.first_name or 'Not set'}\n"
+        message += f"Last Name: {customer.last_name or 'Not set'}\n"
+        message += f"Status: {customer.authorization_status}\n\n"
+        message += "Select what to edit:"
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📝 Edit First Name", "callback_data": f"edit_customer_first_name_{customer.customer_id}"}],
+                [{"text": "📝 Edit Last Name", "callback_data": f"edit_customer_last_name_{customer.customer_id}"}],
+                [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
+            ]
+        }
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
+    
+    def handle_update_customer_first_name(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_customer_first_name command"""
+        if len(args) < 2:
+            self._send_message(chat_id, "Usage: /update_customer_first_name [customer_id] [new_first_name]")
+            return {'status': 'invalid_args'}
+        
+        customer_id = args[0]
+        new_first_name = ' '.join(args[1:]).strip()
+        
+        if len(new_first_name) > 100:
+            self._send_message(chat_id, "❌ First name too long (max 100 characters)")
+            return {'status': 'invalid_name'}
+        
+        customer = self.db.get_customer(customer_id)
+        if not customer:
+            self._send_message(chat_id, "❌ Customer not found")
+            return {'status': 'customer_not_found'}
+        
+        if self.db.update_customer(customer_id, {'first_name': new_first_name}):
+            old_name = customer.first_name or "Not set"
+            self._send_message(chat_id, f"✅ Customer first name updated: '{old_name}' → '{new_first_name}'")
             return {'status': 'success'}
         else:
-            self._send_message(chat_id, "❌ Failed to update customer")
+            self._send_message(chat_id, "❌ Failed to update customer first name")
+            return {'status': 'error'}
+    
+    def handle_update_customer_last_name(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_customer_last_name command"""
+        if len(args) < 2:
+            self._send_message(chat_id, "Usage: /update_customer_last_name [customer_id] [new_last_name]")
+            return {'status': 'invalid_args'}
+        
+        customer_id = args[0]
+        new_last_name = ' '.join(args[1:]).strip()
+        
+        if len(new_last_name) > 100:
+            self._send_message(chat_id, "❌ Last name too long (max 100 characters)")
+            return {'status': 'invalid_name'}
+        
+        customer = self.db.get_customer(customer_id)
+        if not customer:
+            self._send_message(chat_id, "❌ Customer not found")
+            return {'status': 'customer_not_found'}
+        
+        if self.db.update_customer(customer_id, {'last_name': new_last_name}):
+            old_name = customer.last_name or "Not set"
+            self._send_message(chat_id, f"✅ Customer last name updated: '{old_name}' → '{new_last_name}'")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to update customer last name")
             return {'status': 'error'}
 
     def _find_customer_by_identifier(self, identifier: str) -> Optional:
