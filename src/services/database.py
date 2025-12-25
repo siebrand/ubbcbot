@@ -20,6 +20,7 @@ class DynamoDBService:
         self.discounts_table = self.dynamodb.Table(f'{self.table_prefix}-discounts')
         self.counters_table = self.dynamodb.Table(f'{self.table_prefix}-counters')
         self.notifications_table = self.dynamodb.Table(f'{self.table_prefix}-notifications')
+        self.edit_contexts_table = self.dynamodb.Table(f'{self.table_prefix}-edit-contexts')
 
     def _serialize_datetime(self, obj):
         """Convert datetime objects to ISO strings"""
@@ -497,4 +498,49 @@ class DynamoDBService:
             return True
         except Exception as e:
             print(f"Error updating discount: {e}")
+            return False
+    
+    def create_edit_context(self, context) -> bool:
+        """Create edit context"""
+        try:
+            item = self._prepare_item(context.__dict__)
+            self.edit_contexts_table.put_item(Item=item)
+            return True
+        except Exception as e:
+            print(f"Error creating edit context: {e}")
+            return False
+    
+    def get_edit_context_by_chat_id(self, chat_id: int):
+        """Get edit context by chat ID"""
+        try:
+            response = self.edit_contexts_table.scan(
+                FilterExpression='chat_id = :chat_id',
+                ExpressionAttributeValues={':chat_id': chat_id}
+            )
+            
+            if response['Items']:
+                item = response['Items'][0]
+                from models.entities import EditContext
+                from datetime import datetime
+                return EditContext(
+                    context_id=item['context_id'],
+                    chat_id=item['chat_id'],
+                    edit_type=item['edit_type'],
+                    entity_id=item['entity_id'],
+                    created_at=datetime.fromisoformat(item['created_at'])
+                )
+            return None
+        except Exception as e:
+            print(f"Error getting edit context: {e}")
+            return None
+    
+    def delete_edit_context(self, context_id: str) -> bool:
+        """Delete edit context"""
+        try:
+            self.edit_contexts_table.delete_item(
+                Key={'context_id': context_id}
+            )
+            return True
+        except Exception as e:
+            print(f"Error deleting edit context: {e}")
             return False

@@ -23,7 +23,6 @@ class BotService:
         self.admin_user_id = int(os.environ.get('ADMIN_USER_ID', '15005473'))
         self.environment = os.environ.get('ENVIRONMENT', 'test')
         self.telegram_token = self._get_telegram_token()
-        self.edit_contexts = {}  # Store edit contexts temporarily
         
         # Initialize handlers
         self._init_handlers()
@@ -90,7 +89,9 @@ class BotService:
                 return self._handle_command(chat_id, user_id, text)
             
             # Handle edit replies (when user responds to force reply)
-            if chat_id in self.edit_contexts:
+            context = self.db.get_edit_context_by_chat_id(chat_id)
+            if context:
+                logger.info(f"Found edit context for chat {chat_id}: {context.edit_type}")
                 return self._handle_edit_reply(chat_id, user_id, text)
             
             return {'status': 'processed'}
@@ -269,20 +270,37 @@ class BotService:
         return {'status': 'text_input_required'}
     
     def _store_edit_context(self, chat_id: int, edit_type: str, entity_id: str):
-        """Store edit context for processing replies"""
-        self.edit_contexts[chat_id] = {
-            'type': edit_type,
-            'entity_id': entity_id
-        }
+        """Store edit context in DynamoDB for processing replies"""
+        from models.entities import EditContext
+        logger.info(f"Storing edit context: chat_id={chat_id}, type={edit_type}, entity_id={entity_id}")
+        
+        # Delete any existing context for this chat
+        existing = self.db.get_edit_context_by_chat_id(chat_id)
+        if existing:
+            self.db.delete_edit_context(existing.context_id)
+        
+        # Create new context
+        context = EditContext(
+            chat_id=chat_id,
+            edit_type=edit_type,
+            entity_id=entity_id
+        )
+        self.db.create_edit_context(context)
     
     def _handle_edit_reply(self, chat_id: int, user_id: int, text: str) -> Dict[str, Any]:
         """Handle reply to edit prompt"""
-        if chat_id not in self.edit_contexts:
+        context = self.db.get_edit_context_by_chat_id(chat_id)
+        if not context:
             return {'status': 'no_context'}
         
-        context = self.edit_contexts.pop(chat_id)
-        edit_type = context['type']
-        entity_id = context['entity_id']
+        # Delete the context after use
+        self.db.delete_edit_context(context.context_id)
+        
+        edit_type = context.edit_type
+        entity_id = context.entity_id
+        
+        # Log for debugging
+        logger.info(f"Processing edit reply: type={edit_type}, entity_id={entity_id}, text={text}")
         
         if edit_type == 'supplier_name':
             return self.supplier_commands.handle_update_supplier_name(chat_id, [entity_id, text])
