@@ -77,7 +77,10 @@ class SupplierCommands(BaseHandler):
         
         message = f"📋 Registered Suppliers (Page {page}/{total_pages}):\n\n"
         for supplier in page_suppliers:
-            message += f"{supplier.name}\n"
+            status_emoji = "✅" if supplier.status == "active" else "❌"
+            contact = supplier.contact_email or "Not set"
+            message += f"{status_emoji} {supplier.name}\n"
+            message += f"   Contact: {contact}\n\n"
         
         # Add pagination keyboard if needed
         keyboard = None
