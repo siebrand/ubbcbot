@@ -629,7 +629,7 @@ class OfferCommands(BaseHandler):
                     print(f"Failed to send image {image_url}: {e}")
         
         # Send text message
-        result = self._send_message(chat_id, message, reply_markup=reply_markup, force_group=force_group)
+        result = self._send_message(chat_id, message, reply_markup=reply_markup, force_group=force_group, parse_mode="HTML")
         return result
     
     def _notify_subscribers_rich(self, offer):
