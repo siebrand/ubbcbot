@@ -493,4 +493,4 @@ class InfoCommands(BaseHandler):
                 ]
             }
         
-        self._send_message(chat_id, message, reply_markup=reply_markup)
+        self._send_message(chat_id, message, reply_markup=reply_markup, parse_mode="HTML")
