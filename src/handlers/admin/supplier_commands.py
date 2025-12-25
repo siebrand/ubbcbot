@@ -79,13 +79,11 @@ class SupplierCommands(BaseHandler):
         # Paginate results
         page_suppliers, total_pages = self._paginate_list(filtered_suppliers, page, 10)
         
-        status_text = status_filter.title() if status_filter != "all" else "All"
         message = f"📋 {status_text} Suppliers (Page {page}/{total_pages}):\n\n"
         for supplier in page_suppliers:
             status_emoji = "✅" if supplier.status == "active" else "❌"
             contact = supplier.contact_email or "Not set"
-            message += f"{status_emoji} {supplier.name}\n"
-            message += f"   Contact: {contact}\n\n"
+            message += f"{status_emoji} {supplier.name} | Contact: {contact}\n"
         
         # Add pagination keyboard if needed
         keyboard = None
