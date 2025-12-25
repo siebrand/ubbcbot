@@ -198,6 +198,14 @@ class BotService:
             elif data.startswith('edit_'):
                 parts = data.split('_')
                 if len(parts) >= 4:
+                    # Handle special case for customer first/last name editing
+                    if parts[1] == 'customer' and len(parts) == 5:
+                        if parts[2] == 'first' and parts[3] == 'name':
+                            return self._handle_customer_edit(chat_id, 'first_name', parts[4])
+                        elif parts[2] == 'last' and parts[3] == 'name':
+                            return self._handle_customer_edit(chat_id, 'last_name', parts[4])
+                    
+                    # Standard format: edit_{entity}_{field}_{id}
                     entity_type = parts[1]  # supplier, offer
                     field = parts[2]       # name, contact, status, price
                     entity_id = parts[3]   # supplier_id or offer_id
@@ -206,8 +214,6 @@ class BotService:
                         return self._handle_supplier_edit(chat_id, field, entity_id)
                     elif entity_type == 'offer':
                         return self._handle_offer_edit(chat_id, field, entity_id)
-                    elif entity_type == 'customer':
-                        return self._handle_customer_edit(chat_id, field, entity_id)
                 
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
