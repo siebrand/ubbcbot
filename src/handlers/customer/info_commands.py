@@ -107,7 +107,7 @@ class InfoCommands(BaseHandler):
             message += "/approve_user <username> - Approve user\n"
             message += "/reject_user <username> - Reject user\n"
             message += "/user_status <username> - Check user status\n"
-            message += "/update_customer <username> <first_name> [last_name] - Update name\n"
+            message += "/update_user <username> <first_name> [last_name] - Update name\n"
             message += "/order_for <username> <offer_id> [quantity] - Place order for user\n"
             message += "/cancel_order <order_id> - Cancel customer order\n"
             message += "/user_orders <username> - View orders for user\n"

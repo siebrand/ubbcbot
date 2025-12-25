@@ -135,24 +135,24 @@ class UserCommands(BaseHandler):
         self._send_message(chat_id, message)
         return {'status': 'success'}
 
-    def handle_update_customer(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /update_customer command"""
+    def handle_update_user(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_user command"""
         if not args:
-            self._send_message(chat_id, "Usage: /update_customer <name_or_username>")
+            self._send_message(chat_id, "Usage: /update_user <name_or_username>")
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
         if not customer:
-            self._send_message(chat_id, f"❌ Customer '{identifier}' not found")
-            return {'status': 'customer_not_found'}
+            self._send_message(chat_id, f"❌ User '{identifier}' not found")
+            return {'status': 'user_not_found'}
         
         # Show current customer details with edit options
         display_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
         username_part = f" (@{customer.username})" if customer.username else ""
         
-        message = f"📝 Edit Customer: {display_name}{username_part}\n\n"
+        message = f"📝 Edit User: {display_name}{username_part}\n\n"
         message += f"First Name: {customer.first_name or 'Not set'}\n"
         message += f"Last Name: {customer.last_name or 'Not set'}\n"
         message += f"Status: {customer.authorization_status}\n\n"
@@ -169,10 +169,10 @@ class UserCommands(BaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
     
-    def handle_update_customer_first_name(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /update_customer_first_name command"""
+    def handle_update_user_first_name(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_user_first_name command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_customer_first_name [customer_id] [new_first_name]")
+            self._send_message(chat_id, "Usage: /update_user_first_name [customer_id] [new_first_name]")
             return {'status': 'invalid_args'}
         
         customer_id = args[0]
@@ -184,21 +184,21 @@ class UserCommands(BaseHandler):
         
         customer = self.db.get_customer(customer_id)
         if not customer:
-            self._send_message(chat_id, "❌ Customer not found")
-            return {'status': 'customer_not_found'}
+            self._send_message(chat_id, "❌ User not found")
+            return {'status': 'user_not_found'}
         
         if self.db.update_customer(customer_id, {'first_name': new_first_name}):
             old_name = customer.first_name or "Not set"
-            self._send_message(chat_id, f"✅ Customer first name updated: '{old_name}' → '{new_first_name}'")
+            self._send_message(chat_id, f"✅ User first name updated: '{old_name}' → '{new_first_name}'")
             return {'status': 'success'}
         else:
-            self._send_message(chat_id, "❌ Failed to update customer first name")
+            self._send_message(chat_id, "❌ Failed to update user first name")
             return {'status': 'error'}
     
-    def handle_update_customer_last_name(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /update_customer_last_name command"""
+    def handle_update_user_last_name(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_user_last_name command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_customer_last_name [customer_id] [new_last_name]")
+            self._send_message(chat_id, "Usage: /update_user_last_name [customer_id] [new_last_name]")
             return {'status': 'invalid_args'}
         
         customer_id = args[0]
@@ -210,15 +210,15 @@ class UserCommands(BaseHandler):
         
         customer = self.db.get_customer(customer_id)
         if not customer:
-            self._send_message(chat_id, "❌ Customer not found")
-            return {'status': 'customer_not_found'}
+            self._send_message(chat_id, "❌ User not found")
+            return {'status': 'user_not_found'}
         
         if self.db.update_customer(customer_id, {'last_name': new_last_name}):
             old_name = customer.last_name or "Not set"
-            self._send_message(chat_id, f"✅ Customer last name updated: '{old_name}' → '{new_last_name}'")
+            self._send_message(chat_id, f"✅ User last name updated: '{old_name}' → '{new_last_name}'")
             return {'status': 'success'}
         else:
-            self._send_message(chat_id, "❌ Failed to update customer last name")
+            self._send_message(chat_id, "❌ Failed to update user last name")
             return {'status': 'error'}
 
     def _find_customer_by_identifier(self, identifier: str) -> Optional:

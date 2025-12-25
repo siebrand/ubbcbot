@@ -152,7 +152,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/approve_user <name_or_username>` - Approve user
 - `/reject_user <name_or_username>` - Reject user
 - `/user_status <name_or_username>` - Check user status
-- `/update_customer <username> <new_first_name> [new_last_name]` - Update customer name
+- `/update_user <username> <new_first_name> [new_last_name]` - Update customer name
 
 ### Customer Commands
 - `/start` - Register and view help

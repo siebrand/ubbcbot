@@ -340,9 +340,9 @@ class BotService:
         elif edit_type == 'offer_description':
             return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, text])
         elif edit_type == 'customer_first_name':
-            return self.user_commands.handle_update_customer_first_name(chat_id, [entity_id, text])
+            return self.user_commands.handle_update_user_first_name(chat_id, [entity_id, text])
         elif edit_type == 'customer_last_name':
-            return self.user_commands.handle_update_customer_last_name(chat_id, [entity_id, text])
+            return self.user_commands.handle_update_user_last_name(chat_id, [entity_id, text])
         
         return {'status': 'unknown_edit_type'}
 
@@ -541,12 +541,12 @@ class BotService:
                 return self.user_commands.handle_reject_user(admin_target_chat, parts[1:])
             elif command == '/user_status':
                 return self.user_commands.handle_user_status(admin_target_chat, parts[1:])
-            elif command == '/update_customer':
-                return self.user_commands.handle_update_customer(admin_target_chat, parts[1:])
-            elif command == '/update_customer_first_name':
-                return self.user_commands.handle_update_customer_first_name(admin_target_chat, parts[1:])
-            elif command == '/update_customer_last_name':
-                return self.user_commands.handle_update_customer_last_name(admin_target_chat, parts[1:])
+            elif command == '/update_user':
+                return self.user_commands.handle_update_user(admin_target_chat, parts[1:])
+            elif command == '/update_user_first_name':
+                return self.user_commands.handle_update_user_first_name(admin_target_chat, parts[1:])
+            elif command == '/update_user_last_name':
+                return self.user_commands.handle_update_user_last_name(admin_target_chat, parts[1:])
             elif command == '/list_customers':
                 # Parse optional status filter
                 status_filter = parts[1] if len(parts) > 1 and parts[1] in ['approved', 'unauthorized', 'rejected', 'all'] else 'all'

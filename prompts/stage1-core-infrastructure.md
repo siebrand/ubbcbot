@@ -66,7 +66,7 @@ Implement a Telegram beer ordering bot with AWS serverless architecture. Focus o
 - `/approve_user <name_or_username>` - Approve user
 - `/reject_user <name_or_username>` - Reject user
 - `/user_status <name_or_username>` - Check user status
-- `/update_customer <username> <new_first_name> [new_last_name]` - Update customer name
+- `/update_user <username> <new_first_name> [new_last_name]` - Update customer name
 
 ### Customer Commands:
 **General:**

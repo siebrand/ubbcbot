@@ -57,7 +57,7 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
          {\"command\": \"approve_user\", \"description\": \"Approve user\"},
          {\"command\": \"reject_user\", \"description\": \"Reject user\"},
          {\"command\": \"user_status\", \"description\": \"Check user status\"},
-         {\"command\": \"update_customer\", \"description\": \"Update customer name\"}
+         {\"command\": \"update_user\", \"description\": \"Update user name\"}
        ],
        \"scope\": {\"type\": \"chat_administrators\", \"chat_id\": \"$DEFAULT_GROUP_ID\"}
      }" | jq .
