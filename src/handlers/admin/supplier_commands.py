@@ -79,11 +79,17 @@ class SupplierCommands(BaseHandler):
         # Paginate results
         page_suppliers, total_pages = self._paginate_list(filtered_suppliers, page, 10)
         
+        status_text = status_filter.title()
         message = f"📋 {status_text} Suppliers (Page {page}/{total_pages}):\n\n"
+        
+        # Calculate max name length for alignment
+        max_name_length = max(len(supplier.name) for supplier in page_suppliers) if page_suppliers else 0
+        
         for supplier in page_suppliers:
             status_emoji = "✅" if supplier.status == "active" else "❌"
             contact = supplier.contact_email or "Not set"
-            message += f"{status_emoji} {supplier.name} | Contact: {contact}\n"
+            padded_name = supplier.name.ljust(max_name_length)
+            message += f"{status_emoji} {padded_name} | {contact}\n"
         
         # Add pagination keyboard if needed
         keyboard = None
