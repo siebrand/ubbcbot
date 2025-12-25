@@ -223,16 +223,36 @@ class InfoCommands(BaseHandler):
             
             # Show other status offers
             if other_offers:
-                message += "📋 OTHER STATUS:\n"
+                # Group by specific status
+                status_groups = {}
                 for offer in other_offers:
+                    if offer.status not in status_groups:
+                        status_groups[offer.status] = []
+                    status_groups[offer.status].append(offer)
+                
+                for status, status_offers in status_groups.items():
                     status_emoji = {
                         OfferStatus.SOLD_OUT.value: "🚫",
                         OfferStatus.ORDERED.value: "📦",
                         OfferStatus.COMPLETED.value: "✅",
                         OfferStatus.DELIVERED.value: "🚚",
                         OfferStatus.INACTIVE.value: "❌"
-                    }.get(offer.status, "❓")
-                    message += f"{status_emoji} [{offer.offer_id}] {offer.name} €{offer.price_per_unit:.2f} ({offer.status})\n"
+                    }.get(status, "❓")
+                    
+                    message += f"{status_emoji} {status.upper()}:\n"
+                    
+                    for offer in status_offers:
+                        # Get order counts for non-active offers too
+                        boxes = self.db.get_boxes_by_offer(offer.offer_id)
+                        total_capacity = sum(box.max_capacity for box in boxes)
+                        
+                        all_orders = self.db.get_orders_by_offer(offer.offer_id)
+                        active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
+                        total_ordered = sum(order.quantity for order in active_orders)
+                        
+                        message += f"{status_emoji} [{offer.offer_id}] {offer.name} €{offer.price_per_unit:.2f} ({total_ordered}/{total_capacity})\n"
+                    
+                    message += "\n"
         else:
             # Show only active offers for customers
             message += "📋 Active Offers:\n\n"
