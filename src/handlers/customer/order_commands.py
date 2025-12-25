@@ -24,7 +24,7 @@ class CustomerOrderCommands(BaseHandler):
             # Get offer
             offer = self.db.get_offer(offer_id)
             if not offer or offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, "❌ Offer not found or inactive")
+                self._send_message(chat_id, "❌ Offer not found or not available for ordering")
                 return {'status': 'offer_not_found'}
 
             # Get customer

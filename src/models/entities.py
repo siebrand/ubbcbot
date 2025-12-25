@@ -6,6 +6,7 @@ from decimal import Decimal
 import uuid
 
 class OfferStatus(Enum):
+    DRAFT = "draft"
     ACTIVE = "active"
     INACTIVE = "inactive"
     ORDERED = "ordered"
@@ -50,11 +51,12 @@ class Offer:
     supplier_name: str = ""
     name: str = ""
     description: str = ""
+    images: list = field(default_factory=list)
     price_per_unit: Decimal = Decimal('0.0')
     wholesale_box_size: int = 12
     min_quantity_breakeven: int = 10
     max_quantity: Optional[int] = None
-    status: str = OfferStatus.ACTIVE.value
+    status: str = OfferStatus.DRAFT.value
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 @dataclass

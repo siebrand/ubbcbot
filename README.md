@@ -137,9 +137,12 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/retire_supplier <name>` - Retire supplier (no longer available for new offers)
 - `/list_suppliers [active|retired|all]` - View suppliers by status (default: active, paginated)
 - `/edit_supplier <name>` - Edit supplier details with inline keyboard
-- `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
+- `/create_offer <supplier_name> <name> <price> <box_size>` - Create draft beer offer
+- `/edit_offer_details <offer_id>` - Edit offer description and upload images
+- `/publish_offer <offer_id>` - Publish draft offer and announce to customers
+- `/preview_offer <offer_id>` - Preview how offer will appear when published
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
-- `/edit_offer <offer_id>` - Edit offer details with inline keyboard
+- `/edit_offer <offer_id>` - Edit basic offer details with inline keyboard
 - `/add_box <offer_id>` - Add single box to offer (updates sold out offers to active)
 - `/box_status` - View box status and capacity (paginated)
 - `/fulfill_offer <offer_id>` - Start fulfillment process (button confirmation)
@@ -169,12 +172,20 @@ These commands are set up in the deployment script, throught bash script setup-c
 - **API Gateway**: Webhook endpoint
 - **Lambda**: Bot logic and command processing
 - **DynamoDB**: Data storage (offers, orders, customers, boxes, suppliers, notifications)
-- **S3**: Image storage (ready for future use)
+- **S3**: Image storage for offer photos
 - **Parameter Store**: Secure token storage
 
 ## Features
 
+### Enhanced Offer Management
+- **Staged Publishing**: Create draft offers, add descriptions and images, then publish when ready
+- **Rich Offer Display**: Offers include detailed descriptions and multiple images
+- **Admin Preview**: Preview how offers will appear before publishing
+- **Image Support**: Upload and manage multiple images per offer via S3 storage
+- **Draft Status**: Draft offers visible only to admins until published
+
 ### Notification Management
+- **Rich Notifications**: Offer announcements include images and descriptions
 - **Automatic cleanup**: Notification messages deleted when offers become sold out
 - **Cancellation cleanup**: Messages deleted from subscribers when offers cancelled (within 48 hours)
 - **Database hygiene**: Notification records cleaned up to prevent data accumulation

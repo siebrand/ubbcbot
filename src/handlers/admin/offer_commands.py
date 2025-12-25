@@ -6,7 +6,7 @@ from models.entities import Offer, Box, Order, BoxStatus, OfferStatus, OrderStat
 
 class OfferCommands(BaseHandler):
     def handle_create_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /create_offer command"""
+        """Handle /create_offer command - creates draft offer"""
         if len(args) < 4:
             self._send_message(chat_id, "Usage: /create_offer [supplier_name] [name] [price] [box_size]")
             return {'status': 'invalid_args'}
@@ -42,51 +42,29 @@ class OfferCommands(BaseHandler):
                 self._send_message(chat_id, f"❌ Supplier '{supplier_name}' is retired and cannot be used for new offers")
                 return {'status': 'supplier_retired'}
 
-            # Create offer
+            # Create draft offer
             offer = Offer(
                 supplier_name=supplier_name,
                 name=name,
                 price_per_unit=Decimal(str(price)),
                 wholesale_box_size=box_size,
-                min_quantity_breakeven=max(1, int(box_size * 0.8))
+                min_quantity_breakeven=max(1, int(box_size * 0.8)),
+                status=OfferStatus.DRAFT.value
             )
 
             if self.db.create_offer(offer):
-                # Create initial box
-                box = Box(
-                    offer_id=offer.offer_id,
-                    max_capacity=box_size,
-                    min_breakeven=offer.min_quantity_breakeven
-                )
-                self.db.create_box(box)
-
-                # Auto-order 1 unit for admin
-                admin_customer = self.db.get_customer_by_telegram_id(self.admin_user_id)
-                if admin_customer:
-                    admin_order = Order(
-                        customer_id=admin_customer.customer_id,
-                        box_id=box.box_id,
-                        offer_id=offer.offer_id,
-                        quantity=1,
-                        unit_price=Decimal(str(price)),
-                        total_price=Decimal(str(price))
-                    )
-                    self.db.create_order(admin_order)
-                    
-                    # Update box quantity
-                    updates = {'current_quantity': 1}
-                    if 1 >= box.max_capacity:
-                        updates['status'] = BoxStatus.FULL.value
-                    elif 1 >= box.min_breakeven:
-                        updates['status'] = BoxStatus.MINIMUM_REACHED.value
-                    
-                    if not self.db.update_box(box.box_id, updates):
-                        self._send_message(chat_id, "⚠️ Auto-order placed but box update failed")
-                    else:
-                        self._send_message(chat_id, f"✅ Auto-ordered 1 unit for you. Order ID: {admin_order.order_id}")
-
-                # Announce new offer to default group
-                self._announce_offer(offer)
+                message = f"✅ Draft offer created!\n\n"
+                message += f"Offer ID: {offer.offer_id}\n"
+                message += f"Name: {offer.name}\n"
+                message += f"Price: €{offer.price_per_unit:.2f}\n"
+                message += f"Box size: {offer.wholesale_box_size}\n"
+                message += f"Status: {offer.status}\n\n"
+                message += f"Next steps:\n"
+                message += f"• /edit_offer_details {offer.offer_id} - Add description and images\n"
+                message += f"• /preview_offer {offer.offer_id} - Preview how it will look\n"
+                message += f"• /publish_offer {offer.offer_id} - Announce to customers"
+                
+                self._send_message(chat_id, message)
                 return {'status': 'success'}
             else:
                 self._send_message(chat_id, "❌ Failed to create offer")
@@ -587,34 +565,61 @@ class OfferCommands(BaseHandler):
             return {'status': 'invalid_format'}
 
     def _announce_offer(self, offer):
-        """Announce new offer to default group and subscribers"""
+        """Announce new offer to default group and subscribers using rich format"""
         default_group_id = os.environ.get('DEFAULT_GROUP_ID')
         
-        announcement = f"🍺 New offer available!\n\n"
-        announcement += f"[{offer.offer_id}] {offer.name}\n"
-        announcement += f"Price: €{offer.price_per_unit:.2f} per unit\n"
-        announcement += f"Box size: {offer.wholesale_box_size} units\n\n"
-        announcement += f"Order with: /order {offer.offer_id} [quantity]"
-        
-        # Create inline keyboard with order buttons
-        reply_markup = {
-            "inline_keyboard": [
-                [
-                    {"text": "🍺 Order 1", "callback_data": f"order_{offer.offer_id}_1"},
-                    {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
-                ]
-            ]
-        }
-        
-        # Send to default group
+        # Send rich offer message to default group
         if default_group_id:
-            self._send_message(int(default_group_id), announcement, reply_markup=reply_markup, force_group=True)
+            self._send_rich_offer_message(int(default_group_id), offer, force_group=True)
         
         # Send to subscribers in batches
-        self._notify_subscribers(announcement, reply_markup, offer.offer_id)
+        self._notify_subscribers_rich(offer)
     
-    def _notify_subscribers(self, message: str, reply_markup: dict, offer_id: int):
-        """Send offer notification to all subscribers in batches and store message IDs"""
+    def _send_rich_offer_message(self, chat_id: int, offer, preview: bool = False, force_group: bool = False):
+        """Send rich offer message with description and images"""
+        # Build message text
+        if preview:
+            message = f"👁️ PREVIEW - How offer will look:\n\n"
+        else:
+            message = f"🍺 New offer available!\n\n"
+        
+        message += f"[{offer.offer_id}] {offer.name}\n"
+        message += f"Price: €{offer.price_per_unit:.2f} per unit\n"
+        message += f"Box size: {offer.wholesale_box_size} units\n"
+        message += f"Supplier: {offer.supplier_name}\n"
+        
+        if offer.description:
+            message += f"\n{offer.description}\n"
+        
+        if not preview:
+            message += f"\nOrder with: /order {offer.offer_id} [quantity]"
+        
+        # Create inline keyboard with order buttons (only for non-preview)
+        reply_markup = None
+        if not preview:
+            reply_markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": "🍺 Order 1", "callback_data": f"order_{offer.offer_id}_1"},
+                        {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
+                    ]
+                ]
+            }
+        
+        # Send images first if available
+        if offer.images:
+            for image_url in offer.images:
+                try:
+                    self._send_photo(chat_id, image_url, force_group=force_group)
+                except Exception as e:
+                    print(f"Failed to send image {image_url}: {e}")
+        
+        # Send text message
+        result = self._send_message(chat_id, message, reply_markup=reply_markup, force_group=force_group)
+        return result
+    
+    def _notify_subscribers_rich(self, offer):
+        """Send rich offer notification to all subscribers in batches and store message IDs"""
         import time
         from models.entities import AuthorizationStatus, NotificationMessage
         
@@ -629,11 +634,40 @@ class OfferCommands(BaseHandler):
             
             for customer in batch:
                 try:
+                    # Send images first
+                    if offer.images:
+                        for image_url in offer.images:
+                            try:
+                                self._send_photo(customer.telegram_user_id, image_url)
+                            except Exception as e:
+                                print(f"Failed to send image to subscriber {customer.customer_id}: {e}")
+                    
+                    # Send text message with order buttons
+                    message = f"🍺 New offer available!\n\n"
+                    message += f"[{offer.offer_id}] {offer.name}\n"
+                    message += f"Price: €{offer.price_per_unit:.2f} per unit\n"
+                    message += f"Box size: {offer.wholesale_box_size} units\n"
+                    message += f"Supplier: {offer.supplier_name}\n"
+                    
+                    if offer.description:
+                        message += f"\n{offer.description}\n"
+                    
+                    message += f"\nOrder with: /order {offer.offer_id} [quantity]"
+                    
+                    reply_markup = {
+                        "inline_keyboard": [
+                            [
+                                {"text": "🍺 Order 1", "callback_data": f"order_{offer.offer_id}_1"},
+                                {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
+                            ]
+                        ]
+                    }
+                    
                     result = self._send_message(customer.telegram_user_id, message, reply_markup=reply_markup)
                     if result.get('success') and result.get('message_id'):
                         # Store notification message for later deletion
                         notification = NotificationMessage(
-                            offer_id=offer_id,
+                            offer_id=offer.offer_id,
                             chat_id=customer.telegram_user_id,
                             message_id=result['message_id']
                         )
@@ -739,6 +773,139 @@ class OfferCommands(BaseHandler):
                 self._send_message(chat_id, "❌ Failed to update offer description")
                 return {'status': 'error'}
                 
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_format'}
+    
+    def handle_edit_offer_details(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /edit_offer_details command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /edit_offer_details [offer_id]")
+            return {'status': 'invalid_args'}
+
+        try:
+            offer_id = int(args[0])
+            offer = self.db.get_offer(offer_id)
+            
+            if not offer:
+                self._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            # Show current offer details with edit options
+            message = f"📝 Edit Offer Details {offer_id}:\n\n"
+            message += f"Name: {offer.name}\n"
+            message += f"Price: €{offer.price_per_unit:.2f}\n"
+            message += f"Box Size: {offer.wholesale_box_size}\n"
+            message += f"Status: {offer.status}\n"
+            message += f"Supplier: {offer.supplier_name}\n"
+            message += f"Description: {offer.description or 'Not set'}\n"
+            message += f"Images: {len(offer.images)} uploaded\n\n"
+            message += "Select what to edit:"
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": "📝 Edit Description", "callback_data": f"edit_offer_description_{offer_id}"}],
+                    [{"text": "🖼️ Upload Image", "callback_data": f"upload_offer_image_{offer_id}"}],
+                    [{"text": "🗑️ Clear Images", "callback_data": f"clear_offer_images_{offer_id}"}] if offer.images else [],
+                    [{"text": "👁️ Preview Offer", "callback_data": f"preview_offer_{offer_id}"}],
+                    [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
+                ]
+            }
+            
+            # Remove empty rows
+            keyboard["inline_keyboard"] = [row for row in keyboard["inline_keyboard"] if row]
+            
+            self._send_message(chat_id, message, reply_markup=keyboard)
+            return {'status': 'success'}
+            
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_format'}
+    
+    def handle_publish_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /publish_offer command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /publish_offer [offer_id]")
+            return {'status': 'invalid_args'}
+
+        try:
+            offer_id = int(args[0])
+            offer = self.db.get_offer(offer_id)
+            
+            if not offer:
+                self._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            if offer.status != OfferStatus.DRAFT.value:
+                self._send_message(chat_id, f"❌ Offer is not in draft status (current: {offer.status})")
+                return {'status': 'offer_not_draft'}
+            
+            # Update offer status to active
+            if self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value}):
+                # Create initial box
+                box = Box(
+                    offer_id=offer_id,
+                    max_capacity=offer.wholesale_box_size,
+                    min_breakeven=offer.min_quantity_breakeven
+                )
+                self.db.create_box(box)
+
+                # Auto-order 1 unit for admin
+                admin_customer = self.db.get_customer_by_telegram_id(self.admin_user_id)
+                if admin_customer:
+                    admin_order = Order(
+                        customer_id=admin_customer.customer_id,
+                        box_id=box.box_id,
+                        offer_id=offer_id,
+                        quantity=1,
+                        unit_price=offer.price_per_unit,
+                        total_price=offer.price_per_unit
+                    )
+                    self.db.create_order(admin_order)
+                    
+                    # Update box quantity
+                    updates = {'current_quantity': 1}
+                    if 1 >= box.max_capacity:
+                        updates['status'] = BoxStatus.FULL.value
+                    elif 1 >= box.min_breakeven:
+                        updates['status'] = BoxStatus.MINIMUM_REACHED.value
+                    
+                    self.db.update_box(box.box_id, updates)
+
+                # Update offer object for announcement
+                offer.status = OfferStatus.ACTIVE.value
+                
+                # Announce offer to default group and subscribers
+                self._announce_offer(offer)
+                
+                self._send_message(chat_id, f"✅ Offer {offer_id} published and announced!")
+                return {'status': 'success'}
+            else:
+                self._send_message(chat_id, "❌ Failed to publish offer")
+                return {'status': 'error'}
+                
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_format'}
+    
+    def handle_preview_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /preview_offer command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /preview_offer [offer_id]")
+            return {'status': 'invalid_args'}
+
+        try:
+            offer_id = int(args[0])
+            offer = self.db.get_offer(offer_id)
+            
+            if not offer:
+                self._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            # Show rich offer preview
+            self._send_rich_offer_message(chat_id, offer, preview=True)
+            return {'status': 'success'}
+            
         except ValueError:
             self._send_message(chat_id, "❌ Invalid offer ID")
             return {'status': 'invalid_format'}

@@ -9,7 +9,9 @@ from models.entities import Supplier, Offer, Customer, Box, Order, DiscountPerio
 class DynamoDBService:
     def __init__(self):
         self.dynamodb = boto3.resource('dynamodb')
+        self.s3 = boto3.client('s3')
         self.table_prefix = os.environ.get('DYNAMODB_TABLE_PREFIX', 'ubbc-bot-test')
+        self.s3_bucket = os.environ.get('S3_BUCKET_NAME', f'{self.table_prefix}-images')
         
         # Initialize tables
         self.suppliers_table = self.dynamodb.Table(f'{self.table_prefix}-suppliers')
@@ -586,3 +588,35 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error cleaning up edit contexts: {e}")
             return 0
+    
+    def upload_image_to_s3(self, file_content: bytes, file_name: str, offer_id: int) -> Optional[str]:
+        """Upload image to S3 and return URL"""
+        try:
+            key = f"offers/{offer_id}/{file_name}"
+            self.s3.put_object(
+                Bucket=self.s3_bucket,
+                Key=key,
+                Body=file_content,
+                ContentType='image/jpeg'
+            )
+            return f"https://{self.s3_bucket}.s3.amazonaws.com/{key}"
+        except Exception as e:
+            print(f"Error uploading image to S3: {e}")
+            return None
+    
+    def delete_offer_images(self, offer_id: int) -> bool:
+        """Delete all images for an offer from S3"""
+        try:
+            prefix = f"offers/{offer_id}/"
+            response = self.s3.list_objects_v2(Bucket=self.s3_bucket, Prefix=prefix)
+            
+            if 'Contents' in response:
+                objects = [{'Key': obj['Key']} for obj in response['Contents']]
+                self.s3.delete_objects(
+                    Bucket=self.s3_bucket,
+                    Delete={'Objects': objects}
+                )
+            return True
+        except Exception as e:
+            print(f"Error deleting offer images: {e}")
+            return False

@@ -177,32 +177,85 @@ class InfoCommands(BaseHandler):
                 message += f"Valid until: {to_cet_string(active_discount.end_time)}\n"
             message += "\n"
         
-        message += "📋 Active Offers:\n\n"
-        active_found = False
-        for offer in offers:
-            if offer.status == OfferStatus.ACTIVE.value:
-                active_found = True
-                # Get total customer orders vs total capacity
-                boxes = self.db.get_boxes_by_offer(offer.offer_id)
-                total_capacity = sum(box.max_capacity for box in boxes)
-                
-                # Count actual customer orders (not box quantities)
-                all_orders = self.db.get_orders_by_offer(offer.offer_id)
-                active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
-                total_ordered = sum(order.quantity for order in active_orders)
-                
-                original_price = offer.price_per_unit
-                display_price = original_price
-                
-                if active_discount:
-                    display_price = original_price * (1 - active_discount.discount_percentage / 100)
-                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
-                else:
-                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=order_{offer.offer_id}_1) {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
+        is_admin = self._is_admin(user_id)
         
-        if not active_found:
-            self._send_message(chat_id, "🍺 No active offers available")
-            return {'status': 'no_offers'}
+        if is_admin:
+            # Show all offers with status indicators for admin
+            message += "📋 All Offers (Admin View):\n\n"
+            
+            # Group by status
+            draft_offers = [o for o in offers if o.status == OfferStatus.DRAFT.value]
+            active_offers = [o for o in offers if o.status == OfferStatus.ACTIVE.value]
+            other_offers = [o for o in offers if o.status not in [OfferStatus.DRAFT.value, OfferStatus.ACTIVE.value]]
+            
+            # Show draft offers first
+            if draft_offers:
+                message += "📝 DRAFT OFFERS:\n"
+                for offer in draft_offers:
+                    message += f"📝 [{offer.offer_id}] {offer.name} €{offer.price_per_unit:.2f} (draft)\n"
+                message += "\n"
+            
+            # Show active offers
+            if active_offers:
+                message += "🍺 ACTIVE OFFERS:\n"
+                for offer in active_offers:
+                    # Get total customer orders vs total capacity
+                    boxes = self.db.get_boxes_by_offer(offer.offer_id)
+                    total_capacity = sum(box.max_capacity for box in boxes)
+                    
+                    # Count actual customer orders (not box quantities)
+                    all_orders = self.db.get_orders_by_offer(offer.offer_id)
+                    active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
+                    total_ordered = sum(order.quantity for order in active_orders)
+                    
+                    original_price = offer.price_per_unit
+                    display_price = original_price
+                    
+                    if active_discount:
+                        display_price = original_price * (1 - active_discount.discount_percentage / 100)
+                    
+                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=offer_details_{offer.offer_id}) {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
+                message += "\n"
+            
+            # Show other status offers
+            if other_offers:
+                message += "📋 OTHER STATUS:\n"
+                for offer in other_offers:
+                    status_emoji = {
+                        OfferStatus.SOLD_OUT.value: "🚫",
+                        OfferStatus.ORDERED.value: "📦",
+                        OfferStatus.COMPLETED.value: "✅",
+                        OfferStatus.DELIVERED.value: "🚚",
+                        OfferStatus.INACTIVE.value: "❌"
+                    }.get(offer.status, "❓")
+                    message += f"{status_emoji} [{offer.offer_id}] {offer.name} €{offer.price_per_unit:.2f} ({offer.status})\n"
+        else:
+            # Show only active offers for customers
+            message += "📋 Active Offers:\n\n"
+            active_found = False
+            for offer in offers:
+                if offer.status == OfferStatus.ACTIVE.value:
+                    active_found = True
+                    # Get total customer orders vs total capacity
+                    boxes = self.db.get_boxes_by_offer(offer.offer_id)
+                    total_capacity = sum(box.max_capacity for box in boxes)
+                    
+                    # Count actual customer orders (not box quantities)
+                    all_orders = self.db.get_orders_by_offer(offer.offer_id)
+                    active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
+                    total_ordered = sum(order.quantity for order in active_orders)
+                    
+                    original_price = offer.price_per_unit
+                    display_price = original_price
+                    
+                    if active_discount:
+                        display_price = original_price * (1 - active_discount.discount_percentage / 100)
+                    
+                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=offer_details_{offer.offer_id}) {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
+            
+            if not active_found:
+                self._send_message(chat_id, "🍺 No active offers available")
+                return {'status': 'no_offers'}
 
         self._send_message(chat_id, message, 'Markdown')
         return {'status': 'success'}
@@ -336,3 +389,82 @@ class InfoCommands(BaseHandler):
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
+    
+    def handle_offer_details(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
+        """Handle offer details display from deep link"""
+        if not args:
+            self._send_message(chat_id, "❌ No offer ID provided")
+            return {'status': 'invalid_args'}
+        
+        try:
+            offer_id = int(args[0])
+            offer = self.db.get_offer(offer_id)
+            
+            if not offer:
+                self._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            # Only show active offers to non-admin users
+            if not self._is_admin(user_id) and offer.status != OfferStatus.ACTIVE.value:
+                self._send_message(chat_id, "❌ Offer not available")
+                return {'status': 'offer_not_available'}
+            
+            # Send rich offer details
+            self._send_rich_offer_details(chat_id, offer, user_id)
+            return {'status': 'success'}
+            
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_format'}
+    
+    def _send_rich_offer_details(self, chat_id: int, offer, user_id: int):
+        """Send rich offer details with images and description"""
+        # Send images first if available
+        if offer.images:
+            for image_url in offer.images:
+                try:
+                    self._send_photo(chat_id, image_url)
+                except Exception as e:
+                    print(f"Failed to send image {image_url}: {e}")
+        
+        # Build detailed message
+        message = f"🍺 {offer.name}\n\n"
+        message += f"🏷️ Offer ID: {offer.offer_id}\n"
+        message += f"💰 Price: €{offer.price_per_unit:.2f} per unit\n"
+        message += f"📦 Box size: {offer.wholesale_box_size} units\n"
+        message += f"🏭 Supplier: {offer.supplier_name}\n"
+        
+        if offer.status == OfferStatus.ACTIVE.value:
+            # Show availability for active offers
+            boxes = self.db.get_boxes_by_offer(offer.offer_id)
+            total_capacity = sum(box.max_capacity for box in boxes)
+            all_orders = self.db.get_orders_by_offer(offer.offer_id)
+            active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
+            total_ordered = sum(order.quantity for order in active_orders)
+            available = total_capacity - total_ordered
+            
+            message += f"📋 Available: {available}/{total_capacity} units\n"
+        else:
+            message += f"📋 Status: {offer.status}\n"
+        
+        if offer.description:
+            message += f"\n📝 Description:\n{offer.description}\n"
+        
+        # Add order buttons for active offers
+        reply_markup = None
+        if offer.status == OfferStatus.ACTIVE.value and not self._is_admin(user_id):
+            message += f"\n📝 Order with: /order {offer.offer_id} [quantity]"
+            reply_markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": "🍺 Order 1", "callback_data": f"order_{offer.offer_id}_1"},
+                        {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
+                    ],
+                    [
+                        {"text": "🍺🍺🍺 Order 3", "callback_data": f"order_{offer.offer_id}_3"},
+                        {"text": "🍺🍺🍺🍺 Order 4", "callback_data": f"order_{offer.offer_id}_4"}
+                    ]
+                ]
+            }
+        
+        self._send_message(chat_id, message, reply_markup=reply_markup)

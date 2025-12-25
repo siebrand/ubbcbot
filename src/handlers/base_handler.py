@@ -191,3 +191,43 @@ class BaseHandler:
         page_items = items[start_idx:end_idx]
         
         return page_items, total_pages
+    
+    def _send_photo(self, chat_id: int, photo_url: str, caption: str = None, force_group: bool = False) -> dict:
+        """Send photo to Telegram chat"""
+        import requests
+        
+        if self.environment == 'test' and caption:
+            caption = f"TEST - {caption}"
+        
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
+            return {'success': False}
+        
+        # In production, redirect to PM unless explicitly for group
+        if self.environment == 'prod' and chat_id < 0 and not force_group:
+            logger.info(f"Production group photo blocked")
+            return {'success': False}
+            
+        url = f"https://api.telegram.org/bot{self.telegram_token}/sendPhoto"
+        data = {
+            'chat_id': chat_id,
+            'photo': photo_url
+        }
+        
+        if caption:
+            data['caption'] = caption
+        
+        try:
+            if self.environment == 'test':
+                logger.info(f"Sending photo to chat {chat_id}: {photo_url}")
+            response = requests.post(url, json=data)
+            if self.environment == 'test':
+                logger.info(f"Telegram API response: {response.status_code}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {'success': True, 'message_id': result['result']['message_id']}
+            return {'success': False}
+        except Exception as e:
+            logger.error(f"Error sending photo: {e}")
+            return {'success': False}

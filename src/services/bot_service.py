@@ -92,7 +92,7 @@ class BotService:
             context = self.db.get_edit_context_by_chat_id(chat_id)
             if context:
                 logger.info(f"Found edit context for chat {chat_id}: {context.edit_type}")
-                return self._handle_edit_reply(chat_id, user_id, text)
+                return self._handle_edit_reply(chat_id, user_id, text, message)
             
             return {'status': 'processed'}
 
@@ -209,7 +209,7 @@ class BotService:
                     
                     # Standard format: edit_{entity}_{field}_{id}
                     entity_type = parts[1]  # supplier, offer
-                    field = parts[2]       # name, contact, status, price
+                    field = parts[2]       # name, contact, status, price, description
                     entity_id = parts[3]   # supplier_id or offer_id
                     
                     if entity_type == 'supplier':
@@ -221,6 +221,21 @@ class BotService:
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
                 base_handler._send_message(chat_id, "❌ Unknown edit action")
                 return {'status': 'unknown_edit'}
+            
+            # New offer management callbacks
+            elif data.startswith('preview_offer_'):
+                offer_id = data.split('_')[2]
+                return self.offer_commands.handle_preview_offer(chat_id, [offer_id])
+            elif data.startswith('upload_offer_image_'):
+                offer_id = data.split('_')[3]
+                from handlers.base_handler import BaseHandler
+                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                base_handler._send_message(chat_id, f"📷 Send an image to upload for offer {offer_id}")
+                self._store_edit_context(chat_id, 'offer_image_upload', offer_id)
+                return {'status': 'awaiting_image'}
+            elif data.startswith('clear_offer_images_'):
+                offer_id = data.split('_')[3]
+                return self._handle_clear_offer_images(chat_id, offer_id)
             
             return {'status': 'unknown_callback'}
             
@@ -325,7 +340,7 @@ class BotService:
         )
         self.db.create_edit_context(context)
     
-    def _handle_edit_reply(self, chat_id: int, user_id: int, text: str) -> Dict[str, Any]:
+    def _handle_edit_reply(self, chat_id: int, user_id: int, text: str, message: Dict[str, Any] = None) -> Dict[str, Any]:
         """Handle reply to edit prompt"""
         context = self.db.get_edit_context_by_chat_id(chat_id)
         if not context:
@@ -339,6 +354,10 @@ class BotService:
         
         # Log for debugging
         logger.info(f"Processing edit reply: type={edit_type}, entity_id={entity_id}, text={text}")
+        
+        # Handle image upload for offers
+        if edit_type == 'offer_image_upload' and message and 'photo' in message:
+            return self._handle_offer_image_upload(chat_id, entity_id, message['photo'])
         
         if edit_type == 'supplier_name':
             return self.supplier_commands.handle_update_supplier_name(chat_id, [entity_id, text])
@@ -468,6 +487,14 @@ class BotService:
                 section = parts[1][5:]  # Remove 'help_' prefix
                 target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
                 return self.info_commands.handle_help(target_chat, user_id, [section])
+            elif parts[1].startswith('offer_details_'):
+                # Parse offer_details_<offer_id>
+                try:
+                    offer_id_str = parts[1][14:]  # Remove 'offer_details_' prefix
+                    target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
+                    return self.info_commands.handle_offer_details(target_chat, user_id, [offer_id_str])
+                except ValueError:
+                    pass  # Fall through to normal start handling
         
         # Universal commands (available to everyone)
         target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
@@ -532,6 +559,12 @@ class BotService:
                 return self.offer_commands.handle_update_offer_price(admin_target_chat, parts[1:])
             elif command == '/update_offer_description':
                 return self.offer_commands.handle_update_offer_description(admin_target_chat, parts[1:])
+            elif command == '/edit_offer_details':
+                return self.offer_commands.handle_edit_offer_details(admin_target_chat, parts[1:])
+            elif command == '/publish_offer':
+                return self.offer_commands.handle_publish_offer(admin_target_chat, parts[1:])
+            elif command == '/preview_offer':
+                return self.offer_commands.handle_preview_offer(admin_target_chat, parts[1:])
             
             # Admin order commands
             elif command == '/order_for':
@@ -574,3 +607,115 @@ class BotService:
                 return self.discount_commands.handle_discount_status(admin_target_chat)
 
         return {'status': 'unknown_command'}
+    
+    def _handle_offer_image_upload(self, chat_id: int, offer_id: str, photos: list) -> Dict[str, Any]:
+        """Handle image upload for offer"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        try:
+            offer_id_int = int(offer_id)
+            offer = self.db.get_offer(offer_id_int)
+            
+            if not offer:
+                base_handler._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            # Get the largest photo size
+            largest_photo = max(photos, key=lambda p: p['file_size'])
+            file_id = largest_photo['file_id']
+            
+            # Download image from Telegram
+            image_data = self._download_telegram_file(file_id)
+            if not image_data:
+                base_handler._send_message(chat_id, "❌ Failed to download image")
+                return {'status': 'download_failed'}
+            
+            # Upload to S3
+            import uuid
+            file_name = f"{uuid.uuid4()}.jpg"
+            image_url = self.db.upload_image_to_s3(image_data, file_name, offer_id_int)
+            
+            if not image_url:
+                base_handler._send_message(chat_id, "❌ Failed to upload image")
+                return {'status': 'upload_failed'}
+            
+            # Update offer with new image
+            current_images = offer.images or []
+            current_images.append(image_url)
+            
+            if self.db.update_offer(offer_id_int, {'images': current_images}):
+                base_handler._send_message(chat_id, f"✅ Image uploaded successfully! Total images: {len(current_images)}")
+                return {'status': 'success'}
+            else:
+                base_handler._send_message(chat_id, "❌ Failed to update offer with image")
+                return {'status': 'update_failed'}
+                
+        except ValueError:
+            base_handler._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_offer_id'}
+        except Exception as e:
+            logger.error(f"Error uploading image: {e}")
+            base_handler._send_message(chat_id, "❌ Image upload failed")
+            return {'status': 'error'}
+    
+    def _handle_clear_offer_images(self, chat_id: int, offer_id: str) -> Dict[str, Any]:
+        """Handle clearing all images for an offer"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        try:
+            offer_id_int = int(offer_id)
+            offer = self.db.get_offer(offer_id_int)
+            
+            if not offer:
+                base_handler._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            if not offer.images:
+                base_handler._send_message(chat_id, "❌ No images to clear")
+                return {'status': 'no_images'}
+            
+            # Delete images from S3
+            self.db.delete_offer_images(offer_id_int)
+            
+            # Update offer to remove images
+            if self.db.update_offer(offer_id_int, {'images': []}):
+                base_handler._send_message(chat_id, f"✅ Cleared {len(offer.images)} images from offer {offer_id}")
+                return {'status': 'success'}
+            else:
+                base_handler._send_message(chat_id, "❌ Failed to update offer")
+                return {'status': 'update_failed'}
+                
+        except ValueError:
+            base_handler._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_offer_id'}
+        except Exception as e:
+            logger.error(f"Error clearing images: {e}")
+            base_handler._send_message(chat_id, "❌ Failed to clear images")
+            return {'status': 'error'}
+    
+    def _download_telegram_file(self, file_id: str) -> bytes:
+        """Download file from Telegram"""
+        import requests
+        try:
+            # Get file path
+            url = f"https://api.telegram.org/bot{self.telegram_token}/getFile"
+            response = requests.get(url, params={'file_id': file_id})
+            
+            if response.status_code != 200:
+                return None
+            
+            file_path = response.json()['result']['file_path']
+            
+            # Download file
+            download_url = f"https://api.telegram.org/file/bot{self.telegram_token}/{file_path}"
+            file_response = requests.get(download_url)
+            
+            if file_response.status_code == 200:
+                return file_response.content
+            
+            return None
+        except Exception as e:
+            logger.error(f"Error downloading file: {e}")
+            return None
