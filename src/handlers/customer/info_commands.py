@@ -65,7 +65,7 @@ class InfoCommands(BaseHandler):
         bot_username = self._get_bot_username()
         message = message.format(bot_username=bot_username)
         
-        self._send_message(chat_id, message)
+        self._send_message(chat_id, message, parse_mode="Markdown")
         return {'status': 'success'}
     
     def _show_help_section(self, chat_id: int, user_id: int, section: str) -> Dict[str, Any]:
