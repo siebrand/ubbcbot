@@ -433,8 +433,10 @@ class BotService:
         # Universal commands (available to everyone)
         target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
         
-        if command == '/start' or command == '/help':
-            return self.info_commands.handle_start(target_chat, user_id)
+        if command == '/start':
+            return self.info_commands.handle_start(target_chat, user_id, parts[1:])
+        elif command == '/help':
+            return self.info_commands.handle_help(target_chat, user_id, parts[1:])
         elif command == '/order':
             return self.customer_order_commands.handle_order(chat_id, user_id, parts[1:])  # Keep in group
         elif command == '/my_orders':

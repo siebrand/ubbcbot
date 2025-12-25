@@ -131,6 +131,7 @@ Expected response should show:
 These commands are set up in the deployment script, throught bash script setup-commands.sh.
 
 ### Admin Commands (User ID: 15005473)
+- `/help [section]` - Show help for specific section (general, orders, suppliers, offers, users)
 - `/setup_test_data` - Setup test data (test environment only)
 - `/add_supplier <name>` - Register new supplier
 - `/retire_supplier <name>` - Retire supplier (no longer available for new offers)
@@ -155,6 +156,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 
 ### Customer Commands
 - `/start` - Register and view help
+- `/help [section]` - Show help for specific section (general, orders)
 - `/order <offer_id> [quantity]` - Place order
 - `/my_orders [id]` - View personal orders
 - `/list_offers` - View available offers

@@ -4,17 +4,25 @@ from handlers.base_handler import BaseHandler
 from models.entities import OfferStatus
 
 class InfoCommands(BaseHandler):
-    def handle_start(self, chat_id: int, user_id: int) -> Dict[str, Any]:
-        """Handle /start command"""
+    def handle_start(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
+        """Handle /start command with optional help section parameter"""
         import logging
         logger = logging.getLogger()
         
         if self.environment == 'test':
             logger.info(f"Processing /start command for user {user_id}, chat {chat_id}")
         
+        # Check if specific help section requested
+        section = args[0].lower() if args and len(args) > 0 else None
+        
+        if section:
+            return self._show_help_section(chat_id, user_id, section)
+        
+        # Show general help
         message = "🍺 Welcome to UBBC Bot!\n\n"
         message += "📋 General:\n"
-        message += "/start - Show this help\n\n"
+        message += "/start - Show this help\n"
+        message += "/help [section] - Show help for specific section\n\n"
         message += "🛒 Orders:\n"
         message += "/list_offers - View available offers\n"
         message += "/order <offer_id> [quantity] - Place an order\n"
@@ -25,51 +33,92 @@ class InfoCommands(BaseHandler):
         message += "/unsubscribe - Unsubscribe from notifications\n"
         
         if self._is_admin(user_id):
-            if self.environment == 'test':
-                logger.info(f"User {user_id} is admin, adding admin commands")
-            message += "\n👑 Admin Commands:\n\n"
-            
-            # Test environment only
-            if self.environment == 'test':
-                message += "🧪 Test Data:\n"
-                message += "/setup_test_data - Setup test data\n\n"
-            
-            # Supplier management
-            message += "🏭 Suppliers:\n"
-            message += "/add_supplier <name> - Add supplier\n"
-            message += "/retire_supplier <name> - Retire supplier\n"
-            message += "/list_suppliers [active|retired|all] - List suppliers by status\n"
-            message += "/edit_supplier <name> - Edit supplier details\n\n"
-            
-            # Offer management
-            message += "🍺 Offers:\n"
-            message += "/create_offer <supplier> <name> <price> <box_size> - Create offer\n"
-            message += "/cancel_offer <offer_id> - Cancel offer and all orders\n"
-            message += "/edit_offer <offer_id> - Edit offer details\n"
-            message += "/box_status - View box status\n"
-            message += "/fulfill_offer <offer_id> - Start fulfillment process\n\n"
-            
-            # Order management
-            message += "📦 Order Management:\n"
-            message += "/order_for <username> <offer_id> [quantity] - Place order for user\n"
-            message += "/cancel_order <order_id> - Cancel customer order\n"
-            message += "/user_orders <username> - View orders for specific user\n"
-            message += "/all_orders [active|cancelled|ordered|all] - Download CSV of orders\n\n"
-            
-            # User management
-            message += "👥 User Management:\n"
-            message += "/pending_users - View users awaiting approval\n"
-            message += "/list_customers - View all customers\n"
-            message += "/approve_user <username> - Approve user\n"
-            message += "/reject_user <username> - Reject user\n"
-            message += "/user_status <username> - Check user status\n"
-            message += "/update_customer <username> <first_name> [last_name] - Update customer name\n"
-
+            message += "\n👑 Admin sections available: suppliers, offers, orders, users\n"
+            message += "Use /help [section] for detailed commands\n"
+        
         result = self._send_message(chat_id, message)
         success = result.get('success', False)
         if self.environment == 'test':
             logger.info(f"Message send result: {success}")
         
+        return {'status': 'success'}
+    
+    def handle_help(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
+        """Handle /help command with optional section parameter"""
+        section = args[0].lower() if args and len(args) > 0 else None
+        
+        if section:
+            return self._show_help_section(chat_id, user_id, section)
+        
+        # Show available sections
+        message = "📚 Help Sections:\n\n"
+        message += "📋 /help general - Basic commands\n"
+        message += "🛒 /help orders - Order management\n"
+        
+        if self._is_admin(user_id):
+            message += "\n👑 Admin Sections:\n"
+            message += "🏭 /help suppliers - Supplier management\n"
+            message += "🍺 /help offers - Offer management\n"
+            message += "👥 /help users - User management\n"
+        
+        self._send_message(chat_id, message)
+        return {'status': 'success'}
+    
+    def _show_help_section(self, chat_id: int, user_id: int, section: str) -> Dict[str, Any]:
+        """Show help for specific section"""
+        if section == "general":
+            message = "📋 General Commands:\n\n"
+            message += "/start - Show main help\n"
+            message += "/help [section] - Show help for specific section\n"
+            message += "/list_offers - View available offers\n"
+            message += "/subscribe - Subscribe to offer notifications\n"
+            message += "/unsubscribe - Unsubscribe from notifications\n"
+        
+        elif section == "orders":
+            message = "🛒 Order Commands:\n\n"
+            message += "/order <offer_id> [quantity] - Place an order\n"
+            message += "/confirm_order <offer_id> <quantity> - Confirm duplicate order\n"
+            message += "/my_orders [id] - View your orders\n"
+        
+        elif section == "suppliers" and self._is_admin(user_id):
+            message = "🏭 Supplier Management:\n\n"
+            message += "/add_supplier <name> - Add supplier\n"
+            message += "/retire_supplier <name> - Retire supplier\n"
+            message += "/list_suppliers [active|retired|all] - List suppliers\n"
+            message += "/edit_supplier <name> - Edit supplier details\n"
+        
+        elif section == "offers" and self._is_admin(user_id):
+            message = "🍺 Offer Management:\n\n"
+            message += "/create_offer <supplier> <name> <price> <box_size> - Create offer\n"
+            message += "/cancel_offer <offer_id> - Cancel offer and all orders\n"
+            message += "/edit_offer <offer_id> - Edit offer details\n"
+            message += "/add_box <offer_id> - Add box to offer\n"
+            message += "/box_status - View box status\n"
+            message += "/fulfill_offer <offer_id> - Start fulfillment process\n"
+        
+        elif section == "users" and self._is_admin(user_id):
+            message = "👥 User Management:\n\n"
+            message += "/pending_users - View users awaiting approval\n"
+            message += "/list_customers - View all customers\n"
+            message += "/approve_user <username> - Approve user\n"
+            message += "/reject_user <username> - Reject user\n"
+            message += "/user_status <username> - Check user status\n"
+            message += "/update_customer <username> <first_name> [last_name] - Update name\n"
+            message += "/order_for <username> <offer_id> [quantity] - Place order for user\n"
+            message += "/cancel_order <order_id> - Cancel customer order\n"
+            message += "/user_orders <username> - View orders for user\n"
+            message += "/all_orders [status] - Download CSV of orders\n"
+        
+        else:
+            if not self._is_admin(user_id) and section in ["suppliers", "offers", "users"]:
+                message = "❌ Admin-only section"
+            else:
+                message = f"❌ Unknown section: {section}\n\n"
+                message += "Available sections: general, orders"
+                if self._is_admin(user_id):
+                    message += ", suppliers, offers, users"
+        
+        self._send_message(chat_id, message)
         return {'status': 'success'}
 
     def handle_subscribe(self, chat_id: int, user_id: int) -> Dict[str, Any]:
