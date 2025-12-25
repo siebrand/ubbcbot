@@ -10,6 +10,7 @@ from handlers.admin.offer_commands import OfferCommands
 from handlers.admin.order_commands import AdminOrderCommands
 from handlers.admin.user_commands import UserCommands
 from handlers.admin.test_commands import TestCommands
+from handlers.admin.discount_commands import DiscountCommands
 from handlers.customer.order_commands import CustomerOrderCommands
 from handlers.customer.info_commands import InfoCommands
 from handlers.customer.auth_commands import AuthCommands
@@ -48,6 +49,7 @@ class BotService:
         self.admin_order_commands = AdminOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.user_commands = UserCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.test_commands = TestCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        self.discount_commands = DiscountCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         # Customer handlers
         self.customer_order_commands = CustomerOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -430,6 +432,16 @@ class BotService:
             elif command == '/update_customer':
                 return self.user_commands.handle_update_customer(admin_target_chat, parts[1:])
             elif command == '/list_customers':
-                return self.user_commands.handle_list_customers(admin_target_chat)
+                # Parse optional status filter
+                status_filter = parts[1] if len(parts) > 1 and parts[1] in ['approved', 'unauthorized', 'rejected', 'all'] else 'all'
+                return self.user_commands.handle_list_customers(admin_target_chat, 1, status_filter)
+            
+            # Discount management commands
+            elif command == '/create_discount':
+                return self.discount_commands.handle_create_discount(admin_target_chat, parts[1:])
+            elif command == '/cancel_discount':
+                return self.discount_commands.handle_cancel_discount(admin_target_chat)
+            elif command == '/discount_status':
+                return self.discount_commands.handle_discount_status(admin_target_chat)
 
         return {'status': 'unknown_command'}

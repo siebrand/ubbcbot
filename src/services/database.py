@@ -466,3 +466,35 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error deleting notification message: {e}")
             return False
+    def create_discount(self, discount: DiscountPeriod) -> bool:
+        try:
+            item = self._prepare_item(discount.__dict__)
+            self.discounts_table.put_item(Item=item)
+            return True
+        except Exception as e:
+            print(f"Error creating discount: {e}")
+            return False
+    
+    def update_discount(self, discount_id: str, updates: Dict[str, Any]) -> bool:
+        try:
+            update_expression = "SET "
+            expression_values = {}
+            expression_names = {}
+            
+            for key, value in updates.items():
+                update_expression += f"#{key} = :{key}, "
+                expression_values[f":{key}"] = value
+                expression_names[f"#{key}"] = key
+            
+            update_expression = update_expression.rstrip(", ")
+            
+            self.discounts_table.update_item(
+                Key={'discount_id': discount_id},
+                UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_names,
+                ExpressionAttributeValues=expression_values
+            )
+            return True
+        except Exception as e:
+            print(f"Error updating discount: {e}")
+            return False
