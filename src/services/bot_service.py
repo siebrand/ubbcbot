@@ -23,6 +23,7 @@ class BotService:
         self.admin_user_id = int(os.environ.get('ADMIN_USER_ID', '15005473'))
         self.environment = os.environ.get('ENVIRONMENT', 'test')
         self.telegram_token = self._get_telegram_token()
+        self.edit_contexts = {}  # Store edit contexts temporarily
         
         # Initialize handlers
         self._init_handlers()
@@ -87,6 +88,10 @@ class BotService:
             # Handle commands
             if text.startswith('/'):
                 return self._handle_command(chat_id, user_id, text)
+            
+            # Handle edit replies (when user responds to force reply)
+            if chat_id in self.edit_contexts:
+                return self._handle_edit_reply(chat_id, user_id, text)
             
             return {'status': 'processed'}
 
@@ -230,9 +235,13 @@ class BotService:
                 base_handler._send_message(chat_id, "❌ Failed to update supplier status")
                 return {'status': 'error'}
         elif field == 'name':
-            base_handler._send_message(chat_id, f"📝 To change supplier name, copy and send this command:\n\n`/update_supplier_name {supplier_id} [new_name]`\n\nReplace [new_name] with the desired name.")
+            # Store edit context and prompt for input
+            self._store_edit_context(chat_id, 'supplier_name', supplier_id)
+            base_handler._send_message(chat_id, f"📝 Enter new name for supplier '{supplier.name}':", reply_markup={"force_reply": True, "input_field_placeholder": "Enter supplier name"})
         elif field == 'contact':
-            base_handler._send_message(chat_id, f"📧 To change supplier contact, copy and send this command:\n\n`/update_supplier_contact {supplier_id} [email]`\n\nReplace [email] with the contact email.")
+            # Store edit context and prompt for input  
+            self._store_edit_context(chat_id, 'supplier_contact', supplier_id)
+            base_handler._send_message(chat_id, f"📧 Enter contact email for supplier '{supplier.name}':", reply_markup={"force_reply": True, "input_field_placeholder": "Enter email address"})
         else:
             base_handler._send_message(chat_id, "❌ Unknown edit field")
             return {'status': 'unknown_field'}
@@ -245,17 +254,49 @@ class BotService:
         base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         if field == 'name':
-            base_handler._send_message(chat_id, f"📝 To change offer name, copy and send this command:\n\n`/update_offer_name {offer_id} [new_name]`\n\nReplace [new_name] with the desired name.")
+            self._store_edit_context(chat_id, 'offer_name', offer_id)
+            base_handler._send_message(chat_id, f"📝 Enter new name for offer {offer_id}:", reply_markup={"force_reply": True, "input_field_placeholder": "Enter offer name"})
         elif field == 'price':
-            base_handler._send_message(chat_id, f"💰 To change offer price, copy and send this command:\n\n`/update_offer_price {offer_id} [new_price]`\n\nReplace [new_price] with the new price.")
+            self._store_edit_context(chat_id, 'offer_price', offer_id)
+            base_handler._send_message(chat_id, f"💰 Enter new price for offer {offer_id}:", reply_markup={"force_reply": True, "input_field_placeholder": "Enter price (e.g. 12.50)"})
         elif field == 'description':
-            base_handler._send_message(chat_id, f"📦 To change offer description, copy and send this command:\n\n`/update_offer_description {offer_id} [new_description]`\n\nReplace [new_description] with the new description.")
+            self._store_edit_context(chat_id, 'offer_description', offer_id)
+            base_handler._send_message(chat_id, f"📦 Enter new description for offer {offer_id}:", reply_markup={"force_reply": True, "input_field_placeholder": "Enter description"})
         else:
             base_handler._send_message(chat_id, "❌ Unknown edit field")
             return {'status': 'unknown_field'}
         
         return {'status': 'text_input_required'}
     
+    def _store_edit_context(self, chat_id: int, edit_type: str, entity_id: str):
+        """Store edit context for processing replies"""
+        self.edit_contexts[chat_id] = {
+            'type': edit_type,
+            'entity_id': entity_id
+        }
+    
+    def _handle_edit_reply(self, chat_id: int, user_id: int, text: str) -> Dict[str, Any]:
+        """Handle reply to edit prompt"""
+        if chat_id not in self.edit_contexts:
+            return {'status': 'no_context'}
+        
+        context = self.edit_contexts.pop(chat_id)
+        edit_type = context['type']
+        entity_id = context['entity_id']
+        
+        if edit_type == 'supplier_name':
+            return self.supplier_commands.handle_update_supplier_name(chat_id, [entity_id, text])
+        elif edit_type == 'supplier_contact':
+            return self.supplier_commands.handle_update_supplier_contact(chat_id, [entity_id, text])
+        elif edit_type == 'offer_name':
+            return self.offer_commands.handle_update_offer_name(chat_id, [entity_id, text])
+        elif edit_type == 'offer_price':
+            return self.offer_commands.handle_update_offer_price(chat_id, [entity_id, text])
+        elif edit_type == 'offer_description':
+            return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, text])
+        
+        return {'status': 'unknown_edit_type'}
+
     def _answer_callback_query(self, query_id: str) -> bool:
         """Answer callback query to remove loading state"""
         import requests
