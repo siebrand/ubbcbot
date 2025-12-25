@@ -432,6 +432,7 @@ class BotService:
             elif parts[1].startswith('help_'):
                 # Parse help_<section>
                 section = parts[1][5:]  # Remove 'help_' prefix
+                target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
                 return self.info_commands.handle_help(target_chat, user_id, [section])
         
         # Universal commands (available to everyone)
