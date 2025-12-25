@@ -236,6 +236,9 @@ class BotService:
             elif data.startswith('clear_offer_images_'):
                 offer_id = data.split('_')[3]
                 return self._handle_clear_offer_images(chat_id, offer_id)
+            elif data.startswith('publish_offer_'):
+                offer_id = data.split('_')[2]
+                return self.offer_commands.handle_publish_offer(chat_id, [offer_id])
             
             return {'status': 'unknown_callback'}
             

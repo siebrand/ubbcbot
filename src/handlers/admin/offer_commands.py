@@ -904,6 +904,20 @@ class OfferCommands(BaseHandler):
             
             # Show rich offer preview
             self._send_rich_offer_message(chat_id, offer, preview=True)
+            
+            # Add action buttons after preview
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": "📝 Edit Details", "callback_data": f"edit_offer_details_{offer_id}"}],
+                    [{"text": "🚀 Publish Offer", "callback_data": f"publish_offer_{offer_id}"}] if offer.status == OfferStatus.DRAFT.value else [],
+                    [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
+                ]
+            }
+            
+            # Remove empty rows
+            keyboard["inline_keyboard"] = [row for row in keyboard["inline_keyboard"] if row]
+            
+            self._send_message(chat_id, "Choose an action:", reply_markup=keyboard)
             return {'status': 'success'}
             
         except ValueError:
