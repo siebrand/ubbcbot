@@ -5,13 +5,13 @@ Telegram beer ordering bot with AWS serverless architecture.
 ## Quick Start
 
 ### Prerequisites
-- AWS CLI configured
-- AWS SAM CLI installed
-- Telegram bot token from @BotFather
+- ✅ AWS CLI configured
+- ✅ AWS SAM CLI installed
+- ✅ Telegram bot token from @BotFather
 
 ## Telegram Bot Setup
 
-### Test Environment Setup
+### ✅ Test Environment Setup
 
 1. **Create test bot with @BotFather:**
    - Send `/newbot` to @BotFather
@@ -38,7 +38,7 @@ Telegram beer ordering bot with AWS serverless architecture.
      - Pin messages
      - Manage video chats
 
-### Production Environment Setup
+### ✅Production Environment Setup
 
 1. **Create production bot with @BotFather:**
    - Send `/newbot` to @BotFather
@@ -67,7 +67,7 @@ Telegram beer ordering bot with AWS serverless architecture.
 
 ## Deployment
 
-1. **Store bot tokens in Parameter Store:**
+1. ✅**Store bot tokens in Parameter Store:**
 ```bash
 # For test environment (use token from test bot creation)
 aws ssm put-parameter \
@@ -82,7 +82,7 @@ aws ssm put-parameter \
     --type "SecureString"
 ```
 
-2. **Deploy to test environment:**
+2. ✅**Deploy to test environment:**
 ```bash
 ./deploy.sh test
 ```
@@ -113,7 +113,7 @@ aws ssm put-parameter \
    - Test complete order flow in production groups
    - Verify admin permissions work correctly
 
-### Webhook Verification
+### ✅Webhook Verification
 
 After deployment, verify webhook is active:
 ```bash
@@ -127,6 +127,8 @@ Expected response should show:
 - `"pending_update_count"`: 0
 
 ## Bot Commands
+
+These commands are set up in the deployment script, throught bash script setup-commands.sh.
 
 ### Admin Commands (User ID: 15005473)
 - `/setup_test_data` - Setup test data (test environment only)
