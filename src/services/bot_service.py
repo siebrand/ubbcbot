@@ -154,6 +154,23 @@ class BotService:
                 base_handler._send_message(chat_id, "Action cancelled.")
                 return {'status': 'cancelled'}
             
+            # Pagination callbacks
+            elif data.startswith('page_'):
+                parts = data.split('_')
+                if len(parts) >= 3:
+                    entity_type = parts[1]
+                    page = int(parts[2])
+                    
+                    if entity_type == 'suppliers':
+                        return self.supplier_commands.handle_list_suppliers(chat_id, page)
+                    elif entity_type == 'boxes':
+                        return self.offer_commands.handle_box_status(chat_id, page)
+                    elif entity_type == 'pending':
+                        return self.user_commands.handle_pending_users(chat_id, page)
+            elif data == 'page_info':
+                # Do nothing for page info button
+                return {'status': 'page_info'}
+            
             return {'status': 'unknown_callback'}
             
         except Exception as e:

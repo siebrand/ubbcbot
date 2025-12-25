@@ -3,18 +3,21 @@ from handlers.base_handler import BaseHandler
 from models.entities import AuthorizationStatus
 
 class UserCommands(BaseHandler):
-    def handle_pending_users(self, chat_id: int) -> Dict[str, Any]:
-        """Handle /pending_users command"""
+    def handle_pending_users(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
+        """Handle /pending_users command with pagination"""
         customers = self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value)
         
         if not customers:
             self._send_message(chat_id, "No users pending approval")
             return {'status': 'no_pending'}
 
-        message = "📋 Pending Users:\n\n"
+        # Paginate results
+        page_customers, total_pages = self._paginate_list(customers, page, 5)  # Smaller page size for buttons
+        
+        message = f"📋 Pending Users (Page {page}/{total_pages}):\n\n"
         keyboard_buttons = []
         
-        for customer in customers:
+        for customer in page_customers:
             display_name = self._escape_html(customer.first_name or "Unknown")
             if customer.last_name:
                 display_name += f" {self._escape_html(customer.last_name)}"
@@ -27,6 +30,16 @@ class UserCommands(BaseHandler):
                 {"text": f"✅ Approve {customer.first_name or 'User'}", "callback_data": f"approve_user_{customer.customer_id}"},
                 {"text": f"❌ Reject {customer.first_name or 'User'}", "callback_data": f"reject_user_{customer.customer_id}"}
             ])
+
+        # Add pagination buttons if needed
+        if total_pages > 1:
+            nav_buttons = []
+            if page > 1:
+                nav_buttons.append({"text": "◀️ Previous", "callback_data": f"page_pending_{page - 1}_"})
+            nav_buttons.append({"text": f"Page {page}/{total_pages}", "callback_data": "page_info"})
+            if page < total_pages:
+                nav_buttons.append({"text": "Next ▶️", "callback_data": f"page_pending_{page + 1}_"})
+            keyboard_buttons.append(nav_buttons)
 
         if keyboard_buttons:
             keyboard = {"inline_keyboard": keyboard_buttons}

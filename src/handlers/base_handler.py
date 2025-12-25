@@ -151,3 +151,43 @@ class BaseHandler:
         except Exception as e:
             logger.error(f"Error sending document: {e}")
             return False
+    
+    def _build_pagination_keyboard(self, current_page: int, total_pages: int, entity_type: str, filters: str = "") -> Dict[str, Any]:
+        """Build pagination keyboard for list commands"""
+        keyboard = []
+        
+        if total_pages > 1:
+            nav_buttons = []
+            
+            # Previous page button
+            if current_page > 1:
+                nav_buttons.append({
+                    "text": "◀️ Previous", 
+                    "callback_data": f"page_{entity_type}_{current_page - 1}_{filters}"
+                })
+            
+            # Page indicator
+            nav_buttons.append({
+                "text": f"Page {current_page}/{total_pages}",
+                "callback_data": "page_info"
+            })
+            
+            # Next page button
+            if current_page < total_pages:
+                nav_buttons.append({
+                    "text": "Next ▶️", 
+                    "callback_data": f"page_{entity_type}_{current_page + 1}_{filters}"
+                })
+            
+            keyboard.append(nav_buttons)
+        
+        return {"inline_keyboard": keyboard}
+    
+    def _paginate_list(self, items: list, page: int, page_size: int = 10) -> tuple:
+        """Paginate a list of items"""
+        total_pages = (len(items) + page_size - 1) // page_size if items else 1
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        page_items = items[start_idx:end_idx]
+        
+        return page_items, total_pages

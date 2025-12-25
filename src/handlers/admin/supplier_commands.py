@@ -60,8 +60,8 @@ class SupplierCommands(BaseHandler):
             self._send_message(chat_id, "❌ Failed to retire supplier")
             return {'status': 'error'}
 
-    def handle_list_suppliers(self, chat_id: int) -> Dict[str, Any]:
-        """Handle /list_suppliers command"""
+    def handle_list_suppliers(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
+        """Handle /list_suppliers command with pagination"""
         suppliers = self.db.list_suppliers()
         
         if not suppliers:
@@ -72,9 +72,17 @@ class SupplierCommands(BaseHandler):
         active_suppliers = [s for s in suppliers if s.status == "active"]
         active_suppliers.sort(key=lambda x: x.name.lower())
 
-        message = "📋 Registered Suppliers:\n\n"
-        for supplier in active_suppliers:
+        # Paginate results
+        page_suppliers, total_pages = self._paginate_list(active_suppliers, page, 10)
+        
+        message = f"📋 Registered Suppliers (Page {page}/{total_pages}):\n\n"
+        for supplier in page_suppliers:
             message += f"{supplier.name}\n"
-
-        self._send_message(chat_id, message)
+        
+        # Add pagination keyboard if needed
+        keyboard = None
+        if total_pages > 1:
+            keyboard = self._build_pagination_keyboard(page, total_pages, "suppliers")
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
