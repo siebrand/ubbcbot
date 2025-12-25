@@ -230,9 +230,9 @@ class BotService:
                 base_handler._send_message(chat_id, "❌ Failed to update supplier status")
                 return {'status': 'error'}
         elif field == 'name':
-            base_handler._send_message(chat_id, f"To change supplier name, use:\n/update_supplier_name {supplier_id} [new_name]")
+            base_handler._send_message(chat_id, f"📝 To change supplier name, copy and send this command:\n\n`/update_supplier_name {supplier_id} [new_name]`\n\nReplace [new_name] with the desired name.")
         elif field == 'contact':
-            base_handler._send_message(chat_id, f"To change supplier contact, use:\n/update_supplier_contact {supplier_id} [email]")
+            base_handler._send_message(chat_id, f"📧 To change supplier contact, copy and send this command:\n\n`/update_supplier_contact {supplier_id} [email]`\n\nReplace [email] with the contact email.")
         else:
             base_handler._send_message(chat_id, "❌ Unknown edit field")
             return {'status': 'unknown_field'}
@@ -245,11 +245,11 @@ class BotService:
         base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         if field == 'name':
-            base_handler._send_message(chat_id, f"To change offer name, use:\n/update_offer_name {offer_id} [new_name]")
+            base_handler._send_message(chat_id, f"📝 To change offer name, copy and send this command:\n\n`/update_offer_name {offer_id} [new_name]`\n\nReplace [new_name] with the desired name.")
         elif field == 'price':
-            base_handler._send_message(chat_id, f"To change offer price, use:\n/update_offer_price {offer_id} [new_price]")
+            base_handler._send_message(chat_id, f"💰 To change offer price, copy and send this command:\n\n`/update_offer_price {offer_id} [new_price]`\n\nReplace [new_price] with the new price.")
         elif field == 'description':
-            base_handler._send_message(chat_id, f"To change offer description, use:\n/update_offer_description {offer_id} [new_description]")
+            base_handler._send_message(chat_id, f"📦 To change offer description, copy and send this command:\n\n`/update_offer_description {offer_id} [new_description]`\n\nReplace [new_description] with the new description.")
         else:
             base_handler._send_message(chat_id, "❌ Unknown edit field")
             return {'status': 'unknown_field'}
