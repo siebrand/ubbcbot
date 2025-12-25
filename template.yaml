@@ -374,26 +374,6 @@ Resources:
           Value: sam
 
   # S3 Bucket for Images
-  S3ImageLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub '/aws/s3/${AWS::StackName}-image-bucket'
-      RetentionInDays: 7
-      LogGroupClass: STANDARD
-      Tags:
-        - Key: Project
-          Value: UBBCBot
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Owner
-          Value: siebrand
-        - Key: CostCenter
-          Value: personal
-        - Key: Application
-          Value: ubbc-telegram-bot
-        - Key: ManagedBy
-          Value: sam
-
   ImageBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -421,10 +401,9 @@ Resources:
             NoncurrentVersionExpiration:
               NoncurrentDays: 3
       NotificationConfiguration:
-        CloudWatchConfigurations:
+        LambdaConfigurations:
           - Event: s3:ObjectCreated:*
-            CloudWatchConfiguration:
-              LogGroupName: !Sub '/aws/s3/${AWS::StackName}-image-bucket'
+            Function: !GetAtt WebhookHandler.Arn
       Tags:
         - Key: Project
           Value: UBBCBot
