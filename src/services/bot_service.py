@@ -391,12 +391,10 @@ class BotService:
         elif edit_type == 'offer_price':
             return self.offer_commands.handle_update_offer_price(chat_id, [entity_id, text])
         elif edit_type == 'offer_description':
-            # For descriptions, preserve formatting by using the original message text with entities
-            if message and 'entities' in message:
-                # Use the original formatted text
-                formatted_text = text
-                # Store entities information if needed for later reconstruction
-                return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, formatted_text])
+            # For descriptions, convert Telegram entities to HTML format
+            if message and 'entities' in message and message['entities']:
+                html_text = self._convert_entities_to_html(text, message['entities'])
+                return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, html_text])
             else:
                 return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, text])
         elif edit_type == 'customer_first_name':
@@ -759,6 +757,30 @@ class BotService:
             logger.error(f"Error clearing images: {e}")
             base_handler._send_message(chat_id, "❌ Failed to clear images")
             return {'status': 'error'}
+    
+    def _convert_entities_to_html(self, text: str, entities: list) -> str:
+        """Convert Telegram message entities to HTML format"""
+        if not entities:
+            return text
+        
+        # Sort entities by offset in reverse order to avoid offset shifts
+        sorted_entities = sorted(entities, key=lambda x: x['offset'], reverse=True)
+        
+        result = text
+        for entity in sorted_entities:
+            start = entity['offset']
+            length = entity['length']
+            end = start + length
+            entity_text = text[start:end]
+            
+            if entity['type'] == 'bold':
+                result = result[:start] + f"<b>{entity_text}</b>" + result[end:]
+            elif entity['type'] == 'italic':
+                result = result[:start] + f"<i>{entity_text}</i>" + result[end:]
+            elif entity['type'] == 'spoiler':
+                result = result[:start] + f"<tg-spoiler>{entity_text}</tg-spoiler>" + result[end:]
+        
+        return result
     
     def _download_telegram_file(self, file_id: str) -> bytes:
         """Download file from Telegram"""
