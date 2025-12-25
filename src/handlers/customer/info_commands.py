@@ -479,7 +479,7 @@ class InfoCommands(BaseHandler):
         
         # Add order buttons for active offers
         reply_markup = None
-        if offer.status == OfferStatus.ACTIVE.value and not self._is_admin(user_id):
+        if offer.status == OfferStatus.ACTIVE.value:
             message += f"\n📝 Order with: /order {offer.offer_id} [quantity]"
             reply_markup = {
                 "inline_keyboard": [
