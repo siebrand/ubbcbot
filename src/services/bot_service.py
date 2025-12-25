@@ -164,6 +164,9 @@ class BotService:
             elif data.startswith('reject_user_'):
                 customer_id = data.split('_')[2]
                 return self.user_commands.handle_reject_user_by_id(chat_id, customer_id)
+            elif data.startswith('edit_user_select_'):
+                customer_id = data.split('_')[3]
+                return self.user_commands.handle_edit_user_select(chat_id, customer_id)
             elif data == 'cancel_action':
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)

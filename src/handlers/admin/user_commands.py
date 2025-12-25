@@ -286,28 +286,48 @@ class UserCommands(BaseHandler):
         if len(partial_matches) == 1:
             return partial_matches[0]
         elif len(partial_matches) > 1:
-            # Multiple partial matches - show options
-            message = f"❌ Multiple users found starting with '{identifier}':\n\n"
+            # Multiple partial matches - show options with buttons
+            message = f"📋 Multiple users found starting with '{identifier}'. Select user to edit:\n\n"
+            keyboard_buttons = []
+            
             for customer in partial_matches:
                 full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-                username_part = f" (@{customer.username})" if customer.username else " (no username)"
-                message += f"• {full_name}{username_part}\n"
-            message += "\nUse full name or @username to specify exactly which user."
-            self._send_message(chat_id, message)
+                username_part = f" (@{customer.username})" if customer.username else ""
+                display_text = f"{full_name}{username_part}"
+                
+                keyboard_buttons.append([{
+                    "text": f"📝 Edit {full_name}", 
+                    "callback_data": f"edit_user_select_{customer.customer_id}"
+                }])
+            
+            keyboard_buttons.append([{"text": "❌ Cancel", "callback_data": "cancel_action"}])
+            keyboard = {"inline_keyboard": keyboard_buttons}
+            
+            self._send_message(chat_id, message, reply_markup=keyboard)
             return None
         
         # Handle first name matches
         if len(matches) == 1:
             return matches[0]
         elif len(matches) > 1:
-            # Multiple matches - show options
-            message = f"❌ Multiple users found with name '{identifier}':\n\n"
+            # Multiple first name matches - show options with buttons
+            message = f"📋 Multiple users found with name '{identifier}'. Select user to edit:\n\n"
+            keyboard_buttons = []
+            
             for customer in matches:
                 full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-                username_part = f" (@{customer.username})" if customer.username else " (no username)"
-                message += f"• {full_name}{username_part}\n"
-            message += "\nUse full name or @username to specify exactly which user."
-            self._send_message(chat_id, message)
+                username_part = f" (@{customer.username})" if customer.username else ""
+                display_text = f"{full_name}{username_part}"
+                
+                keyboard_buttons.append([{
+                    "text": f"📝 Edit {full_name}", 
+                    "callback_data": f"edit_user_select_{customer.customer_id}"
+                }])
+            
+            keyboard_buttons.append([{"text": "❌ Cancel", "callback_data": "cancel_action"}])
+            keyboard = {"inline_keyboard": keyboard_buttons}
+            
+            self._send_message(chat_id, message, reply_markup=keyboard)
             return None
         
         return None
@@ -400,6 +420,34 @@ class UserCommands(BaseHandler):
         keyboard = None
         if total_pages > 1:
             keyboard = self._build_pagination_keyboard(page, total_pages, f"customers_{status_filter}")
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
+    def handle_edit_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        """Handle user selection from ambiguity resolution buttons"""
+        customer = self.db.get_customer(customer_id)
+        
+        if not customer:
+            self._send_message(chat_id, "❌ User not found")
+            return {'status': 'user_not_found'}
+        
+        # Show edit interface for selected user
+        display_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+        username_part = f" (@{customer.username})" if customer.username else ""
+        
+        message = f"📝 Edit User: {display_name}{username_part}\n\n"
+        message += f"First Name: {customer.first_name or 'Not set'}\n"
+        message += f"Last Name: {customer.last_name or 'Not set'}\n"
+        message += f"Status: {customer.authorization_status}\n\n"
+        message += "Select what to edit:"
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📝 Edit First Name", "callback_data": f"edit_customer_first_name_{customer.customer_id}"}],
+                [{"text": "📝 Edit Last Name", "callback_data": f"edit_customer_last_name_{customer.customer_id}"}],
+                [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
+            ]
+        }
         
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
