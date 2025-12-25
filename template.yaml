@@ -54,6 +54,7 @@ Resources:
     Properties:
       LogGroupName: !Sub '/aws/lambda/ubbc-bot-${Environment}-webhook-handler'
       RetentionInDays: 7
+      LogGroupClass: STANDARD
       Tags:
         - Key: Project
           Value: UBBCBot
