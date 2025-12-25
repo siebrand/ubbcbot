@@ -484,12 +484,8 @@ class InfoCommands(BaseHandler):
             reply_markup = {
                 "inline_keyboard": [
                     [
-                        {"text": "🍺 Order 1", "callback_data": f"order_{offer.offer_id}_1"},
+                        {"text": "🍺   Order 1", "callback_data": f"order_{offer.offer_id}_1"},
                         {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
-                    ],
-                    [
-                        {"text": "🍺🍺🍺 Order 3", "callback_data": f"order_{offer.offer_id}_3"},
-                        {"text": "🍺🍺🍺🍺 Order 4", "callback_data": f"order_{offer.offer_id}_4"}
                     ]
                 ]
             }

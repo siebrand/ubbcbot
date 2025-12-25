@@ -164,6 +164,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/order <offer_id> [quantity]` - Place order
 - `/my_orders [id]` - View personal orders
 - `/list_offers` - View available offers
+- `/offer_details <offer_id>` - View detailed offer information
 - `/subscribe` - Subscribe to new offer notifications
 - `/unsubscribe` - Unsubscribe from offer notifications
 

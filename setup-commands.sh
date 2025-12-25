@@ -77,6 +77,7 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
          {"command": "my_orders", "description": "View your orders"},
          {"command": "confirm_order", "description": "Confirm duplicate order"},
          {"command": "list_offers", "description": "View available offers"},
+         {"command": "offer_details", "description": "View offer details: /offer_details <offer_id>"},
          {"command": "subscribe", "description": "Subscribe to offer notifications"},
          {"command": "unsubscribe", "description": "Unsubscribe from offer notifications"}
        ],
