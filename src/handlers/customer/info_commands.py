@@ -93,9 +93,12 @@ class InfoCommands(BaseHandler):
         
         elif section == "offers" and self._is_admin(user_id):
             message = "🍺 Offer Management:\n\n"
-            message += "/create_offer <supplier> <name> <price> <box_size> - Create offer\n"
+            message += "/create_offer <supplier> <name> <price> <box_size> - Create draft offer\n"
+            message += "/edit_offer_details <offer_id> - Edit description and images\n"
+            message += "/preview_offer <offer_id> - Preview offer appearance\n"
+            message += "/publish_offer <offer_id> - Publish draft offer\n"
             message += "/cancel_offer <offer_id> - Cancel offer and all orders\n"
-            message += "/edit_offer <offer_id> - Edit offer details\n"
+            message += "/edit_offer <offer_id> - Edit basic offer details\n"
             message += "/add_box <offer_id> - Add box to offer\n"
             message += "/box_status - View box status\n"
             message += "/fulfill_offer <offer_id> - Start fulfillment process\n"
