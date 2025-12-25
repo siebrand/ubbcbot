@@ -544,3 +544,24 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error deleting edit context: {e}")
             return False
+    
+    def cleanup_old_edit_contexts(self) -> int:
+        """Clean up edit contexts older than 1 hour"""
+        try:
+            from datetime import datetime, UTC, timedelta
+            cutoff_time = datetime.now(UTC) - timedelta(hours=1)
+            
+            response = self.edit_contexts_table.scan(
+                FilterExpression='created_at < :cutoff',
+                ExpressionAttributeValues={':cutoff': cutoff_time.isoformat()}
+            )
+            
+            deleted_count = 0
+            for item in response.get('Items', []):
+                if self.delete_edit_context(item['context_id']):
+                    deleted_count += 1
+            
+            return deleted_count
+        except Exception as e:
+            print(f"Error cleaning up edit contexts: {e}")
+            return 0

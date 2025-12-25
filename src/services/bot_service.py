@@ -279,6 +279,13 @@ class BotService:
         if existing:
             self.db.delete_edit_context(existing.context_id)
         
+        # Cleanup old contexts periodically
+        import random
+        if random.randint(1, 20) == 1:  # 5% chance
+            cleaned = self.db.cleanup_old_edit_contexts()
+            if cleaned > 0:
+                logger.info(f"Cleaned up {cleaned} old edit contexts")
+        
         # Create new context
         context = EditContext(
             chat_id=chat_id,
