@@ -458,8 +458,11 @@ class InfoCommands(BaseHandler):
         message = f"🍺 {offer.name}\n\n"
         message += f"🏷️ Offer ID: {offer.offer_id}\n"
         message += f"💰 Price: €{offer.price_per_unit:.2f} per unit\n"
-        message += f"📦 Box size: {offer.wholesale_box_size} units\n"
-        message += f"🏭 Supplier: {offer.supplier_name}\n"
+        
+        # Show box size and supplier only to admins
+        if self._is_admin(user_id):
+            message += f"📦 Box size: {offer.wholesale_box_size} units\n"
+            message += f"🏭 Supplier: {offer.supplier_name}\n"
         
         if offer.status == OfferStatus.ACTIVE.value:
             # Show availability for active offers
