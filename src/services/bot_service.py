@@ -174,7 +174,7 @@ class BotService:
                 # Do nothing for page info button
                 return {'status': 'page_info'}
             
-            # Edit callbacks (placeholder - would need text input handling)
+            # Edit callbacks
             elif data.startswith('edit_'):
                 parts = data.split('_')
                 if len(parts) >= 4:
@@ -189,8 +189,8 @@ class BotService:
                 
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, "Edit functionality requires text input. Use the original commands for now.")
-                return {'status': 'edit_placeholder'}
+                base_handler._send_message(chat_id, "❌ Unknown edit action")
+                return {'status': 'unknown_edit'}
             
             return {'status': 'unknown_callback'}
             
