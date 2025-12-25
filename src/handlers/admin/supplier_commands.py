@@ -117,3 +117,65 @@ class SupplierCommands(BaseHandler):
         
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
+    
+    def handle_update_supplier_name(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_supplier_name command"""
+        if len(args) < 2:
+            self._send_message(chat_id, "Usage: /update_supplier_name <supplier_id> <new_name>")
+            return {'status': 'invalid_args'}
+        
+        supplier_id = args[0]
+        new_name = ' '.join(args[1:]).strip()
+        
+        if len(new_name) > 50:
+            self._send_message(chat_id, "❌ Supplier name too long (max 50 characters)")
+            return {'status': 'invalid_name'}
+        
+        if '<' in new_name or '>' in new_name:
+            self._send_message(chat_id, "❌ Supplier name cannot contain < or > characters")
+            return {'status': 'invalid_name'}
+        
+        supplier = self.db.get_supplier(supplier_id)
+        if not supplier:
+            self._send_message(chat_id, "❌ Supplier not found")
+            return {'status': 'supplier_not_found'}
+        
+        # Check for duplicate name
+        existing = self.db.get_supplier_by_name(new_name)
+        if existing and existing.supplier_id != supplier_id:
+            self._send_message(chat_id, f"❌ Supplier name '{new_name}' already exists")
+            return {'status': 'duplicate_name'}
+        
+        if self.db.update_supplier(supplier_id, {'name': new_name}):
+            self._send_message(chat_id, f"✅ Supplier name updated: '{supplier.name}' → '{new_name}'")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to update supplier name")
+            return {'status': 'error'}
+    
+    def handle_update_supplier_contact(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_supplier_contact command"""
+        if len(args) < 2:
+            self._send_message(chat_id, "Usage: /update_supplier_contact <supplier_id> <email>")
+            return {'status': 'invalid_args'}
+        
+        supplier_id = args[0]
+        contact_email = args[1]
+        
+        # Basic email validation
+        if '@' not in contact_email or '.' not in contact_email:
+            self._send_message(chat_id, "❌ Invalid email format")
+            return {'status': 'invalid_email'}
+        
+        supplier = self.db.get_supplier(supplier_id)
+        if not supplier:
+            self._send_message(chat_id, "❌ Supplier not found")
+            return {'status': 'supplier_not_found'}
+        
+        if self.db.update_supplier(supplier_id, {'contact_email': contact_email}):
+            old_contact = supplier.contact_email or "Not set"
+            self._send_message(chat_id, f"✅ Supplier contact updated: '{old_contact}' → '{contact_email}'")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to update supplier contact")
+            return {'status': 'error'}

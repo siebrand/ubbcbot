@@ -646,3 +646,99 @@ class OfferCommands(BaseHandler):
             # Rate limiting: wait 1 second between batches
             if i + batch_size < len(subscribers):
                 time.sleep(1)
+    
+    def handle_update_offer_name(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_offer_name command"""
+        if len(args) < 2:
+            self._send_message(chat_id, "Usage: /update_offer_name <offer_id> <new_name>")
+            return {'status': 'invalid_args'}
+        
+        try:
+            offer_id = int(args[0])
+            new_name = ' '.join(args[1:]).strip()
+            
+            if len(new_name) > 100:
+                self._send_message(chat_id, "❌ Product name too long (max 100 characters)")
+                return {'status': 'invalid_name'}
+            
+            if '<' in new_name or '>' in new_name:
+                self._send_message(chat_id, "❌ Product name cannot contain < or > characters")
+                return {'status': 'invalid_name'}
+            
+            offer = self.db.get_offer(offer_id)
+            if not offer:
+                self._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            if self.db.update_offer(offer_id, {'name': new_name}):
+                self._send_message(chat_id, f"✅ Offer name updated: '{offer.name}' → '{new_name}'")
+                return {'status': 'success'}
+            else:
+                self._send_message(chat_id, "❌ Failed to update offer name")
+                return {'status': 'error'}
+                
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_format'}
+    
+    def handle_update_offer_price(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_offer_price command"""
+        if len(args) < 2:
+            self._send_message(chat_id, "Usage: /update_offer_price <offer_id> <new_price>")
+            return {'status': 'invalid_args'}
+        
+        try:
+            offer_id = int(args[0])
+            new_price = float(args[1])
+            
+            if new_price <= 0:
+                self._send_message(chat_id, "❌ Price must be positive")
+                return {'status': 'invalid_price'}
+            
+            offer = self.db.get_offer(offer_id)
+            if not offer:
+                self._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            from decimal import Decimal
+            if self.db.update_offer(offer_id, {'price_per_unit': Decimal(str(new_price))}):
+                self._send_message(chat_id, f"✅ Offer price updated: €{offer.price_per_unit:.2f} → €{new_price:.2f}")
+                return {'status': 'success'}
+            else:
+                self._send_message(chat_id, "❌ Failed to update offer price")
+                return {'status': 'error'}
+                
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid offer ID or price format")
+            return {'status': 'invalid_format'}
+    
+    def handle_update_offer_description(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_offer_description command"""
+        if len(args) < 2:
+            self._send_message(chat_id, "Usage: /update_offer_description <offer_id> <new_description>")
+            return {'status': 'invalid_args'}
+        
+        try:
+            offer_id = int(args[0])
+            new_description = ' '.join(args[1:]).strip()
+            
+            if len(new_description) > 500:
+                self._send_message(chat_id, "❌ Description too long (max 500 characters)")
+                return {'status': 'invalid_description'}
+            
+            offer = self.db.get_offer(offer_id)
+            if not offer:
+                self._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            if self.db.update_offer(offer_id, {'description': new_description}):
+                old_desc = offer.description or "Not set"
+                self._send_message(chat_id, f"✅ Offer description updated: '{old_desc}' → '{new_description}'")
+                return {'status': 'success'}
+            else:
+                self._send_message(chat_id, "❌ Failed to update offer description")
+                return {'status': 'error'}
+                
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_format'}

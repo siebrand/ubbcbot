@@ -176,6 +176,17 @@ class BotService:
             
             # Edit callbacks (placeholder - would need text input handling)
             elif data.startswith('edit_'):
+                parts = data.split('_')
+                if len(parts) >= 4:
+                    entity_type = parts[1]  # supplier, offer
+                    field = parts[2]       # name, contact, status, price
+                    entity_id = parts[3]   # supplier_id or offer_id
+                    
+                    if entity_type == 'supplier':
+                        return self._handle_supplier_edit(chat_id, field, entity_id)
+                    elif entity_type == 'offer':
+                        return self._handle_offer_edit(chat_id, field, entity_id)
+                
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
                 base_handler._send_message(chat_id, "Edit functionality requires text input. Use the original commands for now.")
@@ -186,6 +197,49 @@ class BotService:
         except Exception as e:
             logger.error(f"Error handling callback query: {e}")
             return {'status': 'error', 'error': str(e)}
+    
+    def _handle_supplier_edit(self, chat_id: int, field: str, supplier_id: str) -> Dict[str, Any]:
+        """Handle supplier edit callbacks"""
+        supplier = self.db.get_supplier(supplier_id)
+        if not supplier:
+            from handlers.base_handler import BaseHandler
+            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            base_handler._send_message(chat_id, "❌ Supplier not found")
+            return {'status': 'supplier_not_found'}
+        
+        if field == 'status':
+            # Toggle status
+            new_status = 'retired' if supplier.status == 'active' else 'active'
+            if self.db.update_supplier(supplier_id, {'status': new_status}):
+                from handlers.base_handler import BaseHandler
+                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                base_handler._send_message(chat_id, f"✅ Supplier '{supplier.name}' status changed to {new_status}")
+                return {'status': 'success'}
+        
+        # For name and contact, we need text input - show instructions
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        if field == 'name':
+            base_handler._send_message(chat_id, f"To change supplier name, use:\n/update_supplier_name {supplier_id} <new_name>")
+        elif field == 'contact':
+            base_handler._send_message(chat_id, f"To change supplier contact, use:\n/update_supplier_contact {supplier_id} <email>")
+        
+        return {'status': 'text_input_required'}
+    
+    def _handle_offer_edit(self, chat_id: int, field: str, offer_id: str) -> Dict[str, Any]:
+        """Handle offer edit callbacks"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        if field == 'name':
+            base_handler._send_message(chat_id, f"To change offer name, use:\n/update_offer_name {offer_id} <new_name>")
+        elif field == 'price':
+            base_handler._send_message(chat_id, f"To change offer price, use:\n/update_offer_price {offer_id} <new_price>")
+        elif field == 'description':
+            base_handler._send_message(chat_id, f"To change offer description, use:\n/update_offer_description {offer_id} <new_description>")
+        
+        return {'status': 'text_input_required'}
     
     def _answer_callback_query(self, query_id: str) -> bool:
         """Answer callback query to remove loading state"""
@@ -329,6 +383,10 @@ class BotService:
                 return self.supplier_commands.handle_list_suppliers(admin_target_chat)
             elif command == '/edit_supplier':
                 return self.supplier_commands.handle_edit_supplier(admin_target_chat, parts[1:])
+            elif command == '/update_supplier_name':
+                return self.supplier_commands.handle_update_supplier_name(admin_target_chat, parts[1:])
+            elif command == '/update_supplier_contact':
+                return self.supplier_commands.handle_update_supplier_contact(admin_target_chat, parts[1:])
             
             # Offer commands
             elif command == '/create_offer':
@@ -343,6 +401,12 @@ class BotService:
                 return self.offer_commands.handle_fulfill_offer(admin_target_chat, parts[1:])
             elif command == '/edit_offer':
                 return self.offer_commands.handle_edit_offer(admin_target_chat, parts[1:])
+            elif command == '/update_offer_name':
+                return self.offer_commands.handle_update_offer_name(admin_target_chat, parts[1:])
+            elif command == '/update_offer_price':
+                return self.offer_commands.handle_update_offer_price(admin_target_chat, parts[1:])
+            elif command == '/update_offer_description':
+                return self.offer_commands.handle_update_offer_description(admin_target_chat, parts[1:])
             
             # Admin order commands
             elif command == '/order_for':
