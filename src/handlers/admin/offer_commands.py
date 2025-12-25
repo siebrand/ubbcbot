@@ -940,14 +940,23 @@ class OfferCommands(BaseHandler):
 
         try:
             offer_id = int(args[0])
+            # Check for "user" parameter
+            show_as_user = len(args) > 1 and args[1].lower() == 'user'
+            
             offer = self.db.get_offer(offer_id)
             
             if not offer:
                 self._send_message(chat_id, "❌ Offer not found")
                 return {'status': 'offer_not_found'}
             
-            # Show rich offer preview
-            self._send_rich_offer_message(chat_id, offer, preview=True)
+            if show_as_user:
+                # Show as regular user would see it
+                from handlers.customer.info_commands import InfoCommands
+                info_handler = InfoCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                info_handler._send_rich_offer_details(chat_id, offer, user_id=999999)  # Fake non-admin user ID
+            else:
+                # Show rich offer preview
+                self._send_rich_offer_message(chat_id, offer, preview=True)
             
             # Add action buttons after preview
             keyboard = {
