@@ -476,6 +476,14 @@ class InfoCommands(BaseHandler):
                 # Show as regular user would see it
                 self._send_rich_offer_details(chat_id, offer, user_id=999999)  # Fake non-admin user ID
             else:
+                # Send images first if available
+                if offer.images:
+                    for image_url in offer.images:
+                        try:
+                            self._send_photo(chat_id, image_url)
+                        except Exception as e:
+                            print(f"Failed to send image {image_url}: {e}")
+                
                 self._send_rich_offer_details(chat_id, offer, user_id)
             
             # Add admin action buttons for draft offers
