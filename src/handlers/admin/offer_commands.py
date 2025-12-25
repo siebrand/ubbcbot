@@ -1,8 +1,11 @@
 import os
+import logging
 from typing import Dict, Any
 from decimal import Decimal
 from handlers.base_handler import BaseHandler
 from models.entities import Offer, Box, Order, BoxStatus, OfferStatus, OrderStatus
+
+logger = logging.getLogger()
 
 class OfferCommands(BaseHandler):
     def handle_create_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
