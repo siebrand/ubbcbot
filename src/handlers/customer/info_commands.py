@@ -52,16 +52,20 @@ class InfoCommands(BaseHandler):
         
         # Show available sections
         message = "📚 Help Sections:\n\n"
-        message += "📋 /help general - Basic commands\n"
-        message += "🛒 /help orders - Order management\n"
+        message += "📋 [/help general](https://t.me/{bot_username}?start=help_general) - Basic commands\n"
+        message += "🛒 [/help orders](https://t.me/{bot_username}?start=help_orders) - Order management\n"
         
         if self._is_admin(user_id):
             message += "\n👑 Admin Sections:\n"
-            message += "🏭 /help suppliers - Supplier management\n"
-            message += "🍺 /help offers - Offer management\n"
-            message += "👥 /help users - User management\n"
+            message += "🏭 [/help suppliers](https://t.me/{bot_username}?start=help_suppliers) - Supplier management\n"
+            message += "🍺 [/help offers](https://t.me/{bot_username}?start=help_offers) - Offer management\n"
+            message += "👥 [/help users](https://t.me/{bot_username}?start=help_users) - User management\n"
         
-        self._send_message(chat_id, message)
+        # Replace bot_username placeholder
+        bot_username = self._get_bot_username()
+        message = message.format(bot_username=bot_username)
+        
+        self._send_message(chat_id, message, 'Markdown')
         return {'status': 'success'}
     
     def _show_help_section(self, chat_id: int, user_id: int, section: str) -> Dict[str, Any]:

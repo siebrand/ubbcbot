@@ -429,6 +429,10 @@ class BotService:
                     return self.customer_order_commands.handle_confirm_order(chat_id, user_id, [offer_id_str, quantity_str])
                 except ValueError:
                     pass  # Fall through to normal start handling
+            elif parts[1].startswith('help_'):
+                # Parse help_<section>
+                section = parts[1][5:]  # Remove 'help_' prefix
+                return self.info_commands.handle_help(target_chat, user_id, [section])
         
         # Universal commands (available to everyone)
         target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
