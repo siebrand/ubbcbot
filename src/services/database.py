@@ -604,6 +604,20 @@ class DynamoDBService:
             print(f"Error uploading image to S3: {e}")
             return None
     
+    def get_presigned_url(self, s3_url: str, expiration: int = 3600) -> Optional[str]:
+        """Generate presigned URL for S3 object"""
+        try:
+            # Extract key from S3 URL
+            if '.s3.amazonaws.com/' in s3_url:
+                key = s3_url.split('.s3.amazonaws.com/')[1]
+            else:
+                return None
+            
+            presigned_url = self.s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': self.s3_bucket, 'Key': key},
+                ExpiresIn=expiration
+            )
     def delete_offer_images(self, offer_id: int) -> bool:
         """Delete all images for an offer from S3"""
         try:
