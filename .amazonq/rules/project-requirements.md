@@ -51,6 +51,8 @@ feat: add automatic webhook setup in deployment script
 - Eliminates manual webhook configuration step
 ```
 
+A commit message must always be suggested right after completing changes to files in the project. 
+
 ## Business Logic
 - Admin user ID: 15005473
 - Supported box sizes: 1,2,6,8,10,12,15,16,18,20,24 units
