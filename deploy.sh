@@ -16,6 +16,15 @@ fi
 
 echo "🚀 Deploying UBBC Bot to $ENVIRONMENT environment..."
 
+# Run tests first
+echo "🧪 Running test suite..."
+if ! python3 tests/run_tests.py; then
+    echo "❌ Tests failed! Deployment aborted."
+    exit 1
+fi
+echo "✅ All tests passed!"
+echo ""
+
 # Verify token exists in Parameter Store
 echo "🔍 Checking for bot token in Parameter Store..."
 if ! aws ssm get-parameter --name "/ubbc-bot/$ENVIRONMENT/telegram-bot-token" --with-decryption >/dev/null 2>&1; then
