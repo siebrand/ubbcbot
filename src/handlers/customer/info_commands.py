@@ -480,6 +480,12 @@ class InfoCommands(BaseHandler):
                 if offer.images:
                     for image_url in offer.images:
                         try:
+                            # Generate presigned URL for S3 images
+                            if 's3.amazonaws.com' in image_url:
+                                presigned_url = self.db.get_presigned_url(image_url)
+                                if presigned_url:
+                                    image_url = presigned_url
+                            
                             self._send_photo(chat_id, image_url)
                         except Exception as e:
                             print(f"Failed to send image {image_url}: {e}")
