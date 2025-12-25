@@ -400,10 +400,6 @@ Resources:
             Status: Enabled
             NoncurrentVersionExpiration:
               NoncurrentDays: 3
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
-            Function: !GetAtt WebhookHandler.Arn
       Tags:
         - Key: Project
           Value: UBBCBot
