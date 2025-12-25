@@ -618,6 +618,11 @@ class DynamoDBService:
                 Params={'Bucket': self.s3_bucket, 'Key': key},
                 ExpiresIn=expiration
             )
+            return presigned_url
+        except Exception as e:
+            print(f"Error generating presigned URL: {e}")
+            return None
+    
     def delete_offer_images(self, offer_id: int) -> bool:
         """Delete all images for an offer from S3"""
         try:
