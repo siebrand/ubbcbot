@@ -896,8 +896,28 @@ class OfferCommands(BaseHandler):
     def handle_preview_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /preview_offer command"""
         if not args:
-            self._send_message(chat_id, "Usage: /preview_offer [offer_id]")
-            return {'status': 'invalid_args'}
+            # Show list of draft offers as buttons
+            offers = self.db.list_offers()
+            draft_offers = [o for o in offers if o.status == OfferStatus.DRAFT.value]
+            
+            if not draft_offers:
+                self._send_message(chat_id, "❌ No draft offers available to preview")
+                return {'status': 'no_draft_offers'}
+            
+            message = "📝 Select draft offer to preview:\n\n"
+            keyboard = {"inline_keyboard": []}
+            
+            for offer in draft_offers:
+                button_text = f"[{offer.offer_id}] {offer.name} - €{offer.price_per_unit:.2f}"
+                keyboard["inline_keyboard"].append([{
+                    "text": button_text,
+                    "callback_data": f"preview_offer_{offer.offer_id}"
+                }])
+            
+            keyboard["inline_keyboard"].append([{"text": "❌ Cancel", "callback_data": "cancel_action"}])
+            
+            self._send_message(chat_id, message, reply_markup=keyboard)
+            return {'status': 'success'}
 
         try:
             offer_id = int(args[0])
