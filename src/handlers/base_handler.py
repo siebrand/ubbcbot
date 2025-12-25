@@ -159,11 +159,17 @@ class BaseHandler:
         if total_pages > 1:
             nav_buttons = []
             
+            # Build callback data with filters
+            if filters:
+                callback_prefix = f"{entity_type}_{filters}"
+            else:
+                callback_prefix = entity_type
+            
             # Previous page button
             if current_page > 1:
                 nav_buttons.append({
                     "text": "◀️ Previous", 
-                    "callback_data": f"page_{entity_type}_{current_page - 1}_{filters}"
+                    "callback_data": f"page_{callback_prefix}_{current_page - 1}"
                 })
             
             # Page indicator
@@ -176,7 +182,7 @@ class BaseHandler:
             if current_page < total_pages:
                 nav_buttons.append({
                     "text": "Next ▶️", 
-                    "callback_data": f"page_{entity_type}_{current_page + 1}_{filters}"
+                    "callback_data": f"page_{callback_prefix}_{current_page + 1}"
                 })
             
             keyboard.append(nav_buttons)

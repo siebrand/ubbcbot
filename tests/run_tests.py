@@ -40,7 +40,8 @@ def main():
         os.path.join(test_dir, "test_supplier_management.py"),
         os.path.join(test_dir, "test_help_system.py"),
         os.path.join(test_dir, "test_webhook_callbacks.py"),
-        os.path.join(test_dir, "test_offer_management.py")
+        os.path.join(test_dir, "test_offer_management.py"),
+        os.path.join(test_dir, "test_pagination.py")
     ]
     
     passed = 0
