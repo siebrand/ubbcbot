@@ -195,7 +195,8 @@ class InfoCommands(BaseHandler):
             if draft_offers:
                 message += "📝 DRAFT OFFERS:\n"
                 for offer in draft_offers:
-                    message += f"📝 [{offer.offer_id}] {offer.name} €{offer.price_per_unit:.2f} (draft)\n"
+                    escaped_name = offer.name.replace('[', '\\[').replace(']', '\\]').replace('(', '\\(').replace(')', '\\)').replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+                    message += f"📝 [{offer.offer_id}] {escaped_name} €{offer.price_per_unit:.2f} (draft)\n"
                 message += "\n"
             
             # Show active offers
@@ -251,7 +252,8 @@ class InfoCommands(BaseHandler):
                         active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
                         total_ordered = sum(order.quantity for order in active_orders)
                         
-                        message += f"{status_emoji} [{offer.offer_id}] {offer.name} €{offer.price_per_unit:.2f} ({total_ordered}/{total_capacity})\n"
+                        escaped_name = offer.name.replace('[', '\\[').replace(']', '\\]').replace('(', '\\(').replace(')', '\\)').replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+                        message += f"{status_emoji} [{offer.offer_id}] {escaped_name} €{offer.price_per_unit:.2f} ({total_ordered}/{total_capacity})\n"
                     
                     message += "\n"
         else:
