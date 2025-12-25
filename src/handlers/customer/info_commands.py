@@ -219,8 +219,7 @@ class InfoCommands(BaseHandler):
                         display_price = original_price * (1 - active_discount.discount_percentage / 100)
                     
                     bot_username = self._get_bot_username()
-                    escaped_name = offer.name.replace('[', '\\[').replace(']', '\\]').replace('(', '\\(').replace(')', '\\)').replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
-                    message += f"🍺 [{offer.offer_id}](https://t.me/{bot_username}?start=offer_details_{offer.offer_id}) {escaped_name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
+                    message += f"🍺 <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>[{offer.offer_id}]</a> {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
                 message += "\n"
             
             # Show other status offers
@@ -279,14 +278,13 @@ class InfoCommands(BaseHandler):
                         display_price = original_price * (1 - active_discount.discount_percentage / 100)
                     
                     bot_username = self._get_bot_username()
-                    escaped_name = offer.name.replace('[', '\\[').replace(']', '\\]').replace('(', '\\(').replace(')', '\\)').replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
-                    message += f"🍺 [{offer.offer_id}](https://t.me/{bot_username}?start=offer_details_{offer.offer_id}) {escaped_name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
+                    message += f"🍺 <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>[{offer.offer_id}]</a> {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
             
             if not active_found:
                 self._send_message(chat_id, "🍺 No active offers available")
                 return {'status': 'no_offers'}
 
-        self._send_message(chat_id, message, parse_mode="Markdown")
+        self._send_message(chat_id, message, parse_mode="HTML")
         return {'status': 'success'}
 
     def handle_my_orders(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
