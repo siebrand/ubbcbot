@@ -777,7 +777,9 @@ class OfferCommands(BaseHandler):
                 return {'status': 'offer_not_found'}
             
             if self.db.update_offer(offer_id, {'description': new_description}):
+                logger.info(f"Stored description in DB: {new_description}")
                 old_desc = offer.description or "Not set"
+                logger.info(f"Retrieved old description from DB: {old_desc}")
                 
                 # Send confirmation with button to continue editing
                 message = f"✅ Offer description updated: '{old_desc}' → '{new_description}'\n\n"

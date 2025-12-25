@@ -394,8 +394,10 @@ class BotService:
             # For descriptions, convert Telegram entities to HTML format
             if message and 'entities' in message and message['entities']:
                 html_text = self._convert_entities_to_html(text, message['entities'])
+                logger.info(f"Converting description - Original: {text}, HTML: {html_text}, Entities: {message['entities']}")
                 return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, html_text])
             else:
+                logger.info(f"No entities found - storing plain text: {text}")
                 return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, text])
         elif edit_type == 'customer_first_name':
             return self.user_commands.handle_update_user_first_name(chat_id, [entity_id, text])
