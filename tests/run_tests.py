@@ -57,12 +57,11 @@ def main():
     
     print(f"\n📊 Results: {passed}/{total} test files passed")
     
-    if passed == total:
-        print("🎉 All tests passed!")
-        return 0
-    else:
+    if passed != total:
         print("💥 Some tests failed!")
         return 1
+    
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())
