@@ -3,36 +3,36 @@
 Implement a Telegram beer ordering bot with AWS serverless architecture. Focus on core functionality:
 
 ## CORE REQUIREMENTS:
-- Admin user ID: 15005473 (siebrand)
-- AWS Lambda + DynamoDB + API Gateway + S3 architecture
-- Basic offer creation with supplier tracking
-- Order placement and box assignment logic
-- Customer registration and order history
-- Minimal viable bot commands for testing
+- ✅ Admin user ID: 15005473 (siebrand)
+- ✅ AWS Lambda + DynamoDB + API Gateway + S3 architecture
+- ✅ Basic offer creation with supplier tracking
+- ✅ Order placement and box assignment logic
+- ✅ Customer registration and order history
+- ✅ Minimal viable bot commands for testing
 
 ## CRITICAL BUSINESS RULES:
-- Wholesale box sizes: 1,2,6,8,10,12,15,16,18,20,24 units
-- Auto-create new boxes when capacity reached
-- Track box status: open → minimum_reached → full → ordered → delivered
-- Validate orders against available capacity
+- ✅ Wholesale box sizes: 1,2,6,8,10,12,15,16,18,20,24 units
+- ✅ Auto-create new boxes when capacity reached in a pre-ordered state of the offer
+- ✅ Track box status: open → minimum_reached → full → ordered → delivered
+- ✅ Validate orders against available capacity
 
 ## DEPLOYMENT & INTEGRATION:
-- Use AWS SAM for infrastructure deployment (template.yaml + samconfig.toml)
-- Set Telegram webhook to API Gateway endpoint with secret validation
-- Environment-specific bot tokens stored in Parameter Store
-- Test environment messages prefixed with "TEST - "
-- Webhook endpoint: POST /webhook with Lambda proxy integration
-- Bot registered with @BotFather for test and production environments
-- Executable scripts must have git executable flag: `git update-index --chmod=+x script.sh`
+- ✅ Use AWS SAM for infrastructure deployment (template.yaml + samconfig.toml)
+- ✅ Set Telegram webhook to API Gateway endpoint with secret validation
+- ✅ Environment-specific bot tokens stored in Parameter Store
+- ✅ Test environment messages prefixed with "TEST - "
+- ✅ Webhook endpoint: POST /webhook with Lambda proxy integration
+- ✅ Bot registered with @BotFather for test and production environments
+- ✅ Executable scripts must have git executable flag: `git update-index --chmod=+x script.sh`
 
 ## RESOURCE NAMING & TAGGING:
-- All resources follow naming convention: `ubbc-bot-{environment}-{resource-type}`
-- Required tags: Project, Environment, Owner, CostCenter, Application, ManagedBy
-- Lambda: `ubbc-bot-test-webhook-handler`, `ubbc-bot-prod-webhook-handler`
-- DynamoDB: `ubbc-bot-test-offers`, `ubbc-bot-prod-customers`
-- S3: `ubbc-bot-test-{account-id}-images`, `ubbc-bot-prod-{account-id}-images`
-- API Gateway: `ubbc-bot-test-api`, `ubbc-bot-prod-api`
-- Parameter Store: `/ubbc-bot/test/telegram-token`, `/ubbc-bot/prod/telegram-token`
+- ✅ All resources follow naming convention: `ubbc-bot-{environment}-{resource-type}`
+- Required tags: , Environment, Owner, CostCenter, Application, ManagedBy
+- ✅ Lambda: `ubbc-bot-test-webhook-handler`, `ubbc-bot-prod-webhook-handler`
+- ✅ DynamoDB: `ubbc-bot-test-offers`, `ubbc-bot-prod-customers`
+- ✅ S3: `ubbc-bot-test-{account-id}-images`, `ubbc-bot-prod-{account-id}-images`
+- ✅ API Gateway: `ubbc-bot-test-api`, `ubbc-bot-prod-api`
+- ✅ Parameter Store: `/ubbc-bot/test/telegram-token`, `/ubbc-bot/prod/telegram-token`
 
 ## ESSENTIAL COMMANDS:
 Admin: /add_supplier, /create_offer, /list_offers, /box_status
