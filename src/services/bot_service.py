@@ -207,6 +207,11 @@ class BotService:
                         elif parts[2] == 'last' and parts[3] == 'name':
                             return self._handle_customer_edit(chat_id, 'last_name', parts[4])
                     
+                    # Handle edit_offer_details callback
+                    if parts[1] == 'offer' and parts[2] == 'details':
+                        offer_id = parts[3]
+                        return self.offer_commands.handle_edit_offer_details(chat_id, [offer_id])
+                    
                     # Standard format: edit_{entity}_{field}_{id}
                     entity_type = parts[1]  # supplier, offer
                     field = parts[2]       # name, contact, status, price, description
