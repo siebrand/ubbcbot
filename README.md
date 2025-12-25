@@ -149,6 +149,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/all_orders [active|cancelled|ordered|all]` - Download CSV of all orders (default: active)
 - `/pending_users` - View users awaiting approval (paginated with approve/reject buttons)
 - `/list_users` - View all customers (paginated with status filtering)
+- `/list_subscribers` - View users subscribed to offer notifications
 - `/approve_user <name_or_username>` - Approve user
 - `/reject_user <name_or_username>` - Reject user
 - `/user_status <name_or_username>` - Check user status
