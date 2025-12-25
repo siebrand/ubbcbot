@@ -451,3 +451,36 @@ class UserCommands(BaseHandler):
         
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
+    def handle_list_subscribers(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
+        """Handle /list_subscribers command with pagination"""
+        subscribers = self.db.get_subscribers()
+        
+        if not subscribers:
+            self._send_message(chat_id, "No subscribers found")
+            return {'status': 'no_subscribers'}
+        
+        # Sort by first name
+        subscribers.sort(key=lambda x: (x.first_name or "zzz").lower())
+        
+        # Paginate results
+        page_subscribers, total_pages = self._paginate_list(subscribers, page, 10)
+        
+        message = f"🔔 Subscribers - Page {page}/{total_pages}:\n\n"
+        
+        for customer in page_subscribers:
+            display_name = self._escape_html(customer.first_name or "Unknown")
+            if customer.last_name:
+                display_name += f" {self._escape_html(customer.last_name)}"
+            
+            username_part = f" (@{self._escape_html(customer.username)})" if customer.username else ""
+            message += f"✅ {display_name}{username_part}\n"
+        
+        message += f"\nTotal subscribers: {len(subscribers)}"
+        
+        # Add pagination keyboard if needed
+        keyboard = None
+        if total_pages > 1:
+            keyboard = self._build_pagination_keyboard(page, total_pages, "subscribers")
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}

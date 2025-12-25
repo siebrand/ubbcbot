@@ -190,6 +190,8 @@ class BotService:
                     elif entity_type.startswith('customers_'):
                         status_filter = entity_type.split('_', 1)[1]
                         return self.user_commands.handle_list_users(chat_id, page, status_filter)
+                    elif entity_type == 'subscribers':
+                        return self.user_commands.handle_list_subscribers(chat_id, page)
             elif data == 'page_info':
                 # Do nothing for page info button
                 return {'status': 'page_info'}
@@ -560,6 +562,8 @@ class BotService:
                 # Parse optional status filter
                 status_filter = parts[1] if len(parts) > 1 and parts[1] in ['approved', 'unauthorized', 'rejected', 'all'] else 'all'
                 return self.user_commands.handle_list_users(admin_target_chat, 1, status_filter)
+            elif command == '/list_subscribers':
+                return self.user_commands.handle_list_subscribers(admin_target_chat)
             
             # Discount management commands
             elif command == '/create_discount':

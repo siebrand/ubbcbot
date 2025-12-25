@@ -545,6 +545,27 @@ class DynamoDBService:
             print(f"Error deleting edit context: {e}")
             return False
     
+    def get_subscribers(self) -> List[Customer]:
+        try:
+            response = self.customers_table.scan(
+                FilterExpression='subscribed_to_offers = :subscribed',
+                ExpressionAttributeValues={':subscribed': True}
+            )
+            return [Customer(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting subscribers: {e}")
+            return []
+    def get_subscribers(self) -> List[Customer]:
+        try:
+            response = self.customers_table.scan(
+                FilterExpression='subscribed_to_offers = :subscribed',
+                ExpressionAttributeValues={':subscribed': True}
+            )
+            return [Customer(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting subscribers: {e}")
+            return []
+
     def cleanup_old_edit_contexts(self) -> int:
         """Clean up edit contexts older than 1 hour"""
         try:
