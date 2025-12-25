@@ -10,7 +10,7 @@ class CustomerOrderCommands(BaseHandler):
     def handle_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /order command"""
         if len(args) < 1:
-            self._send_message(chat_id, "Usage: /order <offer_id> [quantity]")
+            self._send_message(chat_id, "Usage: /order [offer_id] [quantity]")
             return {'status': 'invalid_args'}
 
         try:
@@ -86,7 +86,7 @@ class CustomerOrderCommands(BaseHandler):
     def handle_confirm_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_order command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /confirm_order <offer_id> <quantity>")
+            self._send_message(chat_id, "Usage: /confirm_order [offer_id] [quantity]")
             return {'status': 'invalid_args'}
 
         try:

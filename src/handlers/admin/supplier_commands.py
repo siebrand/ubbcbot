@@ -6,7 +6,7 @@ class SupplierCommands(BaseHandler):
     def handle_add_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /add_supplier command"""
         if not args:
-            self._send_message(chat_id, "Usage: /add_supplier <name>")
+            self._send_message(chat_id, "Usage: /add_supplier [name]")
             return {'status': 'invalid_args'}
 
         supplier_name = ' '.join(args).strip()
@@ -37,7 +37,7 @@ class SupplierCommands(BaseHandler):
     def handle_retire_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /retire_supplier command"""
         if not args:
-            self._send_message(chat_id, "Usage: /retire_supplier <name>")
+            self._send_message(chat_id, "Usage: /retire_supplier [name]")
             return {'status': 'invalid_args'}
 
         supplier_name = ' '.join(args).strip()
@@ -90,7 +90,7 @@ class SupplierCommands(BaseHandler):
     def handle_edit_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /edit_supplier command"""
         if not args:
-            self._send_message(chat_id, "Usage: /edit_supplier <name>")
+            self._send_message(chat_id, "Usage: /edit_supplier [name]")
             return {'status': 'invalid_args'}
 
         supplier_name = ' '.join(args).strip()
@@ -121,7 +121,7 @@ class SupplierCommands(BaseHandler):
     def handle_update_supplier_name(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_supplier_name command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_supplier_name <supplier_id> <new_name>")
+            self._send_message(chat_id, "Usage: /update_supplier_name [supplier_id] [new_name]")
             return {'status': 'invalid_args'}
         
         supplier_id = args[0]
@@ -156,7 +156,7 @@ class SupplierCommands(BaseHandler):
     def handle_update_supplier_contact(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_supplier_contact command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_supplier_contact <supplier_id> <email>")
+            self._send_message(chat_id, "Usage: /update_supplier_contact [supplier_id] [email]")
             return {'status': 'invalid_args'}
         
         supplier_id = args[0]

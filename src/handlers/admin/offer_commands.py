@@ -8,7 +8,7 @@ class OfferCommands(BaseHandler):
     def handle_create_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /create_offer command"""
         if len(args) < 4:
-            self._send_message(chat_id, "Usage: /create_offer <supplier_name> <name> <price> <box_size>")
+            self._send_message(chat_id, "Usage: /create_offer [supplier_name] [name] [price] [box_size]")
             return {'status': 'invalid_args'}
 
         try:
@@ -99,7 +99,7 @@ class OfferCommands(BaseHandler):
     def handle_fulfill_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /fulfill_offer command"""
         if not args:
-            self._send_message(chat_id, "Usage: /fulfill_offer <offer_id>")
+            self._send_message(chat_id, "Usage: /fulfill_offer [offer_id]")
             return {'status': 'invalid_args'}
 
         try:
@@ -324,7 +324,7 @@ class OfferCommands(BaseHandler):
     def handle_cancel_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /cancel_offer command"""
         if not args:
-            self._send_message(chat_id, "Usage: /cancel_offer <offer_id>")
+            self._send_message(chat_id, "Usage: /cancel_offer [offer_id]")
             return {'status': 'invalid_args'}
 
         try:
@@ -471,7 +471,7 @@ class OfferCommands(BaseHandler):
     def handle_add_box(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /add_box command"""
         if not args:
-            self._send_message(chat_id, "Usage: /add_box <offer_id>")
+            self._send_message(chat_id, "Usage: /add_box [offer_id]")
             return {'status': 'invalid_args'}
 
         try:
@@ -550,7 +550,7 @@ class OfferCommands(BaseHandler):
     def handle_edit_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /edit_offer command"""
         if not args:
-            self._send_message(chat_id, "Usage: /edit_offer <offer_id>")
+            self._send_message(chat_id, "Usage: /edit_offer [offer_id]")
             return {'status': 'invalid_args'}
 
         try:
@@ -650,7 +650,7 @@ class OfferCommands(BaseHandler):
     def handle_update_offer_name(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_offer_name command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_offer_name <offer_id> <new_name>")
+            self._send_message(chat_id, "Usage: /update_offer_name [offer_id] [new_name]")
             return {'status': 'invalid_args'}
         
         try:
@@ -684,7 +684,7 @@ class OfferCommands(BaseHandler):
     def handle_update_offer_price(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_offer_price command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_offer_price <offer_id> <new_price>")
+            self._send_message(chat_id, "Usage: /update_offer_price [offer_id] [new_price]")
             return {'status': 'invalid_args'}
         
         try:
@@ -715,7 +715,7 @@ class OfferCommands(BaseHandler):
     def handle_update_offer_description(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_offer_description command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_offer_description <offer_id> <new_description>")
+            self._send_message(chat_id, "Usage: /update_offer_description [offer_id] [new_description]")
             return {'status': 'invalid_args'}
         
         try:
