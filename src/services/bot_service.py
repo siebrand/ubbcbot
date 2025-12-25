@@ -107,6 +107,7 @@ class BotService:
             # Remove the keyboard buttons
             self._edit_message_remove_keyboard(chat_id, message_id)
             
+            # Order callbacks
             if data.startswith('order_'):
                 # Parse order_<offer_id>_<quantity>
                 parts = data.split('_')
@@ -125,6 +126,32 @@ class BotService:
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
                 base_handler._send_message(chat_id, "Order confirmation cancelled.")
+                return {'status': 'cancelled'}
+            
+            # Admin confirmation callbacks
+            elif data.startswith('confirm_cancel_offer_'):
+                offer_id = data.split('_')[3]
+                return self.offer_commands.handle_confirm_cancel_offer(chat_id, [offer_id])
+            elif data.startswith('confirm_fulfill_'):
+                # Parse confirm_fulfill_<offer_id>_<boxes>
+                parts = data.split('_')
+                if len(parts) >= 4:
+                    offer_id = parts[2]
+                    boxes = parts[3]
+                    return self.offer_commands.handle_confirm_fulfill(chat_id, [offer_id, boxes])
+            elif data.startswith('confirm_cancel_order_'):
+                order_id = data.split('_')[3]
+                return self.admin_order_commands.handle_confirm_cancel(chat_id, [order_id])
+            elif data.startswith('approve_user_'):
+                customer_id = data.split('_')[2]
+                return self.user_commands.handle_approve_user_by_id(chat_id, customer_id)
+            elif data.startswith('reject_user_'):
+                customer_id = data.split('_')[2]
+                return self.user_commands.handle_reject_user_by_id(chat_id, customer_id)
+            elif data == 'cancel_action':
+                from handlers.base_handler import BaseHandler
+                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                base_handler._send_message(chat_id, "Action cancelled.")
                 return {'status': 'cancelled'}
             
             return {'status': 'unknown_callback'}
@@ -279,24 +306,18 @@ class BotService:
                 return self.offer_commands.handle_create_offer(admin_target_chat, parts[1:])
             elif command == '/cancel_offer':
                 return self.offer_commands.handle_cancel_offer(admin_target_chat, parts[1:])
-            elif command == '/confirm_cancel_offer':
-                return self.offer_commands.handle_confirm_cancel_offer(admin_target_chat, parts[1:])
             elif command == '/add_box':
                 return self.offer_commands.handle_add_box(admin_target_chat, parts[1:])
             elif command == '/box_status':
                 return self.offer_commands.handle_box_status(admin_target_chat)
             elif command == '/fulfill_offer':
                 return self.offer_commands.handle_fulfill_offer(admin_target_chat, parts[1:])
-            elif command == '/confirm_fulfill':
-                return self.offer_commands.handle_confirm_fulfill(admin_target_chat, parts[1:])
             
             # Admin order commands
             elif command == '/order_for':
                 return self.admin_order_commands.handle_order_for(admin_target_chat, user_id, parts[1:])
             elif command == '/cancel_order':
                 return self.admin_order_commands.handle_cancel_order(admin_target_chat, parts[1:])
-            elif command == '/confirm_cancel':
-                return self.admin_order_commands.handle_confirm_cancel(admin_target_chat, parts[1:])
             elif command == '/user_orders':
                 return self.admin_order_commands.handle_user_orders(admin_target_chat, parts[1:])
             elif command == '/all_orders':

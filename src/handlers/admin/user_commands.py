@@ -12,6 +12,8 @@ class UserCommands(BaseHandler):
             return {'status': 'no_pending'}
 
         message = "📋 Pending Users:\n\n"
+        keyboard_buttons = []
+        
         for customer in customers:
             display_name = self._escape_html(customer.first_name or "Unknown")
             if customer.last_name:
@@ -19,8 +21,19 @@ class UserCommands(BaseHandler):
             
             username_part = f" (@{self._escape_html(customer.username)})" if customer.username else " (no username)"
             message += f"{display_name}{username_part}\n"
+            
+            # Add approve/reject buttons for each user
+            keyboard_buttons.append([
+                {"text": f"✅ Approve {customer.first_name or 'User'}", "callback_data": f"approve_user_{customer.customer_id}"},
+                {"text": f"❌ Reject {customer.first_name or 'User'}", "callback_data": f"reject_user_{customer.customer_id}"}
+            ])
 
-        self._send_message(chat_id, message)
+        if keyboard_buttons:
+            keyboard = {"inline_keyboard": keyboard_buttons}
+            self._send_message(chat_id, message, reply_markup=keyboard)
+        else:
+            self._send_message(chat_id, message)
+        
         return {'status': 'success'}
 
     def handle_approve_user(self, chat_id: int, args: list) -> Dict[str, Any]:
@@ -230,3 +243,49 @@ class UserCommands(BaseHandler):
             return None
         
         return None
+    
+    def handle_approve_user_by_id(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        """Handle user approval by customer ID (called from button callback)"""
+        customer = self.db.get_customer(customer_id)
+        
+        if not customer:
+            self._send_message(chat_id, "❌ User not found")
+            return {'status': 'user_not_found'}
+
+        if customer.authorization_status == AuthorizationStatus.APPROVED.value:
+            self._send_message(chat_id, f"❌ User is already approved")
+            return {'status': 'already_approved'}
+
+        # Update user status
+        if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.APPROVED.value}):
+            # Notify user
+            self._send_message(customer.telegram_user_id, "✅ You've been approved! Send /start to begin using the bot.")
+            
+            # Confirm to admin
+            display_name = customer.first_name or "Unknown"
+            self._send_message(chat_id, f"✅ User '{display_name}' approved")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to approve user")
+            return {'status': 'error'}
+
+    def handle_reject_user_by_id(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        """Handle user rejection by customer ID (called from button callback)"""
+        customer = self.db.get_customer(customer_id)
+        
+        if not customer:
+            self._send_message(chat_id, "❌ User not found")
+            return {'status': 'user_not_found'}
+
+        # Update user status
+        if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.REJECTED.value}):
+            # Notify user
+            self._send_message(customer.telegram_user_id, "❌ Your access request has been rejected.")
+            
+            # Confirm to admin
+            display_name = customer.first_name or "Unknown"
+            self._send_message(chat_id, f"❌ User '{display_name}' rejected")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to reject user")
+            return {'status': 'error'}

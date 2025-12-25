@@ -145,10 +145,15 @@ class OfferCommands(BaseHandler):
             if len(pending_orders) > 10:
                 message += f"... and {len(pending_orders) - 10} more orders\n"
             
-            message += f"\nReply with: /confirm_fulfill {offer_id} <boxes_ordered>\n"
-            message += f"Suggested: /confirm_fulfill {offer_id} {boxes_needed}"
+            # Add inline keyboard for confirmation
+            keyboard = {
+                "inline_keyboard": [[
+                    {"text": f"✅ Fulfill with {boxes_needed} boxes", "callback_data": f"confirm_fulfill_{offer_id}_{boxes_needed}"},
+                    {"text": "❌ Cancel", "callback_data": "cancel_action"}
+                ]]
+            }
             
-            self._send_message(chat_id, message)
+            self._send_message(chat_id, message, reply_markup=keyboard)
             return {'status': 'success'}
             
         except ValueError:
@@ -351,9 +356,16 @@ class OfferCommands(BaseHandler):
             message += f"📦 Delete all boxes\n"
             message += f"❌ Cancel {len(active_orders)} active orders\n"
             message += f"📧 Notify all affected customers\n\n"
-            message += f"Confirm with: /confirm_cancel_offer {offer_id}"
             
-            self._send_message(chat_id, message)
+            # Add inline keyboard for confirmation
+            keyboard = {
+                "inline_keyboard": [[
+                    {"text": "✅ Confirm Cancel", "callback_data": f"confirm_cancel_offer_{offer_id}"},
+                    {"text": "❌ Keep Offer", "callback_data": "cancel_action"}
+                ]]
+            }
+            
+            self._send_message(chat_id, message, reply_markup=keyboard)
             return {'status': 'confirmation_required'}
             
         except ValueError:

@@ -27,21 +27,36 @@ class AdminOrderCommands(BaseHandler):
             self._send_message(chat_id, "❌ Box not found")
             return {'status': 'box_not_found'}
 
-        # Check if box is full - require confirmation
-        if box.status == BoxStatus.FULL.value:
-            self._send_message(chat_id, 
-                f"⚠️ WARNING: This order is from a FULL box!\n"
-                f"Order: {order_id}\n"
-                f"Quantity: {order.quantity}\n"
-                f"Cancelling will affect box status.\n\n"
-                f"Confirm with: /confirm_cancel {order_id}")
-            return {'status': 'confirmation_required'}
+        # Get customer and offer info
+        customer = self.db.get_customer(order.customer_id)
+        offer = self.db.get_offer(order.offer_id)
+        customer_name = customer.first_name if customer else "Unknown"
+        offer_name = offer.name if offer else "Unknown"
 
-        # Cancel directly for non-full boxes
-        return self._execute_cancel(order, box, chat_id)
+        # Show confirmation details
+        message = f"⚠️ Cancel Order {order_id}?\n\n"
+        message += f"Customer: {customer_name}\n"
+        message += f"Product: {offer_name}\n"
+        message += f"Quantity: {order.quantity}\n"
+        message += f"Total: €{order.total_price:.2f}\n\n"
+        
+        if box.status == BoxStatus.FULL.value:
+            message += "⚠️ WARNING: This order is from a FULL box!\n"
+            message += "Cancelling will affect box status.\n\n"
+        
+        # Add inline keyboard for confirmation
+        keyboard = {
+            "inline_keyboard": [[
+                {"text": "✅ Confirm Cancel", "callback_data": f"confirm_cancel_order_{order_id}"},
+                {"text": "❌ Keep Order", "callback_data": "cancel_action"}
+            ]]
+        }
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'confirmation_required'}
 
     def handle_confirm_cancel(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /confirm_cancel command"""
+        """Handle /confirm_cancel command - now called from button callback"""
         if not args:
             self._send_message(chat_id, "Usage: /confirm_cancel <order_id>")
             return {'status': 'invalid_args'}
