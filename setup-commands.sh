@@ -44,6 +44,7 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
          {\"command\": \"create_offer\", \"description\": \"Create offer\"},
          {\"command\": \"cancel_offer\", \"description\": \"Cancel offer and all orders\"},
          {\"command\": \"confirm_cancel_offer\", \"description\": \"Confirm offer cancellation\"},
+         {\"command\": \"add_box\", \"description\": \"Add box to offer\"},
          {\"command\": \"box_status\", \"description\": \"View box status\"},
          {\"command\": \"fulfill_offer\", \"description\": \"Start offer fulfillment\"},
          {\"command\": \"confirm_fulfill\", \"description\": \"Confirm fulfillment\"},

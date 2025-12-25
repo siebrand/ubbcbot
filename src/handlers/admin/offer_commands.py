@@ -456,6 +456,45 @@ class OfferCommands(BaseHandler):
             import logging
             logging.error(f"Error cleaning up offer notifications: {e}")
 
+    def handle_add_box(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /add_box command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /add_box <offer_id>")
+            return {'status': 'invalid_args'}
+
+        try:
+            offer_id = int(args[0])
+            offer = self.db.get_offer(offer_id)
+            
+            if not offer:
+                self._send_message(chat_id, "❌ Offer not found")
+                return {'status': 'offer_not_found'}
+            
+            # Create new box
+            box = Box(
+                offer_id=offer_id,
+                max_capacity=offer.wholesale_box_size,
+                min_breakeven=offer.min_quantity_breakeven
+            )
+            
+            if self.db.create_box(box):
+                # Update offer status from sold_out to active if needed
+                if offer.status == OfferStatus.SOLD_OUT.value:
+                    self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
+                    status_msg = " (offer status updated to active)"
+                else:
+                    status_msg = ""
+                
+                self._send_message(chat_id, f"✅ Added new box for offer {offer_id}{status_msg}")
+                return {'status': 'success'}
+            else:
+                self._send_message(chat_id, "❌ Failed to create box")
+                return {'status': 'error'}
+                
+        except ValueError:
+            self._send_message(chat_id, "❌ Invalid offer ID")
+            return {'status': 'invalid_format'}
+
     def handle_box_status(self, chat_id: int) -> Dict[str, Any]:
         """Handle /box_status command"""
         offers = self.db.list_offers()

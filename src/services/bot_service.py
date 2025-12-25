@@ -281,6 +281,8 @@ class BotService:
                 return self.offer_commands.handle_cancel_offer(admin_target_chat, parts[1:])
             elif command == '/confirm_cancel_offer':
                 return self.offer_commands.handle_confirm_cancel_offer(admin_target_chat, parts[1:])
+            elif command == '/add_box':
+                return self.offer_commands.handle_add_box(admin_target_chat, parts[1:])
             elif command == '/box_status':
                 return self.offer_commands.handle_box_status(admin_target_chat)
             elif command == '/fulfill_offer':
