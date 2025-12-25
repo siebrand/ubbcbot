@@ -391,7 +391,14 @@ class BotService:
         elif edit_type == 'offer_price':
             return self.offer_commands.handle_update_offer_price(chat_id, [entity_id, text])
         elif edit_type == 'offer_description':
-            return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, text])
+            # For descriptions, preserve formatting by using the original message text with entities
+            if message and 'entities' in message:
+                # Use the original formatted text
+                formatted_text = text
+                # Store entities information if needed for later reconstruction
+                return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, formatted_text])
+            else:
+                return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, text])
         elif edit_type == 'customer_first_name':
             return self.user_commands.handle_update_user_first_name(chat_id, [entity_id, text])
         elif edit_type == 'customer_last_name':
