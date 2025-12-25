@@ -781,7 +781,7 @@ class OfferCommands(BaseHandler):
                     "inline_keyboard": [
                         [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id}"}],
                         [{"text": "👁️ Preview Offer", "callback_data": f"preview_offer_{offer_id}"}],
-                        [{"text": "✅ Done", "callback_data": "cancel_action"}]
+                        [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
                 }
                 

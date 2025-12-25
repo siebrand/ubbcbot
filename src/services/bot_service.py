@@ -167,6 +167,11 @@ class BotService:
             elif data.startswith('edit_user_select_'):
                 customer_id = data.split('_')[3]
                 return self.user_commands.handle_edit_user_select(chat_id, customer_id)
+            elif data == 'done_editing':
+                from handlers.base_handler import BaseHandler
+                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                base_handler._send_message(chat_id, "✅ Done editing.")
+                return {'status': 'done'}
             elif data == 'cancel_action':
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -661,7 +666,7 @@ class BotService:
                     "inline_keyboard": [
                         [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id_int}"}],
                         [{"text": "👁️ Preview Offer", "callback_data": f"preview_offer_{offer_id_int}"}],
-                        [{"text": "✅ Done", "callback_data": "cancel_action"}]
+                        [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
                 }
                 
