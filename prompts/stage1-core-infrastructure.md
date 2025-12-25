@@ -62,7 +62,7 @@ Implement a Telegram beer ordering bot with AWS serverless architecture. Focus o
 
 **User Management:**
 - `/pending_users` - View users awaiting approval (paginated with approve/reject buttons)
-- `/list_customers` - View all customers (paginated with status filtering)
+- `/list_users` - View all customers (paginated with status filtering)
 - `/approve_user <name_or_username>` - Approve user
 - `/reject_user <name_or_username>` - Reject user
 - `/user_status <name_or_username>` - Check user status

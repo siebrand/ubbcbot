@@ -186,7 +186,7 @@ class BotService:
                         return self.user_commands.handle_pending_users(chat_id, page)
                     elif entity_type.startswith('customers_'):
                         status_filter = entity_type.split('_', 1)[1]
-                        return self.user_commands.handle_list_customers(chat_id, page, status_filter)
+                        return self.user_commands.handle_list_users(chat_id, page, status_filter)
             elif data == 'page_info':
                 # Do nothing for page info button
                 return {'status': 'page_info'}
@@ -547,10 +547,10 @@ class BotService:
                 return self.user_commands.handle_update_user_first_name(admin_target_chat, parts[1:])
             elif command == '/update_user_last_name':
                 return self.user_commands.handle_update_user_last_name(admin_target_chat, parts[1:])
-            elif command == '/list_customers':
+            elif command == '/list_users':
                 # Parse optional status filter
                 status_filter = parts[1] if len(parts) > 1 and parts[1] in ['approved', 'unauthorized', 'rejected', 'all'] else 'all'
-                return self.user_commands.handle_list_customers(admin_target_chat, 1, status_filter)
+                return self.user_commands.handle_list_users(admin_target_chat, 1, status_filter)
             
             # Discount management commands
             elif command == '/create_discount':

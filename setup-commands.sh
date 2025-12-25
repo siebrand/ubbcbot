@@ -53,7 +53,7 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
          {\"command\": \"user_orders\", \"description\": \"View user orders\"},
          {\"command\": \"all_orders\", \"description\": \"Download orders CSV\"},
          {\"command\": \"pending_users\", \"description\": \"View users awaiting approval\"},
-         {\"command\": \"list_customers\", \"description\": \"View all customers\"},
+         {\"command\": \"list_users\", \"description\": \"View all customers\"},
          {\"command\": \"approve_user\", \"description\": \"Approve user\"},
          {\"command\": \"reject_user\", \"description\": \"Reject user\"},
          {\"command\": \"user_status\", \"description\": \"Check user status\"},

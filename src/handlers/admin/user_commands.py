@@ -338,8 +338,8 @@ class UserCommands(BaseHandler):
         else:
             self._send_message(chat_id, "❌ Failed to reject user")
             return {'status': 'error'}
-    def handle_list_customers(self, chat_id: int, page: int = 1, status_filter: str = "all") -> Dict[str, Any]:
-        """Handle /list_customers command with pagination and filtering"""
+    def handle_list_users(self, chat_id: int, page: int = 1, status_filter: str = "all") -> Dict[str, Any]:
+        """Handle /list_users command with pagination and filtering"""
         from models.entities import AuthorizationStatus
         
         # Get customers based on filter

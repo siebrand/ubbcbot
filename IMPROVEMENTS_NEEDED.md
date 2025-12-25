@@ -118,7 +118,7 @@ def handle_list_orders_enhanced(self, chat_id: int, filters: Dict[str, Any]) -> 
 - `/edit_customer <customer_id>` - Edit customer with inline keyboard
 - `/list_suppliers_paginated [page] [status]` - Paginated supplier list
 - `/list_offers_paginated [page] [status]` - Paginated offer list
-- `/list_customers [page] [status]` - Paginated customer list with admin access
+- `/list_users [page] [status]` - Paginated customer list with admin access
 - `/search_orders <criteria>` - Advanced order search
 
 ### Commands to Modify (Add Button Confirmations):
@@ -133,7 +133,7 @@ def handle_list_orders_enhanced(self, chat_id: int, filters: Dict[str, Any]) -> 
 ### Pagination Support:
 - Add `list_suppliers_paginated(page, page_size, filters)`
 - Add `list_offers_paginated(page, page_size, filters)`
-- Add `list_customers_paginated(page, page_size, filters)`
+- Add `list_users_paginated(page, page_size, filters)`
 
 ### Search/Filter Support:
 - Add `search_orders(filters)` with complex criteria

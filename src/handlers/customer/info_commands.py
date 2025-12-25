@@ -103,7 +103,7 @@ class InfoCommands(BaseHandler):
         elif section == "users" and self._is_admin(user_id):
             message = "👥 User Management:\n\n"
             message += "/pending_users - View users awaiting approval\n"
-            message += "/list_customers - View all customers\n"
+            message += "/list_users - View all customers\n"
             message += "/approve_user <username> - Approve user\n"
             message += "/reject_user <username> - Reject user\n"
             message += "/user_status <username> - Check user status\n"
