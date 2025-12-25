@@ -653,7 +653,19 @@ class BotService:
             current_images.append(image_url)
             
             if self.db.update_offer(offer_id_int, {'images': current_images}):
-                base_handler._send_message(chat_id, f"✅ Image uploaded successfully! Total images: {len(current_images)}")
+                # Send confirmation with button to continue editing
+                message = f"✅ Image uploaded successfully! Total images: {len(current_images)}\n\n"
+                message += "Continue editing?"
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id_int}"}],
+                        [{"text": "👁️ Preview Offer", "callback_data": f"preview_offer_{offer_id_int}"}],
+                        [{"text": "✅ Done", "callback_data": "cancel_action"}]
+                    ]
+                }
+                
+                base_handler._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
             else:
                 base_handler._send_message(chat_id, "❌ Failed to update offer with image")
