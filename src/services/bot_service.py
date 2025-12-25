@@ -243,9 +243,9 @@ class BotService:
                 return {'status': 'unknown_edit'}
             
             # New offer management callbacks
-            elif data.startswith('preview_offer_'):
+            elif data.startswith('offer_details_'):
                 offer_id = data.split('_')[2]
-                return self.offer_commands.handle_preview_offer(chat_id, [offer_id])
+                return self.info_commands.handle_offer_details(chat_id, user_id, [offer_id])
             elif data.startswith('upload_offer_image_'):
                 offer_id = data.split('_')[3]
                 from handlers.base_handler import BaseHandler
@@ -595,8 +595,6 @@ class BotService:
                 return self.offer_commands.handle_edit_offer_details(admin_target_chat, parts[1:])
             elif command == '/publish_offer':
                 return self.offer_commands.handle_publish_offer(admin_target_chat, parts[1:])
-            elif command == '/preview_offer':
-                return self.offer_commands.handle_preview_offer(admin_target_chat, parts[1:])
             
             # Admin order commands
             elif command == '/order_for':
@@ -705,7 +703,7 @@ class BotService:
                 keyboard = {
                     "inline_keyboard": [
                         [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id_int}"}],
-                        [{"text": "👁️ Preview Offer", "callback_data": f"preview_offer_{offer_id_int}"}],
+                        [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id_int}"}],
                         [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
                 }

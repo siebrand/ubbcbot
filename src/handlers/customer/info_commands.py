@@ -418,18 +418,53 @@ class InfoCommands(BaseHandler):
         return {'status': 'success'}
     
     def handle_offer_details(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
-        """Handle offer details display from deep link"""
+        """Handle offer details display from deep link or command"""
         if not args:
-            self._send_message(chat_id, "❌ No offer ID provided")
-            return {'status': 'invalid_args'}
-        
+            # Show list of offers as buttons for admins, error for users
+            if self._is_admin(user_id):
+                offers = self.db.list_offers()
+                draft_offers = [o for o in offers if o.status == OfferStatus.DRAFT.value]
+                active_offers = [o for o in offers if o.status == OfferStatus.ACTIVE.value]
+                all_offers = draft_offers + active_offers
+                
+                if not all_offers:
+                    self._send_message(chat_id, "❌ No offers available")
+                    return {'status': 'no_offers'}
+                
+                message = "📝 Select offer to view details:\n\n"
+                keyboard = {"inline_keyboard": []}
+                
+                for offer in all_offers:
+                    status_prefix = "[DRAFT] " if offer.status == OfferStatus.DRAFT.value else ""
+                    button_text = f"{status_prefix}[{offer.offer_id}] {offer.name} - €{offer.price_per_unit:.2f}"
+                    keyboard["inline_keyboard"].append([{
+                        "text": button_text,
+                        "callback_data": f"offer_details_{offer.offer_id}"
+                    }])
+                
+                keyboard["inline_keyboard"].append([{"text": "❌ Cancel", "callback_data": "cancel_action"}])
+                
+                self._send_message(chat_id, message, reply_markup=keyboard)
+                return {'status': 'success'}
+            else:
+                self._send_message(chat_id, "❌ No offer ID provided")
+                return {'status': 'invalid_args'}
+
         try:
             offer_id = int(args[0])
+            # Check for "user" parameter for admin user view
+            show_as_user = len(args) > 1 and args[1].lower() == 'user' and self._is_admin(user_id)
+            
             offer = self.db.get_offer(offer_id)
             
             if not offer:
                 self._send_message(chat_id, "❌ Offer not found")
                 return {'status': 'offer_not_found'}
+            
+            # Only show draft offers to admins
+            if offer.status == OfferStatus.DRAFT.value and not self._is_admin(user_id):
+                self._send_message(chat_id, "❌ Offer not available")
+                return {'status': 'offer_not_available'}
             
             # Only show active offers to non-admin users
             if not self._is_admin(user_id) and offer.status != OfferStatus.ACTIVE.value:
@@ -437,7 +472,23 @@ class InfoCommands(BaseHandler):
                 return {'status': 'offer_not_available'}
             
             # Send rich offer details
-            self._send_rich_offer_details(chat_id, offer, user_id)
+            if show_as_user:
+                # Show as regular user would see it
+                self._send_rich_offer_details(chat_id, offer, user_id=999999)  # Fake non-admin user ID
+            else:
+                self._send_rich_offer_details(chat_id, offer, user_id)
+            
+            # Add admin action buttons for draft offers
+            if self._is_admin(user_id) and offer.status == OfferStatus.DRAFT.value:
+                keyboard = {
+                    "inline_keyboard": [
+                        [{"text": "📝 Edit Details", "callback_data": f"edit_offer_details_{offer_id}"}],
+                        [{"text": "🚀 Publish Offer", "callback_data": f"publish_offer_{offer_id}"}],
+                        [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
+                    ]
+                }
+                self._send_message(chat_id, "Choose an action:", reply_markup=keyboard)
+            
             return {'status': 'success'}
             
         except ValueError:
@@ -455,12 +506,19 @@ class InfoCommands(BaseHandler):
                     print(f"Failed to send image {image_url}: {e}")
         
         # Build detailed message
-        message = f"🍺 {offer.name}\n\n"
+        is_draft = offer.status == OfferStatus.DRAFT.value
+        is_admin = self._is_admin(user_id)
+        
+        message = ""
+        if is_draft and is_admin:
+            message = f"👁️ PREVIEW - How offer will look:\n\n"
+        
+        message += f"🍺 {offer.name}\n\n"
         message += f"🏷️ Offer ID: {offer.offer_id}\n"
         message += f"💰 Price: €{offer.price_per_unit:.2f} per unit\n"
         
         # Show box size and supplier only to admins
-        if self._is_admin(user_id):
+        if is_admin:
             message += f"📦 Box size: {offer.wholesale_box_size} units\n"
             message += f"🏭 Supplier: {offer.supplier_name}\n"
         

@@ -67,7 +67,7 @@ class OfferCommands(BaseHandler):
                 keyboard = {
                     "inline_keyboard": [
                         [{"text": "📝 Edit Details", "callback_data": f"edit_offer_details_{offer.offer_id}"}],
-                        [{"text": "👁️ Preview Offer", "callback_data": f"preview_offer_{offer.offer_id}"}],
+                        [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer.offer_id}"}],
                         [{"text": "🚀 Publish Offer", "callback_data": f"publish_offer_{offer.offer_id}"}]
                     ]
                 }
@@ -791,7 +791,7 @@ class OfferCommands(BaseHandler):
                 keyboard = {
                     "inline_keyboard": [
                         [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id}"}],
-                        [{"text": "👁️ Preview Offer", "callback_data": f"preview_offer_{offer_id}"}],
+                        [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
                         [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
                 }
@@ -836,7 +836,7 @@ class OfferCommands(BaseHandler):
                     [{"text": "📝 Edit Description", "callback_data": f"edit_offer_description_{offer_id}"}],
                     [{"text": "🖼️ Upload Image", "callback_data": f"upload_offer_image_{offer_id}"}],
                     [{"text": "🗑️ Clear Images", "callback_data": f"clear_offer_images_{offer_id}"}] if offer.images else [],
-                    [{"text": "👁️ Preview Offer", "callback_data": f"preview_offer_{offer_id}"}],
+                    [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
                     [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
                 ]
             }
@@ -917,67 +917,3 @@ class OfferCommands(BaseHandler):
             self._send_message(chat_id, "❌ Invalid offer ID")
             return {'status': 'invalid_format'}
     
-    def handle_preview_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /preview_offer command"""
-        if not args:
-            # Show list of draft offers as buttons
-            offers = self.db.list_offers()
-            draft_offers = [o for o in offers if o.status == OfferStatus.DRAFT.value]
-            
-            if not draft_offers:
-                self._send_message(chat_id, "❌ No draft offers available to preview")
-                return {'status': 'no_draft_offers'}
-            
-            message = "📝 Select draft offer to preview:\n\n"
-            keyboard = {"inline_keyboard": []}
-            
-            for offer in draft_offers:
-                button_text = f"[{offer.offer_id}] {offer.name} - €{offer.price_per_unit:.2f}"
-                keyboard["inline_keyboard"].append([{
-                    "text": button_text,
-                    "callback_data": f"preview_offer_{offer.offer_id}"
-                }])
-            
-            keyboard["inline_keyboard"].append([{"text": "❌ Cancel", "callback_data": "cancel_action"}])
-            
-            self._send_message(chat_id, message, reply_markup=keyboard)
-            return {'status': 'success'}
-
-        try:
-            offer_id = int(args[0])
-            # Check for "user" parameter
-            show_as_user = len(args) > 1 and args[1].lower() == 'user'
-            
-            offer = self.db.get_offer(offer_id)
-            
-            if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
-                return {'status': 'offer_not_found'}
-            
-            if show_as_user:
-                # Show as regular user would see it
-                from handlers.customer.info_commands import InfoCommands
-                info_handler = InfoCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                info_handler._send_rich_offer_details(chat_id, offer, user_id=999999)  # Fake non-admin user ID
-            else:
-                # Show rich offer preview
-                self._send_rich_offer_message(chat_id, offer, preview=True)
-            
-            # Add action buttons after preview
-            keyboard = {
-                "inline_keyboard": [
-                    [{"text": "📝 Edit Details", "callback_data": f"edit_offer_details_{offer_id}"}],
-                    [{"text": "🚀 Publish Offer", "callback_data": f"publish_offer_{offer_id}"}] if offer.status == OfferStatus.DRAFT.value else [],
-                    [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
-                ]
-            }
-            
-            # Remove empty rows
-            keyboard["inline_keyboard"] = [row for row in keyboard["inline_keyboard"] if row]
-            
-            self._send_message(chat_id, "Choose an action:", reply_markup=keyboard)
-            return {'status': 'success'}
-            
-        except ValueError:
-            self._send_message(chat_id, "❌ Invalid offer ID")
-            return {'status': 'invalid_format'}
