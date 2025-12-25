@@ -92,7 +92,17 @@ class BotService:
             context = self.db.get_edit_context_by_chat_id(chat_id)
             if context:
                 logger.info(f"Found edit context for chat {chat_id}: {context.edit_type}")
-                return self._handle_edit_reply(chat_id, user_id, text, message)
+                # Handle multiple images in media group
+                if context.edit_type == 'offer_image_upload' and 'photo' in message:
+                    media_group_id = message.get('media_group_id')
+                    if media_group_id:
+                        # Store images from media group and process when complete
+                        return self._handle_media_group_image(chat_id, context.entity_id, message)
+                    else:
+                        # Single image
+                        return self._handle_edit_reply(chat_id, user_id, text, message)
+                else:
+                    return self._handle_edit_reply(chat_id, user_id, text, message)
             
             return {'status': 'processed'}
 
@@ -635,6 +645,14 @@ class BotService:
                 return self.discount_commands.handle_discount_status(admin_target_chat)
 
         return {'status': 'unknown_command'}
+    
+    def _handle_media_group_image(self, chat_id: int, offer_id: str, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle image from media group (multiple images)"""
+        media_group_id = message['media_group_id']
+        
+        # Store image in temporary storage (you might want to use Redis or DynamoDB for this)
+        # For now, we'll process each image immediately
+        return self._handle_offer_image_upload(chat_id, offer_id, message['photo'])
     
     def _handle_offer_image_upload(self, chat_id: int, offer_id: str, photos: list) -> Dict[str, Any]:
         """Handle image upload for offer"""
