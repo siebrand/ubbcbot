@@ -304,7 +304,7 @@ class CustomerOrderCommands(BaseHandler):
             sold_out_text = " - SOLD OUT" if updated_offer and updated_offer.status == OfferStatus.SOLD_OUT.value else ""
             
             message = f"🍺 {customer_name} ordered {quantity}x {offer.name}{sold_out_text}"
-            result = self._send_message(int(group_id), message)
+            result = self._send_message(int(group_id), message, force_group=True)
             return result.get('success', False)
             
         except Exception as e:
