@@ -217,7 +217,8 @@ class InfoCommands(BaseHandler):
                     if active_discount:
                         display_price = original_price * (1 - active_discount.discount_percentage / 100)
                     
-                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=offer_details_{offer.offer_id}) {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
+                    bot_username = self._get_bot_username()
+                    message += f"🍺 [{offer.offer_id}](https://t.me/{bot_username}?start=offer_details_{offer.offer_id}) {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
                 message += "\n"
             
             # Show other status offers
@@ -254,7 +255,8 @@ class InfoCommands(BaseHandler):
                     if active_discount:
                         display_price = original_price * (1 - active_discount.discount_percentage / 100)
                     
-                    message += f"🍺 [{offer.offer_id}](https://t.me/{self._get_bot_username()}?start=offer_details_{offer.offer_id}) {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
+                    bot_username = self._get_bot_username()
+                    message += f"🍺 [{offer.offer_id}](https://t.me/{bot_username}?start=offer_details_{offer.offer_id}) {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
             
             if not active_found:
                 self._send_message(chat_id, "🍺 No active offers available")
