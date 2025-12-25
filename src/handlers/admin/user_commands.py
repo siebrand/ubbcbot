@@ -302,3 +302,49 @@ class UserCommands(BaseHandler):
         else:
             self._send_message(chat_id, "❌ Failed to reject user")
             return {'status': 'error'}
+    def handle_list_customers(self, chat_id: int, page: int = 1, status_filter: str = "all") -> Dict[str, Any]:
+        """Handle /list_customers command with pagination and filtering"""
+        from models.entities import AuthorizationStatus
+        
+        # Get customers based on filter
+        if status_filter == "all":
+            customers = []
+            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value))
+            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
+            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.REJECTED.value))
+        else:
+            customers = self.db.get_customers_by_status(status_filter)
+        
+        if not customers:
+            self._send_message(chat_id, f"No customers found ({status_filter})")
+            return {'status': 'no_customers'}
+        
+        # Sort by first name
+        customers.sort(key=lambda x: (x.first_name or "zzz").lower())
+        
+        # Paginate results
+        page_customers, total_pages = self._paginate_list(customers, page, 10)
+        
+        message = f"👥 Customers ({status_filter}) - Page {page}/{total_pages}:\n\n"
+        
+        for customer in page_customers:
+            display_name = self._escape_html(customer.first_name or "Unknown")
+            if customer.last_name:
+                display_name += f" {self._escape_html(customer.last_name)}"
+            
+            username_part = f" (@{self._escape_html(customer.username)})" if customer.username else ""
+            status_emoji = {
+                AuthorizationStatus.UNAUTHORIZED.value: "⚠️",
+                AuthorizationStatus.APPROVED.value: "✅",
+                AuthorizationStatus.REJECTED.value: "❌"
+            }.get(customer.authorization_status, "❓")
+            
+            message += f"{status_emoji} {display_name}{username_part}\n"
+        
+        # Add pagination keyboard if needed
+        keyboard = None
+        if total_pages > 1:
+            keyboard = self._build_pagination_keyboard(page, total_pages, f"customers_{status_filter}")
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}

@@ -167,9 +167,19 @@ class BotService:
                         return self.offer_commands.handle_box_status(chat_id, page)
                     elif entity_type == 'pending':
                         return self.user_commands.handle_pending_users(chat_id, page)
+                    elif entity_type.startswith('customers_'):
+                        status_filter = entity_type.split('_', 1)[1]
+                        return self.user_commands.handle_list_customers(chat_id, page, status_filter)
             elif data == 'page_info':
                 # Do nothing for page info button
                 return {'status': 'page_info'}
+            
+            # Edit callbacks (placeholder - would need text input handling)
+            elif data.startswith('edit_'):
+                from handlers.base_handler import BaseHandler
+                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                base_handler._send_message(chat_id, "Edit functionality requires text input. Use the original commands for now.")
+                return {'status': 'edit_placeholder'}
             
             return {'status': 'unknown_callback'}
             
@@ -317,6 +327,8 @@ class BotService:
                 return self.supplier_commands.handle_retire_supplier(admin_target_chat, parts[1:])
             elif command == '/list_suppliers':
                 return self.supplier_commands.handle_list_suppliers(admin_target_chat)
+            elif command == '/edit_supplier':
+                return self.supplier_commands.handle_edit_supplier(admin_target_chat, parts[1:])
             
             # Offer commands
             elif command == '/create_offer':
@@ -329,6 +341,8 @@ class BotService:
                 return self.offer_commands.handle_box_status(admin_target_chat)
             elif command == '/fulfill_offer':
                 return self.offer_commands.handle_fulfill_offer(admin_target_chat, parts[1:])
+            elif command == '/edit_offer':
+                return self.offer_commands.handle_edit_offer(admin_target_chat, parts[1:])
             
             # Admin order commands
             elif command == '/order_for':
@@ -351,5 +365,7 @@ class BotService:
                 return self.user_commands.handle_user_status(admin_target_chat, parts[1:])
             elif command == '/update_customer':
                 return self.user_commands.handle_update_customer(admin_target_chat, parts[1:])
+            elif command == '/list_customers':
+                return self.user_commands.handle_list_customers(admin_target_chat)
 
         return {'status': 'unknown_command'}

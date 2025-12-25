@@ -86,3 +86,34 @@ class SupplierCommands(BaseHandler):
         
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
+    
+    def handle_edit_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /edit_supplier command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /edit_supplier <name>")
+            return {'status': 'invalid_args'}
+
+        supplier_name = ' '.join(args).strip()
+        supplier = self.db.get_supplier_by_name(supplier_name)
+        
+        if not supplier:
+            self._send_message(chat_id, f"❌ Supplier '{supplier_name}' not found")
+            return {'status': 'supplier_not_found'}
+        
+        # Show current supplier details with edit options
+        message = f"📝 Edit Supplier: {supplier.name}\n\n"
+        message += f"Current Status: {supplier.status}\n"
+        message += f"Contact: {supplier.contact_email or 'Not set'}\n\n"
+        message += "Select what to edit:"
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📝 Edit Name", "callback_data": f"edit_supplier_name_{supplier.supplier_id}"}],
+                [{"text": "📧 Edit Contact", "callback_data": f"edit_supplier_contact_{supplier.supplier_id}"}],
+                [{"text": "🔄 Toggle Status", "callback_data": f"edit_supplier_status_{supplier.supplier_id}"}],
+                [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
+            ]
+        }
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
