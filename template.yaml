@@ -45,7 +45,7 @@ Resources:
         Environment: !Ref Environment
         Owner: siebrand
         CostCenter: personal
-        Application: telegram-bot
+        Application: ubbc-telegram-bot
         ManagedBy: sam
 
   # Lambda Functions
@@ -64,7 +64,7 @@ Resources:
         - Key: CostCenter
           Value: personal
         - Key: Application
-          Value: telegram-bot
+          Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
 
@@ -99,7 +99,7 @@ Resources:
         Environment: !Ref Environment
         Owner: siebrand
         CostCenter: personal
-        Application: telegram-bot
+        Application: ubbc-telegram-bot
         ManagedBy: sam
 
   # DynamoDB Tables
@@ -124,7 +124,7 @@ Resources:
         - Key: CostCenter
           Value: personal
         - Key: Application
-          Value: telegram-bot
+          Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
 
@@ -149,7 +149,7 @@ Resources:
         - Key: CostCenter
           Value: personal
         - Key: Application
-          Value: telegram-bot
+          Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
 
@@ -183,7 +183,7 @@ Resources:
         - Key: CostCenter
           Value: personal
         - Key: Application
-          Value: telegram-bot
+          Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
 
@@ -225,7 +225,7 @@ Resources:
         - Key: CostCenter
           Value: personal
         - Key: Application
-          Value: telegram-bot
+          Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
 
@@ -259,7 +259,7 @@ Resources:
         - Key: CostCenter
           Value: personal
         - Key: Application
-          Value: telegram-bot
+          Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
 
@@ -284,7 +284,7 @@ Resources:
         - Key: CostCenter
           Value: personal
         - Key: Application
-          Value: telegram-bot
+          Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
 
@@ -309,7 +309,7 @@ Resources:
         - Key: CostCenter
           Value: personal
         - Key: Application
-          Value: telegram-bot
+          Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
 
@@ -343,7 +343,7 @@ Resources:
         - Key: CostCenter
           Value: personal
         - Key: Application
-          Value: telegram-bot
+          Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
 
@@ -367,7 +367,7 @@ Resources:
         - Key: CostCenter
           Value: personal
         - Key: Application
-          Value: telegram-bot
+          Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
 
