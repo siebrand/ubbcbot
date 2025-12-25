@@ -376,8 +376,8 @@ class UserCommands(BaseHandler):
         else:
             self._send_message(chat_id, "❌ Failed to reject user")
             return {'status': 'error'}
-    def handle_list_users(self, chat_id: int, page: int = 1, status_filter: str = "all") -> Dict[str, Any]:
-        """Handle /list_users command with pagination and filtering"""
+    def handle_list_users(self, chat_id: int, page: int = 1, status_filter: str = "all", search_string: str = None) -> Dict[str, Any]:
+        """Handle /list_users command with pagination, filtering, and optional search"""
         from models.entities import AuthorizationStatus
         
         # Get customers based on filter
@@ -389,8 +389,27 @@ class UserCommands(BaseHandler):
         else:
             customers = self.db.get_customers_by_status(status_filter)
         
+        # Apply search filter if provided
+        if search_string:
+            search_lower = search_string.lower()
+            filtered_customers = []
+            for customer in customers:
+                # Search in first name, last name, username, and full name
+                first_name = (customer.first_name or "").lower()
+                last_name = (customer.last_name or "").lower()
+                username = (customer.username or "").lower()
+                full_name = f"{first_name} {last_name}".strip()
+                
+                if (search_lower in first_name or 
+                    search_lower in last_name or 
+                    search_lower in username or 
+                    search_lower in full_name):
+                    filtered_customers.append(customer)
+            customers = filtered_customers
+        
         if not customers:
-            self._send_message(chat_id, f"No customers found ({status_filter})")
+            search_text = f" matching '{search_string}'" if search_string else ""
+            self._send_message(chat_id, f"No customers found ({status_filter}){search_text}")
             return {'status': 'no_customers'}
         
         # Sort by first name
@@ -399,7 +418,8 @@ class UserCommands(BaseHandler):
         # Paginate results
         page_customers, total_pages = self._paginate_list(customers, page, 10)
         
-        message = f"👥 Customers ({status_filter}) - Page {page}/{total_pages}:\n\n"
+        search_text = f" matching '{search_string}'" if search_string else ""
+        message = f"👥 Customers ({status_filter}){search_text} - Page {page}/{total_pages}:\n\n"
         
         for customer in page_customers:
             display_name = self._escape_html(customer.first_name or "Unknown")

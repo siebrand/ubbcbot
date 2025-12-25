@@ -605,9 +605,22 @@ class BotService:
             elif command == '/update_user_last_name':
                 return self.user_commands.handle_update_user_last_name(admin_target_chat, parts[1:])
             elif command == '/list_users':
-                # Parse optional status filter
-                status_filter = parts[1] if len(parts) > 1 and parts[1] in ['approved', 'unauthorized', 'rejected', 'all'] else 'all'
-                return self.user_commands.handle_list_users(admin_target_chat, 1, status_filter)
+                # Parse optional status filter and search string
+                status_filter = 'all'
+                search_string = None
+                
+                if len(parts) > 1:
+                    # Check if first arg is a status filter
+                    if parts[1] in ['approved', 'unauthorized', 'rejected', 'all']:
+                        status_filter = parts[1]
+                        # Remaining args are search string
+                        if len(parts) > 2:
+                            search_string = ' '.join(parts[2:])
+                    else:
+                        # All args are search string
+                        search_string = ' '.join(parts[1:])
+                
+                return self.user_commands.handle_list_users(admin_target_chat, 1, status_filter, search_string)
             elif command == '/list_subscribers':
                 return self.user_commands.handle_list_subscribers(admin_target_chat)
             
