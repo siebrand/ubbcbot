@@ -65,7 +65,7 @@ class InfoCommands(BaseHandler):
         bot_username = self._get_bot_username()
         message = message.format(bot_username=bot_username)
         
-        self._send_message(chat_id, message, 'Markdown')
+        self._send_message(chat_id, message)
         return {'status': 'success'}
     
     def _show_help_section(self, chat_id: int, user_id: int, section: str) -> Dict[str, Any]:
@@ -262,7 +262,7 @@ class InfoCommands(BaseHandler):
                 self._send_message(chat_id, "🍺 No active offers available")
                 return {'status': 'no_offers'}
 
-        self._send_message(chat_id, message, 'Markdown')
+        self._send_message(chat_id, message)
         return {'status': 'success'}
 
     def handle_my_orders(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:

@@ -772,7 +772,20 @@ class OfferCommands(BaseHandler):
             
             if self.db.update_offer(offer_id, {'description': new_description}):
                 old_desc = offer.description or "Not set"
-                self._send_message(chat_id, f"✅ Offer description updated: '{old_desc}' → '{new_description}'")
+                
+                # Send confirmation with button to continue editing
+                message = f"✅ Offer description updated: '{old_desc}' → '{new_description}'\n\n"
+                message += "Continue editing?"
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id}"}],
+                        [{"text": "👁️ Preview Offer", "callback_data": f"preview_offer_{offer_id}"}],
+                        [{"text": "✅ Done", "callback_data": "cancel_action"}]
+                    ]
+                }
+                
+                self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
             else:
                 self._send_message(chat_id, "❌ Failed to update offer description")
