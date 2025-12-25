@@ -38,7 +38,7 @@ class InfoCommands(BaseHandler):
             message += "🏭 Suppliers:\n"
             message += "/add_supplier <name> - Add supplier\n"
             message += "/retire_supplier <name> - Retire supplier\n"
-            message += "/list_suppliers - List all suppliers\n"
+            message += "/list_suppliers [active|retired|all] - List suppliers by status\n"
             message += "/edit_supplier <name> - Edit supplier details\n\n"
             
             # Offer management

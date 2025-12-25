@@ -177,8 +177,9 @@ class BotService:
                     entity_type = parts[1]
                     page = int(parts[2])
                     
-                    if entity_type == 'suppliers':
-                        return self.supplier_commands.handle_list_suppliers(chat_id, page)
+                    if entity_type == 'suppliers' or entity_type.startswith('suppliers_'):
+                        status_filter = entity_type.split('_', 1)[1] if '_' in entity_type else 'active'
+                        return self.supplier_commands.handle_list_suppliers(chat_id, page, status_filter)
                     elif entity_type == 'boxes':
                         return self.offer_commands.handle_box_status(chat_id, page)
                     elif entity_type == 'pending':
@@ -461,7 +462,9 @@ class BotService:
             elif command == '/retire_supplier':
                 return self.supplier_commands.handle_retire_supplier(admin_target_chat, parts[1:])
             elif command == '/list_suppliers':
-                return self.supplier_commands.handle_list_suppliers(admin_target_chat)
+                # Parse optional status filter
+                status_filter = parts[1] if len(parts) > 1 and parts[1] in ['active', 'retired', 'all'] else 'active'
+                return self.supplier_commands.handle_list_suppliers(admin_target_chat, 1, status_filter)
             elif command == '/edit_supplier':
                 return self.supplier_commands.handle_edit_supplier(admin_target_chat, parts[1:])
             elif command == '/update_supplier_name':

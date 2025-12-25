@@ -60,22 +60,27 @@ class SupplierCommands(BaseHandler):
             self._send_message(chat_id, "❌ Failed to retire supplier")
             return {'status': 'error'}
 
-    def handle_list_suppliers(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
-        """Handle /list_suppliers command with pagination"""
+    def handle_list_suppliers(self, chat_id: int, page: int = 1, status_filter: str = "active") -> Dict[str, Any]:
+        """Handle /list_suppliers command with pagination and status filter"""
         suppliers = self.db.list_suppliers()
         
         if not suppliers:
             self._send_message(chat_id, "No suppliers found")
             return {'status': 'no_suppliers'}
 
-        # Filter active suppliers and sort alphabetically
-        active_suppliers = [s for s in suppliers if s.status == "active"]
-        active_suppliers.sort(key=lambda x: x.name.lower())
+        # Filter suppliers by status and sort alphabetically
+        if status_filter == "all":
+            filtered_suppliers = suppliers
+        else:
+            filtered_suppliers = [s for s in suppliers if s.status == status_filter]
+        
+        filtered_suppliers.sort(key=lambda x: x.name.lower())
 
         # Paginate results
-        page_suppliers, total_pages = self._paginate_list(active_suppliers, page, 10)
+        page_suppliers, total_pages = self._paginate_list(filtered_suppliers, page, 10)
         
-        message = f"📋 Registered Suppliers (Page {page}/{total_pages}):\n\n"
+        status_text = status_filter.title() if status_filter != "all" else "All"
+        message = f"📋 {status_text} Suppliers (Page {page}/{total_pages}):\n\n"
         for supplier in page_suppliers:
             status_emoji = "✅" if supplier.status == "active" else "❌"
             contact = supplier.contact_email or "Not set"
@@ -85,7 +90,7 @@ class SupplierCommands(BaseHandler):
         # Add pagination keyboard if needed
         keyboard = None
         if total_pages > 1:
-            keyboard = self._build_pagination_keyboard(page, total_pages, "suppliers")
+            keyboard = self._build_pagination_keyboard(page, total_pages, f"suppliers_{status_filter}")
         
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}

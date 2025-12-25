@@ -134,7 +134,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/setup_test_data` - Setup test data (test environment only)
 - `/add_supplier <name>` - Register new supplier
 - `/retire_supplier <name>` - Retire supplier (no longer available for new offers)
-- `/list_suppliers` - View all registered suppliers (paginated)
+- `/list_suppliers [active|retired|all]` - View suppliers by status (default: active, paginated)
 - `/edit_supplier <name>` - Edit supplier details with inline keyboard
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
