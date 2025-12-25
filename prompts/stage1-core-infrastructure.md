@@ -43,26 +43,26 @@ Implement a Telegram beer ordering bot with AWS serverless architecture. Focus o
 **Supplier Management:**
 - `/add_supplier <name>` - Add new supplier
 - `/retire_supplier <name>` - Retire supplier (no longer available for new offers)
-- `/list_suppliers` - View all registered suppliers
+- `/list_suppliers` - View all registered suppliers (paginated)
+- `/edit_supplier <name>` - Edit supplier details with inline keyboard
 
 **Offer Management:**
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
-- `/cancel_offer <offer_id>` - Cancel offer and all related orders
-- `/confirm_cancel_offer <offer_id>` - Confirm offer cancellation
+- `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
+- `/edit_offer <offer_id>` - Edit offer details with inline keyboard
 - `/add_box <offer_id>` - Add single box to offer (updates sold out offers to active)
-- `/box_status` - View box status and capacity
-- `/fulfill_offer <offer_id>` - Start fulfillment process for an offer
-- `/confirm_fulfill <offer_id> <boxes_ordered>` - Confirm fulfillment with box count
+- `/box_status` - View box status and capacity (paginated)
+- `/fulfill_offer <offer_id>` - Start fulfillment process (button confirmation)
 
 **Order Management:**
 - `/order_for <username> <offer_id> [quantity]` - Place order for another user (10-unit admin limit)
-- `/cancel_order <order_id>` - Cancel customer order (with confirmation for full boxes)
-- `/confirm_cancel <order_id>` - Confirm order cancellation
+- `/cancel_order <order_id>` - Cancel customer order (button confirmation)
 - `/user_orders <username>` - View orders for specific user
 - `/all_orders [active|cancelled|ordered|all]` - Download CSV of all orders (default: active)
 
 **User Management:**
-- `/pending_users` - View users awaiting approval
+- `/pending_users` - View users awaiting approval (paginated with approve/reject buttons)
+- `/list_customers` - View all customers (paginated with status filtering)
 - `/approve_user <name_or_username>` - Approve user
 - `/reject_user <name_or_username>` - Reject user
 - `/user_status <name_or_username>` - Check user status

@@ -38,28 +38,28 @@ class InfoCommands(BaseHandler):
             message += "🏭 Suppliers:\n"
             message += "/add_supplier <name> - Add supplier\n"
             message += "/retire_supplier <name> - Retire supplier\n"
-            message += "/list_suppliers - List all suppliers\n\n"
+            message += "/list_suppliers - List all suppliers\n"
+            message += "/edit_supplier <name> - Edit supplier details\n\n"
             
             # Offer management
             message += "🍺 Offers:\n"
             message += "/create_offer <supplier> <name> <price> <box_size> - Create offer\n"
             message += "/cancel_offer <offer_id> - Cancel offer and all orders\n"
+            message += "/edit_offer <offer_id> - Edit offer details\n"
             message += "/box_status - View box status\n"
-            message += "/fulfill_offer <offer_id> - Start fulfillment process\n"
-            message += "/confirm_fulfill <offer_id> <boxes> - Confirm fulfillment\n\n"
+            message += "/fulfill_offer <offer_id> - Start fulfillment process\n\n"
             
             # Order management
             message += "📦 Order Management:\n"
             message += "/order_for <username> <offer_id> [quantity] - Place order for user\n"
             message += "/cancel_order <order_id> - Cancel customer order\n"
-            message += "/confirm_cancel <order_id> - Confirm order cancellation\n"
             message += "/user_orders <username> - View orders for specific user\n"
-            message += "/all_orders [active|cancelled|ordered|all] - Download CSV of orders\n"
-            message += "/confirm_cancel_offer <offer_id> - Confirm offer cancellation\n\n"
+            message += "/all_orders [active|cancelled|ordered|all] - Download CSV of orders\n\n"
             
             # User management
             message += "👥 User Management:\n"
             message += "/pending_users - View users awaiting approval\n"
+            message += "/list_customers - View all customers\n"
             message += "/approve_user <username> - Approve user\n"
             message += "/reject_user <username> - Reject user\n"
             message += "/user_status <username> - Check user status\n"

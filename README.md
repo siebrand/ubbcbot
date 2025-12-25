@@ -134,17 +134,23 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/setup_test_data` - Setup test data (test environment only)
 - `/add_supplier <name>` - Register new supplier
 - `/retire_supplier <name>` - Retire supplier (no longer available for new offers)
-- `/list_suppliers` - View all registered suppliers
+- `/list_suppliers` - View all registered suppliers (paginated)
+- `/edit_supplier <name>` - Edit supplier details with inline keyboard
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
-- `/cancel_offer <offer_id>` - Cancel offer and all related orders
-- `/confirm_cancel_offer <offer_id>` - Confirm offer cancellation
+- `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
+- `/edit_offer <offer_id>` - Edit offer details with inline keyboard
 - `/add_box <offer_id>` - Add single box to offer (updates sold out offers to active)
-- `/box_status` - View box status and capacity
-- `/fulfill_offer <offer_id>` - Start fulfillment process for an offer
-- `/confirm_fulfill <offer_id> <boxes_ordered>` - Confirm fulfillment with box count
-- `/cancel_order <order_id>` - Cancel customer order (with confirmation for full boxes)
+- `/box_status` - View box status and capacity (paginated)
+- `/fulfill_offer <offer_id>` - Start fulfillment process (button confirmation)
+- `/order_for <username> <offer_id> [quantity]` - Place order for another user (10-unit admin limit)
+- `/cancel_order <order_id>` - Cancel customer order (button confirmation)
 - `/user_orders <username>` - View orders for specific user
 - `/all_orders [active|cancelled|ordered|all]` - Download CSV of all orders (default: active)
+- `/pending_users` - View users awaiting approval (paginated with approve/reject buttons)
+- `/list_customers` - View all customers (paginated with status filtering)
+- `/approve_user <name_or_username>` - Approve user
+- `/reject_user <name_or_username>` - Reject user
+- `/user_status <name_or_username>` - Check user status
 - `/update_customer <username> <new_first_name> [new_last_name]` - Update customer name
 
 ### Customer Commands
