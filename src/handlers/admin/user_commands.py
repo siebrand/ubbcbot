@@ -295,7 +295,7 @@ class UserCommands(BaseHandler):
                 display_text = f"{full_name}{username_part}"
                 
                 keyboard_buttons.append([{
-                    "text": f"📝 Edit {full_name}", 
+                    "text": f"📝 {full_name}",
                     "callback_data": f"edit_user_select_{customer.customer_id}"
                 }])
             
@@ -319,7 +319,7 @@ class UserCommands(BaseHandler):
                 display_text = f"{full_name}{username_part}"
                 
                 keyboard_buttons.append([{
-                    "text": f"📝 Edit {full_name}", 
+                    "text": f"📝 {full_name}",
                     "callback_data": f"edit_user_select_{customer.customer_id}"
                 }])
             
