@@ -55,34 +55,51 @@ class InfoCommands(BaseHandler):
     
     def _show_help_section(self, chat_id: int, user_id: int, section: str) -> Dict[str, Any]:
         """Show help for specific section"""
-        if section == "general":
-            message = self._t('help_general')
+        if section == "all":
+            # Show all available sections
+            sections = ["general", "orders"]
+            if self._is_admin(user_id):
+                sections.extend(["suppliers", "offers", "users"])
+            
+            message = ""
+            for i, sect in enumerate(sections):
+                if i > 0:
+                    message += "\n\n"
+                message += self._get_section_help(sect)
+            
+            self._send_message(chat_id, message)
+            return {'status': 'success'}
         
-        elif section == "orders":
-            message = self._t('help_orders')
-        
-        elif section == "suppliers" and self._is_admin(user_id):
-            message = self._t('help_suppliers')
-        
-        elif section == "offers" and self._is_admin(user_id):
-            message = self._t('help_offers')
-        
-        elif section == "users" and self._is_admin(user_id):
-            message = self._t('help_users')
-        
-        else:
-            if not self._is_admin(user_id) and section in ["suppliers", "offers", "users"]:
+        elif section in ["general", "orders", "suppliers", "offers", "users"]:
+            if section in ["suppliers", "offers", "users"] and not self._is_admin(user_id):
                 message = self._t('admin_only_section')
             else:
-                available_sections = ["general", "orders"]
-                if self._is_admin(user_id):
-                    available_sections.extend(["suppliers", "offers", "users"])
-                
-                sections_text = ", ".join(available_sections)
-                message = f"❌ Unknown section: {section}\n\nAvailable sections: {sections_text}"
+                message = self._get_section_help(section)
+        
+        else:
+            available_sections = ["general", "orders", "all"]
+            if self._is_admin(user_id):
+                available_sections.extend(["suppliers", "offers", "users"])
+            
+            sections_text = ", ".join(available_sections)
+            message = f"❌ Unknown section: {section}\n\nAvailable sections: {sections_text}"
         
         self._send_message(chat_id, message)
         return {'status': 'success'}
+    
+    def _get_section_help(self, section: str) -> str:
+        """Get help text for a specific section"""
+        if section == "general":
+            return self._t('help_general')
+        elif section == "orders":
+            return self._t('help_orders')
+        elif section == "suppliers":
+            return self._t('help_suppliers')
+        elif section == "offers":
+            return self._t('help_offers')
+        elif section == "users":
+            return self._t('help_users')
+        return ""
 
     def _format_offer_line(self, offer, status_emoji, total_ordered=None, total_capacity=None, is_draft=False):
         """Format a single offer line with consistent markup"""
