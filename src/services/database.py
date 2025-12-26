@@ -166,6 +166,25 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error listing offers: {e}")
             return []
+    
+    def list_sold_out_offers_recent(self, days: int = 7) -> List[Offer]:
+        """Get sold out offers from last N days"""
+        try:
+            from datetime import datetime, timedelta, UTC
+            cutoff_date = (datetime.now(UTC) - timedelta(days=days)).isoformat()
+            
+            response = self.offers_table.scan(
+                FilterExpression='#status = :status AND created_at >= :cutoff',
+                ExpressionAttributeNames={'#status': 'status'},
+                ExpressionAttributeValues={
+                    ':status': 'sold_out',
+                    ':cutoff': cutoff_date
+                }
+            )
+            return [Offer(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error listing recent sold out offers: {e}")
+            return []
 
     def update_offer(self, offer_id: int, updates: Dict[str, Any]) -> bool:
         try:

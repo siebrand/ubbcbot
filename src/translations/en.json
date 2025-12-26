@@ -281,5 +281,6 @@
   "subtotal_label": "Subtotal: €{total:.2f}",
   "sufficient_available": "sufficient available",
   "units_available": "{count} available",
+  "sold_out_offers_title": "🚫 SOLD OUT (Last 7 days):",
   "open_orders_total_label": "📊 Open Orders Total: €{total:.2f}"
 }

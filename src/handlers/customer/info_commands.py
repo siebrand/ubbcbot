@@ -171,8 +171,25 @@ class InfoCommands(BaseHandler):
             message += "\n\n"
         
         is_admin = self._is_admin(user_id)
-        # Check if admin wants to see user view
+        # Check if admin wants to see user view or sold out offers
         show_user_view = args and len(args) > 0 and args[0].lower() == 'user' and is_admin
+        show_sold_out = args and len(args) > 0 and args[0].lower() == 'sold_out'
+        
+        if show_sold_out:
+            # Show sold out offers from last 7 days for any user
+            sold_out_offers = self.db.list_sold_out_offers_recent(7)
+            
+            if not sold_out_offers:
+                self._send_message(chat_id, self._t('no_offers', user_id))
+                return {'status': 'no_offers'}
+            
+            message += self._t('sold_out_offers_title', user_id) + "\n\n"
+            for offer in sold_out_offers:
+                total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
+                message += self._format_offer_line(offer, "🚫", total_ordered, total_capacity)
+            
+            self._send_message(chat_id, message, parse_mode="HTML")
+            return {'status': 'success'}
         
         if is_admin and not show_user_view:
             # Show all offers with status indicators for admin

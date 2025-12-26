@@ -281,5 +281,6 @@
   "subtotal_label": "Subtotaal: €{total:.2f}",
   "sufficient_available": "voldoende beschikbaar",
   "units_available": "{count} beschikbaar",
+  "sold_out_offers_title": "🚫 UITVERKOCHT (Laatste 7 dagen):",
   "open_orders_total_label": "📊 Openstaande Bestellingen Totaal: €{total:.2f}"
 }
