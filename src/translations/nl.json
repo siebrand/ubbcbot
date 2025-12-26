@@ -179,7 +179,7 @@
   "no_images_to_clear": "❌ Geen afbeeldingen om te wissen",
   "images_cleared": "✅ {count} afbeeldingen gewist van aanbieding {offer_id}",
   "failed_clear_images": "❌ Kon afbeeldingen niet wissen",
-  "action_cancelled": "Actie geannuleerd",
+  "action_cancelled": "Handeling geannuleerd",
   "done": "✅ Klaar met bewerken",
   "discount_created": "✅ Korting aangemaakt: {percentage}% KORTING\nGeldig tot: {end_time}",
   "active_discount_status": "🎉 Actieve Korting: {percentage}% KORTING\nGestart: {start_time}\nEindigt: {end_time}",
