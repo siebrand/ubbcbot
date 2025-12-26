@@ -222,11 +222,6 @@ class BotService:
             elif data.startswith('edit_'):
                 parts = data.split('_')
                 
-                # Handle edit_offer callback (basic offer editing) - format: edit_offer_<id>
-                if len(parts) == 3 and parts[1] == 'offer':
-                    offer_id = parts[2]
-                    return self.offer_commands.handle_edit_offer(chat_id, [offer_id])
-                
                 if len(parts) >= 4:
                     # Handle special case for customer first/last name editing
                     if parts[1] == 'customer' and len(parts) == 5:
@@ -597,7 +592,7 @@ class BotService:
             elif command == '/fulfill_offer':
                 return self.offer_commands.handle_fulfill_offer(admin_target_chat, parts[1:])
             elif command == '/edit_offer':
-                return self.offer_commands.handle_edit_offer(admin_target_chat, parts[1:])
+                return self.offer_commands.handle_edit_offer_details(admin_target_chat, parts[1:])
             elif command == '/update_offer_name':
                 return self.offer_commands.handle_update_offer_name(admin_target_chat, parts[1:])
             elif command == '/update_offer_price':

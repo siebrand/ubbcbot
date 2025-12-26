@@ -533,45 +533,6 @@ class OfferCommands(BaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
     
-    def handle_edit_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /edit_offer command"""
-        if not args:
-            self._send_message(chat_id, "Usage: /edit_offer [offer_id]")
-            return {'status': 'invalid_args'}
-
-        try:
-            offer_id = int(args[0])
-            offer = self.db.get_offer(offer_id)
-            
-            if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
-                return {'status': 'offer_not_found'}
-            
-            # Show current offer details with edit options
-            message = f"📝 Edit Offer {offer_id}:\n\n"
-            message += f"Name: {offer.name}\n"
-            message += f"Price: €{offer.price_per_unit:.2f}\n"
-            message += f"Box Size: {offer.wholesale_box_size}\n"
-            message += f"Status: {offer.status}\n"
-            message += f"Supplier: {offer.supplier_name}\n\n"
-            message += "Select what to edit:"
-            
-            keyboard = {
-                "inline_keyboard": [
-                    [{"text": "📝 Edit Name", "callback_data": f"edit_offer_name_{offer_id}"}],
-                    [{"text": "💰 Edit Price", "callback_data": f"edit_offer_price_{offer_id}"}],
-                    [{"text": "📦 Edit Description", "callback_data": f"edit_offer_description_{offer_id}"}],
-                    [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
-                ]
-            }
-            
-            self._send_message(chat_id, message, reply_markup=keyboard)
-            return {'status': 'success'}
-            
-        except ValueError:
-            self._send_message(chat_id, "❌ Invalid offer ID")
-            return {'status': 'invalid_format'}
-
     def _announce_offer(self, offer):
         """Announce new offer to default group and subscribers using rich format"""
         default_group_id = os.environ.get('DEFAULT_GROUP_ID')
@@ -725,7 +686,7 @@ class OfferCommands(BaseHandler):
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_{offer_id}"}],
+                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id}"}],
                         [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
                         [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
@@ -768,7 +729,7 @@ class OfferCommands(BaseHandler):
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_{offer_id}"}],
+                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id}"}],
                         [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
                         [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
@@ -814,7 +775,7 @@ class OfferCommands(BaseHandler):
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_{offer_id}"}],
+                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id}"}],
                         [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
                         [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
@@ -857,6 +818,8 @@ class OfferCommands(BaseHandler):
             
             keyboard = {
                 "inline_keyboard": [
+                    [{"text": "📝 Edit Name", "callback_data": f"edit_offer_name_{offer_id}"}],
+                    [{"text": "💰 Edit Price", "callback_data": f"edit_offer_price_{offer_id}"}],
                     [{"text": "📝 Edit Description", "callback_data": f"edit_offer_description_{offer_id}"}],
                     [{"text": "🖼️ Upload Image", "callback_data": f"upload_offer_image_{offer_id}"}],
                     [{"text": "🗑️ Clear Images", "callback_data": f"clear_offer_images_{offer_id}"}] if offer.images else [],

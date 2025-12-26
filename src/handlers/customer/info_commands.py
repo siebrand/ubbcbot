@@ -559,7 +559,7 @@ class InfoCommands(BaseHandler):
                             {"text": "🍺   Order 1", "callback_data": f"order_{offer.offer_id}_1"},
                             {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
                         ],
-                        [{"text": "✏️ Edit Offer", "callback_data": f"edit_offer_{offer.offer_id}"}]
+                        [{"text": "✏️ Edit Offer", "callback_data": f"edit_offer_details_{offer.offer_id}"}]
                     ]
                 }
             else:
@@ -575,7 +575,7 @@ class InfoCommands(BaseHandler):
             # Add edit button for admins on non-active offers
             reply_markup = {
                 "inline_keyboard": [
-                    [{"text": "✏️ Edit Offer", "callback_data": f"edit_offer_{offer.offer_id}"}]
+                    [{"text": "✏️ Edit Offer", "callback_data": f"edit_offer_details_{offer.offer_id}"}]
                 ]
             }
         
