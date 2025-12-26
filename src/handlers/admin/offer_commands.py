@@ -719,7 +719,19 @@ class OfferCommands(BaseHandler):
                 return {'status': 'offer_not_found'}
             
             if self.db.update_offer(offer_id, {'name': new_name}):
-                self._send_message(chat_id, f"✅ Offer name updated: '{offer.name}' → '{new_name}'")
+                # Send confirmation and return to edit menu
+                message = f"✅ Offer name updated: '{offer.name}' → '{new_name}'\n\n"
+                message += "Continue editing?"
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_{offer_id}"}],
+                        [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
+                        [{"text": "✅ Done", "callback_data": "done_editing"}]
+                    ]
+                }
+                
+                self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
             else:
                 self._send_message(chat_id, "❌ Failed to update offer name")
@@ -750,7 +762,19 @@ class OfferCommands(BaseHandler):
             
             from decimal import Decimal
             if self.db.update_offer(offer_id, {'price_per_unit': Decimal(str(new_price))}):
-                self._send_message(chat_id, f"✅ Offer price updated: €{offer.price_per_unit:.2f} → €{new_price:.2f}")
+                # Send confirmation and return to edit menu
+                message = f"✅ Offer price updated: €{offer.price_per_unit:.2f} → €{new_price:.2f}\n\n"
+                message += "Continue editing?"
+                
+                keyboard = {
+                    "inline_keyboard": [
+                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_{offer_id}"}],
+                        [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
+                        [{"text": "✅ Done", "callback_data": "done_editing"}]
+                    ]
+                }
+                
+                self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
             else:
                 self._send_message(chat_id, "❌ Failed to update offer price")
@@ -790,7 +814,7 @@ class OfferCommands(BaseHandler):
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id}"}],
+                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_{offer_id}"}],
                         [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
                         [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
