@@ -475,19 +475,34 @@ class InfoCommands(BaseHandler):
             if edit_mode:
                 return self._show_edit_interface(chat_id, offer)
             
-            # Send images first if available
+            # Send images as media group if available
             if offer.images:
-                for image_url in offer.images:
+                if len(offer.images) == 1:
+                    # Single image
                     try:
-                        # Generate presigned URL for S3 images
+                        image_url = offer.images[0]
                         if 's3.amazonaws.com' in image_url:
                             presigned_url = self.db.get_presigned_url(image_url)
                             if presigned_url:
                                 image_url = presigned_url
-                        
                         self._send_photo(chat_id, image_url)
                     except Exception as e:
                         print(f"Failed to send image {image_url}: {e}")
+                else:
+                    # Multiple images as media group
+                    media_group = []
+                    for image_url in offer.images[:10]:  # Telegram limit is 10 images per group
+                        try:
+                            if 's3.amazonaws.com' in image_url:
+                                presigned_url = self.db.get_presigned_url(image_url)
+                                if presigned_url:
+                                    image_url = presigned_url
+                            media_group.append({"type": "photo", "media": image_url})
+                        except Exception as e:
+                            print(f"Failed to prepare image {image_url}: {e}")
+                    
+                    if media_group:
+                        self._send_media_group(chat_id, media_group)
             
             # Send rich offer details
             if show_as_user:
@@ -544,13 +559,34 @@ class InfoCommands(BaseHandler):
     
     def _send_rich_offer_details(self, chat_id: int, offer, user_id: int):
         """Send rich offer details with images and description"""
-        # Send images first if available
+        # Send images as media group if available
         if offer.images:
-            for image_url in offer.images:
+            if len(offer.images) == 1:
+                # Single image
                 try:
+                    image_url = offer.images[0]
+                    if 's3.amazonaws.com' in image_url:
+                        presigned_url = self.db.get_presigned_url(image_url)
+                        if presigned_url:
+                            image_url = presigned_url
                     self._send_photo(chat_id, image_url)
                 except Exception as e:
                     print(f"Failed to send image {image_url}: {e}")
+            else:
+                # Multiple images as media group
+                media_group = []
+                for image_url in offer.images[:10]:  # Telegram limit is 10 images per group
+                    try:
+                        if 's3.amazonaws.com' in image_url:
+                            presigned_url = self.db.get_presigned_url(image_url)
+                            if presigned_url:
+                                image_url = presigned_url
+                        media_group.append({"type": "photo", "media": image_url})
+                    except Exception as e:
+                        print(f"Failed to prepare image {image_url}: {e}")
+                
+                if media_group:
+                    self._send_media_group(chat_id, media_group)
         
         # Build detailed message
         is_draft = offer.status == OfferStatus.DRAFT.value
