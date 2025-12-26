@@ -3,6 +3,26 @@ from handlers.base_handler import BaseHandler
 from models.entities import AuthorizationStatus
 
 class UserCommands(BaseHandler):
+    def _approve_user_by_customer(self, chat_id: int, customer) -> Dict[str, Any]:
+        """Shared approval logic for customer object"""
+        if customer.authorization_status == AuthorizationStatus.APPROVED.value:
+            display_name = customer.first_name or "Unknown"
+            self._send_message(chat_id, f"❌ User '{display_name}' is already approved")
+            return {'status': 'already_approved'}
+
+        # Update user status
+        if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.APPROVED.value}):
+            # Notify user
+            self._send_message(customer.telegram_user_id, "✅ You are now authorized to use UBBC Bot! Send /start to begin.")
+            
+            # Confirm to admin
+            display_name = customer.first_name or "Unknown"
+            self._send_message(chat_id, f"✅ User '{display_name}' approved")
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, "❌ Failed to approve user")
+            return {'status': 'error'}
+
     def handle_pending_users(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
         """Handle /pending_users command with pagination"""
         customers = self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value)
@@ -62,22 +82,7 @@ class UserCommands(BaseHandler):
             self._send_message(chat_id, f"❌ User '{identifier}' not found")
             return {'status': 'user_not_found'}
 
-        if customer.authorization_status == AuthorizationStatus.APPROVED.value:
-            self._send_message(chat_id, f"❌ User '{identifier}' is already approved")
-            return {'status': 'already_approved'}
-
-        # Update user status
-        if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.APPROVED.value}):
-            # Notify user
-            self._send_message(customer.telegram_user_id, "✅ You've been approved! Send /start to begin using the bot.")
-            
-            # Confirm to admin
-            display_name = customer.first_name or "Unknown"
-            self._send_message(chat_id, f"✅ User '{display_name}' approved")
-            return {'status': 'success'}
-        else:
-            self._send_message(chat_id, "❌ Failed to approve user")
-            return {'status': 'error'}
+        return self._approve_user_by_customer(chat_id, customer)
 
     def handle_reject_user(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /reject_user command"""
@@ -339,22 +344,7 @@ class UserCommands(BaseHandler):
             self._send_message(chat_id, "❌ User not found")
             return {'status': 'user_not_found'}
 
-        if customer.authorization_status == AuthorizationStatus.APPROVED.value:
-            self._send_message(chat_id, f"❌ User is already approved")
-            return {'status': 'already_approved'}
-
-        # Update user status
-        if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.APPROVED.value}):
-            # Notify user
-            self._send_message(customer.telegram_user_id, "✅ You've been approved! Send /start to begin using the bot.")
-            
-            # Confirm to admin
-            display_name = customer.first_name or "Unknown"
-            self._send_message(chat_id, f"✅ User '{display_name}' approved")
-            return {'status': 'success'}
-        else:
-            self._send_message(chat_id, "❌ Failed to approve user")
-            return {'status': 'error'}
+        return self._approve_user_by_customer(chat_id, customer)
 
     def handle_reject_user_by_id(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         """Handle user rejection by customer ID (called from button callback)"""
