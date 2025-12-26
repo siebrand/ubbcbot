@@ -254,8 +254,12 @@ class BotService:
             
             # New offer management callbacks
             elif data.startswith('offer_details_'):
-                offer_id = data.split('_')[2]
-                return self.info_commands.handle_offer_details(chat_id, user_id, [offer_id])
+                parts = data.split('_')
+                if len(parts) >= 3:
+                    offer_id = parts[2]
+                    edit_mode = len(parts) > 3 and parts[3] == 'edit'
+                    args = [offer_id, 'edit'] if edit_mode else [offer_id]
+                    return self.info_commands.handle_offer_details(chat_id, user_id, args)
             elif data.startswith('upload_offer_image_'):
                 offer_id = data.split('_')[3]
                 from handlers.base_handler import BaseHandler
