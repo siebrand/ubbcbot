@@ -37,6 +37,25 @@ class CallbackHandler:
             elif data.startswith('wd_'):
                 return self._handle_wholesale_delivery_callbacks(chat_id, user_id, data)
             
+            # Export orders callbacks
+            elif data.startswith('export_orders_'):
+                status_filter = data.replace('export_orders_', '')
+                return self.handlers['admin_order'].handle_export_orders_callback(chat_id, status_filter)
+            
+            # Delivery overview callbacks
+            elif data == 'start_send_overviews':
+                return self.handlers['delivery_overview'].start_send_overviews(chat_id)
+            
+            # Labeling completion callbacks
+            elif data.startswith('finish_labeling_'):
+                box_id = data.split('_', 2)[2]
+                return self.handlers['labeling'].handle_finish_labeling(chat_id, box_id)
+            
+            # Payment marking callbacks
+            elif data.startswith('mark_paid_'):
+                customer_id = data.split('_', 2)[2]
+                return self.handlers['delivery_overview'].handle_mark_customer_paid(chat_id, customer_id)
+            
             # Order callbacks
             if data.startswith('order_'):
                 parts = data.split('_')

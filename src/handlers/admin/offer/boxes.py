@@ -72,12 +72,31 @@ class BoxManagementHandler(OfferBaseHandler):
                 BoxStatus.DELIVERED.value: "✅"
             }.get(box.status, "❓")
             
-            message += f"🍺 {offer.name} €{offer.price_per_unit:.2f}\n   {status_emoji} Box {box.box_id[:8]}: {box.current_quantity}/{box.max_capacity} ({box.status})\n\n"
+            # Check if box has orders ready for labeling
+            orders = self.db.get_orders_by_box(box.box_id)
+            ready_for_labeling = any(o.status == 'ready_for_labeling' for o in orders)
+            labeling_button = f" [Finish Labeling](tg://btn?data=finish_labeling_{box.box_id})" if ready_for_labeling else ""
+            
+            message += f"🍺 {offer.name} €{offer.price_per_unit:.2f}\n   {status_emoji} Box {box.box_id[:8]}: {box.current_quantity}/{box.max_capacity} ({box.status}){labeling_button}\n\n"
         
         # Add pagination keyboard if needed
         keyboard = None
         if total_pages > 1:
             keyboard = self._build_pagination_keyboard(page, total_pages, "boxes")
+        
+        # Add finish labeling buttons for boxes with ready orders
+        labeling_buttons = []
+        for offer, box in page_items:
+            orders = self.db.get_orders_by_box(box.box_id)
+            ready_for_labeling = any(o.status == 'ready_for_labeling' for o in orders)
+            if ready_for_labeling:
+                labeling_buttons.append([{"text": f"✅ Finish Labeling Box {box.box_id[:8]}", "callback_data": f"finish_labeling_{box.box_id}"}])
+        
+        if labeling_buttons:
+            if keyboard:
+                keyboard["inline_keyboard"].extend(labeling_buttons)
+            else:
+                keyboard = {"inline_keyboard": labeling_buttons}
         
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}

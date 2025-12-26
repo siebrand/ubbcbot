@@ -257,15 +257,30 @@ class AdminOrderCommands(BaseHandler):
 
     def handle_all_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /all_orders command"""
-        # Get filter from args (active, cancelled, ordered, or all)
-        status_filter = args[0].lower() if args else 'active'
+        if not args:
+            # Show status selection buttons
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": "Ready for Labeling", "callback_data": "export_orders_ready_for_labeling"}],
+                    [{"text": "Labeling Completed", "callback_data": "export_orders_labeling_completed"}],
+                    [{"text": "Awaiting Payment", "callback_data": "export_orders_awaiting_payment"}],
+                    [{"text": "Completed", "callback_data": "export_orders_completed"}],
+                    [{"text": "Active", "callback_data": "export_orders_active"}],
+                    [{"text": "Cancelled", "callback_data": "export_orders_cancelled"}],
+                    [{"text": "All", "callback_data": "export_orders_all"}]
+                ]
+            }
+            self._send_message(chat_id, "📊 Select order status to export:", reply_markup=keyboard)
+            return {'status': 'selection_shown'}
         
-        if status_filter not in ['active', 'cancelled', 'ordered', 'all']:
-            self._send_message(chat_id, self._t('usage_all_orders'))
-            return {'status': 'invalid_args'}
-
+        # Get filter from args
+        status_filter = args[0].lower()
+        return self._export_orders_by_status(chat_id, status_filter)
+    
+    def _export_orders_by_status(self, chat_id: int, status_filter: str) -> Dict[str, Any]:
+        """Export orders by status filter"""
         # Get all customers and their orders
-        from models.entities import AuthorizationStatus
+        from models.entities import AuthorizationStatus, OrderStatus
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
         
         all_orders = []
@@ -278,68 +293,65 @@ class AdminOrderCommands(BaseHandler):
                     continue
                 elif status_filter == 'ordered' and order.status != 'ordered':
                     continue
+                elif status_filter == 'ready_for_labeling' and order.status != OrderStatus.READY_FOR_LABELING.value:
+                    continue
+                elif status_filter == 'labeling_completed' and order.status != OrderStatus.LABELING_COMPLETED.value:
+                    continue
+                elif status_filter == 'awaiting_payment' and order.status != OrderStatus.AWAITING_PAYMENT.value:
+                    continue
+                elif status_filter == 'completed' and order.status != OrderStatus.COMPLETED.value:
+                    continue
+                elif status_filter != 'all' and status_filter not in ['active', 'cancelled', 'ordered', 'ready_for_labeling', 'labeling_completed', 'awaiting_payment', 'completed']:
+                    continue
                 all_orders.append((customer, order))
         
         if not all_orders:
             self._send_message(chat_id, self._t('no_orders_status', status=status_filter))
             return {'status': 'no_orders'}
         
-        # Sort by date (newest first)
-        all_orders.sort(key=lambda x: x[1].created_at, reverse=True)
+        # Sort by customer name for grouping
+        all_orders.sort(key=lambda x: (x[0].first_name or '', x[0].last_name or ''))
         
         # Generate CSV and upload
-        csv_content = self._generate_orders_csv(all_orders)
-        csv_filename = f"orders_{status_filter}_{self.environment}.csv"
+        csv_content = self._generate_pick_list_csv(all_orders)
+        csv_filename = f"pick_list_{status_filter}_{self.environment}.csv"
         
         # Send CSV file
-        caption = self._t('orders_csv_caption', user_id=None, 
-                         status=status_filter.title(), 
+        caption = self._t('pick_list_csv_caption', user_id=None, 
+                         status=status_filter.replace('_', ' ').title(), 
                          count=len(all_orders))
         self._send_document(chat_id, csv_content, csv_filename, caption)
         
         return {'status': 'success'}
     
-    def _generate_orders_csv(self, orders_data: list) -> str:
-        """Generate CSV content from orders data"""
-        import csv
-        from io import StringIO
-        from datetime import datetime
-        
-        output = StringIO()
-        writer = csv.writer(output)
-        
+    def _generate_pick_list_csv(self, orders_data: list) -> bytes:
+        """Generate pick list CSV content grouped by customer"""
         # CSV headers
-        writer.writerow([
-            'Order ID', 'Date', 'Customer Name', 'Username', 'Product', 
-            'Quantity', 'Unit Price', 'Total Price', 'Status', 'Box ID'
-        ])
+        headers = [
+            'Customer_Name', 'Telegram_Username', 'Offer_Name', 
+            'Box_ID', 'Unit_Count', 'Total_Price_to_Charge'
+        ]
         
-        # CSV data
+        csv_content = ','.join(headers) + '\n'
+        
+        # Group by customer and sort
+        customer_orders = {}
         for customer, order in orders_data:
-            offer = self.db.get_offer(order.offer_id)
-            offer_name = offer.name if offer else "Unknown"
-            unit_price = offer.price_per_unit if offer else 0
-            
-            from utils.timezone import to_cet_string
-            order_date = to_cet_string(order.created_at, '%Y-%m-%d %H:%M')
-            
-            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
-            username = customer.username or ""
-            
-            writer.writerow([
-                order.order_id,
-                order_date,
-                customer_name,
-                username,
-                offer_name,
-                order.quantity,
-                f"{unit_price:.2f}",
-                f"{order.total_price:.2f}",
-                order.status,
-                order.box_id
-            ])
+            customer_key = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+            if customer_key not in customer_orders:
+                customer_orders[customer_key] = []
+            customer_orders[customer_key].append((customer, order))
         
-        return output.getvalue()
+        # Generate CSV data grouped by customer
+        for customer_name in sorted(customer_orders.keys()):
+            for customer, order in customer_orders[customer_name]:
+                offer = self.db.get_offer(order.offer_id)
+                offer_name = offer.name if offer else "Unknown"
+                username = customer.username or ""
+                
+                csv_content += f'"{customer_name}","{username}","{offer_name}","{order.box_id}",{order.quantity},{order.total_price:.2f}\n'
+        
+        return csv_content.encode('utf-8')
 
     def handle_user_orders_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         """Handle user selection from disambiguation buttons for user_orders"""
@@ -350,3 +362,75 @@ class AdminOrderCommands(BaseHandler):
             return {'status': 'user_not_found'}
         
         return self._show_user_orders(chat_id, customer)
+    
+    def handle_send_overviews(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /send_overviews command"""
+        from models.entities import AuthorizationStatus, OrderStatus
+        
+        # Get customers with LABELING_COMPLETED orders
+        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        customers_with_ready_orders = []
+        
+        for customer in customers:
+            orders = self.db.get_orders_by_customer(customer.customer_id)
+            labeling_completed_orders = [o for o in orders if o.status == OrderStatus.LABELING_COMPLETED.value]
+            if labeling_completed_orders:
+                customers_with_ready_orders.append((customer, labeling_completed_orders))
+        
+        if not customers_with_ready_orders:
+            self._send_message(chat_id, "❌ No customers with orders ready for delivery overview")
+            return {'status': 'no_customers'}
+        
+        total_customers = len(customers_with_ready_orders)
+        batches_needed = (total_customers + 49) // 50  # Round up
+        
+        message = f"📊 Delivery Overview Summary:\n\n👥 Customers to notify: {total_customers}\n📦 Payment link batches needed: {batches_needed}\n\nThis will send delivery overviews and move orders to AWAITING_PAYMENT status."
+        
+        keyboard = {
+            "inline_keyboard": [[
+                {"text": "✅ Start Sending Overviews", "callback_data": "start_send_overviews"},
+                {"text": "❌ Cancel", "callback_data": "cancel_action"}
+            ]]
+        }
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'confirmation_shown'}
+    
+    def handle_mark_paid(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /mark_paid command"""
+        from models.entities import AuthorizationStatus, OrderStatus
+        
+        # Get customers with AWAITING_PAYMENT orders
+        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        customers_awaiting_payment = []
+        
+        for customer in customers:
+            orders = self.db.get_orders_by_customer(customer.customer_id)
+            awaiting_payment_orders = [o for o in orders if o.status == OrderStatus.AWAITING_PAYMENT.value]
+            if awaiting_payment_orders:
+                customers_awaiting_payment.append((customer, awaiting_payment_orders))
+        
+        if not customers_awaiting_payment:
+            self._send_message(chat_id, "❌ No customers with orders awaiting payment")
+            return {'status': 'no_customers'}
+        
+        # Show customers with payment buttons
+        message = "💳 Customers Awaiting Payment:\n\n"
+        keyboard_rows = []
+        
+        for customer, orders in customers_awaiting_payment[:10]:  # Show first 10
+            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+            total_amount = sum(order.total_price for order in orders)
+            message += f"👤 {customer_name}: €{total_amount:.2f} ({len(orders)} orders)\n"
+            keyboard_rows.append([{"text": f"✅ Mark {customer_name} Paid", "callback_data": f"mark_paid_{customer.customer_id}"}])
+        
+        if len(customers_awaiting_payment) > 10:
+            message += f"\n... and {len(customers_awaiting_payment) - 10} more customers"
+        
+        keyboard = {"inline_keyboard": keyboard_rows}
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'customers_shown'}
+    
+    def handle_export_orders_callback(self, chat_id: int, status_filter: str) -> Dict[str, Any]:
+        """Handle export orders callback"""
+        return self._export_orders_by_status(chat_id, status_filter)

@@ -181,5 +181,9 @@ class CommandRouter:
                 return self.handlers['discount'].handle_discount_status(admin_target_chat)
             elif command == '/wholesale_delivery':
                 return self.handlers['wholesale_delivery'].handle_wholesale_delivery(admin_target_chat, user_id, parts[1:])
+            elif command == '/send_overviews':
+                return self.handlers['admin_order'].handle_send_overviews(admin_target_chat, parts[1:])
+            elif command == '/mark_paid':
+                return self.handlers['admin_order'].handle_mark_paid(admin_target_chat, parts[1:])
 
         return {'status': 'unknown_command'}

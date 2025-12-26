@@ -70,7 +70,9 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"update_user_last_name\", \"description\": \"Update user last name\"},
          {\"command\": \"create_discount\", \"description\": \"Create discount\"},
          {\"command\": \"cancel_discount\", \"description\": \"Cancel discount\"},
-         {\"command\": \"discount_status\", \"description\": \"View discount status\"}
+         {\"command\": \"discount_status\", \"description\": \"View discount status\"},
+         {\"command\": \"send_overviews\", \"description\": \"Send delivery overviews\"},
+         {\"command\": \"mark_paid\", \"description\": \"Mark customers as paid\"}
        ],
        \"scope\": {\"type\": \"chat_administrators\", \"chat_id\": \"$DEFAULT_GROUP_ID\"}
      }" | jq .

@@ -7,7 +7,7 @@ from services.media_handler import MediaHandler
 from services.callback_handler import CallbackHandler
 from models.entities import Customer, AuthorizationStatus
 
-# Import handlers
+        # Import handlers
 from handlers.admin.supplier_commands import SupplierCommands
 from handlers.admin.offer_commands import OfferCommands
 from handlers.admin.order_commands import AdminOrderCommands
@@ -15,6 +15,8 @@ from handlers.admin.user_commands import UserCommands
 from handlers.admin.test_commands import TestCommands
 from handlers.admin.discount_commands import DiscountCommands
 from handlers.admin.wholesale_delivery_commands import WholesaleDeliveryCommands
+from handlers.admin.labeling_commands import LabelingCommands
+from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
 from handlers.customer.order_commands import CustomerOrderCommands
 from handlers.customer.info_commands import InfoCommands
 from handlers.customer.auth_commands import AuthCommands
@@ -59,6 +61,8 @@ class BotService:
         self.test_commands = TestCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.discount_commands = DiscountCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.wholesale_delivery_commands = WholesaleDeliveryCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        self.labeling_commands = LabelingCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        self.delivery_overview_handler = DeliveryOverviewHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         # Customer handlers
         self.customer_order_commands = CustomerOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -77,6 +81,8 @@ class BotService:
             'test': self.test_commands,
             'discount': self.discount_commands,
             'wholesale_delivery': self.wholesale_delivery_commands,
+            'labeling': self.labeling_commands,
+            'delivery_overview': self.delivery_overview_handler,
             'changelog': self.changelog_commands,
             'customer_order': self.customer_order_commands,
             'info': self.info_commands,
@@ -257,5 +263,7 @@ class BotService:
             return self.user_commands.handle_update_user_last_name(chat_id, [entity_id, text])
         elif edit_type == 'incomplete_delivery':
             return self.wholesale_delivery_commands.handle_incomplete_delivery_reply(chat_id, user_id, text, entity_id)
+        elif edit_type == 'payment_link_input':
+            return self.delivery_overview_handler.handle_payment_link_input(chat_id, text, entity_id)
         
         return {'status': 'unknown_edit_type'}
