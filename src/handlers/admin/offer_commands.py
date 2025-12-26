@@ -66,7 +66,7 @@ class OfferCommands(BaseHandler):
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Edit Details", "callback_data": f"edit_offer_details_{offer.offer_id}"}],
+                        [{"text": "📝 Edit Details", "callback_data": f"offer_edit_{offer.offer_id}"}],
                         [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer.offer_id}"}],
                         [{"text": "🚀 Publish Offer", "callback_data": f"publish_offer_{offer.offer_id}"}]
                     ]
@@ -686,7 +686,7 @@ class OfferCommands(BaseHandler):
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id}"}],
+                        [{"text": "📝 Continue Editing", "callback_data": f"offer_edit_{offer_id}"}],
                         [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
                         [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
@@ -729,7 +729,7 @@ class OfferCommands(BaseHandler):
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id}"}],
+                        [{"text": "📝 Continue Editing", "callback_data": f"offer_edit_{offer_id}"}],
                         [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
                         [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
@@ -775,7 +775,7 @@ class OfferCommands(BaseHandler):
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"edit_offer_details_{offer_id}"}],
+                        [{"text": "📝 Continue Editing", "callback_data": f"offer_edit_{offer_id}"}],
                         [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
                         [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]
@@ -791,10 +791,10 @@ class OfferCommands(BaseHandler):
             self._send_message(chat_id, "❌ Invalid offer ID")
             return {'status': 'invalid_format'}
     
-    def handle_edit_offer_details(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /edit_offer_details command"""
+    def handle_offer_edit(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /offer_edit command"""
         if not args:
-            self._send_message(chat_id, "Usage: /edit_offer_details [offer_id]")
+            self._send_message(chat_id, "Usage: /offer_edit [offer_id]")
             return {'status': 'invalid_args'}
 
         try:

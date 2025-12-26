@@ -94,11 +94,11 @@ class InfoCommands(BaseHandler):
         elif section == "offers" and self._is_admin(user_id):
             message = "🍺 Offer Management:\n\n"
             message += "/create_offer <supplier> <name> <price> <box_size> - Create draft offer\n"
-            message += "/edit_offer_details <offer_id> - Edit description and images\n"
+            message += "/offer_edit <offer_id> - Edit description and images\n"
             message += "/preview_offer <offer_id> - Preview offer appearance\n"
             message += "/publish_offer <offer_id> - Publish draft offer\n"
             message += "/cancel_offer <offer_id> - Cancel offer and all orders\n"
-            message += "/edit_offer_details <offer_id> - Edit offer details\n"
+            message += "/offer_edit <offer_id> - Edit offer details\n"
             message += "/add_box <offer_id> - Add box to offer\n"
             message += "/box_status - View box status\n"
             message += "/fulfill_offer <offer_id> - Start fulfillment process\n"
@@ -496,7 +496,7 @@ class InfoCommands(BaseHandler):
             if self._is_admin(user_id) and offer.status == OfferStatus.DRAFT.value:
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Edit Details", "callback_data": f"edit_offer_details_{offer_id}"}],
+                        [{"text": "📝 Edit Details", "callback_data": f"offer_edit_{offer_id}"}],
                         [{"text": "🚀 Publish Offer", "callback_data": f"publish_offer_{offer_id}"}],
                         [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
                     ]
@@ -559,7 +559,7 @@ class InfoCommands(BaseHandler):
                             {"text": "🍺   Order 1", "callback_data": f"order_{offer.offer_id}_1"},
                             {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
                         ],
-                        [{"text": "✏️ Edit Offer", "callback_data": f"edit_offer_details_{offer.offer_id}"}]
+                        [{"text": "✏️ Edit Offer", "callback_data": f"offer_edit_{offer.offer_id}"}]
                     ]
                 }
             else:
@@ -575,7 +575,7 @@ class InfoCommands(BaseHandler):
             # Add edit button for admins on non-active offers
             reply_markup = {
                 "inline_keyboard": [
-                    [{"text": "✏️ Edit Offer", "callback_data": f"edit_offer_details_{offer.offer_id}"}]
+                    [{"text": "✏️ Edit Offer", "callback_data": f"offer_edit_{offer.offer_id}"}]
                 ]
             }
         

@@ -43,7 +43,7 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
          {\"command\": \"list_suppliers\", \"description\": \"View all suppliers\"},
          {\"command\": \"edit_supplier\", \"description\": \"Edit supplier details\"},
          {\"command\": \"create_offer\", \"description\": \"Create draft offer\"},
-         {\"command\": \"edit_offer_details\", \"description\": \"Edit offer description and images\"},
+         {\"command\": \"offer_edit\", \"description\": \"Edit offer description and images\"},
          {\"command\": \"publish_offer\", \"description\": \"Publish draft offer\"},
          {\"command\": \"preview_offer\", \"description\": \"Preview offer appearance\"},
          {\"command\": \"cancel_offer\", \"description\": \"Cancel offer and all orders\"},

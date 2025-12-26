@@ -138,7 +138,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/list_suppliers [active|retired|all]` - View suppliers by status (default: active, paginated)
 - `/edit_supplier <name>` - Edit supplier details with inline keyboard
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create draft beer offer
-- `/edit_offer_details <offer_id>` - Edit offer description and upload images
+- `/offer_edit <offer_id>` - Edit offer description and upload images
 - `/publish_offer <offer_id>` - Publish draft offer and announce to customers
 - `/preview_offer <offer_id>` - Preview how offer will appear when published
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
