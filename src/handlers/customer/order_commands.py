@@ -287,6 +287,16 @@ class CustomerOrderCommands(BaseHandler):
         except Exception as e:
             logger.error(f"Error checking offer status: {e}")
     
+    def _get_public_name(self, customer):
+        """Get customer's public display name (Firstname L)"""
+        name_parts = []
+        if customer.first_name:
+            name_parts.append(customer.first_name)
+        if customer.last_name:
+            name_parts.append(f"{customer.last_name[0]}")
+        
+        return ' '.join(name_parts) if name_parts else customer.username or 'Unknown'
+    
     def _notify_channel_order(self, customer, offer, quantity):
         """Send order notification to default group"""
         import os
@@ -295,14 +305,7 @@ class CustomerOrderCommands(BaseHandler):
             if not group_id:
                 return
             
-            # Format customer name
-            name_parts = []
-            if customer.first_name:
-                name_parts.append(customer.first_name)
-            if customer.last_name:
-                name_parts.append(customer.last_name)
-            
-            customer_name = ' '.join(name_parts) if name_parts else customer.username or 'Unknown'
+            customer_name = self._get_public_name(customer)
             
             # Check if offer is now sold out and calculate remaining availability
             updated_offer = self.db.get_offer(offer.offer_id)
