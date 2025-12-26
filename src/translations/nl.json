@@ -7,7 +7,7 @@
   "access_rejected": "❌ Je toegangsverzoek is afgewezen.",
   "failed_approve_user": "❌ Kon gebruiker niet goedkeuren",
   "failed_reject_user": "❌ Kon gebruiker niet afwijzen",
-  "no_pending_users": "Geen gebruikers wachten op goedkeuring",
+  "no_pending_users": "Er zijn geen gebruikers die wachten op goedkeuring",
   "pending_users_title": "📋 Wachtende Gebruikers (Pagina {page}/{total_pages}):",
   "approve_user": "✅ Keur {name} goed",
   "reject_user": "❌ Wijs {name} af",
