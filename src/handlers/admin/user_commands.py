@@ -73,31 +73,29 @@ class UserCommands(BaseHandler):
 
     def handle_approve_user(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /approve_user command"""
-        error = self._validate_args(args, 1, 'usage_approve_user', chat_id)
-        if error:
-            return error
+        if not args:
+            self._send_message(chat_id, self._t('usage_approve_user', chat_id))
+            return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
-        if not customer:
-            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=identifier))
-            return {'status': 'user_not_found'}
+        if customer is None:
+            return {'status': 'disambiguation_shown'}
 
         return self._approve_user_by_customer(chat_id, customer)
 
     def handle_reject_user(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /reject_user command"""
-        error = self._validate_args(args, 1, 'usage_reject_user', chat_id)
-        if error:
-            return error
+        if not args:
+            self._send_message(chat_id, self._t('usage_reject_user', chat_id))
+            return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
-        if not customer:
-            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=identifier))
-            return {'status': 'user_not_found'}
+        if customer is None:
+            return {'status': 'disambiguation_shown'}
 
         # Update user status
         if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.REJECTED.value}):
@@ -114,16 +112,15 @@ class UserCommands(BaseHandler):
 
     def handle_user_status(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /user_status command"""
-        error = self._validate_args(args, 1, 'usage_user_status', chat_id)
-        if error:
-            return error
+        if not args:
+            self._send_message(chat_id, self._t('usage_user_status', chat_id))
+            return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
-        if not customer:
-            self._send_message(chat_id, f"❌ User '{identifier}' not found")
-            return {'status': 'user_not_found'}
+        if customer is None:
+            return {'status': 'disambiguation_shown'}
 
         display_name = self._escape_html(customer.first_name or "Unknown")
         if customer.last_name:
@@ -166,16 +163,16 @@ class UserCommands(BaseHandler):
 
     def handle_update_user(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_user command"""
-        error = self._validate_args(args, 2, 'usage_update_user', chat_id)
-        if error:
-            return error
+        if not args:
+            self._send_message(chat_id, self._t('usage_update_user', chat_id))
+            return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
-        if not customer:
-            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=identifier))
-            return {'status': 'user_not_found'}
+        if customer is None:
+            # Don't show error if disambiguation buttons were shown
+            return {'status': 'disambiguation_shown'}
         
         return self._show_user_edit_interface(customer, chat_id)
     
