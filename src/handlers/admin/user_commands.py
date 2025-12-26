@@ -18,7 +18,9 @@ class UserCommands(BaseHandler):
             # Confirm to admin
             display_name = customer.first_name or "Unknown"
             self._send_message(chat_id, self._t('user_approved', chat_id, name=display_name))
-            return {'status': 'success'}
+            
+            # Enter update user dialog
+            return self._show_user_edit_interface(customer, chat_id)
         else:
             self._send_message(chat_id, self._t('failed_approve_user', chat_id))
             return {'status': 'error'}
