@@ -221,18 +221,18 @@ class AdminOrderCommands(BaseHandler):
         orders = self.db.get_orders_by_customer(customer.customer_id)
         
         if not orders:
-            display_name = customer.first_name or "Unknown"
+            display_name = f"{customer.first_name} {customer.last_name}" or "Unknown"
             self._send_message(chat_id, self._t('no_orders_for_user', name=display_name))
             return {'status': 'no_orders'}
 
         # Group orders by status
         active_orders = [o for o in orders if o.status in ['pending', 'ordered']]
         cancelled_orders = [o for o in orders if o.status == 'cancelled']
-        
-        display_name = self._escape_html(customer.first_name or "Unknown")
+
+        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or "Unknown")
         message = self._t('user_orders_title', user_id=None, name=display_name)
         message += "\n\n"
-        
+
         if active_orders:
             message += self._t('active_orders_label', user_id=None) + "\n"
             for order in active_orders:
