@@ -283,5 +283,21 @@
   "sold_out_offers_title": "🚫 UITVERKOCHT (Laatste 7 dagen):",
   "open_orders_total_label": "📊 Openstaande Bestellingen Totaal: €{total:.2f}",
   "new_user_pending_notification": "🔔 Nieuwe gebruiker wacht op autorisatie:\n\n👤 {name}\n📱 @{username}\n🆔 ID: {user_id}\n\nGebruik /pending_users om te beoordelen.",
-  "pm_notification_failed": "⚠️ PM notificatie naar {name} mislukt (gebruiker moet eerst /start sturen naar de bot)"
+  "pm_notification_failed": "⚠️ PM notificatie naar {name} mislukt (gebruiker moet eerst /start sturen naar de bot)",
+  "no_ordered_offers": "❌ Geen aanbiedingen met BESTELD status gevonden",
+  "select_supplier_for_delivery": "📦 Selecteer leverancier voor leveringsverwerking:",
+  "no_ordered_offers_for_supplier": "❌ Geen BESTELDE aanbiedingen gevonden voor leverancier '{supplier_name}'",
+  "select_offer_for_delivery": "🍺 Selecteer aanbieding voor levering (Leverancier: {supplier_name}):",
+  "no_boxes_with_orders": "❌ Geen dozen met bestellingen gevonden voor aanbieding '{offer_name}'",
+  "select_box_for_delivery": "📦 Selecteer doos voor levering (Aanbieding: {offer_name}):",
+  "box_delivery_triage": "📦 Doos {box_id} Levering Triage\n\n📊 Totaal Eenheden: {total_units}\n📋 Bestellingen: {order_count}\n\nKies leveringsstatus:",
+  "full_delivery_processed": "✅ Volledige levering verwerkt voor doos {box_id}\nAlle bestellingen ingesteld op KLAAR_VOOR_LABELING",
+  "delayed_delivery_processed": "⏳ Vertraagde levering verwerkt voor doos {box_id}\nAlle bestellingen ingesteld op ONTVANGEN_GEDEELTELIJK_VERTRAAGD\nKlanten worden geïnformeerd",
+  "cancelled_delivery_processed": "❌ Geannuleerde levering verwerkt voor doos {box_id}\nAlle bestellingen ingesteld op GEANNULEERD_NIET_BESCHIKBAAR\nKlanten worden geïnformeerd",
+  "delivery_processing_failed": "❌ Leveringsverwerking mislukt",
+  "enter_received_quantity": "📝 Voer aantal ontvangen eenheden in (max {total_units}):",
+  "invalid_quantity_range": "❌ Ongeldig aantal. Moet tussen 0 en {max_units} zijn",
+  "invalid_number_format": "❌ Ongeldig nummerformaat",
+  "choose_remaining_action": "📝 {received_units} eenheden ontvangen. Kies actie voor resterende eenheden:",
+  "partial_delivery_processed": "✅ Gedeeltelijke levering verwerkt voor doos {box_id}\n📦 Ontvangen: {received_units} eenheden\n📋 Resterende eenheden: {action}"
 }

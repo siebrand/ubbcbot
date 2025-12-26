@@ -283,5 +283,21 @@
   "units_available": "{count} available",
   "sold_out_offers_title": "🚫 SOLD OUT (Last 7 days):",
   "open_orders_total_label": "📊 Open Orders Total: €{total:.2f}",
-  "pm_notification_failed": "⚠️ PM notification to {name} failed (user must send /start to bot first)"
+  "pm_notification_failed": "⚠️ PM notification to {name} failed (user must send /start to bot first)",
+  "no_ordered_offers": "❌ No offers with ORDERED status found",
+  "select_supplier_for_delivery": "📦 Select supplier for delivery processing:",
+  "no_ordered_offers_for_supplier": "❌ No ORDERED offers found for supplier '{supplier_name}'",
+  "select_offer_for_delivery": "🍺 Select offer for delivery (Supplier: {supplier_name}):",
+  "no_boxes_with_orders": "❌ No boxes with orders found for offer '{offer_name}'",
+  "select_box_for_delivery": "📦 Select box for delivery (Offer: {offer_name}):",
+  "box_delivery_triage": "📦 Box {box_id} Delivery Triage\n\n📊 Total Units: {total_units}\n📋 Orders: {order_count}\n\nChoose delivery status:",
+  "full_delivery_processed": "✅ Full delivery processed for box {box_id}\nAll orders set to READY_FOR_LABELING",
+  "delayed_delivery_processed": "⏳ Delayed delivery processed for box {box_id}\nAll orders set to RECEIVED_PARTIAL_DELAYED\nCustomers will be notified",
+  "cancelled_delivery_processed": "❌ Cancelled delivery processed for box {box_id}\nAll orders set to CANCELLED_UNAVAILABLE\nCustomers will be notified",
+  "delivery_processing_failed": "❌ Delivery processing failed",
+  "enter_received_quantity": "📝 Enter number of units received (max {total_units}):",
+  "invalid_quantity_range": "❌ Invalid quantity. Must be between 0 and {max_units}",
+  "invalid_number_format": "❌ Invalid number format",
+  "choose_remaining_action": "📝 {received_units} units received. Choose action for remaining units:",
+  "partial_delivery_processed": "✅ Partial delivery processed for box {box_id}\n📦 Received: {received_units} units\n📋 Remaining units: {action}"
 }

@@ -33,6 +33,12 @@ class OrderStatus(Enum):
     COMPLETED = "completed"
     DELIVERED = "delivered"
 
+class DeliveryAction(Enum):
+    FULL = "full"
+    DELAYED = "delayed"
+    CANCEL = "cancel"
+    INCOMPLETE = "incomplete"
+
 class DiscountStatus(Enum):
     ACTIVE = "active"
     EXPIRED = "expired"

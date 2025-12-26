@@ -14,6 +14,7 @@ from handlers.admin.order_commands import AdminOrderCommands
 from handlers.admin.user_commands import UserCommands
 from handlers.admin.test_commands import TestCommands
 from handlers.admin.discount_commands import DiscountCommands
+from handlers.admin.wholesale_delivery_commands import WholesaleDeliveryCommands
 from handlers.customer.order_commands import CustomerOrderCommands
 from handlers.customer.info_commands import InfoCommands
 from handlers.customer.auth_commands import AuthCommands
@@ -57,6 +58,7 @@ class BotService:
         self.user_commands = UserCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.test_commands = TestCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.discount_commands = DiscountCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        self.wholesale_delivery_commands = WholesaleDeliveryCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         # Customer handlers
         self.customer_order_commands = CustomerOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -74,6 +76,7 @@ class BotService:
             'user': self.user_commands,
             'test': self.test_commands,
             'discount': self.discount_commands,
+            'wholesale_delivery': self.wholesale_delivery_commands,
             'changelog': self.changelog_commands,
             'customer_order': self.customer_order_commands,
             'info': self.info_commands,
@@ -252,5 +255,7 @@ class BotService:
             return self.user_commands.handle_update_user_first_name(chat_id, [entity_id, text])
         elif edit_type == 'customer_last_name':
             return self.user_commands.handle_update_user_last_name(chat_id, [entity_id, text])
+        elif edit_type == 'incomplete_delivery':
+            return self.wholesale_delivery_commands.handle_incomplete_delivery_reply(chat_id, user_id, text, entity_id)
         
         return {'status': 'unknown_edit_type'}

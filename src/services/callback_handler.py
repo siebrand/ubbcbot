@@ -33,6 +33,10 @@ class CallbackHandler:
             if should_remove_keyboard:
                 self._edit_message_remove_keyboard(chat_id, message_id)
             
+            # Wholesale delivery callbacks
+            elif data.startswith('wd_'):
+                return self._handle_wholesale_delivery_callbacks(chat_id, user_id, data)
+            
             # Order callbacks
             if data.startswith('order_'):
                 parts = data.split('_')
@@ -307,3 +311,40 @@ class CallbackHandler:
         except Exception as e:
             logger.error(f"Error removing keyboard: {e}")
             return False
+    
+    def _handle_wholesale_delivery_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
+        """Handle wholesale delivery callbacks"""
+        if not self._is_admin(user_id):
+            from handlers.base_handler import BaseHandler
+            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            return base_handler._send_message(chat_id, base_handler._t('admin_only', user_id))
+        
+        parts = data.split(':')
+        
+        if parts[0] == 'wd_sup':  # Supplier selection
+            supplier_id = parts[1]
+            return self.handlers['wholesale_delivery'].handle_supplier_selection(chat_id, supplier_id)
+        elif parts[0] == 'wd_off':  # Offer selection
+            offer_id, supplier_id = int(parts[1]), parts[2]
+            return self.handlers['wholesale_delivery'].handle_offer_selection(chat_id, offer_id, supplier_id)
+        elif parts[0] == 'wd_box':  # Box selection
+            box_id, offer_id, supplier_id = parts[1], int(parts[2]), parts[3]
+            return self.handlers['wholesale_delivery'].handle_box_selection(chat_id, box_id, offer_id, supplier_id)
+        elif parts[0] == 'wd_action':  # Delivery action
+            action, box_id, offer_id, supplier_id = parts[1], parts[2], int(parts[3]), parts[4]
+            return self.handlers['wholesale_delivery'].handle_delivery_action(chat_id, action, box_id, offer_id, supplier_id)
+        elif parts[0] == 'wd_partial':  # Partial delivery action
+            action, box_id, received_units = parts[1], parts[2], int(parts[3])
+            return self.handlers['wholesale_delivery'].handle_partial_action(chat_id, action, box_id, received_units)
+        elif parts[0] == 'wd_back':  # Back navigation
+            target = parts[1]
+            args = parts[2:] if len(parts) > 2 else []
+            return self.handlers['wholesale_delivery'].handle_back_navigation(chat_id, target, *args)
+        
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        return base_handler._send_message(chat_id, base_handler._t('unknown_callback', user_id))
+    
+    def _is_admin(self, user_id: int) -> bool:
+        """Check if user is admin"""
+        return user_id == self.admin_user_id

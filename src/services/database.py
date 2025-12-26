@@ -654,6 +654,65 @@ class DynamoDBService:
             print(f"Error generating presigned URL: {e}")
             return None
     
+    def get_suppliers_with_ordered_offers(self) -> List[Supplier]:
+        """Get suppliers that have offers with ORDERED status"""
+        try:
+            # Get all ORDERED offers
+            response = self.offers_table.scan(
+                FilterExpression='#status = :status',
+                ExpressionAttributeNames={'#status': 'status'},
+                ExpressionAttributeValues={':status': 'ordered'}
+            )
+            
+            # Get unique supplier names
+            supplier_names = set()
+            for item in response.get('Items', []):
+                supplier_names.add(item['supplier_name'])
+            
+            # Get supplier objects
+            suppliers = []
+            for name in supplier_names:
+                supplier = self.get_supplier_by_name(name)
+                if supplier:
+                    suppliers.append(supplier)
+            
+            return suppliers
+        except Exception as e:
+            print(f"Error getting suppliers with ordered offers: {e}")
+            return []
+
+    def get_ordered_offers_by_supplier(self, supplier_name: str) -> List[Offer]:
+        """Get ORDERED offers for a specific supplier"""
+        try:
+            response = self.offers_table.scan(
+                FilterExpression='supplier_name = :supplier AND #status = :status',
+                ExpressionAttributeNames={'#status': 'status'},
+                ExpressionAttributeValues={
+                    ':supplier': supplier_name,
+                    ':status': 'ordered'
+                }
+            )
+            return [Offer(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting ordered offers by supplier: {e}")
+            return []
+
+    def get_boxes_by_offer_with_orders(self, offer_id: int) -> List[Box]:
+        """Get boxes for an offer that have orders"""
+        try:
+            boxes = self.get_boxes_by_offer(offer_id)
+            boxes_with_orders = []
+            
+            for box in boxes:
+                orders = self.get_orders_by_box(box.box_id)
+                if orders:  # Only include boxes that have orders
+                    boxes_with_orders.append(box)
+            
+            return boxes_with_orders
+        except Exception as e:
+            print(f"Error getting boxes with orders: {e}")
+            return []
+
     def delete_offer_images(self, offer_id: int) -> bool:
         """Delete all images for an offer from S3"""
         try:
