@@ -62,7 +62,11 @@ class BoxManagementHandler(OfferBaseHandler):
         # Paginate results
         page_items, total_pages = self._paginate_list(offer_boxes, page, 10)
         
-        message = self._t('box_status_title', page=page, total_pages=total_pages)
+        message = self._t('box_status_title', page=page, total_pages=total_pages) + "\n\n"
+        message += "```\n"
+        message += "Status  Offer                     Price   Units\n"
+        message += "------  ------------------------  ------  -----\n"
+        
         for offer, box in page_items:
             status_emoji = {
                 BoxStatus.OPEN.value: "🟢",
@@ -72,12 +76,14 @@ class BoxManagementHandler(OfferBaseHandler):
                 BoxStatus.DELIVERED.value: "✅"
             }.get(box.status, "❓")
             
-            # Check if box has orders ready for labeling
-            orders = self.db.get_orders_by_box(box.box_id)
-            ready_for_labeling = any(o.status == 'ready_for_labeling' for o in orders)
-            labeling_button = f" [Finish Labeling](tg://btn?data=finish_labeling_{box.box_id})" if ready_for_labeling else ""
+            # Truncate offer name to fit table
+            offer_name = offer.name[:24] if len(offer.name) > 24 else offer.name
+            price_str = f"€{offer.price_per_unit:.2f}"
+            units_str = f"{box.current_quantity}/{box.max_capacity}"
             
-            message += f"🍺 {offer.name} €{offer.price_per_unit:.2f}\n   {status_emoji} Box {box.box_id[:8]}: {box.current_quantity}/{box.max_capacity} ({box.status}){labeling_button}\n\n"
+            message += f"{status_emoji:<7}  {offer_name:<24}  {price_str:>6}  {units_str:>5}\n"
+        
+        message += "```"
         
         # Add pagination keyboard if needed
         keyboard = None
@@ -98,5 +104,5 @@ class BoxManagementHandler(OfferBaseHandler):
             else:
                 keyboard = {"inline_keyboard": labeling_buttons}
         
-        self._send_message(chat_id, message, reply_markup=keyboard)
+        self._send_message(chat_id, message, reply_markup=keyboard, parse_mode="Markdown")
         return {'status': 'success'}
