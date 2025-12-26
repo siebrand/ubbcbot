@@ -221,6 +221,12 @@ class BotService:
             # Edit callbacks
             elif data.startswith('edit_'):
                 parts = data.split('_')
+                
+                # Handle edit_offer callback (basic offer editing) - format: edit_offer_<id>
+                if len(parts) == 3 and parts[1] == 'offer':
+                    offer_id = parts[2]
+                    return self.offer_commands.handle_edit_offer(chat_id, [offer_id])
+                
                 if len(parts) >= 4:
                     # Handle special case for customer first/last name editing
                     if parts[1] == 'customer' and len(parts) == 5:
@@ -233,11 +239,6 @@ class BotService:
                     if parts[1] == 'offer' and parts[2] == 'details':
                         offer_id = parts[3]
                         return self.offer_commands.handle_edit_offer_details(chat_id, [offer_id])
-                    
-                    # Handle edit_offer callback (basic offer editing)
-                    if parts[1] == 'offer' and len(parts) == 3:
-                        offer_id = parts[2]
-                        return self.offer_commands.handle_edit_offer(chat_id, [offer_id])
                     
                     # Standard format: edit_{entity}_{field}_{id}
                     entity_type = parts[1]  # supplier, offer
