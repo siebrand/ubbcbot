@@ -271,5 +271,10 @@
   "enter_new_offer_price": "💰 Enter new price for offer {offer_id}:",
   "enter_new_offer_description": "📦 Enter new description for offer {offer_id}:",
   "enter_new_first_name": "📝 Enter new first name for customer:",
-  "enter_new_last_name": "📝 Enter new last name for customer:"
+  "enter_new_last_name": "📝 Enter new last name for customer:",
+  "status_sold_out": "SOLD OUT",
+  "status_ordered": "ORDERED",
+  "status_delivered": "DELIVERED",
+  "status_completed": "COMPLETED",
+  "status_inactive": "INACTIVE"
 }

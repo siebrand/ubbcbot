@@ -213,7 +213,15 @@ class InfoCommands(BaseHandler):
                         OfferStatus.INACTIVE.value: "❌"
                     }.get(status, "❓")
                     
-                    message += f"{status_emoji} {status.upper()}:\n"
+                    status_label = {
+                        OfferStatus.SOLD_OUT.value: self._t('status_sold_out', user_id=None),
+                        OfferStatus.ORDERED.value: self._t('status_ordered', user_id=None),
+                        OfferStatus.DELIVERED.value: self._t('status_delivered', user_id=None),
+                        OfferStatus.COMPLETED.value: self._t('status_completed', user_id=None),
+                        OfferStatus.INACTIVE.value: self._t('status_inactive', user_id=None)
+                    }.get(status, status.upper())
+                    
+                    message += f"{status_emoji} {status_label}:\n"
                     
                     for offer in status_offers:
                         total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
