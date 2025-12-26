@@ -177,5 +177,7 @@ class CommandRouter:
                 return self.handlers['discount'].handle_cancel_discount(admin_target_chat)
             elif command == '/discount_status':
                 return self.handlers['discount'].handle_discount_status(admin_target_chat)
+            elif command == '/changelog':
+                return self.handlers['changelog'].handle_changelog(admin_target_chat, user_id)
 
         return {'status': 'unknown_command'}
