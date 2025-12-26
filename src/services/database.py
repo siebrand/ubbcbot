@@ -322,6 +322,18 @@ class DynamoDBService:
             print(f"Error getting orders by offer: {e}")
             return []
 
+    def get_orders_by_box(self, box_id: str) -> List[Order]:
+        """Get all orders for a specific box"""
+        try:
+            response = self.orders_table.scan(
+                FilterExpression='box_id = :box_id',
+                ExpressionAttributeValues={':box_id': box_id}
+            )
+            return [Order(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting orders by box: {e}")
+            return []
+
     def get_active_discount(self) -> Optional[DiscountPeriod]:
         try:
             from datetime import datetime, UTC

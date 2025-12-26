@@ -25,6 +25,12 @@ class OrderStatus(Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
     CANCELLED = "cancelled"
+    RECEIVED_PARTIAL_DELAYED = "received_partial_delayed"
+    CANCELLED_UNAVAILABLE = "cancelled_unavailable"
+    READY_FOR_LABELING = "ready_for_labeling"
+    LABELING_COMPLETED = "labeling_completed"
+    AWAITING_PAYMENT = "awaiting_payment"
+    COMPLETED = "completed"
     DELIVERED = "delivered"
 
 class DiscountStatus(Enum):
@@ -88,6 +94,7 @@ class Order:
     box_id: str = ""
     offer_id: int = 0
     quantity: int = 1
+    received_quantity: int = 0
     unit_price: Decimal = Decimal('0.0')
     total_price: Decimal = Decimal('0.0')
     status: str = OrderStatus.PENDING.value
