@@ -536,21 +536,17 @@ class InfoCommands(BaseHandler):
             total_ordered = sum(order.quantity for order in active_orders)
             available = total_capacity - total_ordered
             
-            message += f"<b>🍺 {offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
+            message += f"<b>{offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
         else:
-            message += f"<b>🍺 {offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
+            message += f"<b>{offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
         
         # Show admin-only info
         if is_admin:
             message += f"📦 Box size: {offer.wholesale_box_size} units\n"
             message += f"🏭 Supplier: {offer.supplier_name}\n"
             message += f"📋 Status: {offer.status}\n"
-        
-        if offer.description:
-            if is_admin:
-                message += f"\n📝 Description:\n{offer.description}\n"
-            else:
-                message += f"\n{offer.description}\n"
+
+        message += f"\n{offer.description}\n"
         
         # Add order buttons for active offers
         reply_markup = None
