@@ -74,10 +74,12 @@ class InfoCommands(BaseHandler):
             if not self._is_admin(user_id) and section in ["suppliers", "offers", "users"]:
                 message = self._t('admin_only_section')
             else:
+                available_sections = ["general", "orders"]
                 if self._is_admin(user_id):
-                    message = self._t('unknown_section_admin', section=section)
-                else:
-                    message = self._t('unknown_section', section=section)
+                    available_sections.extend(["suppliers", "offers", "users"])
+                
+                sections_text = ", ".join(available_sections)
+                message = f"❌ Unknown section: {section}\n\nAvailable sections: {sections_text}"
         
         self._send_message(chat_id, message)
         return {'status': 'success'}
