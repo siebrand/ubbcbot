@@ -51,7 +51,8 @@ class TestCommands(BaseHandler):
                     name=offer_data["name"],
                     price_per_unit=Decimal(str(offer_data["price"])),
                     wholesale_box_size=offer_data["box_size"],
-                    min_quantity_breakeven=max(1, int(offer_data["box_size"] * 0.8))
+                    min_quantity_breakeven=max(1, int(offer_data["box_size"] * 0.8)),
+                    status='active'
                 )
                 
                 if self.db.create_offer(offer):

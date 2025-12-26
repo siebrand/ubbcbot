@@ -25,6 +25,7 @@
 /list_suppliers
 /box_status
 ```
+*Expected: Should show 8 active offers with boxes, each having 1/X capacity from admin auto-orders*
 
 ---
 
