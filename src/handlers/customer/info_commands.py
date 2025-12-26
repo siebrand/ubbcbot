@@ -527,17 +527,8 @@ class InfoCommands(BaseHandler):
         if is_draft and is_admin:
             message = f"👁️ PREVIEW - How offer will look:\n\n"
         
-        message += f"🍺 {offer.name}\n\n"
-        message += f"🏷️ Offer ID: {offer.offer_id}\n"
-        message += f"💰 Price: €{offer.price_per_unit:.2f} per unit\n"
-        
-        # Show box size and supplier only to admins
-        if is_admin:
-            message += f"📦 Box size: {offer.wholesale_box_size} units\n"
-            message += f"🏭 Supplier: {offer.supplier_name}\n"
-        
         if offer.status == OfferStatus.ACTIVE.value:
-            # Show availability for active offers
+            # Get availability for active offers
             boxes = self.db.get_boxes_by_offer(offer.offer_id)
             total_capacity = sum(box.max_capacity for box in boxes)
             all_orders = self.db.get_orders_by_offer(offer.offer_id)
@@ -545,8 +536,14 @@ class InfoCommands(BaseHandler):
             total_ordered = sum(order.quantity for order in active_orders)
             available = total_capacity - total_ordered
             
-            message += f"📋 Available: {available}/{total_capacity} units\n"
+            message += f"🍺 {offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})\n\n"
         else:
+            message += f"🍺 {offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}\n\n"
+        
+        # Show admin-only info
+        if is_admin:
+            message += f"📦 Box size: {offer.wholesale_box_size} units\n"
+            message += f"🏭 Supplier: {offer.supplier_name}\n"
             message += f"📋 Status: {offer.status}\n"
         
         if offer.description:
