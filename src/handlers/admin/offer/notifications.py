@@ -6,27 +6,22 @@ class NotificationHandler(OfferBaseHandler):
     """Handler for offer notifications and announcements"""
     
     def _send_rich_offer_message(self, chat_id: int, offer, preview: bool = False, force_group: bool = False):
-        """Send rich offer message with description and images"""
-        # Build message text
-        if preview:
-            message = self._t('preview_how_offer_looks')
-        else:
-            message = self._t('new_offer_available',
-                offer_id=offer.offer_id,
-                name=offer.name,
-                price=offer.price_per_unit,
-                box_size=offer.wholesale_box_size,
-                supplier_name=offer.supplier_name
-            )
+        """Send rich offer message using offer_details formatting"""
+        # Import here to avoid circular imports
+        from handlers.customer.info_commands import InfoCommands
         
-        if offer.description:
-            message += f"\n{offer.description}\n"
-        
+        # Send announcement header for non-preview
         if not preview:
-            message += "\n" + self._t('order_with_command', offer_id=offer.offer_id)
+            header_message = self._t('new_offer_available')
+            self._send_message(chat_id, header_message, force_group=force_group)
         
-        # Create inline keyboard with order buttons (only for non-preview)
-        reply_markup = None
+        # Create info handler instance to reuse offer details formatting
+        info_handler = InfoCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        # Use the existing rich offer details method
+        info_handler._send_rich_offer_details(chat_id, offer, user_id=999999)  # Use fake non-admin user ID
+        
+        # Add order buttons for non-preview announcements
         if not preview:
             reply_markup = {
                 "inline_keyboard": [
@@ -36,27 +31,13 @@ class NotificationHandler(OfferBaseHandler):
                     ]
                 ]
             }
-        
-        # Send images first if available
-        if offer.images:
-            for image_url in offer.images:
-                try:
-                    # Generate presigned URL for S3 images
-                    if 's3.amazonaws.com' in image_url:
-                        presigned_url = self.db.get_presigned_url(image_url)
-                        if presigned_url:
-                            image_url = presigned_url
-                    
-                    self._send_photo(chat_id, image_url, force_group=force_group)
-                except Exception as e:
-                    print(f"Failed to send image {image_url}: {e}")
-        
-        # Send text message
-        result = self._send_message(chat_id, message, reply_markup=reply_markup, force_group=force_group, parse_mode="HTML")
-        return result
-    
+            
+            # Send order buttons message
+            button_message = self._t('order_with_command', offer_id=offer.offer_id)
+            self._send_message(chat_id, button_message, reply_markup=reply_markup)
+
     def _notify_subscribers_rich(self, offer):
-        """Send rich offer notification to all subscribers in batches and store message IDs"""
+        """Send rich offer notification to all subscribers in batches using offer_details formatting"""
         # Get all approved customers
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
         subscribers = [c for c in customers if getattr(c, 'subscribed_to_offers', False)]
@@ -68,46 +49,8 @@ class NotificationHandler(OfferBaseHandler):
             
             for customer in batch:
                 try:
-                    # Send images first
-                    if offer.images:
-                        for image_url in offer.images:
-                            try:
-                                self._send_photo(customer.telegram_user_id, image_url)
-                            except Exception as e:
-                                print(f"Failed to send image to subscriber {customer.customer_id}: {e}")
-                    
-                    # Send text message with order buttons
-                    message = self._t('new_offer_available',
-                        offer_id=offer.offer_id,
-                        name=offer.name,
-                        price=offer.price_per_unit,
-                        box_size=offer.wholesale_box_size,
-                        supplier_name=offer.supplier_name
-                    )
-                    
-                    if offer.description:
-                        message += f"\n{offer.description}\n"
-                    
-                    message += "\n" + self._t('order_with_command', offer_id=offer.offer_id)
-                    
-                    reply_markup = {
-                        "inline_keyboard": [
-                            [
-                                {"text": self._t('order_1'), "callback_data": f"order_{offer.offer_id}_1"},
-                                {"text": self._t('order_2'), "callback_data": f"order_{offer.offer_id}_2"}
-                            ]
-                        ]
-                    }
-                    
-                    result = self._send_message(customer.telegram_user_id, message, reply_markup=reply_markup)
-                    if result.get('success') and result.get('message_id'):
-                        # Store notification message for later deletion
-                        notification = NotificationMessage(
-                            offer_id=offer.offer_id,
-                            chat_id=customer.telegram_user_id,
-                            message_id=result['message_id']
-                        )
-                        self.db.create_notification_message(notification)
+                    # Use the same rich offer message method for consistency
+                    self._send_rich_offer_message(customer.telegram_user_id, offer, preview=False, force_group=False)
                 except Exception as e:
                     # Log error but continue with other subscribers
                     import logging

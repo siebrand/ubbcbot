@@ -149,7 +149,7 @@
   "box_added": "✅ Added new box for offer {offer_id}",
   "failed_create_box": "❌ Failed to create box",
   "box_status_title": "📦 Box Status (Page {page}/{total_pages}):",
-  "new_offer_available": "🍺 New offer available!\n\n[{offer_id}] {name}\nPrice: €{price:.2f} per unit\nBox size: {box_size} units\nSupplier: {supplier_name}",
+  "new_offer_available": "🍺 New offer available!",
   "order_with_command": "Order with: /order {offer_id} [quantity]",
   "order_1": "🍺 Order 1",
   "order_2": "🍺🍺 Order 2",

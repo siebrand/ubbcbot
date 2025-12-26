@@ -148,7 +148,7 @@
   "box_added": "✅ Nieuwe colli toegevoegd voor aanbieding {offer_id}",
   "failed_create_box": "❌ Kon colli niet aanmaken",
   "box_status_title": "📦 Collistatus (Pagina {page}/{total_pages}):",
-  "new_offer_available": "🍺 Nieuwe aanbieding beschikbaar!\n\n[{offer_id}] {name}\nPrijs: €{price:.2f} per stuk\nAantal per colli: {box_size} stuks\nLeverancier: {supplier_name}",
+  "new_offer_available": "🍺 Nieuwe aanbieding beschikbaar!",
   "order_with_command": "Bestel met: /order {offer_id} [aantal]",
   "order_1": "🍺 Bestel 1",
   "order_2": "🍺🍺 Bestel 2",
