@@ -471,25 +471,25 @@ class InfoCommands(BaseHandler):
                 self._send_message(chat_id, "❌ Offer not available")
                 return {'status': 'offer_not_available'}
             
+            # Send images first if available
+            if offer.images:
+                for image_url in offer.images:
+                    try:
+                        # Generate presigned URL for S3 images
+                        if 's3.amazonaws.com' in image_url:
+                            presigned_url = self.db.get_presigned_url(image_url)
+                            if presigned_url:
+                                image_url = presigned_url
+                        
+                        self._send_photo(chat_id, image_url)
+                    except Exception as e:
+                        print(f"Failed to send image {image_url}: {e}")
+            
             # Send rich offer details
             if show_as_user:
                 # Show as regular user would see it
                 self._send_rich_offer_details(chat_id, offer, user_id=999999)  # Fake non-admin user ID
             else:
-                # Send images first if available
-                if offer.images:
-                    for image_url in offer.images:
-                        try:
-                            # Generate presigned URL for S3 images
-                            if 's3.amazonaws.com' in image_url:
-                                presigned_url = self.db.get_presigned_url(image_url)
-                                if presigned_url:
-                                    image_url = presigned_url
-                            
-                            self._send_photo(chat_id, image_url)
-                        except Exception as e:
-                            print(f"Failed to send image {image_url}: {e}")
-                
                 self._send_rich_offer_details(chat_id, offer, user_id)
             
             # Add admin action buttons for draft offers
