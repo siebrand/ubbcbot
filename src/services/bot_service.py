@@ -14,10 +14,10 @@ from handlers.admin.order_commands import AdminOrderCommands
 from handlers.admin.user_commands import UserCommands
 from handlers.admin.test_commands import TestCommands
 from handlers.admin.discount_commands import DiscountCommands
-from handlers.admin.changelog_commands import AdminChangelogCommands
 from handlers.customer.order_commands import CustomerOrderCommands
 from handlers.customer.info_commands import InfoCommands
 from handlers.customer.auth_commands import AuthCommands
+from handlers.customer.changelog_commands import ChangelogCommands
 
 logger = logging.getLogger()
 
@@ -57,12 +57,12 @@ class BotService:
         self.user_commands = UserCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.test_commands = TestCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.discount_commands = DiscountCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        self.changelog_commands = AdminChangelogCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         # Customer handlers
         self.customer_order_commands = CustomerOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.info_commands = InfoCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.auth_commands = AuthCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        self.changelog_commands = ChangelogCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
     
     def _init_services(self):
         """Initialize service components"""

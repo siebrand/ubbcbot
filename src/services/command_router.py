@@ -96,6 +96,8 @@ class CommandRouter:
             return self.handlers['info'].handle_offer_details(target_chat, user_id, parts[1:])
         elif command == '/confirm_order':
             return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, parts[1:])
+        elif command == '/changelog':
+            return self.handlers['changelog'].handle_changelog(target_chat, user_id)
 
         # Admin-only commands
         if self._is_admin(user_id):
@@ -177,7 +179,5 @@ class CommandRouter:
                 return self.handlers['discount'].handle_cancel_discount(admin_target_chat)
             elif command == '/discount_status':
                 return self.handlers['discount'].handle_discount_status(admin_target_chat)
-            elif command == '/changelog':
-                return self.handlers['changelog'].handle_changelog(admin_target_chat, user_id)
 
         return {'status': 'unknown_command'}

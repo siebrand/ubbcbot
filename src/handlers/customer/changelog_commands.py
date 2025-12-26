@@ -1,7 +1,7 @@
 from typing import Dict, Any
 from handlers.base_handler import BaseHandler
 
-class AdminChangelogCommands(BaseHandler):
+class ChangelogCommands(BaseHandler):
     def handle_changelog(self, chat_id: int, user_id: int) -> Dict[str, Any]:
         """Handle /changelog command"""
         changelog = """📋 **UBBC Bot Changelog**

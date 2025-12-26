@@ -166,6 +166,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/offer_details <offer_id>` - View detailed offer information
 - `/subscribe` - Subscribe to new offer notifications
 - `/unsubscribe` - Unsubscribe from offer notifications
+- `/changelog` - View bot updates and feature changes
 
 ## Architecture
 
