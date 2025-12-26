@@ -137,8 +137,13 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/retire_supplier <name>` - Retire supplier (no longer available for new offers)
 - `/list_suppliers [active|retired|all]` - View suppliers by status (default: active, paginated)
 - `/edit_supplier <name>` - Edit supplier details with inline keyboard
+- `/update_supplier_name <supplier_id> <new_name>` - Update supplier name
+- `/update_supplier_contact <supplier_id> <email>` - Update supplier contact email
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create draft beer offer
 - `/offer_details <offer_id>` - View and edit offer details
+- `/update_offer_name <offer_id> <new_name>` - Update offer name
+- `/update_offer_price <offer_id> <new_price>` - Update offer price
+- `/update_offer_description <offer_id> <description>` - Update offer description
 - `/publish_offer <offer_id>` - Publish draft offer and announce to customers
 - `/preview_offer <offer_id>` - Preview how offer will appear when published
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
@@ -156,6 +161,11 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/reject_user <name_or_username>` - Reject user
 - `/user_status <name_or_username>` - Check user status
 - `/update_user <username> <new_first_name> [new_last_name]` - Update customer name
+- `/update_user_first_name <customer_id> <new_first_name>` - Update customer first name
+- `/update_user_last_name <customer_id> <new_last_name>` - Update customer last name
+- `/create_discount <percentage> [hours]` - Create discount (percentage 0-100, optional duration)
+- `/cancel_discount` - Cancel active discount
+- `/discount_status` - View current discount status
 
 ### Customer Commands
 - `/start` - Register and view help

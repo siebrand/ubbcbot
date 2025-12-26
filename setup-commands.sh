@@ -42,8 +42,13 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"retire_supplier\", \"description\": \"Retire supplier\"},
          {\"command\": \"list_suppliers\", \"description\": \"View all suppliers\"},
          {\"command\": \"edit_supplier\", \"description\": \"Edit supplier details\"},
+         {\"command\": \"update_supplier_name\", \"description\": \"Update supplier name\"},
+         {\"command\": \"update_supplier_contact\", \"description\": \"Update supplier contact\"},
          {\"command\": \"create_offer\", \"description\": \"Create draft offer\"},
          {\"command\": \"offer_details\", \"description\": \"View and edit offer details\"},
+         {\"command\": \"update_offer_name\", \"description\": \"Update offer name\"},
+         {\"command\": \"update_offer_price\", \"description\": \"Update offer price\"},
+         {\"command\": \"update_offer_description\", \"description\": \"Update offer description\"},
          {\"command\": \"publish_offer\", \"description\": \"Publish draft offer\"},
          {\"command\": \"preview_offer\", \"description\": \"Preview offer appearance\"},
          {\"command\": \"cancel_offer\", \"description\": \"Cancel offer and all orders\"},
@@ -60,7 +65,12 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"approve_user\", \"description\": \"Approve user\"},
          {\"command\": \"reject_user\", \"description\": \"Reject user\"},
          {\"command\": \"user_status\", \"description\": \"Check user status\"},
-         {\"command\": \"update_user\", \"description\": \"Update user name\"}
+         {\"command\": \"update_user\", \"description\": \"Update user name\"},
+         {\"command\": \"update_user_first_name\", \"description\": \"Update user first name\"},
+         {\"command\": \"update_user_last_name\", \"description\": \"Update user last name\"},
+         {\"command\": \"create_discount\", \"description\": \"Create discount\"},
+         {\"command\": \"cancel_discount\", \"description\": \"Cancel discount\"},
+         {\"command\": \"discount_status\", \"description\": \"View discount status\"}
        ],
        \"scope\": {\"type\": \"chat_administrators\", \"chat_id\": \"$DEFAULT_GROUP_ID\"}
      }" | jq .
