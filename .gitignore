@@ -29,6 +29,7 @@ wheels/
 .venv
 env/
 venv/
+test_env/
 ENV/
 env.bak/
 venv.bak/
