@@ -11,41 +11,37 @@ class OfferManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('usage_fulfill_offer'))
             return {'status': 'invalid_args'}
 
-        try:
-            offer_id = int(args[0])
-            offer = self.db.get_offer(offer_id)
+        offer, error = self._validate_and_get_offer(args, chat_id)
+        if error:
+            return error
             
-            if not offer:
-                self._send_message(chat_id, self._t('offer_not_found'))
-                return {'status': 'offer_not_found'}
-            
-            if offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, self._t('offer_not_active'))
-                return {'status': 'offer_not_active'}
-            
-            # Get all pending orders for this offer, sorted by date ascending
-            all_orders = self.db.get_orders_by_offer(offer_id)
-            pending_orders = [o for o in all_orders if o.status == 'pending']
-            pending_orders.sort(key=lambda x: x.created_at)
-            
-            if not pending_orders:
-                self._send_message(chat_id, self._t('no_pending_orders'))
-                return {'status': 'no_pending_orders'}
-            
-            # Calculate boxes needed
-            total_units = sum(order.quantity for order in pending_orders)
-            boxes_needed = (total_units + offer.wholesale_box_size - 1) // offer.wholesale_box_size  # Ceiling division
-            
-            # Show order summary
-            message = self._t('fulfillment_summary',
-                offer_id=offer_id,
-                name=offer.name,
-                price=offer.price_per_unit,
-                box_size=offer.wholesale_box_size,
-                total_units=total_units,
-                boxes_needed=boxes_needed,
-                order_count=len(pending_orders)
-            )
+        if offer.status != OfferStatus.ACTIVE.value:
+            self._send_message(chat_id, self._t('offer_not_active'))
+            return {'status': 'offer_not_active'}
+        
+        # Get all pending orders for this offer, sorted by date ascending
+        all_orders = self.db.get_orders_by_offer(offer.offer_id)
+        pending_orders = [o for o in all_orders if o.status == 'pending']
+        pending_orders.sort(key=lambda x: x.created_at)
+        
+        if not pending_orders:
+            self._send_message(chat_id, self._t('no_pending_orders'))
+            return {'status': 'no_pending_orders'}
+        
+        # Calculate boxes needed
+        total_units = sum(order.quantity for order in pending_orders)
+        boxes_needed = (total_units + offer.wholesale_box_size - 1) // offer.wholesale_box_size  # Ceiling division
+        
+        # Show order summary
+        message = self._t('fulfillment_summary',
+            offer_id=offer.offer_id,
+            name=offer.name,
+            price=offer.price_per_unit,
+            box_size=offer.wholesale_box_size,
+            total_units=total_units,
+            boxes_needed=boxes_needed,
+            order_count=len(pending_orders)
+        )
             
             for i, order in enumerate(pending_orders[:10], 1):  # Show first 10
                 customer = self.db.get_customer(order.customer_id)
@@ -60,17 +56,13 @@ class OfferManagementHandler(OfferBaseHandler):
             # Add inline keyboard for confirmation
             keyboard = {
                 "inline_keyboard": [[
-                    {"text": self._t('fulfill_with_boxes', boxes=boxes_needed), "callback_data": f"confirm_fulfill_{offer_id}_{boxes_needed}"},
+                    {"text": self._t('fulfill_with_boxes', boxes=boxes_needed), "callback_data": f"confirm_fulfill_{offer.offer_id}_{boxes_needed}"},
                     {"text": self._t('cancel'), "callback_data": "cancel_action"}
                 ]]
             }
             
             self._send_message(chat_id, message, reply_markup=keyboard)
             return {'status': 'success'}
-            
-        except ValueError:
-            self._send_message(chat_id, self._t('invalid_offer_id'))
-            return {'status': 'invalid_format'}
     
     def handle_confirm_fulfill(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_fulfill command"""
@@ -78,29 +70,28 @@ class OfferManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('usage_confirm_fulfill'))
             return {'status': 'invalid_args'}
         
-        try:
-            offer_id = int(args[0])
-            boxes_ordered = int(args[1])
+        offer, error = self._validate_and_get_offer(args, chat_id)
+        if error:
+            return error
             
-            if boxes_ordered <= 0:
-                self._send_message(chat_id, self._t('boxes_must_positive'))
-                return {'status': 'invalid_quantity'}
+        boxes_ordered, error = self._parse_int_arg(args[1], 'invalid_format', chat_id)
+        if error:
+            return error
             
-            offer = self.db.get_offer(offer_id)
-            if not offer:
-                self._send_message(chat_id, self._t('offer_not_found'))
-                return {'status': 'offer_not_found'}
-            
-            # Get pending orders sorted by date ascending (oldest first)
-            all_orders = self.db.get_orders_by_offer(offer_id)
-            pending_orders = [o for o in all_orders if o.status == 'pending']
-            pending_orders.sort(key=lambda x: x.created_at)
-            
-            units_available = boxes_ordered * offer.wholesale_box_size
-            units_allocated = 0
-            fulfilled_orders = []
-            cancelled_orders = []
-            updated_orders = []
+        if boxes_ordered <= 0:
+            self._send_message(chat_id, self._t('boxes_must_positive'))
+            return {'status': 'invalid_quantity'}
+        
+        # Get pending orders sorted by date ascending (oldest first)
+        all_orders = self.db.get_orders_by_offer(offer.offer_id)
+        pending_orders = [o for o in all_orders if o.status == 'pending']
+        pending_orders.sort(key=lambda x: x.created_at)
+        
+        units_available = boxes_ordered * offer.wholesale_box_size
+        units_allocated = 0
+        fulfilled_orders = []
+        cancelled_orders = []
+        updated_orders = []
             
             # Process orders from oldest to newest
             for order in pending_orders:
@@ -208,7 +199,7 @@ class OfferManagementHandler(OfferBaseHandler):
             # Send summary to admin
             fulfilled_units = sum(order.quantity for order in fulfilled_orders)
             summary = self._t('offer_fulfilled_summary',
-                offer_id=offer_id,
+                offer_id=offer.offer_id,
                 boxes=boxes_ordered,
                 fulfilled_orders=len(fulfilled_orders),
                 fulfilled_units=fulfilled_units
@@ -249,10 +240,6 @@ class OfferManagementHandler(OfferBaseHandler):
             
             self._send_message(chat_id, summary)
             return {'status': 'success'}
-            
-        except ValueError:
-            self._send_message(chat_id, self._t('invalid_format'))
-            return {'status': 'invalid_format'}
     
     def handle_cancel_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /cancel_offer command"""
@@ -260,50 +247,42 @@ class OfferManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('usage_cancel_offer'))
             return {'status': 'invalid_args'}
 
-        try:
-            offer_id = int(args[0])
-            offer = self.db.get_offer(offer_id)
-            
-            if not offer:
-                self._send_message(chat_id, self._t('offer_not_found'))
-                return {'status': 'offer_not_found'}
-            
-            if offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, self._t('offer_not_active'))
-                return {'status': 'offer_not_active'}
-            
-            # Get all orders for this offer
-            all_orders = self.db.get_orders_by_offer(offer_id)
-            active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
-            
-            if not active_orders:
-                # No active orders, just cancel the offer
-                self.db.update_offer(offer_id, {'status': OfferStatus.INACTIVE.value})
-                self._delete_offer_boxes(offer_id)
-                self._send_message(chat_id, self._t('offer_cancelled_no_orders', offer_id=offer_id))
-                return {'status': 'success'}
-            
-            # Show confirmation with order details
-            message = self._t('cancel_offer_warning',
-                offer_id=offer_id,
-                name=offer.name,
-                order_count=len(active_orders)
-            )
-            
-            # Add inline keyboard for confirmation
-            keyboard = {
-                "inline_keyboard": [[
-                    {"text": self._t('confirm_cancel'), "callback_data": f"confirm_cancel_offer_{offer_id}"},
-                    {"text": self._t('keep_offer'), "callback_data": "cancel_action"}
-                ]]
-            }
-            
-            self._send_message(chat_id, message, reply_markup=keyboard)
-            return {'status': 'confirmation_required'}
-            
-        except ValueError:
-            self._send_message(chat_id, self._t('invalid_offer_id'))
-            return {'status': 'invalid_format'}
+        offer, error = self._validate_and_get_offer(args, chat_id)
+        if error:
+            return error
+        
+        if offer.status != OfferStatus.ACTIVE.value:
+            self._send_message(chat_id, self._t('offer_not_active'))
+            return {'status': 'offer_not_active'}
+        
+        # Get all orders for this offer
+        all_orders = self.db.get_orders_by_offer(offer.offer_id)
+        active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
+        
+        if not active_orders:
+            # No active orders, just cancel the offer
+            self.db.update_offer(offer.offer_id, {'status': OfferStatus.INACTIVE.value})
+            self._delete_offer_boxes(offer.offer_id)
+            self._send_message(chat_id, self._t('offer_cancelled_no_orders', offer_id=offer.offer_id))
+            return {'status': 'success'}
+        
+        # Show confirmation with order details
+        message = self._t('cancel_offer_warning',
+            offer_id=offer.offer_id,
+            name=offer.name,
+            order_count=len(active_orders)
+        )
+        
+        # Add inline keyboard for confirmation
+        keyboard = {
+            "inline_keyboard": [[
+                {"text": self._t('confirm_cancel'), "callback_data": f"confirm_cancel_offer_{offer.offer_id}"},
+                {"text": self._t('keep_offer'), "callback_data": "cancel_action"}
+            ]]
+        }
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'confirmation_required'}
     
     def handle_confirm_cancel_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_cancel_offer command"""
@@ -311,48 +290,40 @@ class OfferManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('usage_confirm_cancel_offer'))
             return {'status': 'invalid_args'}
         
-        try:
-            offer_id = int(args[0])
-            offer = self.db.get_offer(offer_id)
+        offer, error = self._validate_and_get_offer(args, chat_id)
+        if error:
+            return error
             
-            if not offer:
-                self._send_message(chat_id, self._t('offer_not_found'))
-                return {'status': 'offer_not_found'}
-            
-            # Get all pending orders
-            all_orders = self.db.get_orders_by_offer(offer_id)
-            active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
-            
-            # Cancel all active orders and notify customers
-            cancelled_count = 0
-            for order in active_orders:
-                if self.db.update_order(order.order_id, {'status': OrderStatus.CANCELLED.value}):
-                    cancelled_count += 1
-                    self._notify_customer_cancellation(order, offer)
-            
-            # Delete all boxes
-            deleted_boxes = self._delete_offer_boxes(offer_id)
-            
-            # Delete notification messages for cancelled offer
-            self._cleanup_offer_notifications(offer_id)
-            
-            # Cancel the offer
-            self.db.update_offer(offer_id, {'status': OfferStatus.INACTIVE.value})
-            
-            # Send summary
-            summary = self._t('offer_cancelled_summary',
-                offer_id=offer_id,
-                cancelled_count=cancelled_count,
-                deleted_boxes=deleted_boxes,
-                notified_count=cancelled_count
-            )
-            
-            self._send_message(chat_id, summary)
-            return {'status': 'success'}
-            
-        except ValueError:
-            self._send_message(chat_id, self._t('invalid_offer_id'))
-            return {'status': 'invalid_format'}
+        # Get all pending orders
+        all_orders = self.db.get_orders_by_offer(offer.offer_id)
+        active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
+        
+        # Cancel all active orders and notify customers
+        cancelled_count = 0
+        for order in active_orders:
+            if self.db.update_order(order.order_id, {'status': OrderStatus.CANCELLED.value}):
+                cancelled_count += 1
+                self._notify_customer_cancellation(order, offer)
+        
+        # Delete all boxes
+        deleted_boxes = self._delete_offer_boxes(offer.offer_id)
+        
+        # Delete notification messages for cancelled offer
+        self._cleanup_offer_notifications(offer.offer_id)
+        
+        # Cancel the offer
+        self.db.update_offer(offer.offer_id, {'status': OfferStatus.INACTIVE.value})
+        
+        # Send summary
+        summary = self._t('offer_cancelled_summary',
+            offer_id=offer.offer_id,
+            cancelled_count=cancelled_count,
+            deleted_boxes=deleted_boxes,
+            notified_count=cancelled_count
+        )
+        
+        self._send_message(chat_id, summary)
+        return {'status': 'success'}
     
     def _delete_offer_boxes(self, offer_id: int) -> int:
         """Delete all boxes for an offer and return count"""

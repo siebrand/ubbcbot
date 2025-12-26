@@ -238,6 +238,46 @@ class BaseHandler:
         
         return page_items, total_pages
     
+    def _validate_and_get_offer(self, args: list, chat_id: int):
+        """Validate offer ID and return offer or send error"""
+        if not args:
+            return None, {'status': 'invalid_args'}
+        
+        try:
+            offer_id = int(args[0])
+            offer = self.db.get_offer(offer_id)
+            if not offer:
+                self._send_message(chat_id, self._t('offer_not_found'))
+                return None, {'status': 'offer_not_found'}
+            return offer, None
+        except ValueError:
+            self._send_message(chat_id, self._t('invalid_offer_id'))
+            return None, {'status': 'invalid_format'}
+    
+    def _validate_and_get_customer(self, args: list, chat_id: int):
+        """Validate customer ID and return customer or send error"""
+        if not args:
+            return None, {'status': 'invalid_args'}
+        
+        try:
+            customer_id = int(args[0])
+            customer = self.db.get_customer(customer_id)
+            if not customer:
+                self._send_message(chat_id, self._t('customer_not_found'))
+                return None, {'status': 'customer_not_found'}
+            return customer, None
+        except ValueError:
+            self._send_message(chat_id, self._t('invalid_customer_id'))
+            return None, {'status': 'invalid_format'}
+    
+    def _parse_int_arg(self, arg: str, error_key: str, chat_id: int):
+        """Parse integer argument or send error"""
+        try:
+            return int(arg), None
+        except ValueError:
+            self._send_message(chat_id, self._t(error_key))
+            return None, {'status': 'invalid_format'}
+    
     def _send_photo(self, chat_id: int, photo_url: str, caption: str = None, force_group: bool = False) -> dict:
         """Send photo to Telegram chat"""
         import requests
