@@ -194,8 +194,8 @@ class InfoCommands(BaseHandler):
             if draft_offers:
                 message += "📝 DRAFT OFFERS:\n"
                 for offer in draft_offers:
-                    escaped_name = offer.name.replace('[', '\\[').replace(']', '\\]').replace('(', '\\(').replace(')', '\\)').replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
-                    message += f"📝 [{offer.offer_id}] {escaped_name} €{offer.price_per_unit:.2f} (draft)\n"
+                    bot_username = self._get_bot_username()
+                    message += f"📝 <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a> {offer.name} €{offer.price_per_unit:.2f} (draft)\n"
                 message += "\n"
             
             # Show active offers
@@ -218,7 +218,7 @@ class InfoCommands(BaseHandler):
                         display_price = original_price * (1 - active_discount.discount_percentage / 100)
                     
                     bot_username = self._get_bot_username()
-                    message += f"🍺 <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>[{offer.offer_id}]</a> {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
+                    message += f"🍺 <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a> {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
                 message += "\n"
             
             # Show other status offers
@@ -277,7 +277,7 @@ class InfoCommands(BaseHandler):
                         display_price = original_price * (1 - active_discount.discount_percentage / 100)
                     
                     bot_username = self._get_bot_username()
-                    message += f"🍺 <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>[{offer.offer_id}]</a> {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
+                    message += f"🍺 <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a> {offer.name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
             
             if not active_found:
                 self._send_message(chat_id, "🍺 No active offers available")
