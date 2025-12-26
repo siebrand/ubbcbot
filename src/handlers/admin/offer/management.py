@@ -42,27 +42,27 @@ class OfferManagementHandler(OfferBaseHandler):
             boxes_needed=boxes_needed,
             order_count=len(pending_orders)
         )
-            
-            for i, order in enumerate(pending_orders[:10], 1):  # Show first 10
-                customer = self.db.get_customer(order.customer_id)
-                customer_name = customer.first_name if customer else "Unknown"
-                from utils.timezone import to_cet_string
-                order_date = to_cet_string(order.created_at, '%m-%d %H:%M')
-                message += f"{i}. {customer_name}: {order.quantity} units [{order_date}]\n"
-            
-            if len(pending_orders) > 10:
-                message += f"... and {len(pending_orders) - 10} more orders\n"
-            
-            # Add inline keyboard for confirmation
-            keyboard = {
-                "inline_keyboard": [[
-                    {"text": self._t('fulfill_with_boxes', boxes=boxes_needed), "callback_data": f"confirm_fulfill_{offer.offer_id}_{boxes_needed}"},
-                    {"text": self._t('cancel'), "callback_data": "cancel_action"}
-                ]]
-            }
-            
-            self._send_message(chat_id, message, reply_markup=keyboard)
-            return {'status': 'success'}
+        
+        for i, order in enumerate(pending_orders[:10], 1):  # Show first 10
+            customer = self.db.get_customer(order.customer_id)
+            customer_name = customer.first_name if customer else "Unknown"
+            from utils.timezone import to_cet_string
+            order_date = to_cet_string(order.created_at, '%m-%d %H:%M')
+            message += f"{i}. {customer_name}: {order.quantity} units [{order_date}]\n"
+        
+        if len(pending_orders) > 10:
+            message += f"... and {len(pending_orders) - 10} more orders\n"
+        
+        # Add inline keyboard for confirmation
+        keyboard = {
+            "inline_keyboard": [[
+                {"text": self._t('fulfill_with_boxes', boxes=boxes_needed), "callback_data": f"confirm_fulfill_{offer.offer_id}_{boxes_needed}"},
+                {"text": self._t('cancel'), "callback_data": "cancel_action"}
+            ]]
+        }
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
     
     def handle_confirm_fulfill(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_fulfill command"""
@@ -92,49 +92,49 @@ class OfferManagementHandler(OfferBaseHandler):
         fulfilled_orders = []
         cancelled_orders = []
         updated_orders = []
+        
+        # Process orders from oldest to newest
+        for order in pending_orders:
+            remaining_capacity = units_available - units_allocated
             
-            # Process orders from oldest to newest
-            for order in pending_orders:
-                remaining_capacity = units_available - units_allocated
-                
-                if remaining_capacity <= 0:
-                    # No more capacity - cancel this order
-                    cancelled_orders.append(order)
-                elif order.quantity <= remaining_capacity:
-                    # Order fits completely
-                    fulfilled_orders.append(order)
-                    units_allocated += order.quantity
-                else:
-                    # Partial fulfillment - reduce order size
-                    old_quantity = order.quantity
-                    new_quantity = remaining_capacity
-                    updated_orders.append((order, old_quantity, new_quantity))
-                    units_allocated += new_quantity
+            if remaining_capacity <= 0:
+                # No more capacity - cancel this order
+                cancelled_orders.append(order)
+            elif order.quantity <= remaining_capacity:
+                # Order fits completely
+                fulfilled_orders.append(order)
+                units_allocated += order.quantity
+            else:
+                # Partial fulfillment - reduce order size
+                old_quantity = order.quantity
+                new_quantity = remaining_capacity
+                updated_orders.append((order, old_quantity, new_quantity))
+                units_allocated += new_quantity
+        
+        # Execute the fulfillment
+        # Update fulfilled orders to 'ordered'
+        for order in fulfilled_orders:
+            self.db.update_order(order.order_id, {'status': 'ordered'})
+        
+        # Update partially fulfilled orders
+        for order, old_qty, new_qty in updated_orders:
+            new_total_price = new_qty * order.unit_price
+            self.db.update_order(order.order_id, {
+                'quantity': new_qty,
+                'total_price': new_total_price,
+                'status': 'ordered'
+            })
             
-            # Execute the fulfillment
-            # Update fulfilled orders to 'ordered'
-            for order in fulfilled_orders:
-                self.db.update_order(order.order_id, {'status': 'ordered'})
-            
-            # Update partially fulfilled orders
-            for order, old_qty, new_qty in updated_orders:
-                new_total_price = new_qty * order.unit_price
-                self.db.update_order(order.order_id, {
-                    'quantity': new_qty,
-                    'total_price': new_total_price,
-                    'status': 'ordered'
-                })
-                
-                # Notify customer of quantity reduction
-                customer = self.db.get_customer(order.customer_id)
-                if customer:
-                    msg = self._t('order_updated_limited',
-                        name=offer.name,
-                        old_qty=old_qty,
-                        new_qty=new_qty,
-                        total=new_total_price
-                    )
-                    self._send_message(customer.telegram_user_id, msg)
+            # Notify customer of quantity reduction
+            customer = self.db.get_customer(order.customer_id)
+            if customer:
+                msg = self._t('order_updated_limited',
+                    name=offer.name,
+                    old_qty=old_qty,
+                    new_qty=new_qty,
+                    total=new_total_price
+                )
+                self._send_message(customer.telegram_user_id, msg)
             
             # Update all boxes for this offer to 'ordered' status
             boxes = self.db.get_boxes_by_offer(offer_id)
