@@ -82,7 +82,7 @@ class InfoCommands(BaseHandler):
                 available_sections.extend(["suppliers", "offers", "users"])
             
             sections_text = ", ".join(available_sections)
-            message = f"❌ Unknown section: {section}\n\nAvailable sections: {sections_text}"
+            message = self._t('unknown_section', user_id, section=section, sections=sections_text)
         
         self._send_message(chat_id, message)
         return {'status': 'success'}
