@@ -98,7 +98,7 @@ class InfoCommands(BaseHandler):
             message += "/preview_offer <offer_id> - Preview offer appearance\n"
             message += "/publish_offer <offer_id> - Publish draft offer\n"
             message += "/cancel_offer <offer_id> - Cancel offer and all orders\n"
-            message += "/edit_offer <offer_id> - Edit basic offer details\n"
+            message += "/edit_offer_details <offer_id> - Edit offer details\n"
             message += "/add_box <offer_id> - Add box to offer\n"
             message += "/box_status - View box status\n"
             message += "/fulfill_offer <offer_id> - Start fulfillment process\n"

@@ -142,7 +142,6 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/publish_offer <offer_id>` - Publish draft offer and announce to customers
 - `/preview_offer <offer_id>` - Preview how offer will appear when published
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
-- `/edit_offer <offer_id>` - Edit basic offer details with inline keyboard
 - `/add_box <offer_id>` - Add single box to offer (updates sold out offers to active)
 - `/box_status` - View box status and capacity (paginated)
 - `/fulfill_offer <offer_id>` - Start fulfillment process (button confirmation)
