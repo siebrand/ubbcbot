@@ -194,6 +194,12 @@ class UserCommands(BaseHandler):
         if self.db.update_customer(customer_id, {'first_name': new_first_name}):
             old_name = customer.first_name or "Not set"
             self._send_message(chat_id, f"✅ User first name updated: '{old_name}' → '{new_first_name}'")
+            
+            # Return to edit interface
+            updated_customer = self.db.get_customer(customer_id)
+            if updated_customer:
+                return self.handle_update_user(chat_id, [f"{updated_customer.first_name or ''} {updated_customer.last_name or ''}".strip() or updated_customer.username or str(updated_customer.customer_id)])
+            
             return {'status': 'success'}
         else:
             self._send_message(chat_id, "❌ Failed to update user first name")
@@ -220,6 +226,12 @@ class UserCommands(BaseHandler):
         if self.db.update_customer(customer_id, {'last_name': new_last_name}):
             old_name = customer.last_name or "Not set"
             self._send_message(chat_id, f"✅ User last name updated: '{old_name}' → '{new_last_name}'")
+            
+            # Return to edit interface
+            updated_customer = self.db.get_customer(customer_id)
+            if updated_customer:
+                return self.handle_update_user(chat_id, [f"{updated_customer.first_name or ''} {updated_customer.last_name or ''}".strip() or updated_customer.username or str(updated_customer.customer_id)])
+            
             return {'status': 'success'}
         else:
             self._send_message(chat_id, "❌ Failed to update user last name")
