@@ -59,7 +59,7 @@ class InfoCommands(BaseHandler):
             # Show all available sections
             sections = ["general", "orders"]
             if self._is_admin(user_id):
-                sections.extend(["suppliers", "offers", "users"])
+                sections.extend(["suppliers", "offers", "users", "delivery"])
             
             message = ""
             for i, sect in enumerate(sections):
@@ -70,8 +70,8 @@ class InfoCommands(BaseHandler):
             self._send_message(chat_id, message)
             return {'status': 'success'}
         
-        elif section in ["general", "orders", "suppliers", "offers", "users"]:
-            if section in ["suppliers", "offers", "users"] and not self._is_admin(user_id):
+        elif section in ["general", "orders", "suppliers", "offers", "users", "delivery"]:
+            if section in ["suppliers", "offers", "users", "delivery"] and not self._is_admin(user_id):
                 message = self._t('admin_only_section')
             else:
                 message = self._get_section_help(section)
@@ -79,7 +79,7 @@ class InfoCommands(BaseHandler):
         else:
             available_sections = ["general", "orders", "all"]
             if self._is_admin(user_id):
-                available_sections.extend(["suppliers", "offers", "users"])
+                available_sections.extend(["suppliers", "offers", "users", "delivery"])
             
             sections_text = ", ".join(available_sections)
             message = self._t('unknown_section', user_id, section=section, sections=sections_text)
@@ -99,6 +99,8 @@ class InfoCommands(BaseHandler):
             return self._t('help_offers')
         elif section == "users":
             return self._t('help_users')
+        elif section == "delivery":
+            return self._t('help_delivery')
         return ""
 
     def _format_offer_line(self, offer, status_emoji, total_ordered=None, total_capacity=None, is_draft=False):

@@ -136,6 +136,8 @@ class CommandRouter:
                 return self.handlers['offer'].handle_update_offer_description(admin_target_chat, parts[1:])
             elif command == '/publish_offer':
                 return self.handlers['offer'].handle_publish_offer(admin_target_chat, parts[1:])
+            elif command == '/preview_offer':
+                return self.handlers['info'].handle_offer_details(admin_target_chat, user_id, parts[1:] + ['user'])
             elif command == '/order_for':
                 return self.handlers['admin_order'].handle_order_for(admin_target_chat, user_id, parts[1:])
             elif command == '/cancel_order':

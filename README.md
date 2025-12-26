@@ -166,11 +166,15 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/create_discount <percentage> [hours]` - Create discount (percentage 0-100, optional duration)
 - `/cancel_discount` - Cancel active discount
 - `/discount_status` - View current discount status
+- `/wholesale_delivery` - Process wholesale deliveries and manage delivery status
+- `/send_overviews` - Send delivery overviews to customers
+- `/mark_paid` - Mark customers as paid
 
 ### Customer Commands
 - `/start` - Register and view help
 - `/help [section]` - Show help for specific section (general, orders)
 - `/order <offer_id> [quantity]` - Place order
+- `/confirm_order <offer_id> <quantity>` - Confirm duplicate order
 - `/my_orders [id]` - View personal orders
 - `/list_offers` - View available offers
 - `/offer_details <offer_id>` - View detailed offer information

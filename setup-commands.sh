@@ -33,6 +33,7 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
      -d "{
        \"commands\": [
          {\"command\": \"start\", \"description\": \"Register and view help\"},
+         {\"command\": \"help\", \"description\": \"Show help for specific section\"},
          {\"command\": \"order\", \"description\": \"Place order: /order <offer_id> [quantity]\"},
          {\"command\": \"my_orders\", \"description\": \"View your orders\"},
          {\"command\": \"confirm_order\", \"description\": \"Confirm duplicate order\"},
@@ -71,6 +72,7 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"create_discount\", \"description\": \"Create discount\"},
          {\"command\": \"cancel_discount\", \"description\": \"Cancel discount\"},
          {\"command\": \"discount_status\", \"description\": \"View discount status\"},
+         {\"command\": \"wholesale_delivery\", \"description\": \"Process wholesale deliveries\"},
          {\"command\": \"send_overviews\", \"description\": \"Send delivery overviews\"},
          {\"command\": \"mark_paid\", \"description\": \"Mark customers as paid\"}
        ],
@@ -84,6 +86,7 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
      -d '{
        "commands": [
          {"command": "start", "description": "Register and view help"},
+         {"command": "help", "description": "Show help for specific section"},
          {"command": "order", "description": "Place order: /order <offer_id> [quantity]"},
          {"command": "my_orders", "description": "View your orders"},
          {"command": "confirm_order", "description": "Confirm duplicate order"},
