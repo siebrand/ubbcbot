@@ -13,26 +13,21 @@ class SupplierCommands(BaseHandler):
         
         # Validate supplier name
         if len(supplier_name) > 50:
-            self._send_message(chat_id, self._t('supplier_name_too_long', chat_id))
-            return {'status': 'invalid_name'}
+            return self._send_error(chat_id, 'supplier_name_too_long', 'invalid_name', chat_id=chat_id)
         
         if '<' in supplier_name or '>' in supplier_name:
-            self._send_message(chat_id, self._t('supplier_name_invalid_chars', chat_id))
-            return {'status': 'invalid_name'}
+            return self._send_error(chat_id, 'supplier_name_invalid_chars', 'invalid_name', chat_id=chat_id)
         
         # Check for duplicate
         if self.db.get_supplier_by_name(supplier_name):
-            self._send_message(chat_id, self._t('supplier_exists', chat_id, name=supplier_name))
-            return {'status': 'duplicate_supplier'}
+            return self._send_error(chat_id, 'supplier_exists', 'duplicate_supplier', chat_id=chat_id, name=supplier_name)
         
         supplier = Supplier(name=supplier_name)
         
         if self.db.create_supplier(supplier):
-            self._send_message(chat_id, self._t('supplier_added', chat_id, name=supplier_name))
-            return {'status': 'success'}
+            return self._send_success(chat_id, 'supplier_added', chat_id=chat_id, name=supplier_name)
         else:
-            self._send_message(chat_id, self._t('failed_add_supplier', chat_id))
-            return {'status': 'error'}
+            return self._send_error(chat_id, 'failed_add_supplier', 'error', chat_id=chat_id)
 
     def handle_retire_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /retire_supplier command"""
@@ -45,20 +40,16 @@ class SupplierCommands(BaseHandler):
         # Find supplier by name
         supplier = self.db.get_supplier_by_name(supplier_name)
         if not supplier:
-            self._send_message(chat_id, self._t('supplier_not_found', chat_id, name=supplier_name))
-            return {'status': 'supplier_not_found'}
+            return self._send_error(chat_id, 'supplier_not_found', 'supplier_not_found', chat_id=chat_id, name=supplier_name)
         
         if supplier.status == "retired":
-            self._send_message(chat_id, self._t('supplier_already_retired', chat_id, name=supplier_name))
-            return {'status': 'already_retired'}
+            return self._send_error(chat_id, 'supplier_already_retired', 'already_retired', chat_id=chat_id, name=supplier_name)
         
         # Update supplier status to retired
         if self.db.update_supplier(supplier.supplier_id, {'status': 'retired'}):
-            self._send_message(chat_id, self._t('supplier_retired', chat_id, name=supplier_name))
-            return {'status': 'success'}
+            return self._send_success(chat_id, 'supplier_retired', chat_id=chat_id, name=supplier_name)
         else:
-            self._send_message(chat_id, self._t('failed_retire_supplier', chat_id))
-            return {'status': 'error'}
+            return self._send_error(chat_id, 'failed_retire_supplier', 'error', chat_id=chat_id)
 
     def handle_list_suppliers(self, chat_id: int, page: int = 1, status_filter: str = "active") -> Dict[str, Any]:
         """Handle /list_suppliers command with pagination and status filter"""

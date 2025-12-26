@@ -7,27 +7,24 @@ from models.entities import DiscountPeriod, DiscountStatus
 class DiscountCommands(BaseHandler):
     def handle_create_discount(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /create_discount command"""
-        if len(args) < 1:
-            self._send_message(chat_id, self._t('usage_create_discount', chat_id))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_create_discount', chat_id)
+        if error:
+            return error
 
         try:
             percentage = float(args[0])
             hours = int(args[1]) if len(args) > 1 else 24  # Default 24 hours
             
             if percentage <= 0 or percentage >= 100:
-                self._send_message(chat_id, self._t('discount_percentage_invalid', chat_id))
-                return {'status': 'invalid_percentage'}
+                return self._send_error(chat_id, 'discount_percentage_invalid', 'invalid_percentage', chat_id=chat_id)
             
             if hours <= 0:
-                self._send_message(chat_id, self._t('discount_duration_invalid', chat_id))
-                return {'status': 'invalid_duration'}
+                return self._send_error(chat_id, 'discount_duration_invalid', 'invalid_duration', chat_id=chat_id)
             
             # Check for existing active discount
             existing = self.db.get_active_discount()
             if existing:
-                self._send_message(chat_id, self._t('discount_already_exists', chat_id, percentage=existing.discount_percentage))
-                return {'status': 'discount_exists'}
+                return self._send_error(chat_id, 'discount_already_exists', 'discount_exists', chat_id=chat_id, percentage=existing.discount_percentage)
             
             # Create discount
             end_time = datetime.now(UTC) + timedelta(hours=hours)
@@ -44,33 +41,27 @@ class DiscountCommands(BaseHandler):
                 ))
                 return {'status': 'success'}
             else:
-                self._send_message(chat_id, self._t('failed_create_discount', chat_id))
-                return {'status': 'error'}
+                return self._send_error(chat_id, 'failed_create_discount', 'error', chat_id=chat_id)
                 
         except ValueError:
-            self._send_message(chat_id, self._t('invalid_percentage_format', chat_id))
-            return {'status': 'invalid_format'}
+            return self._send_error(chat_id, 'invalid_percentage_format', 'invalid_format', chat_id=chat_id)
     
     def handle_cancel_discount(self, chat_id: int) -> Dict[str, Any]:
         """Handle /cancel_discount command"""
         discount = self.db.get_active_discount()
         if not discount:
-            self._send_message(chat_id, self._t('no_active_discount', chat_id))
-            return {'status': 'no_discount'}
+            return self._send_error(chat_id, 'no_active_discount', 'no_discount', chat_id=chat_id)
         
         if self.db.update_discount(discount.discount_id, {'status': DiscountStatus.CANCELLED.value}):
-            self._send_message(chat_id, self._t('discount_cancelled', chat_id, percentage=discount.discount_percentage))
-            return {'status': 'success'}
+            return self._send_success(chat_id, 'discount_cancelled', chat_id=chat_id, percentage=discount.discount_percentage)
         else:
-            self._send_message(chat_id, self._t('failed_cancel_discount', chat_id))
-            return {'status': 'error'}
+            return self._send_error(chat_id, 'failed_cancel_discount', 'error', chat_id=chat_id)
     
     def handle_discount_status(self, chat_id: int) -> Dict[str, Any]:
         """Handle /discount_status command"""
         discount = self.db.get_active_discount()
         if not discount:
-            self._send_message(chat_id, self._t('no_active_discount_info', chat_id))
-            return {'status': 'no_discount'}
+            return self._send_error(chat_id, 'no_active_discount_info', 'no_discount', chat_id=chat_id)
         
         from utils.timezone import to_cet_string
         if discount.end_time:
