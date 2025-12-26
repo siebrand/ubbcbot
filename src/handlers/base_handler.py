@@ -335,36 +335,86 @@ class BaseHandler:
             logger.error(f"Error sending photo: {e}")
             return {'success': False}
     
-    def _send_media_group(self, chat_id: int, media_group: list, force_group: bool = False) -> dict:
-        """Send media group to Telegram chat"""
-        import requests
+    def _find_customer_with_ambiguity_check(self, identifier: str, chat_id: int, callback_prefix: str = "edit_user_select"):
+        """Find customer with ambiguity handling for admin commands"""
+        # Try by username first (remove @ if present)
+        username = identifier.lstrip('@').lower()
+        customer = self.db.get_customer_by_username(username)
+        if customer:
+            return customer
         
-        if not self.telegram_token:
-            logger.error("Telegram token is empty")
-            return {'success': False}
+        # Try by first name across all customers
+        from models.entities import AuthorizationStatus
+        all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
         
-        # In production, redirect to PM unless explicitly for group
-        if self.environment == 'prod' and chat_id < 0 and not force_group:
-            logger.info(f"Production group media group blocked")
-            return {'success': False}
+        matches = []
+        exact_full_name_match = None
+        partial_matches = []
+        
+        for customer in all_customers:
+            # Check for exact full name match first
+            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+            if full_name.lower() == identifier.lower():
+                exact_full_name_match = customer
+                break
             
-        url = f"https://api.telegram.org/bot{self.telegram_token}/sendMediaGroup"
-        data = {
-            'chat_id': chat_id,
-            'media': media_group
-        }
-        
-        try:
-            if self.environment == 'test':
-                logger.info(f"Sending media group to chat {chat_id}: {len(media_group)} items")
-            response = requests.post(url, json=data, timeout=20)
-            if self.environment == 'test':
-                logger.info(f"Telegram API response: {response.status_code}")
+            # Check if full name starts with identifier
+            if full_name.lower().startswith(identifier.lower()):
+                partial_matches.append(customer)
             
-            if response.status_code == 200:
-                result = response.json()
-                return {'success': True, 'message_ids': [msg['message_id'] for msg in result['result']]}
-            return {'success': False}
-        except Exception as e:
-            logger.error(f"Error sending media group: {e}")
-            return {'success': False}
+            # Collect first name matches
+            if customer.first_name and customer.first_name.lower() == identifier.lower():
+                matches.append(customer)
+        
+        # Return exact full name match if found
+        if exact_full_name_match:
+            return exact_full_name_match
+        
+        # Return single partial match if found
+        if len(partial_matches) == 1:
+            return partial_matches[0]
+        elif len(partial_matches) > 1:
+            # Multiple partial matches - show options with buttons
+            message = self._t('multiple_users_starting', chat_id, identifier=identifier) + "\n\n"
+            keyboard_buttons = []
+            
+            for customer in partial_matches:
+                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+                username_part = f" (@{customer.username})" if customer.username else ""
+                
+                keyboard_buttons.append([{
+                    "text": f"📝 {full_name}",
+                    "callback_data": f"{callback_prefix}_{customer.customer_id}"
+                }])
+            
+            keyboard_buttons.append([{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}])
+            keyboard = {"inline_keyboard": keyboard_buttons}
+            
+            self._send_message(chat_id, message, reply_markup=keyboard)
+            return None
+        
+        # Handle first name matches
+        if len(matches) == 1:
+            return matches[0]
+        elif len(matches) > 1:
+            # Multiple first name matches - show options with buttons
+            message = self._t('multiple_users_found', chat_id, identifier=identifier) + "\n\n"
+            keyboard_buttons = []
+            
+            for customer in matches:
+                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+                username_part = f" (@{customer.username})" if customer.username else ""
+                
+                keyboard_buttons.append([{
+                    "text": f"📝 {full_name}",
+                    "callback_data": f"{callback_prefix}_{customer.customer_id}"
+                }])
+            
+            keyboard_buttons.append([{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}])
+            keyboard = {"inline_keyboard": keyboard_buttons}
+            
+            self._send_message(chat_id, message, reply_markup=keyboard)
+            return None
+        
+        return None

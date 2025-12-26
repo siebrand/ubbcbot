@@ -204,21 +204,24 @@ class AdminOrderCommands(BaseHandler):
 
     def handle_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /user_orders command"""
-        error = self._validate_args(args, 1, 'usage_user_orders', chat_id)
-        if error:
-            return error
+        if not args:
+            self._send_message(chat_id, self._t('usage_user_orders'))
+            return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer = self._find_customer_by_identifier(identifier)
+        customer = self._find_customer_with_ambiguity_check(identifier, chat_id, "user_orders_select")
         
-        if not customer:
-            self._send_message(chat_id, self._t('user_not_found_username', username=identifier))
-            return {'status': 'user_not_found'}
+        if customer is None:
+            return {'status': 'disambiguation_shown'}
 
+        return self._show_user_orders(chat_id, customer)
+    
+    def _show_user_orders(self, chat_id: int, customer) -> Dict[str, Any]:
+        """Show orders for a specific customer"""
         orders = self.db.get_orders_by_customer(customer.customer_id)
         
         if not orders:
-            display_name = customer.first_name or identifier
+            display_name = customer.first_name or "Unknown"
             self._send_message(chat_id, self._t('no_orders_for_user', name=display_name))
             return {'status': 'no_orders'}
 
@@ -226,7 +229,7 @@ class AdminOrderCommands(BaseHandler):
         active_orders = [o for o in orders if o.status in ['pending', 'ordered']]
         cancelled_orders = [o for o in orders if o.status == 'cancelled']
         
-        display_name = self._escape_html(customer.first_name or identifier)
+        display_name = self._escape_html(customer.first_name or "Unknown")
         message = self._t('user_orders_title', user_id=None, name=display_name)
         message += "\n\n"
         
@@ -338,24 +341,12 @@ class AdminOrderCommands(BaseHandler):
         
         return output.getvalue()
 
-    def _find_customer_by_identifier(self, identifier: str):
-        """Find customer by username or display name"""
-        from models.entities import AuthorizationStatus
+    def handle_user_orders_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        """Handle user selection from disambiguation buttons for user_orders"""
+        customer = self.db.get_customer(customer_id)
         
-        # Try by username first (remove @ if present)
-        username = identifier.lstrip('@').lower()
-        customer = self.db.get_customer_by_username(username)
-        if customer:
-            return customer
+        if not customer:
+            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=customer_id))
+            return {'status': 'user_not_found'}
         
-        # Try by first name across all customers (not just unauthorized)
-        all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-        for customer in all_customers:
-            if customer.first_name and customer.first_name.lower() == identifier.lower():
-                return customer
-            # Try first + last name combination
-            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-            if full_name.lower() == identifier.lower():
-                return customer
-        
-        return None
+        return self._show_user_orders(chat_id, customer)

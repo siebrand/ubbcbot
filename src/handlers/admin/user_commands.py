@@ -171,7 +171,6 @@ class UserCommands(BaseHandler):
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
         if customer is None:
-            # Don't show error if disambiguation buttons were shown
             return {'status': 'disambiguation_shown'}
         
         return self._show_user_edit_interface(customer, chat_id)
@@ -264,93 +263,147 @@ class UserCommands(BaseHandler):
         
         # Return single match or None if multiple/no matches
         return matches[0] if len(matches) == 1 else None
-    
-    def _find_customer_with_ambiguity_check(self, identifier: str, chat_id: int) -> Optional:
-        """Find customer with ambiguity handling for admin commands"""
-        # Try by username first (remove @ if present)
-        username = identifier.lstrip('@').lower()
-        customer = self.db.get_customer_by_username(username)
-        if customer:
-            return customer
-        
-        # Try by first name across all customers
+
+    def handle_list_users(self, chat_id: int, page: int = 1, status_filter: str = "all", search_string: str = None) -> Dict[str, Any]:
+        """Handle /list_users command with pagination, filtering, and optional search"""
         from models.entities import AuthorizationStatus
-        all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
+
+        # Get customers based on filter
+        if status_filter == "all":
+            customers = []
+            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value))
+            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
+            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.REJECTED.value))
+        else:
+            customers = self.db.get_customers_by_status(status_filter)
+
+        # Apply search filter if provided
+        if search_string:
+            search_lower = search_string.lower()
+            filtered_customers = []
+            for customer in customers:
+                # Search in first name, last name, username, and full name
+                first_name = (customer.first_name or "").lower()
+                last_name = (customer.last_name or "").lower()
+                username = (customer.username or "").lower()
+                full_name = f"{first_name} {last_name}".strip()
+
+                if (search_lower in first_name or
+                        search_lower in last_name or
+                        search_lower in username or
+                        search_lower in full_name):
+                    filtered_customers.append(customer)
+            customers = filtered_customers
+
+        if not customers:
+            search_text = f" matching '{search_string}'" if search_string else ""
+            self._send_message(chat_id, self._t('no_customers_found', chat_id, status=status_filter, search=search_text))
+            return {'status': 'no_customers'}
+
+        # Sort by first name
+        customers.sort(key=lambda x: (x.first_name or "zzz").lower())
+
+        # Paginate results
+        page_customers, total_pages = self._paginate_list(customers, page, 20)
+
+        search_text = f" matching '{search_string}'" if search_string else ""
+        message = f"👥 Customers ({status_filter}){search_text} - Page {page}/{total_pages}:\n\n"
+
+        for customer in page_customers:
+            display_name = self._escape_html(customer.first_name or "Unknown")
+            if customer.last_name:
+                display_name += f" {self._escape_html(customer.last_name)}"
+
+            username_part = f" (@{self._escape_html(customer.username)})" if customer.username else ""
+            status_emoji = {
+                AuthorizationStatus.UNAUTHORIZED.value: "⚠️",
+                AuthorizationStatus.APPROVED.value: "✅",
+                AuthorizationStatus.REJECTED.value: "❌"
+            }.get(customer.authorization_status, "❓")
+
+            message += f"{status_emoji} {display_name}{username_part}\n"
+
+        # Add pagination keyboard if needed
+        keyboard = None
+        if total_pages > 1:
+            keyboard = self._build_user_pagination_keyboard(page, total_pages, f"customers_{status_filter}")
+
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
+
+    def _build_user_pagination_keyboard(self, current_page: int, total_pages: int, entity_type: str) -> Dict[str, Any]:
+        """Build enhanced pagination keyboard for user lists"""
+        keyboard = []
+
+        if total_pages > 1:
+            nav_buttons = []
+
+            # First page button (if not on first page)
+            if current_page > 1:
+                nav_buttons.append({
+                    "text": "⏮️",
+                    "callback_data": f"page_{entity_type}_1"
+                })
+
+            # Previous page button
+            if current_page > 1:
+                nav_buttons.append({
+                    "text": "◀️",
+                    "callback_data": f"page_{entity_type}_{current_page - 1}"
+                })
+
+            # Page indicator
+            nav_buttons.append({
+                "text": f"{current_page}/{total_pages}",
+                "callback_data": "page_info"
+            })
+
+            # Next page button
+            if current_page < total_pages:
+                nav_buttons.append({
+                    "text": "▶️",
+                    "callback_data": f"page_{entity_type}_{current_page + 1}"
+                })
+
+            # Last page button (if not on last page)
+            if current_page < total_pages:
+                nav_buttons.append({
+                    "text": "⏭️",
+                    "callback_data": f"page_{entity_type}_{total_pages}"
+                })
+
+            keyboard.append(nav_buttons)
+
+            # Add jump buttons for larger lists (show ±2 pages)
+            if total_pages > 5:
+                jump_buttons = []
+
+                # Show a few page numbers around current page
+                start_page = max(1, current_page - 2)
+                end_page = min(total_pages, current_page + 2)
+
+                for p in range(start_page, end_page + 1):
+                    if p != current_page:
+                        jump_buttons.append({
+                            "text": str(p),
+                            "callback_data": f"page_{entity_type}_{p}"
+                        })
+
+                if jump_buttons:
+                    keyboard.append(jump_buttons)
+
+        return {"inline_keyboard": keyboard}
+
+    def handle_edit_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        """Handle user selection from ambiguity resolution buttons"""
+        customer = self.db.get_customer(customer_id)
         
-        matches = []
-        exact_full_name_match = None
-        partial_matches = []
+        if not customer:
+            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=customer_id))
+            return {'status': 'user_not_found'}
         
-        for customer in all_customers:
-            # Check for exact full name match first
-            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-            if full_name.lower() == identifier.lower():
-                exact_full_name_match = customer
-                break
-            
-            # Check if full name starts with identifier (for partial matches like "Rick H." matching "Rick H. 🍻")
-            if full_name.lower().startswith(identifier.lower()):
-                partial_matches.append(customer)
-            
-            # Collect first name matches
-            if customer.first_name and customer.first_name.lower() == identifier.lower():
-                matches.append(customer)
-        
-        # Return exact full name match if found
-        if exact_full_name_match:
-            return exact_full_name_match
-        
-        # Return single partial match if found
-        if len(partial_matches) == 1:
-            return partial_matches[0]
-        elif len(partial_matches) > 1:
-            # Multiple partial matches - show options with buttons
-            message = self._t('multiple_users_starting', chat_id, identifier=identifier) + "\n\n"
-            keyboard_buttons = []
-            
-            for customer in partial_matches:
-                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-                username_part = f" (@{customer.username})" if customer.username else ""
-                display_text = f"{full_name}{username_part}"
-                
-                keyboard_buttons.append([{
-                    "text": f"📝 {full_name}",
-                    "callback_data": f"edit_user_select_{customer.customer_id}"
-                }])
-            
-            keyboard_buttons.append([{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}])
-            keyboard = {"inline_keyboard": keyboard_buttons}
-            
-            self._send_message(chat_id, message, reply_markup=keyboard)
-            return None
-        
-        # Handle first name matches
-        if len(matches) == 1:
-            return matches[0]
-        elif len(matches) > 1:
-            # Multiple first name matches - show options with buttons
-            message = self._t('multiple_users_found', chat_id, identifier=identifier) + "\n\n"
-            keyboard_buttons = []
-            
-            for customer in matches:
-                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-                username_part = f" (@{customer.username})" if customer.username else ""
-                display_text = f"{full_name}{username_part}"
-                
-                keyboard_buttons.append([{
-                    "text": f"📝 {full_name}",
-                    "callback_data": f"edit_user_select_{customer.customer_id}"
-                }])
-            
-            keyboard_buttons.append([{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}])
-            keyboard = {"inline_keyboard": keyboard_buttons}
-            
-            self._send_message(chat_id, message, reply_markup=keyboard)
-            return None
-        
-        return None
-    
+        return self._show_user_edit_interface(customer, chat_id)
+
     def handle_approve_user_by_id(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         """Handle user approval by customer ID (called from button callback)"""
         customer = self.db.get_customer(customer_id)
@@ -381,144 +434,7 @@ class UserCommands(BaseHandler):
         else:
             self._send_message(chat_id, self._t('failed_reject_user', chat_id))
             return {'status': 'error'}
-    def handle_list_users(self, chat_id: int, page: int = 1, status_filter: str = "all", search_string: str = None) -> Dict[str, Any]:
-        """Handle /list_users command with pagination, filtering, and optional search"""
-        from models.entities import AuthorizationStatus
-        
-        # Get customers based on filter
-        if status_filter == "all":
-            customers = []
-            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value))
-            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
-            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.REJECTED.value))
-        else:
-            customers = self.db.get_customers_by_status(status_filter)
-        
-        # Apply search filter if provided
-        if search_string:
-            search_lower = search_string.lower()
-            filtered_customers = []
-            for customer in customers:
-                # Search in first name, last name, username, and full name
-                first_name = (customer.first_name or "").lower()
-                last_name = (customer.last_name or "").lower()
-                username = (customer.username or "").lower()
-                full_name = f"{first_name} {last_name}".strip()
-                
-                if (search_lower in first_name or 
-                    search_lower in last_name or 
-                    search_lower in username or 
-                    search_lower in full_name):
-                    filtered_customers.append(customer)
-            customers = filtered_customers
-        
-        if not customers:
-            search_text = f" matching '{search_string}'" if search_string else ""
-            self._send_message(chat_id, self._t('no_customers_found', chat_id, status=status_filter, search=search_text))
-            return {'status': 'no_customers'}
-        
-        # Sort by first name
-        customers.sort(key=lambda x: (x.first_name or "zzz").lower())
-        
-        # Paginate results
-        page_customers, total_pages = self._paginate_list(customers, page, 20)
-        
-        search_text = f" matching '{search_string}'" if search_string else ""
-        message = f"👥 Customers ({status_filter}){search_text} - Page {page}/{total_pages}:\n\n"
-        
-        for customer in page_customers:
-            display_name = self._escape_html(customer.first_name or "Unknown")
-            if customer.last_name:
-                display_name += f" {self._escape_html(customer.last_name)}"
-            
-            username_part = f" (@{self._escape_html(customer.username)})" if customer.username else ""
-            status_emoji = {
-                AuthorizationStatus.UNAUTHORIZED.value: "⚠️",
-                AuthorizationStatus.APPROVED.value: "✅",
-                AuthorizationStatus.REJECTED.value: "❌"
-            }.get(customer.authorization_status, "❓")
-            
-            message += f"{status_emoji} {display_name}{username_part}\n"
-        
-        # Add pagination keyboard if needed
-        keyboard = None
-        if total_pages > 1:
-            keyboard = self._build_user_pagination_keyboard(page, total_pages, f"customers_{status_filter}")
-        
-        self._send_message(chat_id, message, reply_markup=keyboard)
-        return {'status': 'success'}
-    
-    def _build_user_pagination_keyboard(self, current_page: int, total_pages: int, entity_type: str) -> Dict[str, Any]:
-        """Build enhanced pagination keyboard for user lists"""
-        keyboard = []
-        
-        if total_pages > 1:
-            nav_buttons = []
-            
-            # First page button (if not on first page)
-            if current_page > 1:
-                nav_buttons.append({
-                    "text": "⏮️", 
-                    "callback_data": f"page_{entity_type}_1"
-                })
-            
-            # Previous page button
-            if current_page > 1:
-                nav_buttons.append({
-                    "text": "◀️", 
-                    "callback_data": f"page_{entity_type}_{current_page - 1}"
-                })
-            
-            # Page indicator
-            nav_buttons.append({
-                "text": f"{current_page}/{total_pages}",
-                "callback_data": "page_info"
-            })
-            
-            # Next page button
-            if current_page < total_pages:
-                nav_buttons.append({
-                    "text": "▶️", 
-                    "callback_data": f"page_{entity_type}_{current_page + 1}"
-                })
-            
-            # Last page button (if not on last page)
-            if current_page < total_pages:
-                nav_buttons.append({
-                    "text": "⏭️", 
-                    "callback_data": f"page_{entity_type}_{total_pages}"
-                })
-            
-            keyboard.append(nav_buttons)
-            
-            # Add jump buttons for larger lists (show ±2 pages)
-            if total_pages > 5:
-                jump_buttons = []
-                
-                # Show a few page numbers around current page
-                start_page = max(1, current_page - 2)
-                end_page = min(total_pages, current_page + 2)
-                
-                for p in range(start_page, end_page + 1):
-                    if p != current_page:
-                        jump_buttons.append({
-                            "text": str(p),
-                            "callback_data": f"page_{entity_type}_{p}"
-                        })
-                
-                if jump_buttons:
-                    keyboard.append(jump_buttons)
-        
-        return {"inline_keyboard": keyboard}
-    def handle_edit_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
-        """Handle user selection from ambiguity resolution buttons"""
-        customer = self.db.get_customer(customer_id)
-        
-        if not customer:
-            self._send_message(chat_id, "❌ User not found")
-            return {'status': 'user_not_found'}
-        
-        return self._show_user_edit_interface(customer, chat_id)
+
     def handle_list_subscribers(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
         """Handle /list_subscribers command with pagination"""
         subscribers = self.db.get_subscribers()
