@@ -547,7 +547,10 @@ class InfoCommands(BaseHandler):
             message += f"📋 Status: {offer.status}\n"
         
         if offer.description:
-            message += f"\n📝 Description:\n{offer.description}\n"
+            if is_admin:
+                message += f"\n📝 Description:\n{offer.description}\n"
+            else:
+                message += f"\n{offer.description}\n"
         
         # Add order buttons for active offers
         reply_markup = None
