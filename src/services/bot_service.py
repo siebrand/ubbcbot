@@ -159,6 +159,58 @@ class BotService:
                 last_name=last_name
             )
             self.db.create_customer(customer)
+            
+            # Send notification to admin about new user pending authorization
+            self._notify_admin_new_user_pending(user_data)
+    
+    def _notify_admin_new_user_pending(self, user_data: Dict[str, Any]):
+        """Send notification to admin when new user registration is pending"""
+        try:
+            first_name = user_data.get('first_name', 'Unknown')
+            last_name = user_data.get('last_name', '')
+            username = user_data.get('username', 'no_username')
+            user_id = user_data.get('id')
+            
+            # Format display name
+            display_name = first_name
+            if last_name:
+                display_name += f" {last_name}"
+            
+            # Get customer ID for buttons
+            customer = self.db.get_customer_by_telegram_id(user_id)
+            if not customer:
+                logger.error(f"Customer not found after registration for user_id: {user_id}")
+                return
+            
+            # Create notification message using translation system
+            from handlers.base_handler import BaseHandler
+            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            
+            message = base_handler._t(
+                'new_user_pending_notification',
+                self.admin_user_id,
+                name=display_name,
+                username=username,
+                user_id=user_id
+            )
+            
+            # Add approve/reject buttons
+            keyboard = {
+                "inline_keyboard": [
+                    [
+                        {"text": base_handler._t('approve_user', self.admin_user_id, name=first_name), "callback_data": f"approve_user_{customer.customer_id}"},
+                        {"text": base_handler._t('reject_user', self.admin_user_id, name=first_name), "callback_data": f"reject_user_{customer.customer_id}"}
+                    ]
+                ]
+            }
+            
+            # Send notification to admin with buttons
+            base_handler._send_message(self.admin_user_id, message, reply_markup=keyboard)
+            
+            logger.info(f"Sent new user notification to admin for user: {display_name} (@{username})")
+            
+        except Exception as e:
+            logger.error(f"Failed to send new user notification to admin: {e}")
     
     def _handle_edit_reply(self, chat_id: int, user_id: int, text: str, message: Dict[str, Any] = None) -> Dict[str, Any]:
         """Handle reply to edit prompt"""

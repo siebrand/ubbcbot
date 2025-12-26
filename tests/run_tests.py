@@ -37,6 +37,7 @@ def main():
         os.path.join(test_dir, "test_customer_orders.py"),
         os.path.join(test_dir, "test_admin_operations.py"),
         os.path.join(test_dir, "test_user_management.py"),
+        os.path.join(test_dir, "test_new_user_notification.py"),
         os.path.join(test_dir, "test_supplier_management.py"),
         os.path.join(test_dir, "test_help_system.py"),
         os.path.join(test_dir, "test_webhook_callbacks.py"),

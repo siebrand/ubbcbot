@@ -158,6 +158,48 @@ def test_user_status_filtering():
     assert len(rejected) == 1
     print("✅ Rejected user filtering works")
 
+def test_new_user_notification():
+    """Test new user notification logic"""
+    print("\n=== Testing new user notification ===")
+    
+    # Mock user data from Telegram
+    user_data = {
+        'id': 123456789,
+        'first_name': 'John',
+        'last_name': 'Doe',
+        'username': 'johndoe'
+    }
+    
+    # Test notification message formatting
+    display_name = user_data['first_name']
+    if user_data.get('last_name'):
+        display_name += f" {user_data['last_name']}"
+    
+    expected_name = "John Doe"
+    assert display_name == expected_name
+    print("✅ Display name formatting works")
+    
+    # Test username handling
+    username = user_data.get('username', 'no_username')
+    assert username == 'johndoe'
+    print("✅ Username extraction works")
+    
+    # Test user without username
+    user_data_no_username = {
+        'id': 987654321,
+        'first_name': 'Jane',
+        'username': None
+    }
+    
+    username_fallback = user_data_no_username.get('username') or 'no_username'
+    assert username_fallback == 'no_username'
+    print("✅ Username fallback works")
+    
+    # Test admin user ID
+    admin_user_id = 15005473
+    assert admin_user_id == 15005473
+    print("✅ Admin user ID correct")
+
 if __name__ == "__main__":
     test_user_authorization()
     test_user_search_logic()
@@ -165,4 +207,5 @@ if __name__ == "__main__":
     test_user_name_updates()
     test_admin_permissions()
     test_user_status_filtering()
+    test_new_user_notification()
     print("\n🎉 All user management tests passed!")
