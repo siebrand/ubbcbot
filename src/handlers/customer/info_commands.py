@@ -536,9 +536,9 @@ class InfoCommands(BaseHandler):
             total_ordered = sum(order.quantity for order in active_orders)
             available = total_capacity - total_ordered
             
-            message += f"🍺 {offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})\n\n"
+            message += f"<b>🍺 {offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
         else:
-            message += f"🍺 {offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}\n\n"
+            message += f"<b>🍺 {offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
         
         # Show admin-only info
         if is_admin:
