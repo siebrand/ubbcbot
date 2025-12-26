@@ -38,6 +38,9 @@ class InfoCommands(BaseHandler):
         if section:
             return self._show_help_section(chat_id, user_id, section)
         
+        # Get bot username first
+        bot_username = self._get_bot_username()
+        
         # Show available sections
         message = self._t('help_sections', bot_username=bot_username)
         
@@ -45,7 +48,6 @@ class InfoCommands(BaseHandler):
             message += self._t('admin_help_sections', bot_username=bot_username)
         
         # Replace bot_username placeholder
-        bot_username = self._get_bot_username()
         message = message.format(bot_username=bot_username)
         
         self._send_message(chat_id, message, parse_mode="Markdown")
