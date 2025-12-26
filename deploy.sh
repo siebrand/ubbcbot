@@ -27,11 +27,23 @@ if ! pip show pytest >/dev/null 2>&1; then
     echo "Installing test dependencies..."
     pip install -r tests/requirements.txt
 fi
-if ! python -m pytest tests/test_customer_orders.py -v; then
-    echo "❌ Tests failed! Deployment aborted."
+
+# Run old test framework
+echo "Running legacy tests..."
+if ! python tests/run_tests.py; then
+    echo "❌ Legacy tests failed! Deployment aborted."
     deactivate
     exit 1
 fi
+
+# Run pytest tests
+echo "Running pytest tests..."
+if ! python -m pytest tests/test_customer_orders.py -v; then
+    echo "❌ Pytest tests failed! Deployment aborted."
+    deactivate
+    exit 1
+fi
+
 deactivate
 echo "✅ All tests passed!"
 echo ""
@@ -84,6 +96,6 @@ echo ""
 echo "✅ Setup complete! Next steps:"
 echo "1. Test with /start command in Telegram"
 echo "2. Verify webhook status: curl \"https://api.telegram.org/bot$TELEGRAM_TOKEN/getWebhookInfo\""
-echo "3. Run tests locally: source test_env/bin/activate && python -m pytest tests/test_customer_orders.py -v"
+echo "3. Run tests locally: python tests/run_tests.py && source test_env/bin/activate && python -m pytest tests/test_customer_orders.py -v"
 echo ""
 echo "🕐 Deployment completed at: $(date)"
