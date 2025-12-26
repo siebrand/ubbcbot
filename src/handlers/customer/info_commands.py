@@ -146,7 +146,7 @@ class InfoCommands(BaseHandler):
             self._send_message(chat_id, self._t('failed_unsubscribe', user_id))
             return {'status': 'error'}
     
-    def handle_list_offers(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+    def handle_list_offers(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
         """Handle /list_offers command"""
         offers = self.db.list_offers()
         
@@ -169,8 +169,10 @@ class InfoCommands(BaseHandler):
             message += "\n\n"
         
         is_admin = self._is_admin(user_id)
+        # Check if admin wants to see user view
+        show_user_view = args and len(args) > 0 and args[0].lower() == 'user' and is_admin
         
-        if is_admin:
+        if is_admin and not show_user_view:
             # Show all offers with status indicators for admin
             message += self._t('all_offers_admin') + "\n\n"
             
