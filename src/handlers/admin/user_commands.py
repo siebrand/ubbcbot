@@ -140,19 +140,8 @@ class UserCommands(BaseHandler):
         self._send_message(chat_id, message)
         return {'status': 'success'}
 
-    def handle_update_user(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /update_user command"""
-        if not args:
-            self._send_message(chat_id, "Usage: /update_user <name_or_username>")
-            return {'status': 'invalid_args'}
-
-        identifier = ' '.join(args)
-        customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
-        
-        if not customer:
-            return {'status': 'user_not_found'}
-        
-        # Show current customer details with edit options
+    def _show_user_edit_interface(self, customer, chat_id: int) -> Dict[str, Any]:
+        """Show edit interface for a customer"""
         display_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
         username_part = f" (@{customer.username})" if customer.username else ""
         
@@ -166,12 +155,26 @@ class UserCommands(BaseHandler):
             "inline_keyboard": [
                 [{"text": "📝 Edit First Name", "callback_data": f"edit_customer_first_name_{customer.customer_id}"}],
                 [{"text": "📝 Edit Last Name", "callback_data": f"edit_customer_last_name_{customer.customer_id}"}],
-                [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
+                [{"text": "✅ Done", "callback_data": "done_action"}]
             ]
         }
         
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
+
+    def handle_update_user(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_user command"""
+        if not args:
+            self._send_message(chat_id, "Usage: /update_user <name_or_username>")
+            return {'status': 'invalid_args'}
+
+        identifier = ' '.join(args)
+        customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
+        
+        if not customer:
+            return {'status': 'user_not_found'}
+        
+        return self._show_user_edit_interface(customer, chat_id)
     
     def handle_update_user_first_name(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_user_first_name command"""
@@ -515,26 +518,7 @@ class UserCommands(BaseHandler):
             self._send_message(chat_id, "❌ User not found")
             return {'status': 'user_not_found'}
         
-        # Show edit interface for selected user
-        display_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
-        username_part = f" (@{customer.username})" if customer.username else ""
-        
-        message = f"📝 Edit User: {display_name}{username_part}\n\n"
-        message += f"First Name: {customer.first_name or 'Not set'}\n"
-        message += f"Last Name: {customer.last_name or 'Not set'}\n"
-        message += f"Status: {customer.authorization_status}\n\n"
-        message += "Select what to edit:"
-        
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": "📝 Edit First Name", "callback_data": f"edit_customer_first_name_{customer.customer_id}"}],
-                [{"text": "📝 Edit Last Name", "callback_data": f"edit_customer_last_name_{customer.customer_id}"}],
-                [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
-            ]
-        }
-        
-        self._send_message(chat_id, message, reply_markup=keyboard)
-        return {'status': 'success'}
+        return self._show_user_edit_interface(customer, chat_id)
     def handle_list_subscribers(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
         """Handle /list_subscribers command with pagination"""
         subscribers = self.db.get_subscribers()
