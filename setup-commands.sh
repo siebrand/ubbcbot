@@ -28,7 +28,7 @@ else
 fi
 
 echo "👑 Setting admin commands..."
-curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
+curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
      -H "Content-Type: application/json" \
      -d "{
        \"commands\": [
@@ -67,7 +67,7 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
 
 echo ""
 echo "👥 Setting customer commands..."
-curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
+curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
      -H "Content-Type: application/json" \
      -d '{
        "commands": [

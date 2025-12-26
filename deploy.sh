@@ -62,7 +62,7 @@ echo "✅ Deployment complete!"
 echo "📡 Webhook URL: $WEBHOOK_URL"
 echo ""
 echo "🔗 Setting Telegram webhook..."
-curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/setWebhook" \
+curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setWebhook" \
      -d "url=$WEBHOOK_URL" | jq .
 
 echo ""
