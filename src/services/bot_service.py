@@ -192,8 +192,15 @@ class BotService:
             elif data.startswith('page_'):
                 parts = data.split('_')
                 if len(parts) >= 3:
-                    entity_type = parts[1]
-                    page = int(parts[2])
+                    # Handle cases where entity_type contains underscores (e.g., customers_all)
+                    if len(parts) == 4 and parts[1] in ['customers', 'suppliers']:
+                        # Format: page_customers_all_2 or page_suppliers_active_2
+                        entity_type = f"{parts[1]}_{parts[2]}"
+                        page = int(parts[3])
+                    else:
+                        # Format: page_boxes_2 or page_pending_2
+                        entity_type = parts[1]
+                        page = int(parts[2])
                     
                     if entity_type == 'suppliers' or entity_type.startswith('suppliers_'):
                         status_filter = entity_type.split('_', 1)[1] if '_' in entity_type else 'active'
