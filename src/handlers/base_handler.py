@@ -226,7 +226,7 @@ class BaseHandler:
         try:
             if self.environment == 'test':
                 logger.info(f"Sending photo to chat {chat_id}: {photo_url}")
-            response = requests.post(url, json=data)
+            response = requests.post(url, json=data, timeout=30)
             if self.environment == 'test':
                 logger.info(f"Telegram API response: {response.status_code}")
             
@@ -236,4 +236,38 @@ class BaseHandler:
             return {'success': False}
         except Exception as e:
             logger.error(f"Error sending photo: {e}")
+            return {'success': False}
+    
+    def _send_media_group(self, chat_id: int, media_group: list, force_group: bool = False) -> dict:
+        """Send media group to Telegram chat"""
+        import requests
+        
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
+            return {'success': False}
+        
+        # In production, redirect to PM unless explicitly for group
+        if self.environment == 'prod' and chat_id < 0 and not force_group:
+            logger.info(f"Production group media group blocked")
+            return {'success': False}
+            
+        url = f"https://api.telegram.org/bot{self.telegram_token}/sendMediaGroup"
+        data = {
+            'chat_id': chat_id,
+            'media': media_group
+        }
+        
+        try:
+            if self.environment == 'test':
+                logger.info(f"Sending media group to chat {chat_id}: {len(media_group)} items")
+            response = requests.post(url, json=data, timeout=30)
+            if self.environment == 'test':
+                logger.info(f"Telegram API response: {response.status_code}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {'success': True, 'message_ids': [msg['message_id'] for msg in result['result']]}
+            return {'success': False}
+        except Exception as e:
+            logger.error(f"Error sending media group: {e}")
             return {'success': False}
