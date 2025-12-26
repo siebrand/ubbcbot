@@ -552,12 +552,30 @@ class InfoCommands(BaseHandler):
         reply_markup = None
         if offer.status == OfferStatus.ACTIVE.value:
             message += f"\n📝 Order with: /order {offer.offer_id} [quantity]"
+            if is_admin:
+                reply_markup = {
+                    "inline_keyboard": [
+                        [
+                            {"text": "🍺   Order 1", "callback_data": f"order_{offer.offer_id}_1"},
+                            {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
+                        ],
+                        [{"text": "✏️ Edit Offer", "callback_data": f"edit_offer_{offer.offer_id}"}]
+                    ]
+                }
+            else:
+                reply_markup = {
+                    "inline_keyboard": [
+                        [
+                            {"text": "🍺   Order 1", "callback_data": f"order_{offer.offer_id}_1"},
+                            {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
+                        ]
+                    ]
+                }
+        elif is_admin:
+            # Add edit button for admins on non-active offers
             reply_markup = {
                 "inline_keyboard": [
-                    [
-                        {"text": "🍺   Order 1", "callback_data": f"order_{offer.offer_id}_1"},
-                        {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
-                    ]
+                    [{"text": "✏️ Edit Offer", "callback_data": f"edit_offer_{offer.offer_id}"}]
                 ]
             }
         

@@ -234,6 +234,11 @@ class BotService:
                         offer_id = parts[3]
                         return self.offer_commands.handle_edit_offer_details(chat_id, [offer_id])
                     
+                    # Handle edit_offer callback (basic offer editing)
+                    if parts[1] == 'offer' and len(parts) == 3:
+                        offer_id = parts[2]
+                        return self.offer_commands.handle_edit_offer(chat_id, [offer_id])
+                    
                     # Standard format: edit_{entity}_{field}_{id}
                     entity_type = parts[1]  # supplier, offer
                     field = parts[2]       # name, contact, status, price, description
