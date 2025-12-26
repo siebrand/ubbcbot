@@ -276,5 +276,8 @@
   "status_ordered": "ORDERED",
   "status_delivered": "DELIVERED",
   "status_completed": "COMPLETED",
-  "status_inactive": "INACTIVE"
+  "status_inactive": "INACTIVE",
+  "multiple_days_label": "[multiple days]",
+  "subtotal_label": "Subtotal: €{total:.2f}",
+  "open_orders_total_label": "📊 Open Orders Total: €{total:.2f}"
 }

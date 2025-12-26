@@ -268,7 +268,7 @@ class InfoCommands(BaseHandler):
         aggregated = {}
         for order in orders:
             offer = self.db.get_offer(order.offer_id)
-            offer_name = offer.name if offer else "Unknown"
+            offer_name = offer.name if offer else self._t('unknown', user_id)
             
             key = (order.offer_id, order.unit_price, order.status)
             if key not in aggregated:
@@ -338,7 +338,7 @@ class InfoCommands(BaseHandler):
             
             # Add status total if multiple statuses present
             if len(status_groups) > 1:
-                message += f"Subtotal: €{status_groups[status]['total_price']:.2f}\n\n"
+                message += self._t('subtotal_label', user_id, total=status_groups[status]['total_price']) + "\n\n"
             
             # Add to open total if applicable
             if status in open_statuses:
@@ -346,7 +346,7 @@ class InfoCommands(BaseHandler):
         
         # Add open orders total before cancelled orders
         if open_total > 0 and 'cancelled' in status_groups:
-            message += f"📊 Open Orders Total: €{open_total:.2f}\n\n"
+            message += self._t('open_orders_total_label', user_id, total=open_total) + "\n\n"
         
         # Show cancelled orders last (no total needed)
         if 'cancelled' in status_groups:
@@ -371,7 +371,7 @@ class InfoCommands(BaseHandler):
         
         # Add open orders total if no cancelled orders
         elif open_total > 0:
-            message += f"📊 Open Orders Total: €{open_total:.2f}"
+            message += self._t('open_orders_total_label', user_id, total=open_total)
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
@@ -569,9 +569,9 @@ class InfoCommands(BaseHandler):
         
         # Show admin-only info
         if is_admin:
-            message += f"📦 Box size: {offer.wholesale_box_size} units\n"
-            message += f"🏭 Supplier: {offer.supplier_name}\n"
-            message += f"📋 Status: {offer.status}\n"
+            message += self._t('box_size_units', size=offer.wholesale_box_size) + "\n"
+            message += self._t('supplier_name', name=offer.supplier_name) + "\n"
+            message += self._t('status_label', status=offer.status) + "\n"
 
         message += f"\n{offer.description}\n"
         

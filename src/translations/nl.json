@@ -276,5 +276,8 @@
   "status_ordered": "BESTELD",
   "status_delivered": "GELEVERD",
   "status_completed": "VOLTOOID",
-  "status_inactive": "INACTIEF"
+  "status_inactive": "INACTIEF",
+  "multiple_days_label": "[meerdere dagen]",
+  "subtotal_label": "Subtotaal: €{total:.2f}",
+  "open_orders_total_label": "📊 Openstaande Bestellingen Totaal: €{total:.2f}"
 }
