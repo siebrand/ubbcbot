@@ -49,7 +49,7 @@ Implement a Telegram beer ordering bot with AWS serverless architecture. Focus o
 **Offer Management:**
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create beer offer
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
-- `/offer_edit <offer_id>` - Edit offer details with inline keyboard
+- `/offer_details <offer_id>` - View and edit offer details
 - `/add_box <offer_id>` - Add single box to offer (updates sold out offers to active)
 - `/box_status` - View box status and capacity (paginated)
 - `/fulfill_offer <offer_id>` - Start fulfillment process (button confirmation)

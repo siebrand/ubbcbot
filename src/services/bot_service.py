@@ -230,10 +230,12 @@ class BotService:
                         elif parts[2] == 'last' and parts[3] == 'name':
                             return self._handle_customer_edit(chat_id, 'last_name', parts[4])
                     
-                    # Handle offer_edit callback
-                    if parts[1] == 'offer' and parts[2] == 'edit':
+                    # Handle offer_details callback with edit mode
+                    if parts[1] == 'offer' and parts[2] == 'details':
                         offer_id = parts[3]
-                        return self.offer_commands.handle_offer_edit(chat_id, [offer_id])
+                        edit_mode = len(parts) > 4 and parts[4] == 'edit'
+                        args = [offer_id, 'edit'] if edit_mode else [offer_id]
+                        return self.info_commands.handle_offer_details(chat_id, user_id, args)
                     
                     # Standard format: edit_{entity}_{field}_{id}
                     entity_type = parts[1]  # supplier, offer
@@ -591,16 +593,16 @@ class BotService:
                 return self.offer_commands.handle_box_status(admin_target_chat)
             elif command == '/fulfill_offer':
                 return self.offer_commands.handle_fulfill_offer(admin_target_chat, parts[1:])
-            elif command == '/edit_offer':
-                return self.offer_commands.handle_offer_edit(admin_target_chat, parts[1:])
+            elif command == '/offer_details':
+                return self.info_commands.handle_offer_details(admin_target_chat, user_id, parts[1:])
             elif command == '/update_offer_name':
                 return self.offer_commands.handle_update_offer_name(admin_target_chat, parts[1:])
             elif command == '/update_offer_price':
                 return self.offer_commands.handle_update_offer_price(admin_target_chat, parts[1:])
             elif command == '/update_offer_description':
                 return self.offer_commands.handle_update_offer_description(admin_target_chat, parts[1:])
-            elif command == '/offer_edit':
-                return self.offer_commands.handle_offer_edit(admin_target_chat, parts[1:])
+            elif command == '/offer_details':
+                return self.info_commands.handle_offer_details(admin_target_chat, user_id, parts[1:])
             elif command == '/publish_offer':
                 return self.offer_commands.handle_publish_offer(admin_target_chat, parts[1:])
             
@@ -710,7 +712,7 @@ class BotService:
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"offer_edit_{offer_id_int}"}],
+                        [{"text": "📝 Continue Editing", "callback_data": f"offer_details_{offer_id_int}_edit"}],
                         [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id_int}"}],
                         [{"text": "✅ Done", "callback_data": "done_editing"}]
                     ]

@@ -94,11 +94,10 @@ class InfoCommands(BaseHandler):
         elif section == "offers" and self._is_admin(user_id):
             message = "🍺 Offer Management:\n\n"
             message += "/create_offer <supplier> <name> <price> <box_size> - Create draft offer\n"
-            message += "/offer_edit <offer_id> - Edit description and images\n"
+            message += "/offer_details <offer_id> - View and edit offer details\n"
             message += "/preview_offer <offer_id> - Preview offer appearance\n"
             message += "/publish_offer <offer_id> - Publish draft offer\n"
             message += "/cancel_offer <offer_id> - Cancel offer and all orders\n"
-            message += "/offer_edit <offer_id> - Edit offer details\n"
             message += "/add_box <offer_id> - Add box to offer\n"
             message += "/box_status - View box status\n"
             message += "/fulfill_offer <offer_id> - Start fulfillment process\n"
@@ -418,7 +417,7 @@ class InfoCommands(BaseHandler):
         return {'status': 'success'}
     
     def handle_offer_details(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
-        """Handle offer details display from deep link or command"""
+        """Handle offer details display and editing from deep link or command"""
         if not args:
             # Show list of offers as buttons for admins, error for users
             if self._is_admin(user_id):
@@ -452,6 +451,8 @@ class InfoCommands(BaseHandler):
 
         try:
             offer_id = int(args[0])
+            # Check for "edit" parameter for admin edit mode
+            edit_mode = len(args) > 1 and args[1].lower() == 'edit' and self._is_admin(user_id)
             # Check for "user" parameter for admin user view
             show_as_user = len(args) > 1 and args[1].lower() == 'user' and self._is_admin(user_id)
             
@@ -470,6 +471,10 @@ class InfoCommands(BaseHandler):
             if not self._is_admin(user_id) and offer.status != OfferStatus.ACTIVE.value:
                 self._send_message(chat_id, "❌ Offer not available")
                 return {'status': 'offer_not_available'}
+            
+            # Handle edit mode for admins
+            if edit_mode:
+                return self._show_edit_interface(chat_id, offer)
             
             # Send images first if available
             if offer.images:
@@ -496,7 +501,7 @@ class InfoCommands(BaseHandler):
             if self._is_admin(user_id) and offer.status == OfferStatus.DRAFT.value:
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Edit Details", "callback_data": f"offer_edit_{offer_id}"}],
+                        [{"text": "📝 Edit Details", "callback_data": f"offer_details_{offer_id}_edit"}],
                         [{"text": "🚀 Publish Offer", "callback_data": f"publish_offer_{offer_id}"}],
                         [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
                     ]
@@ -508,6 +513,36 @@ class InfoCommands(BaseHandler):
         except ValueError:
             self._send_message(chat_id, "❌ Invalid offer ID")
             return {'status': 'invalid_format'}
+    
+    def _show_edit_interface(self, chat_id: int, offer) -> Dict[str, Any]:
+        """Show editing interface for offer"""
+        message = f"📝 Edit Offer Details {offer.offer_id}:\n\n"
+        message += f"Name: {offer.name}\n"
+        message += f"Price: €{offer.price_per_unit:.2f}\n"
+        message += f"Box Size: {offer.wholesale_box_size}\n"
+        message += f"Status: {offer.status}\n"
+        message += f"Supplier: {offer.supplier_name}\n"
+        message += f"Description: {offer.description or 'Not set'}\n"
+        message += f"Images: {len(offer.images)} uploaded\n\n"
+        message += "Select what to edit:"
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": "📝 Edit Name", "callback_data": f"edit_offer_name_{offer.offer_id}"}],
+                [{"text": "💰 Edit Price", "callback_data": f"edit_offer_price_{offer.offer_id}"}],
+                [{"text": "📝 Edit Description", "callback_data": f"edit_offer_description_{offer.offer_id}"}],
+                [{"text": "🖼️ Upload Image", "callback_data": f"upload_offer_image_{offer.offer_id}"}],
+                [{"text": "🗑️ Clear Images", "callback_data": f"clear_offer_images_{offer.offer_id}"}] if offer.images else [],
+                [{"text": "👁️ Exit Edit Mode", "callback_data": f"offer_details_{offer.offer_id}"}],
+                [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
+            ]
+        }
+        
+        # Remove empty rows
+        keyboard["inline_keyboard"] = [row for row in keyboard["inline_keyboard"] if row]
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
     
     def _send_rich_offer_details(self, chat_id: int, offer, user_id: int):
         """Send rich offer details with images and description"""
@@ -559,7 +594,7 @@ class InfoCommands(BaseHandler):
                             {"text": "🍺   Order 1", "callback_data": f"order_{offer.offer_id}_1"},
                             {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
                         ],
-                        [{"text": "✏️ Edit Offer", "callback_data": f"offer_edit_{offer.offer_id}"}]
+                        [{"text": "✏️ Edit Offer", "callback_data": f"offer_details_{offer.offer_id}_edit"}]
                     ]
                 }
             else:
@@ -575,7 +610,7 @@ class InfoCommands(BaseHandler):
             # Add edit button for admins on non-active offers
             reply_markup = {
                 "inline_keyboard": [
-                    [{"text": "✏️ Edit Offer", "callback_data": f"offer_edit_{offer.offer_id}"}]
+                    [{"text": "✏️ Edit Offer", "callback_data": f"offer_details_{offer.offer_id}_edit"}]
                 ]
             }
         
