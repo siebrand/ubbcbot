@@ -533,8 +533,7 @@ class InfoCommands(BaseHandler):
                 [{"text": "📝 Edit Description", "callback_data": f"edit_offer_description_{offer.offer_id}"}],
                 [{"text": "🖼️ Upload Image", "callback_data": f"upload_offer_image_{offer.offer_id}"}],
                 [{"text": "🗑️ Clear Images", "callback_data": f"clear_offer_images_{offer.offer_id}"}] if offer.images else [],
-                [{"text": "👁️ Exit Edit Mode", "callback_data": f"offer_details_{offer.offer_id}"}],
-                [{"text": "❌ Cancel", "callback_data": "cancel_action"}]
+                [{"text": "👁️ Exit Edit Mode", "callback_data": f"offer_details_{offer.offer_id}"}]
             ]
         }
         
