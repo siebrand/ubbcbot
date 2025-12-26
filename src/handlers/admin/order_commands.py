@@ -6,9 +6,9 @@ from models.entities import Order, Box, BoxStatus, OfferStatus
 class AdminOrderCommands(BaseHandler):
     def handle_cancel_order(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /cancel_order command"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_cancel_order'))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_cancel_order', chat_id)
+        if error:
+            return error
 
         order_id = args[0]
         order = self.db.get_order(order_id)
@@ -57,9 +57,9 @@ class AdminOrderCommands(BaseHandler):
 
     def handle_confirm_cancel(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_cancel command - now called from button callback"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_confirm_cancel'))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_confirm_cancel', chat_id)
+        if error:
+            return error
 
         order_id = args[0]
         order = self.db.get_order(order_id)
@@ -204,9 +204,9 @@ class AdminOrderCommands(BaseHandler):
 
     def handle_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /user_orders command"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_user_orders'))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_user_orders', chat_id)
+        if error:
+            return error
 
         identifier = ' '.join(args)
         customer = self._find_customer_by_identifier(identifier)

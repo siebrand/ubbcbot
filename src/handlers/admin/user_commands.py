@@ -73,9 +73,9 @@ class UserCommands(BaseHandler):
 
     def handle_approve_user(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /approve_user command"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_approve_user', chat_id))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_approve_user', chat_id)
+        if error:
+            return error
 
         identifier = ' '.join(args)
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
@@ -88,9 +88,9 @@ class UserCommands(BaseHandler):
 
     def handle_reject_user(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /reject_user command"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_reject_user', chat_id))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_reject_user', chat_id)
+        if error:
+            return error
 
         identifier = ' '.join(args)
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
@@ -114,9 +114,9 @@ class UserCommands(BaseHandler):
 
     def handle_user_status(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /user_status command"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_user_status', chat_id))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_user_status', chat_id)
+        if error:
+            return error
 
         identifier = ' '.join(args)
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
@@ -166,9 +166,9 @@ class UserCommands(BaseHandler):
 
     def handle_update_user(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_user command"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_update_user', chat_id))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 2, 'usage_update_user', chat_id)
+        if error:
+            return error
 
         identifier = ' '.join(args)
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)

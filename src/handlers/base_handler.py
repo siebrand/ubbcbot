@@ -278,6 +278,23 @@ class BaseHandler:
             self._send_message(chat_id, self._t(error_key))
             return None, {'status': 'invalid_format'}
     
+    def _validate_args(self, args: list, min_count: int, usage_key: str, chat_id: int):
+        """Validate minimum argument count or send usage message"""
+        if len(args) < min_count:
+            self._send_message(chat_id, self._t(usage_key))
+            return {'status': 'invalid_args'}
+        return None
+    
+    def _send_error(self, chat_id: int, error_key: str, status: str, **kwargs):
+        """Send error message and return status"""
+        self._send_message(chat_id, self._t(error_key, **kwargs))
+        return {'status': status}
+    
+    def _send_success(self, chat_id: int, success_key: str, status: str = 'success', **kwargs):
+        """Send success message and return status"""
+        self._send_message(chat_id, self._t(success_key, **kwargs))
+        return {'status': status}
+    
     def _send_photo(self, chat_id: int, photo_url: str, caption: str = None, force_group: bool = False) -> dict:
         """Send photo to Telegram chat"""
         import requests

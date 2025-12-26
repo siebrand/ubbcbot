@@ -5,9 +5,9 @@ from models.entities import Supplier
 class SupplierCommands(BaseHandler):
     def handle_add_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /add_supplier command"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_add_supplier', chat_id))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_add_supplier', chat_id)
+        if error:
+            return error
 
         supplier_name = ' '.join(args).strip()
         
@@ -36,9 +36,9 @@ class SupplierCommands(BaseHandler):
 
     def handle_retire_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /retire_supplier command"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_retire_supplier', chat_id))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_retire_supplier', chat_id)
+        if error:
+            return error
 
         supplier_name = ' '.join(args).strip()
         
@@ -101,9 +101,9 @@ class SupplierCommands(BaseHandler):
     
     def handle_edit_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /edit_supplier command"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_edit_supplier', chat_id))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_edit_supplier', chat_id)
+        if error:
+            return error
 
         supplier_name = ' '.join(args).strip()
         supplier = self.db.get_supplier_by_name(supplier_name)

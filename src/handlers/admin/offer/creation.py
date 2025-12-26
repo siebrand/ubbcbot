@@ -78,9 +78,9 @@ class OfferCreationHandler(OfferBaseHandler):
 
     def handle_publish_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /publish_offer command"""
-        if not args:
-            self._send_message(chat_id, self._t('usage_publish_offer'))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_publish_offer', chat_id)
+        if error:
+            return error
 
         try:
             offer_id = int(args[0])
