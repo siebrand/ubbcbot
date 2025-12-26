@@ -137,20 +137,23 @@ class AdminOrderCommands(BaseHandler):
                 latest_order = max(orders, key=lambda o: o.created_at) if orders else None
                 order_status = latest_order.status if latest_order else 'pending'
                 
-                # Notify target customer
+                # Try to notify target customer
                 customer_message = self._t('admin_order_placed', target_customer.telegram_user_id,
                                          product=offer.name,
                                          quantity=quantity,
                                          total=offer.price_per_unit * quantity,
                                          status=order_status)
-                self._send_message(target_customer.telegram_user_id, customer_message)
+                pm_result = self._send_message(target_customer.telegram_user_id, customer_message)
                 
                 # Send notification to default group (admin orders don't trigger this automatically)
                 order_handler._notify_channel_order(target_customer, offer, quantity)
                 
-                # Confirm to admin
+                # Confirm to admin with PM status
                 display_name = target_customer.first_name or username
-                self._send_message(chat_id, self._t('order_placed_for_user', name=display_name))
+                admin_message = self._t('order_placed_for_user', name=display_name)
+                if not pm_result.get('success'):
+                    admin_message += "\n" + self._t('pm_notification_failed', user_id=None, name=display_name)
+                self._send_message(chat_id, admin_message)
             
             return result
 
