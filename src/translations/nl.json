@@ -242,7 +242,7 @@
   "order_1_button": "🍺   Bestel 1",
   "order_2_button": "🍺🍺 Bestel 2",
   "edit_offer_button": "✏️ Aanbieding bewerken",
-  "usage_confirm_order": "Gebruik: /confirm_order [aanbieding_id] [aantal]",
+  "usage_confirm_order": "Gebruik: /confirm_order <aanbieding_id> <aantal>",
   "order_limit_exceeded": "❌ Bestelling overschrijdt 5-eenheden limiet voor {offer_name}\n\nJe bestaande bestellingen ({total_existing} eenheden):",
   "remaining_units_allowed": "\nMaximum dat je nog kunt bestellen: {remaining} eenheden",
   "limit_reached": "\nJe hebt de 5-eenheden limiet voor deze aanbieding bereikt",

@@ -243,7 +243,7 @@
   "order_1_button": "🍺   Order 1",
   "order_2_button": "🍺🍺 Order 2",
   "edit_offer_button": "✏️ Edit Offer",
-  "usage_confirm_order": "Usage: /confirm_order [offer_id] [quantity]",
+  "usage_confirm_order": "Usage: /confirm_order <offer_id> <quantity>",
   "order_limit_exceeded": "❌ Order exceeds 5-unit limit for {offer_name}\n\nYour existing orders ({total_existing} units):",
   "remaining_units_allowed": "\nMaximum you can still order: {remaining} units",
   "limit_reached": "\nYou have reached the 5-unit limit for this offer",
