@@ -11,7 +11,7 @@ class OfferCommands(BaseHandler):
     def handle_create_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /create_offer command - creates draft offer"""
         if len(args) < 4:
-            self._send_message(chat_id, "Usage: /create_offer [supplier_name] [name] [price] [box_size]")
+            self._send_message(chat_id, self._t('usage_create_offer'))
             return {'status': 'invalid_args'}
 
         try:
@@ -22,27 +22,27 @@ class OfferCommands(BaseHandler):
             # Validate and sanitize name
             name = ' '.join(args[1:-2]).strip()
             if len(name) > 100:
-                self._send_message(chat_id, "❌ Product name too long (max 100 characters)")
+                self._send_message(chat_id, self._t('product_name_too_long'))
                 return {'status': 'invalid_name'}
             
             if '<' in name or '>' in name:
-                self._send_message(chat_id, "❌ Product name cannot contain < or > characters")
+                self._send_message(chat_id, self._t('product_name_invalid_chars'))
                 return {'status': 'invalid_name'}
 
             # Validate box size
             valid_sizes = [1, 2, 6, 8, 10, 12, 15, 16, 18, 20, 24]
             if box_size not in valid_sizes:
-                self._send_message(chat_id, f"❌ Invalid box size. Valid sizes: {valid_sizes}")
+                self._send_message(chat_id, self._t('invalid_box_size', sizes=valid_sizes))
                 return {'status': 'invalid_box_size'}
 
             # Check supplier exists and is active
             supplier = self.db.get_supplier_by_name(supplier_name)
             if not supplier:
-                self._send_message(chat_id, "❌ Supplier not found")
+                self._send_message(chat_id, self._t('supplier_not_found'))
                 return {'status': 'supplier_not_found'}
             
             if supplier.status != "active":
-                self._send_message(chat_id, f"❌ Supplier '{supplier_name}' is retired and cannot be used for new offers")
+                self._send_message(chat_id, self._t('supplier_retired_cannot_use', name=supplier_name))
                 return {'status': 'supplier_retired'}
 
             # Create draft offer
@@ -56,36 +56,36 @@ class OfferCommands(BaseHandler):
             )
 
             if self.db.create_offer(offer):
-                message = f"✅ Draft offer created!\n\n"
-                message += f"Offer ID: {offer.offer_id}\n"
-                message += f"Name: {offer.name}\n"
-                message += f"Price: €{offer.price_per_unit:.2f}\n"
-                message += f"Box size: {offer.wholesale_box_size}\n"
-                message += f"Status: {offer.status}\n\n"
-                message += f"Choose next step:"
+                message = self._t('draft_offer_created', 
+                    offer_id=offer.offer_id,
+                    name=offer.name,
+                    price=offer.price_per_unit,
+                    box_size=offer.wholesale_box_size,
+                    status=offer.status
+                )
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Edit Details", "callback_data": f"offer_details_{offer.offer_id}_edit"}],
-                        [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer.offer_id}"}],
-                        [{"text": "🚀 Publish Offer", "callback_data": f"publish_offer_{offer.offer_id}"}]
+                        [{"text": self._t('edit_details'), "callback_data": f"offer_details_{offer.offer_id}_edit"}],
+                        [{"text": self._t('view_details'), "callback_data": f"offer_details_{offer.offer_id}"}],
+                        [{"text": self._t('publish_offer'), "callback_data": f"publish_offer_{offer.offer_id}"}]
                     ]
                 }
                 
                 self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
             else:
-                self._send_message(chat_id, "❌ Failed to create offer")
+                self._send_message(chat_id, self._t('failed_create_offer'))
                 return {'status': 'error'}
 
         except (ValueError, IndexError) as e:
-            self._send_message(chat_id, f"❌ Invalid format. Error: {str(e)}")
+            self._send_message(chat_id, self._t('invalid_format'))
             return {'status': 'invalid_format'}
 
     def handle_fulfill_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /fulfill_offer command"""
         if not args:
-            self._send_message(chat_id, "Usage: /fulfill_offer [offer_id]")
+            self._send_message(chat_id, self._t('usage_fulfill_offer'))
             return {'status': 'invalid_args'}
 
         try:
@@ -93,11 +93,11 @@ class OfferCommands(BaseHandler):
             offer = self.db.get_offer(offer_id)
             
             if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
+                self._send_message(chat_id, self._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             if offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, "❌ Offer is not active")
+                self._send_message(chat_id, self._t('offer_not_active'))
                 return {'status': 'offer_not_active'}
             
             # Get all pending orders for this offer, sorted by date ascending
@@ -106,7 +106,7 @@ class OfferCommands(BaseHandler):
             pending_orders.sort(key=lambda x: x.created_at)
             
             if not pending_orders:
-                self._send_message(chat_id, "❌ No pending orders for this offer")
+                self._send_message(chat_id, self._t('no_pending_orders'))
                 return {'status': 'no_pending_orders'}
             
             # Calculate boxes needed
@@ -114,12 +114,15 @@ class OfferCommands(BaseHandler):
             boxes_needed = (total_units + offer.wholesale_box_size - 1) // offer.wholesale_box_size  # Ceiling division
             
             # Show order summary
-            message = f"📋 Fulfillment Summary for Offer {offer_id}:\n"
-            message += f"🍺 {offer.name} - €{offer.price_per_unit:.2f}\n"
-            message += f"📦 Box size: {offer.wholesale_box_size} units\n\n"
-            message += f"📈 Total pending units: {total_units}\n"
-            message += f"📦 Boxes needed: {boxes_needed}\n\n"
-            message += f"📋 Pending Orders ({len(pending_orders)} orders):\n"
+            message = self._t('fulfillment_summary',
+                offer_id=offer_id,
+                name=offer.name,
+                price=offer.price_per_unit,
+                box_size=offer.wholesale_box_size,
+                total_units=total_units,
+                boxes_needed=boxes_needed,
+                order_count=len(pending_orders)
+            )
             
             for i, order in enumerate(pending_orders[:10], 1):  # Show first 10
                 customer = self.db.get_customer(order.customer_id)
@@ -134,8 +137,8 @@ class OfferCommands(BaseHandler):
             # Add inline keyboard for confirmation
             keyboard = {
                 "inline_keyboard": [[
-                    {"text": f"✅ Fulfill with {boxes_needed} boxes", "callback_data": f"confirm_fulfill_{offer_id}_{boxes_needed}"},
-                    {"text": "❌ Cancel", "callback_data": "cancel_action"}
+                    {"text": self._t('fulfill_with_boxes', boxes=boxes_needed), "callback_data": f"confirm_fulfill_{offer_id}_{boxes_needed}"},
+                    {"text": self._t('cancel'), "callback_data": "cancel_action"}
                 ]]
             }
             
@@ -143,13 +146,13 @@ class OfferCommands(BaseHandler):
             return {'status': 'success'}
             
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid offer ID")
+            self._send_message(chat_id, self._t('invalid_offer_id'))
             return {'status': 'invalid_format'}
     
     def handle_confirm_fulfill(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_fulfill command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /confirm_fulfill <offer_id> <boxes_ordered>")
+            self._send_message(chat_id, self._t('usage_confirm_fulfill'))
             return {'status': 'invalid_args'}
         
         try:
@@ -157,12 +160,12 @@ class OfferCommands(BaseHandler):
             boxes_ordered = int(args[1])
             
             if boxes_ordered <= 0:
-                self._send_message(chat_id, "❌ Boxes ordered must be positive")
+                self._send_message(chat_id, self._t('boxes_must_positive'))
                 return {'status': 'invalid_quantity'}
             
             offer = self.db.get_offer(offer_id)
             if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
+                self._send_message(chat_id, self._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             # Get pending orders sorted by date ascending (oldest first)
@@ -211,12 +214,12 @@ class OfferCommands(BaseHandler):
                 # Notify customer of quantity reduction
                 customer = self.db.get_customer(order.customer_id)
                 if customer:
-                    msg = f"⚠️ Your order has been updated due to limited availability:\n\n"
-                    msg += f"🍺 {offer.name}\n"
-                    msg += f"Original: {old_qty} units\n"
-                    msg += f"Updated: {new_qty} units\n"
-                    msg += f"New total: €{new_total_price:.2f}\n\n"
-                    msg += f"Your order is confirmed and will be delivered."
+                    msg = self._t('order_updated_limited',
+                        name=offer.name,
+                        old_qty=old_qty,
+                        new_qty=new_qty,
+                        total=new_total_price
+                    )
                     self._send_message(customer.telegram_user_id, msg)
             
             # Update all boxes for this offer to 'ordered' status
@@ -231,11 +234,11 @@ class OfferCommands(BaseHandler):
                 # Notify customer of cancellation
                 customer = self.db.get_customer(order.customer_id)
                 if customer:
-                    msg = f"❌ Your order has been cancelled due to insufficient availability:\n\n"
-                    msg += f"🍺 {offer.name}\n"
-                    msg += f"Quantity: {order.quantity} units\n"
-                    msg += f"Amount: €{order.total_price:.2f}\n\n"
-                    msg += f"We apologize for the inconvenience."
+                    msg = self._t('order_cancelled_insufficient',
+                        name=offer.name,
+                        quantity=order.quantity,
+                        total=order.total_price
+                    )
                     self._send_message(customer.telegram_user_id, msg)
             
             # Update offer status - keep active if there's remaining capacity or pending orders
@@ -279,13 +282,23 @@ class OfferCommands(BaseHandler):
                     deleted_boxes += 1
             # Send summary to admin
             fulfilled_units = sum(order.quantity for order in fulfilled_orders)
-            summary = f"✅ Offer {offer_id} fulfilled with {boxes_ordered} boxes:\n\n"
-            summary += f"✅ Fulfilled: {len(fulfilled_orders)} orders ({fulfilled_units} units)\n"
+            summary = self._t('offer_fulfilled_summary',
+                offer_id=offer_id,
+                boxes=boxes_ordered,
+                fulfilled_orders=len(fulfilled_orders),
+                fulfilled_units=fulfilled_units
+            )
+            
             if updated_orders:
                 order, old_qty, new_qty = updated_orders[0]
                 customer = self.db.get_customer(order.customer_id)
                 customer_name = customer.first_name if customer else "Unknown"
-                summary += f"⚠️ Reduced: {customer_name}'s order from {old_qty} to {new_qty} units\n"
+                summary += "\n" + self._t('order_reduced',
+                    customer=customer_name,
+                    old_qty=old_qty,
+                    new_qty=new_qty
+                )
+            
             if cancelled_orders:
                 cancelled_details = []
                 cancelled_units = 0
@@ -294,23 +307,32 @@ class OfferCommands(BaseHandler):
                     customer_name = customer.first_name if customer else "Unknown"
                     cancelled_details.append(f"{customer_name} ({order.quantity} units)")
                     cancelled_units += order.quantity
-                summary += f"❌ Cancelled: {len(cancelled_orders)} orders ({cancelled_units} units) - {', '.join(cancelled_details)}\n"
-            summary += f"\n📦 Total units allocated: {units_allocated}/{units_available}\n"
-            summary += f"📊 {offer_status_msg}"
+                summary += "\n" + self._t('orders_cancelled',
+                    cancelled_orders=len(cancelled_orders),
+                    cancelled_units=cancelled_units,
+                    details=', '.join(cancelled_details)
+                )
+            
+            summary += "\n\n" + self._t('total_allocated',
+                allocated=units_allocated,
+                available=units_available
+            )
+            summary += f"\n📊 {offer_status_msg}"
+            
             if deleted_boxes > 0:
-                summary += f"\n🗑️ Cleaned up {deleted_boxes} empty boxes"
+                summary += "\n" + self._t('cleaned_empty_boxes', count=deleted_boxes)
             
             self._send_message(chat_id, summary)
             return {'status': 'success'}
             
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid format")
+            self._send_message(chat_id, self._t('invalid_format'))
             return {'status': 'invalid_format'}
     
     def handle_cancel_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /cancel_offer command"""
         if not args:
-            self._send_message(chat_id, "Usage: /cancel_offer [offer_id]")
+            self._send_message(chat_id, self._t('usage_cancel_offer'))
             return {'status': 'invalid_args'}
 
         try:
@@ -318,11 +340,11 @@ class OfferCommands(BaseHandler):
             offer = self.db.get_offer(offer_id)
             
             if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
+                self._send_message(chat_id, self._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             if offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, "❌ Offer is not active")
+                self._send_message(chat_id, self._t('offer_not_active'))
                 return {'status': 'offer_not_active'}
             
             # Get all orders for this offer
@@ -333,21 +355,21 @@ class OfferCommands(BaseHandler):
                 # No active orders, just cancel the offer
                 self.db.update_offer(offer_id, {'status': OfferStatus.INACTIVE.value})
                 self._delete_offer_boxes(offer_id)
-                self._send_message(chat_id, f"✅ Offer {offer_id} cancelled (no active orders)")
+                self._send_message(chat_id, self._t('offer_cancelled_no_orders', offer_id=offer_id))
                 return {'status': 'success'}
             
             # Show confirmation with order details
-            message = f"⚠️ WARNING: Cancelling offer {offer_id} will:\n\n"
-            message += f"🍺 Cancel offer: {offer.name}\n"
-            message += f"📦 Delete all boxes\n"
-            message += f"❌ Cancel {len(active_orders)} active orders\n"
-            message += f"📧 Notify all affected customers\n\n"
+            message = self._t('cancel_offer_warning',
+                offer_id=offer_id,
+                name=offer.name,
+                order_count=len(active_orders)
+            )
             
             # Add inline keyboard for confirmation
             keyboard = {
                 "inline_keyboard": [[
-                    {"text": "✅ Confirm Cancel", "callback_data": f"confirm_cancel_offer_{offer_id}"},
-                    {"text": "❌ Keep Offer", "callback_data": "cancel_action"}
+                    {"text": self._t('confirm_cancel'), "callback_data": f"confirm_cancel_offer_{offer_id}"},
+                    {"text": self._t('keep_offer'), "callback_data": "cancel_action"}
                 ]]
             }
             
@@ -355,13 +377,13 @@ class OfferCommands(BaseHandler):
             return {'status': 'confirmation_required'}
             
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid offer ID")
+            self._send_message(chat_id, self._t('invalid_offer_id'))
             return {'status': 'invalid_format'}
     
     def handle_confirm_cancel_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_cancel_offer command"""
         if not args:
-            self._send_message(chat_id, "Usage: /confirm_cancel_offer <offer_id>")
+            self._send_message(chat_id, self._t('usage_confirm_cancel_offer'))
             return {'status': 'invalid_args'}
         
         try:
@@ -369,7 +391,7 @@ class OfferCommands(BaseHandler):
             offer = self.db.get_offer(offer_id)
             
             if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
+                self._send_message(chat_id, self._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             # Get all pending orders
@@ -393,16 +415,18 @@ class OfferCommands(BaseHandler):
             self.db.update_offer(offer_id, {'status': OfferStatus.INACTIVE.value})
             
             # Send summary
-            summary = f"✅ Offer {offer_id} cancelled:\n\n"
-            summary += f"❌ Cancelled {cancelled_count} orders\n"
-            summary += f"🗑️ Deleted {deleted_boxes} boxes\n"
-            summary += f"📧 Notified {cancelled_count} customers"
+            summary = self._t('offer_cancelled_summary',
+                offer_id=offer_id,
+                cancelled_count=cancelled_count,
+                deleted_boxes=deleted_boxes,
+                notified_count=cancelled_count
+            )
             
             self._send_message(chat_id, summary)
             return {'status': 'success'}
             
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid offer ID")
+            self._send_message(chat_id, self._t('invalid_offer_id'))
             return {'status': 'invalid_format'}
     
     def _delete_offer_boxes(self, offer_id: int) -> int:
@@ -418,10 +442,10 @@ class OfferCommands(BaseHandler):
         """Notify customer about order cancellation"""
         customer = self.db.get_customer(order.customer_id)
         if customer:
-            message = f"❌ Your order has been cancelled due to offer cancellation:\n\n"
-            message += f"🍺 {offer.name}\n"
-            message += f"Quantity: {order.quantity} units\n\n"
-            message += f"We apologize for the inconvenience."
+            message = self._t('order_cancelled_offer_cancelled',
+                name=offer.name,
+                quantity=order.quantity
+            )
             self._send_message(customer.telegram_user_id, message)
 
     def _cleanup_offer_notifications(self, offer_id: int):
@@ -457,7 +481,7 @@ class OfferCommands(BaseHandler):
     def handle_add_box(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /add_box command"""
         if not args:
-            self._send_message(chat_id, "Usage: /add_box [offer_id]")
+            self._send_message(chat_id, self._t('usage_add_box'))
             return {'status': 'invalid_args'}
 
         try:
@@ -465,7 +489,7 @@ class OfferCommands(BaseHandler):
             offer = self.db.get_offer(offer_id)
             
             if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
+                self._send_message(chat_id, self._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             # Create new box
@@ -479,18 +503,16 @@ class OfferCommands(BaseHandler):
                 # Update offer status from sold_out to active if needed
                 if offer.status == OfferStatus.SOLD_OUT.value:
                     self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
-                    status_msg = " (offer status updated to active)"
+                    self._send_message(chat_id, self._t('box_added_offer_active', offer_id=offer_id))
                 else:
-                    status_msg = ""
-                
-                self._send_message(chat_id, f"✅ Added new box for offer {offer_id}{status_msg}")
+                    self._send_message(chat_id, self._t('box_added', offer_id=offer_id))
                 return {'status': 'success'}
             else:
-                self._send_message(chat_id, "❌ Failed to create box")
+                self._send_message(chat_id, self._t('failed_create_box'))
                 return {'status': 'error'}
                 
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid offer ID")
+            self._send_message(chat_id, self._t('invalid_offer_id'))
             return {'status': 'invalid_format'}
 
     def handle_box_status(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
@@ -499,7 +521,7 @@ class OfferCommands(BaseHandler):
         active_offers = [offer for offer in offers if offer.status == OfferStatus.ACTIVE.value]
         
         if not active_offers:
-            self._send_message(chat_id, "🍺 No active offers available")
+            self._send_message(chat_id, self._t('no_offers'))
             return {'status': 'no_offers'}
         
         # Build list of offer-box combinations for pagination
@@ -513,7 +535,7 @@ class OfferCommands(BaseHandler):
         # Paginate results
         page_items, total_pages = self._paginate_list(offer_boxes, page, 10)
         
-        message = f"📦 Box Status (Page {page}/{total_pages}):\n\n"
+        message = self._t('box_status_title', page=page, total_pages=total_pages)
         for offer, box in page_items:
             status_emoji = {
                 BoxStatus.OPEN.value: "🟢",
@@ -548,20 +570,21 @@ class OfferCommands(BaseHandler):
         """Send rich offer message with description and images"""
         # Build message text
         if preview:
-            message = f"👁️ PREVIEW - How offer will look:\n\n"
+            message = self._t('preview_how_offer_looks')
         else:
-            message = f"🍺 New offer available!\n\n"
-        
-        message += f"[{offer.offer_id}] {offer.name}\n"
-        message += f"Price: €{offer.price_per_unit:.2f} per unit\n"
-        message += f"Box size: {offer.wholesale_box_size} units\n"
-        message += f"Supplier: {offer.supplier_name}\n"
+            message = self._t('new_offer_available',
+                offer_id=offer.offer_id,
+                name=offer.name,
+                price=offer.price_per_unit,
+                box_size=offer.wholesale_box_size,
+                supplier_name=offer.supplier_name
+            )
         
         if offer.description:
             message += f"\n{offer.description}\n"
         
         if not preview:
-            message += f"\nOrder with: /order {offer.offer_id} [quantity]"
+            message += "\n" + self._t('order_with_command', offer_id=offer.offer_id)
         
         # Create inline keyboard with order buttons (only for non-preview)
         reply_markup = None
@@ -569,8 +592,8 @@ class OfferCommands(BaseHandler):
             reply_markup = {
                 "inline_keyboard": [
                     [
-                        {"text": "🍺 Order 1", "callback_data": f"order_{offer.offer_id}_1"},
-                        {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
+                        {"text": self._t('order_1'), "callback_data": f"order_{offer.offer_id}_1"},
+                        {"text": self._t('order_2'), "callback_data": f"order_{offer.offer_id}_2"}
                     ]
                 ]
             }
@@ -618,22 +641,24 @@ class OfferCommands(BaseHandler):
                                 print(f"Failed to send image to subscriber {customer.customer_id}: {e}")
                     
                     # Send text message with order buttons
-                    message = f"🍺 New offer available!\n\n"
-                    message += f"[{offer.offer_id}] {offer.name}\n"
-                    message += f"Price: €{offer.price_per_unit:.2f} per unit\n"
-                    message += f"Box size: {offer.wholesale_box_size} units\n"
-                    message += f"Supplier: {offer.supplier_name}\n"
+                    message = self._t('new_offer_available',
+                        offer_id=offer.offer_id,
+                        name=offer.name,
+                        price=offer.price_per_unit,
+                        box_size=offer.wholesale_box_size,
+                        supplier_name=offer.supplier_name
+                    )
                     
                     if offer.description:
                         message += f"\n{offer.description}\n"
                     
-                    message += f"\nOrder with: /order {offer.offer_id} [quantity]"
+                    message += "\n" + self._t('order_with_command', offer_id=offer.offer_id)
                     
                     reply_markup = {
                         "inline_keyboard": [
                             [
-                                {"text": "🍺 Order 1", "callback_data": f"order_{offer.offer_id}_1"},
-                                {"text": "🍺🍺 Order 2", "callback_data": f"order_{offer.offer_id}_2"}
+                                {"text": self._t('order_1'), "callback_data": f"order_{offer.offer_id}_1"},
+                                {"text": self._t('order_2'), "callback_data": f"order_{offer.offer_id}_2"}
                             ]
                         ]
                     }
@@ -659,7 +684,7 @@ class OfferCommands(BaseHandler):
     def handle_update_offer_name(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_offer_name command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_offer_name [offer_id] [new_name]")
+            self._send_message(chat_id, self._t('usage_update_offer_name'))
             return {'status': 'invalid_args'}
         
         try:
@@ -667,45 +692,47 @@ class OfferCommands(BaseHandler):
             new_name = ' '.join(args[1:]).strip()
             
             if len(new_name) > 100:
-                self._send_message(chat_id, "❌ Product name too long (max 100 characters)")
+                self._send_message(chat_id, self._t('product_name_too_long'))
                 return {'status': 'invalid_name'}
             
             if '<' in new_name or '>' in new_name:
-                self._send_message(chat_id, "❌ Product name cannot contain < or > characters")
+                self._send_message(chat_id, self._t('product_name_invalid_chars'))
                 return {'status': 'invalid_name'}
             
             offer = self.db.get_offer(offer_id)
             if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
+                self._send_message(chat_id, self._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             if self.db.update_offer(offer_id, {'name': new_name}):
                 # Send confirmation and return to edit menu
-                message = f"✅ Offer name updated: '{offer.name}' → '{new_name}'\n\n"
-                message += "Continue editing?"
+                message = self._t('offer_name_updated',
+                    old_name=offer.name,
+                    new_name=new_name
+                )
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": "✅ Done", "callback_data": "done_editing"}]
+                        [{"text": self._t('continue_editing'), "callback_data": f"offer_details_{offer_id}"}],
+                        [{"text": self._t('view_details'), "callback_data": f"offer_details_{offer_id}"}],
+                        [{"text": self._t('done_editing'), "callback_data": "done_editing"}]
                     ]
                 }
                 
                 self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
             else:
-                self._send_message(chat_id, "❌ Failed to update offer name")
+                self._send_message(chat_id, self._t('failed_update_offer_name'))
                 return {'status': 'error'}
                 
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid offer ID")
+            self._send_message(chat_id, self._t('invalid_offer_id'))
             return {'status': 'invalid_format'}
     
     def handle_update_offer_price(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_offer_price command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_offer_price [offer_id] [new_price]")
+            self._send_message(chat_id, self._t('usage_update_offer_price'))
             return {'status': 'invalid_args'}
         
         try:
@@ -713,42 +740,44 @@ class OfferCommands(BaseHandler):
             new_price = float(args[1])
             
             if new_price <= 0:
-                self._send_message(chat_id, "❌ Price must be positive")
+                self._send_message(chat_id, self._t('price_must_positive'))
                 return {'status': 'invalid_price'}
             
             offer = self.db.get_offer(offer_id)
             if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
+                self._send_message(chat_id, self._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             from decimal import Decimal
             if self.db.update_offer(offer_id, {'price_per_unit': Decimal(str(new_price))}):
                 # Send confirmation and return to edit menu
-                message = f"✅ Offer price updated: €{offer.price_per_unit:.2f} → €{new_price:.2f}\n\n"
-                message += "Continue editing?"
+                message = self._t('offer_price_updated',
+                    old_price=offer.price_per_unit,
+                    new_price=new_price
+                )
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": "✅ Done", "callback_data": "done_editing"}]
+                        [{"text": self._t('continue_editing'), "callback_data": f"offer_details_{offer_id}"}],
+                        [{"text": self._t('view_details'), "callback_data": f"offer_details_{offer_id}"}],
+                        [{"text": self._t('done_editing'), "callback_data": "done_editing"}]
                     ]
                 }
                 
                 self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
             else:
-                self._send_message(chat_id, "❌ Failed to update offer price")
+                self._send_message(chat_id, self._t('failed_update_offer_price'))
                 return {'status': 'error'}
                 
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid offer ID or price format")
+            self._send_message(chat_id, self._t('invalid_price_format'))
             return {'status': 'invalid_format'}
     
     def handle_update_offer_description(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_offer_description command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /update_offer_description [offer_id] [new_description]")
+            self._send_message(chat_id, self._t('usage_update_offer_description'))
             return {'status': 'invalid_args'}
         
         try:
@@ -756,46 +785,48 @@ class OfferCommands(BaseHandler):
             new_description = ' '.join(args[1:]).strip()
             
             if len(new_description) > 500:
-                self._send_message(chat_id, "❌ Description too long (max 500 characters)")
+                self._send_message(chat_id, self._t('description_too_long'))
                 return {'status': 'invalid_description'}
             
             offer = self.db.get_offer(offer_id)
             if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
+                self._send_message(chat_id, self._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             if self.db.update_offer(offer_id, {'description': new_description}):
                 logger.info(f"Stored description in DB: {new_description}")
-                old_desc = offer.description or "Not set"
+                old_desc = offer.description or self._t('not_set')
                 logger.info(f"Retrieved old description from DB: {old_desc}")
                 
                 # Send confirmation with button to continue editing
-                message = f"✅ Offer description updated: '{old_desc}' → '{new_description}'\n\n"
-                message += "Continue editing?"
+                message = self._t('offer_description_updated',
+                    old_desc=old_desc,
+                    new_desc=new_description
+                )
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": "✅ Done", "callback_data": "done_editing"}]
+                        [{"text": self._t('continue_editing'), "callback_data": f"offer_details_{offer_id}"}],
+                        [{"text": self._t('view_details'), "callback_data": f"offer_details_{offer_id}"}],
+                        [{"text": self._t('done_editing'), "callback_data": "done_editing"}]
                     ]
                 }
                 
                 self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
             else:
-                self._send_message(chat_id, "❌ Failed to update offer description")
+                self._send_message(chat_id, self._t('failed_update_offer_description'))
                 return {'status': 'error'}
                 
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid offer ID")
+            self._send_message(chat_id, self._t('invalid_offer_id'))
             return {'status': 'invalid_format'}
     
 
     def handle_publish_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /publish_offer command"""
         if not args:
-            self._send_message(chat_id, "Usage: /publish_offer [offer_id]")
+            self._send_message(chat_id, self._t('usage_publish_offer'))
             return {'status': 'invalid_args'}
 
         try:
@@ -803,11 +834,11 @@ class OfferCommands(BaseHandler):
             offer = self.db.get_offer(offer_id)
             
             if not offer:
-                self._send_message(chat_id, "❌ Offer not found")
+                self._send_message(chat_id, self._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             if offer.status != OfferStatus.DRAFT.value:
-                self._send_message(chat_id, f"❌ Offer is not in draft status (current: {offer.status})")
+                self._send_message(chat_id, self._t('offer_not_draft', status=offer.status))
                 return {'status': 'offer_not_draft'}
             
             # Update offer status to active
@@ -848,13 +879,13 @@ class OfferCommands(BaseHandler):
                 # Announce offer to default group and subscribers
                 self._announce_offer(offer)
                 
-                self._send_message(chat_id, f"✅ Offer {offer_id} published and announced!")
+                self._send_message(chat_id, self._t('offer_published_announced', offer_id=offer_id))
                 return {'status': 'success'}
             else:
-                self._send_message(chat_id, "❌ Failed to publish offer")
+                self._send_message(chat_id, self._t('failed_publish_offer'))
                 return {'status': 'error'}
                 
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid offer ID")
+            self._send_message(chat_id, self._t('invalid_offer_id'))
             return {'status': 'invalid_format'}
     

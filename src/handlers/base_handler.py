@@ -1,5 +1,7 @@
 from typing import Dict, Any
 import logging
+import json
+import os
 from services.database import DynamoDBService
 
 logger = logging.getLogger()
@@ -11,6 +13,44 @@ class BaseHandler:
         self.environment = environment
         self.telegram_token = telegram_token
         self._bot_username = None
+        self._translations = {}
+
+    def _load_translations(self, lang: str) -> Dict[str, str]:
+        """Load translations for given language"""
+        if lang in self._translations:
+            return self._translations[lang]
+        
+        # Default to Dutch for most users, fallback to English
+        lang_file = lang if lang in ['en', 'nl'] else 'nl'
+        
+        try:
+            file_path = os.path.join(os.path.dirname(__file__), '..', 'translations', f'{lang_file}.json')
+            with open(file_path, 'r', encoding='utf-8') as f:
+                self._translations[lang] = json.load(f)
+                return self._translations[lang]
+        except Exception as e:
+            logger.error(f"Error loading translations for {lang}: {e}")
+            # Fallback to English if Dutch fails
+            if lang_file != 'en':
+                return self._load_translations('en')
+            return {}
+
+    def _t(self, key: str, user_id: int = None, force_group_lang: bool = False, **params) -> str:
+        """Translate message key to user language"""
+        # Force Dutch for group messages
+        if force_group_lang:
+            lang = 'nl'
+        else:
+            # Get user language preference, default to Dutch
+            lang = 'nl'
+            if user_id:
+                customer = self.db.get_customer_by_telegram_id(user_id)
+                if customer and hasattr(customer, 'language') and customer.language:
+                    lang = customer.language
+        
+        translations = self._load_translations(lang)
+        message = translations.get(key, key)
+        return message.format(**params) if params else message
 
     def _get_bot_username(self) -> str:
         """Get bot username from Telegram API"""

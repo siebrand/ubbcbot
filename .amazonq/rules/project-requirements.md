@@ -11,6 +11,21 @@ This is a Telegram beer ordering bot built with AWS serverless architecture usin
 - Follow resource naming convention: `ubbc-bot-{environment}-{resource-type}`
 - Lambda functions must have CloudWatch logs with 7-day retention
 
+## Internationalization (i18n) Requirements
+- All user-facing strings must use the current key-based i18n system
+- Support English (en) and Dutch (nl) languages
+- Translation files located in `src/translations/` directory
+- Use descriptive keys following dot notation (e.g., `commands.help.description`)
+- Never hardcode user-facing text in Python code
+- Default language: Dutch (nl)
+- Language detection based on Telegram user language preference
+- Duplicate keys are not allowed in the json translation files
+- Use `self._t(key, user_id, **params)` method in handlers for all user messages
+- Translation keys must exist in both en.json and nl.json files
+- Use parameter substitution for dynamic content: `{variable_name}`
+- Language preference stored in customer database record
+- Group messages must always use Dutch (nl) language code
+
 ## Security Requirements
 - Never expose bot tokens in code or logs
 - Use AWS Parameter Store for all secrets

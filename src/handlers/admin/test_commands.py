@@ -11,7 +11,7 @@ class TestCommands(BaseHandler):
         """Handle /setup_test_data command - creates test suppliers and offers (test environment only)"""
         # Only allow in test environment
         if self.environment != 'test':
-            self._send_message(chat_id, "❌ Test data setup is only available in test environment")
+            self._send_message(chat_id, self._t('test_env_only'))
             return {'status': 'environment_restricted'}
             
         try:
@@ -86,15 +86,10 @@ class TestCommands(BaseHandler):
                             updates['status'] = BoxStatus.MINIMUM_REACHED.value
                         self.db.update_box(box.box_id, updates)
             
-            message = f"✅ Test data created successfully!\n\n"
-            message += f"📦 Suppliers: {created_suppliers} created\n"
-            message += f"🍺 Offers: {created_offers} created\n"
-            message += f"📋 Use /list_offers to see all offers"
-            
-            self._send_message(chat_id, message)
+            self._send_message(chat_id, self._t('test_data_success', suppliers=created_suppliers, offers=created_offers))
             return {'status': 'success'}
             
         except Exception as e:
             logger.error(f"Error setting up test data: {e}")
-            self._send_message(chat_id, "❌ Failed to setup test data")
+            self._send_message(chat_id, self._t('test_data_failed'))
             return {'status': 'error'}

@@ -151,7 +151,7 @@ class BotService:
             elif data == 'cancel_confirmation':
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, "Order confirmation cancelled.")
+                base_handler._send_message(chat_id, base_handler._t('action_cancelled'))
                 return {'status': 'cancelled'}
             
             # Admin confirmation callbacks
@@ -180,12 +180,12 @@ class BotService:
             elif data == 'done_editing':
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, "✅ Done editing.")
+                base_handler._send_message(chat_id, base_handler._t('done'))
                 return {'status': 'done'}
             elif data == 'cancel_action':
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, "Action cancelled.")
+                base_handler._send_message(chat_id, base_handler._t('action_cancelled'))
                 return {'status': 'cancelled'}
             
             # Pagination callbacks
@@ -249,7 +249,7 @@ class BotService:
                 
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, "❌ Unknown edit action")
+                base_handler._send_message(chat_id, base_handler._t('unknown_edit'))
                 return {'status': 'unknown_edit'}
             
             # New offer management callbacks
@@ -264,7 +264,7 @@ class BotService:
                 offer_id = data.split('_')[3]
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, f"📷 Send an image to upload for offer {offer_id}")
+                base_handler._send_message(chat_id, base_handler._t('awaiting_image', offer_id=offer_id))
                 self._store_edit_context(chat_id, 'offer_image_upload', offer_id)
                 return {'status': 'awaiting_image'}
             elif data.startswith('clear_offer_images_'):
@@ -286,7 +286,7 @@ class BotService:
         if not supplier:
             from handlers.base_handler import BaseHandler
             base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            base_handler._send_message(chat_id, "❌ Supplier not found")
+            base_handler._send_message(chat_id, base_handler._t('supplier_not_found', user_id=None))
             return {'status': 'supplier_not_found'}
         
         from handlers.base_handler import BaseHandler
@@ -296,21 +296,24 @@ class BotService:
             # Toggle status
             new_status = 'retired' if supplier.status == 'active' else 'active'
             if self.db.update_supplier(supplier_id, {'status': new_status}):
-                base_handler._send_message(chat_id, f"✅ Supplier '{supplier.name}' status changed to {new_status}")
+                base_handler._send_message(chat_id, base_handler._t('supplier_status_updated', user_id=None, 
+                                                                 name=supplier.name, status=new_status))
                 return {'status': 'success'}
             else:
-                base_handler._send_message(chat_id, "❌ Failed to update supplier status")
+                base_handler._send_message(chat_id, base_handler._t('failed_update_supplier_status', user_id=None))
                 return {'status': 'error'}
         elif field == 'name':
             # Store edit context and prompt for input
             self._store_edit_context(chat_id, 'supplier_name', supplier_id)
-            base_handler._send_message(chat_id, f"📝 Enter new name for supplier '{supplier.name}':", reply_markup={"force_reply": True, "input_field_placeholder": "Enter supplier name"})
+            base_handler._send_message(chat_id, base_handler._t('enter_new_supplier_name', user_id=None, name=supplier.name), 
+                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter supplier name"})
         elif field == 'contact':
             # Store edit context and prompt for input  
             self._store_edit_context(chat_id, 'supplier_contact', supplier_id)
-            base_handler._send_message(chat_id, f"📧 Enter contact email for supplier '{supplier.name}':", reply_markup={"force_reply": True, "input_field_placeholder": "Enter email address"})
+            base_handler._send_message(chat_id, base_handler._t('enter_supplier_contact', user_id=None, name=supplier.name), 
+                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter email address"})
         else:
-            base_handler._send_message(chat_id, "❌ Unknown edit field")
+            base_handler._send_message(chat_id, base_handler._t('unknown_edit_field', user_id=None))
             return {'status': 'unknown_field'}
         
         return {'status': 'text_input_required'}
@@ -322,15 +325,18 @@ class BotService:
         
         if field == 'name':
             self._store_edit_context(chat_id, 'offer_name', offer_id)
-            base_handler._send_message(chat_id, f"📝 Enter new name for offer {offer_id}:", reply_markup={"force_reply": True, "input_field_placeholder": "Enter offer name"})
+            base_handler._send_message(chat_id, base_handler._t('enter_new_offer_name', user_id=None, offer_id=offer_id), 
+                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter offer name"})
         elif field == 'price':
             self._store_edit_context(chat_id, 'offer_price', offer_id)
-            base_handler._send_message(chat_id, f"💰 Enter new price for offer {offer_id}:", reply_markup={"force_reply": True, "input_field_placeholder": "Enter price (e.g. 12.50)"})
+            base_handler._send_message(chat_id, base_handler._t('enter_new_offer_price', user_id=None, offer_id=offer_id), 
+                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter price (e.g. 12.50)"})
         elif field == 'description':
             self._store_edit_context(chat_id, 'offer_description', offer_id)
-            base_handler._send_message(chat_id, f"📦 Enter new description for offer {offer_id}:", reply_markup={"force_reply": True, "input_field_placeholder": "Enter description"})
+            base_handler._send_message(chat_id, base_handler._t('enter_new_offer_description', user_id=None, offer_id=offer_id), 
+                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter description"})
         else:
-            base_handler._send_message(chat_id, "❌ Unknown edit field")
+            base_handler._send_message(chat_id, base_handler._t('unknown_edit_field', user_id=None))
             return {'status': 'unknown_field'}
         
         return {'status': 'text_input_required'}
@@ -342,12 +348,14 @@ class BotService:
         
         if field == 'first_name':
             self._store_edit_context(chat_id, 'customer_first_name', customer_id)
-            base_handler._send_message(chat_id, f"📝 Enter new first name for customer:", reply_markup={"force_reply": True, "input_field_placeholder": "Enter first name"})
+            base_handler._send_message(chat_id, base_handler._t('enter_new_first_name', user_id=None), 
+                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter first name"})
         elif field == 'last_name':
             self._store_edit_context(chat_id, 'customer_last_name', customer_id)
-            base_handler._send_message(chat_id, f"📝 Enter new last name for customer:", reply_markup={"force_reply": True, "input_field_placeholder": "Enter last name"})
+            base_handler._send_message(chat_id, base_handler._t('enter_new_last_name', user_id=None), 
+                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter last name"})
         else:
-            base_handler._send_message(chat_id, "❌ Unknown edit field")
+            base_handler._send_message(chat_id, base_handler._t('unknown_edit_field', user_id=None))
             return {'status': 'unknown_field'}
         
         return {'status': 'text_input_required'}
@@ -493,7 +501,7 @@ class BotService:
             # Send PM redirect message
             from handlers.base_handler import BaseHandler
             base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            base_handler._send_message(user_id, f"Please use commands in private messages. Send {command} here.")
+            base_handler._send_message(user_id, base_handler._t('redirected_to_pm', command=command))
             return {'status': 'redirected_to_pm'}
 
         # Check user authorization (admin always approved)
@@ -507,7 +515,7 @@ class BotService:
                     from handlers.base_handler import BaseHandler
                     base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
                     target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
-                    base_handler._send_message(target_chat, "❌ You are not authorized to use this bot. Send /start for more information.")
+                    base_handler._send_message(target_chat, base_handler._t('unauthorized'))
                     return {'status': 'unauthorized'}
 
         # Handle deep link start parameters
@@ -683,7 +691,7 @@ class BotService:
             offer = self.db.get_offer(offer_id_int)
             
             if not offer:
-                base_handler._send_message(chat_id, "❌ Offer not found")
+                base_handler._send_message(chat_id, base_handler._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             # Get the largest photo size
@@ -693,7 +701,7 @@ class BotService:
             # Download image from Telegram
             image_data = self._download_telegram_file(file_id)
             if not image_data:
-                base_handler._send_message(chat_id, "❌ Failed to download image")
+                base_handler._send_message(chat_id, base_handler._t('download_failed'))
                 return {'status': 'download_failed'}
             
             # Upload to S3
@@ -702,7 +710,7 @@ class BotService:
             image_url = self.db.upload_image_to_s3(image_data, file_name, offer_id_int)
             
             if not image_url:
-                base_handler._send_message(chat_id, "❌ Failed to upload image")
+                base_handler._send_message(chat_id, base_handler._t('upload_failed'))
                 return {'status': 'upload_failed'}
             
             # Update offer with new image
@@ -711,29 +719,28 @@ class BotService:
             
             if self.db.update_offer(offer_id_int, {'images': current_images}):
                 # Send confirmation with button to continue editing
-                message = f"✅ Image uploaded successfully! Total images: {len(current_images)}\n\n"
-                message += "Continue editing?"
+                message = base_handler._t('image_uploaded', count=len(current_images))
                 
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": "📝 Continue Editing", "callback_data": f"offer_details_{offer_id_int}_edit"}],
-                        [{"text": "👁️ View Details", "callback_data": f"offer_details_{offer_id_int}"}],
-                        [{"text": "✅ Done", "callback_data": "done_editing"}]
+                        [{"text": base_handler._t('continue_editing'), "callback_data": f"offer_details_{offer_id_int}_edit"}],
+                        [{"text": base_handler._t('view_details'), "callback_data": f"offer_details_{offer_id_int}"}],
+                        [{"text": base_handler._t('done_editing'), "callback_data": "done_editing"}]
                     ]
                 }
                 
                 base_handler._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
             else:
-                base_handler._send_message(chat_id, "❌ Failed to update offer with image")
+                base_handler._send_message(chat_id, base_handler._t('update_failed'))
                 return {'status': 'update_failed'}
                 
         except ValueError:
-            base_handler._send_message(chat_id, "❌ Invalid offer ID")
+            base_handler._send_message(chat_id, base_handler._t('invalid_offer_id'))
             return {'status': 'invalid_offer_id'}
         except Exception as e:
             logger.error(f"Error uploading image: {e}")
-            base_handler._send_message(chat_id, "❌ Image upload failed")
+            base_handler._send_message(chat_id, base_handler._t('image_upload_failed'))
             return {'status': 'error'}
     
     def _handle_clear_offer_images(self, chat_id: int, offer_id: str) -> Dict[str, Any]:
@@ -746,11 +753,11 @@ class BotService:
             offer = self.db.get_offer(offer_id_int)
             
             if not offer:
-                base_handler._send_message(chat_id, "❌ Offer not found")
+                base_handler._send_message(chat_id, base_handler._t('offer_not_found'))
                 return {'status': 'offer_not_found'}
             
             if not offer.images:
-                base_handler._send_message(chat_id, "❌ No images to clear")
+                base_handler._send_message(chat_id, base_handler._t('no_images_to_clear'))
                 return {'status': 'no_images'}
             
             # Delete images from S3
@@ -758,18 +765,18 @@ class BotService:
             
             # Update offer to remove images
             if self.db.update_offer(offer_id_int, {'images': []}):
-                base_handler._send_message(chat_id, f"✅ Cleared {len(offer.images)} images from offer {offer_id}")
+                base_handler._send_message(chat_id, base_handler._t('images_cleared', count=len(offer.images), offer_id=offer_id))
                 return {'status': 'success'}
             else:
-                base_handler._send_message(chat_id, "❌ Failed to update offer")
+                base_handler._send_message(chat_id, base_handler._t('update_failed'))
                 return {'status': 'update_failed'}
                 
         except ValueError:
-            base_handler._send_message(chat_id, "❌ Invalid offer ID")
+            base_handler._send_message(chat_id, base_handler._t('invalid_offer_id'))
             return {'status': 'invalid_offer_id'}
         except Exception as e:
             logger.error(f"Error clearing images: {e}")
-            base_handler._send_message(chat_id, "❌ Failed to clear images")
+            base_handler._send_message(chat_id, base_handler._t('failed_clear_images'))
             return {'status': 'error'}
     
     def _convert_entities_to_html(self, text: str, entities: list) -> str:

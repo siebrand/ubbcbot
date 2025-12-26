@@ -10,7 +10,7 @@ class CustomerOrderCommands(BaseHandler):
     def handle_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /order command"""
         if len(args) < 1:
-            self._send_message(chat_id, "Usage: /order [offer_id] [quantity]")
+            self._send_message(chat_id, self._t('usage_order', user_id))
             return {'status': 'invalid_args'}
 
         try:
@@ -18,19 +18,19 @@ class CustomerOrderCommands(BaseHandler):
             quantity = int(args[1]) if len(args) > 1 else 1
 
             if quantity <= 0:
-                self._send_message(chat_id, "❌ Quantity must be positive")
+                self._send_message(chat_id, self._t('quantity_must_positive', user_id))
                 return {'status': 'invalid_quantity'}
 
             # Get offer
             offer = self.db.get_offer(offer_id)
             if not offer or offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, "❌ Offer not found or not available for ordering")
+                self._send_message(chat_id, self._t('offer_not_found', user_id))
                 return {'status': 'offer_not_found'}
 
             # Get customer
             customer = self.db.get_customer_by_telegram_id(user_id)
             if not customer:
-                self._send_message(chat_id, "❌ Customer not found")
+                self._send_message(chat_id, self._t('customer_not_found', user_id))
                 return {'status': 'customer_not_found'}
 
             # Check for existing orders and enforce 5-unit limit
@@ -39,8 +39,10 @@ class CustomerOrderCommands(BaseHandler):
             total_existing = sum(order.quantity for order in existing_orders)
             
             if total_existing + quantity > 5:
-                message = f"❌ Order exceeds 5-unit limit for {offer.name}\n\n"
-                message += f"Your existing orders ({total_existing} units):\n"
+                message = self._t('order_limit_exceeded', user_id, 
+                                offer_name=offer.name, 
+                                total_existing=total_existing)
+                message += "\n\n"
                 for order in existing_orders:
                     from utils.timezone import to_cet_string
                     order_date = to_cet_string(order.created_at, '%Y-%m-%d')
@@ -48,28 +50,29 @@ class CustomerOrderCommands(BaseHandler):
                 
                 remaining_allowed = 5 - total_existing
                 if remaining_allowed > 0:
-                    message += f"\nMaximum you can still order: {remaining_allowed} units"
+                    message += self._t('remaining_units_allowed', user_id, remaining=remaining_allowed)
                 else:
-                    message += f"\nYou have reached the 5-unit limit for this offer"
+                    message += self._t('limit_reached', user_id)
                 
                 self._send_message(chat_id, message)
                 return {'status': 'limit_exceeded'}
             
             # Check for existing orders for duplicate confirmation
             if existing_orders:
-                message = f"⚠️ You already have orders for {offer.name}:\n\n"
+                message = self._t('duplicate_order_warning', user_id, offer_name=offer.name)
+                message += "\n\n"
                 for order in existing_orders:
                     from utils.timezone import to_cet_string
                     order_date = to_cet_string(order.created_at, '%Y-%m-%d')
                     message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
                 
-                message += f"\nAre you sure you want to order {quantity}x more?"
+                message += self._t('confirm_additional_order', user_id, quantity=quantity)
                 
                 # Create inline keyboard with Confirm and Cancel buttons
                 keyboard = {
                     "inline_keyboard": [[
-                        {"text": "✅ Confirm", "callback_data": f"confirm_order_{offer_id}_{quantity}"},
-                        {"text": "❌ Cancel", "callback_data": "cancel_confirmation"}
+                        {"text": self._t('confirm', user_id), "callback_data": f"confirm_order_{offer_id}_{quantity}"},
+                        {"text": self._t('cancel', user_id), "callback_data": "cancel_confirmation"}
                     ]]
                 }
                 
@@ -80,13 +83,13 @@ class CustomerOrderCommands(BaseHandler):
             return self.execute_order(chat_id, user_id, offer_id, quantity, offer, customer)
 
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid quantity format")
+            self._send_message(chat_id, self._t('invalid_format', user_id))
             return {'status': 'invalid_format'}
 
     def handle_confirm_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_order command"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /confirm_order [offer_id] [quantity]")
+            self._send_message(chat_id, self._t('usage_confirm_order', user_id))
             return {'status': 'invalid_args'}
 
         try:
@@ -94,18 +97,18 @@ class CustomerOrderCommands(BaseHandler):
             quantity = int(args[1])
             
             if quantity <= 0:
-                self._send_message(chat_id, "❌ Quantity must be positive")
+                self._send_message(chat_id, self._t('quantity_must_positive', user_id))
                 return {'status': 'invalid_quantity'}
 
             # Get offer and customer
             offer = self.db.get_offer(offer_id)
             if not offer or offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, "❌ Offer not found or inactive")
+                self._send_message(chat_id, self._t('offer_not_found_inactive', user_id))
                 return {'status': 'offer_not_found'}
 
             customer = self.db.get_customer_by_telegram_id(user_id)
             if not customer:
-                self._send_message(chat_id, "❌ Customer not found")
+                self._send_message(chat_id, self._t('customer_not_found', user_id))
                 return {'status': 'customer_not_found'}
             
             # Check 5-unit limit for confirmed orders
@@ -114,8 +117,10 @@ class CustomerOrderCommands(BaseHandler):
             total_existing = sum(order.quantity for order in existing_orders)
             
             if total_existing + quantity > 5:
-                message = f"❌ Order exceeds 5-unit limit for {offer.name}\n\n"
-                message += f"Your existing orders ({total_existing} units):\n"
+                message = self._t('order_limit_exceeded', user_id, 
+                                offer_name=offer.name, 
+                                total_existing=total_existing)
+                message += "\n\n"
                 for order in existing_orders:
                     from utils.timezone import to_cet_string
                     order_date = to_cet_string(order.created_at, '%Y-%m-%d')
@@ -123,9 +128,9 @@ class CustomerOrderCommands(BaseHandler):
                 
                 remaining_allowed = 5 - total_existing
                 if remaining_allowed > 0:
-                    message += f"\nMaximum you can still order: {remaining_allowed} units"
+                    message += self._t('remaining_units_allowed', user_id, remaining=remaining_allowed)
                 else:
-                    message += f"\nYou have reached the 5-unit limit for this offer"
+                    message += self._t('limit_reached', user_id)
                 
                 self._send_message(chat_id, message)
                 return {'status': 'limit_exceeded'}
@@ -134,7 +139,7 @@ class CustomerOrderCommands(BaseHandler):
             return self.execute_order(chat_id, user_id, offer_id, quantity, offer, customer)
             
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid format")
+            self._send_message(chat_id, self._t('invalid_format', user_id))
             return {'status': 'invalid_format'}
 
     def execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
@@ -152,7 +157,7 @@ class CustomerOrderCommands(BaseHandler):
                 total_available = offer.wholesale_box_size
             
             if quantity > total_available:
-                self._send_message(chat_id, f"❌ Only {total_available} units available for {offer.name}")
+                self._send_message(chat_id, self._t('sold_out', user_id))
                 return {'status': 'insufficient_capacity'}
 
             # Create single order
@@ -167,7 +172,7 @@ class CustomerOrderCommands(BaseHandler):
             )
 
             if not self.db.create_order(order):
-                self._send_message(chat_id, "❌ Failed to place order")
+                self._send_message(chat_id, self._t('order_failed', user_id))
                 return {'status': 'error'}
 
             # Now assign order to boxes and update quantities
@@ -191,7 +196,7 @@ class CustomerOrderCommands(BaseHandler):
                     # Check if offer is ordered/completed/delivered or any boxes are already ordered - if so, don't create new box
                     has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes)
                     if offer.status in [OfferStatus.ORDERED.value, OfferStatus.COMPLETED.value, OfferStatus.DELIVERED.value] or has_ordered_boxes:
-                        self._send_message(chat_id, "❌ No available capacity - offer is sold out")
+                        self._send_message(chat_id, self._t('no_available_capacity', user_id))
                         return {'status': 'sold_out'}
                     
                     available_box = Box(
@@ -217,7 +222,7 @@ class CustomerOrderCommands(BaseHandler):
 
                 if not self.db.update_box(available_box.box_id, updates):
                     logger.error(f"Failed to update box {available_box.box_id}")
-                    self._send_message(chat_id, "❌ Failed to update box")
+                    self._send_message(chat_id, self._t('failed_update_box', user_id))
                     return {'status': 'error'}
                 
                 boxes_used.append(available_box.box_id)
@@ -262,7 +267,7 @@ class CustomerOrderCommands(BaseHandler):
             
         except Exception as e:
             logger.error(f"Error in execute_order: {e}")
-            self._send_message(chat_id, "❌ Order processing failed")
+            self._send_message(chat_id, self._t('order_processing_failed', user_id))
             return {'status': 'error'}
     
     def _check_and_update_offer_status(self, offer_id: int):

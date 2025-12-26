@@ -7,48 +7,48 @@ class AdminOrderCommands(BaseHandler):
     def handle_cancel_order(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /cancel_order command"""
         if not args:
-            self._send_message(chat_id, "Usage: /cancel_order <order_id>")
+            self._send_message(chat_id, self._t('usage_cancel_order'))
             return {'status': 'invalid_args'}
 
         order_id = args[0]
         order = self.db.get_order(order_id)
         
         if not order:
-            self._send_message(chat_id, "❌ Order not found")
+            self._send_message(chat_id, self._t('order_not_found'))
             return {'status': 'order_not_found'}
         
         if order.status == 'cancelled':
-            self._send_message(chat_id, "❌ Order already cancelled")
+            self._send_message(chat_id, self._t('order_already_cancelled'))
             return {'status': 'already_cancelled'}
 
         # Get box info
         box = self.db.get_box(order.box_id)
         if not box:
-            self._send_message(chat_id, "❌ Box not found")
+            self._send_message(chat_id, self._t('box_not_found'))
             return {'status': 'box_not_found'}
 
         # Get customer and offer info
         customer = self.db.get_customer(order.customer_id)
         offer = self.db.get_offer(order.offer_id)
-        customer_name = customer.first_name if customer else "Unknown"
-        offer_name = offer.name if offer else "Unknown"
+        customer_name = customer.first_name if customer else self._t('unknown', user_id=None)
+        offer_name = offer.name if offer else self._t('unknown', user_id=None)
 
         # Show confirmation details
-        message = f"⚠️ Cancel Order {order_id}?\n\n"
-        message += f"Customer: {customer_name}\n"
-        message += f"Product: {offer_name}\n"
-        message += f"Quantity: {order.quantity}\n"
-        message += f"Total: €{order.total_price:.2f}\n\n"
+        message = self._t('cancel_order_confirmation', user_id=None,
+                         order_id=order_id,
+                         customer_name=customer_name,
+                         offer_name=offer_name,
+                         quantity=order.quantity,
+                         total=order.total_price)
         
         if box.status == BoxStatus.FULL.value:
-            message += "⚠️ WARNING: This order is from a FULL box!\n"
-            message += "Cancelling will affect box status.\n\n"
+            message += "\n" + self._t('cancel_full_box_warning', user_id=None)
         
         # Add inline keyboard for confirmation
         keyboard = {
             "inline_keyboard": [[
-                {"text": "✅ Confirm Cancel", "callback_data": f"confirm_cancel_order_{order_id}"},
-                {"text": "❌ Keep Order", "callback_data": "cancel_action"}
+                {"text": self._t('confirm_cancel', user_id=None), "callback_data": f"confirm_cancel_order_{order_id}"},
+                {"text": self._t('keep_order', user_id=None), "callback_data": "cancel_action"}
             ]]
         }
         
@@ -58,19 +58,19 @@ class AdminOrderCommands(BaseHandler):
     def handle_confirm_cancel(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_cancel command - now called from button callback"""
         if not args:
-            self._send_message(chat_id, "Usage: /confirm_cancel <order_id>")
+            self._send_message(chat_id, self._t('usage_confirm_cancel'))
             return {'status': 'invalid_args'}
 
         order_id = args[0]
         order = self.db.get_order(order_id)
         
         if not order:
-            self._send_message(chat_id, "❌ Order not found")
+            self._send_message(chat_id, self._t('order_not_found'))
             return {'status': 'order_not_found'}
 
         box = self.db.get_box(order.box_id)
         if not box:
-            self._send_message(chat_id, "❌ Box not found")
+            self._send_message(chat_id, self._t('box_not_found'))
             return {'status': 'box_not_found'}
 
         return self._execute_cancel(order, box, chat_id)
@@ -78,7 +78,7 @@ class AdminOrderCommands(BaseHandler):
     def handle_order_for(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /order_for command - admin places order for another user"""
         if len(args) < 2:
-            self._send_message(chat_id, "Usage: /order_for <username> <offer_id> [quantity]")
+            self._send_message(chat_id, self._t('usage_order_for'))
             return {'status': 'invalid_args'}
 
         try:
@@ -87,19 +87,19 @@ class AdminOrderCommands(BaseHandler):
             quantity = int(args[2]) if len(args) > 2 else 1
 
             if quantity <= 0:
-                self._send_message(chat_id, "❌ Quantity must be positive")
+                self._send_message(chat_id, self._t('quantity_must_positive'))
                 return {'status': 'invalid_quantity'}
 
             # Find target customer
             target_customer = self._find_customer_by_identifier(username)
             if not target_customer:
-                self._send_message(chat_id, f"❌ User '{username}' not found")
+                self._send_message(chat_id, self._t('user_not_found_username', username=username))
                 return {'status': 'user_not_found'}
 
             # Get offer
             offer = self.db.get_offer(offer_id)
             if not offer or offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, "❌ Offer not found or inactive")
+                self._send_message(chat_id, self._t('offer_not_found_inactive'))
                 return {'status': 'offer_not_found'}
 
             # Check 10-unit admin limit for target customer
@@ -108,8 +108,10 @@ class AdminOrderCommands(BaseHandler):
             total_existing = sum(order.quantity for order in existing_orders)
             
             if total_existing + quantity > 10:
-                message = f"❌ Order exceeds 10-unit admin limit for {target_customer.first_name or username}\n\n"
-                message += f"Their existing orders ({total_existing} units):\n"
+                message = self._t('admin_order_limit_exceeded', user_id=None,
+                                customer_name=target_customer.first_name or username,
+                                total_existing=total_existing)
+                message += "\n\n"
                 for order in existing_orders:
                     from utils.timezone import to_cet_string
                     order_date = to_cet_string(order.created_at, '%Y-%m-%d')
@@ -117,9 +119,9 @@ class AdminOrderCommands(BaseHandler):
                 
                 remaining_allowed = 10 - total_existing
                 if remaining_allowed > 0:
-                    message += f"\nMaximum you can order for them: {remaining_allowed} units"
+                    message += self._t('admin_remaining_units_allowed', user_id=None, remaining=remaining_allowed)
                 else:
-                    message += f"\nThey have reached the 10-unit admin limit for this offer"
+                    message += self._t('admin_limit_reached', user_id=None)
                 
                 self._send_message(chat_id, message)
                 return {'status': 'limit_exceeded'}
@@ -136,11 +138,11 @@ class AdminOrderCommands(BaseHandler):
                 order_status = latest_order.status if latest_order else 'pending'
                 
                 # Notify target customer
-                customer_message = f"🍺 An order has been placed for you by admin\n\n"
-                customer_message += f"Product: {offer.name}\n"
-                customer_message += f"Quantity: {quantity}\n"
-                customer_message += f"Total: €{offer.price_per_unit * quantity:.2f}\n"
-                customer_message += f"Status: {order_status}"
+                customer_message = self._t('admin_order_placed', target_customer.telegram_user_id,
+                                         product=offer.name,
+                                         quantity=quantity,
+                                         total=offer.price_per_unit * quantity,
+                                         status=order_status)
                 self._send_message(target_customer.telegram_user_id, customer_message)
                 
                 # Send notification to default group (admin orders don't trigger this automatically)
@@ -148,19 +150,19 @@ class AdminOrderCommands(BaseHandler):
                 
                 # Confirm to admin
                 display_name = target_customer.first_name or username
-                self._send_message(chat_id, f"✅ Order placed for {display_name}")
+                self._send_message(chat_id, self._t('order_placed_for_user', name=display_name))
             
             return result
 
         except ValueError:
-            self._send_message(chat_id, "❌ Invalid format")
+            self._send_message(chat_id, self._t('invalid_format'))
             return {'status': 'invalid_format'}
 
     def _execute_cancel(self, order, box, chat_id: int) -> Dict[str, Any]:
         """Execute order cancellation"""
         # Update order status
         if not self.db.update_order(order.order_id, {'status': 'cancelled'}):
-            self._send_message(chat_id, "❌ Failed to cancel order")
+            self._send_message(chat_id, self._t('failed_cancel_order'))
             return {'status': 'error'}
 
         # Update box quantity and status
@@ -183,38 +185,38 @@ class AdminOrderCommands(BaseHandler):
         
         # Notify customer
         if customer:
-            customer_message = f"❌ Your order has been cancelled by admin\n"
-            customer_message += f"Product: {offer.name if offer else 'Unknown'}\n"
-            customer_message += f"Quantity: {order.quantity}\n"
+            customer_message = self._t('order_cancelled_by_admin', customer.telegram_user_id,
+                                     product=offer.name if offer else 'Unknown',
+                                     quantity=order.quantity)
             self._send_message(customer.telegram_user_id, customer_message)
 
         # Confirm to admin
-        self._send_message(chat_id, 
-            f"✅ Order cancelled\n"
-            f"Order ID: {order.order_id}\n"
-            f"Customer notified\n"
-            f"Box quantity updated: {new_quantity}/{box.max_capacity}")
+        admin_message = self._t('order_cancelled_success', user_id=None,
+                              order_id=order.order_id,
+                              new_quantity=new_quantity,
+                              max_capacity=box.max_capacity)
+        self._send_message(chat_id, admin_message)
         
         return {'status': 'success'}
 
     def handle_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /user_orders command"""
         if not args:
-            self._send_message(chat_id, "Usage: /user_orders <username>")
+            self._send_message(chat_id, self._t('usage_user_orders'))
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
         customer = self._find_customer_by_identifier(identifier)
         
         if not customer:
-            self._send_message(chat_id, f"❌ User '{identifier}' not found")
+            self._send_message(chat_id, self._t('user_not_found_username', username=identifier))
             return {'status': 'user_not_found'}
 
         orders = self.db.get_orders_by_customer(customer.customer_id)
         
         if not orders:
             display_name = customer.first_name or identifier
-            self._send_message(chat_id, f"📋 No orders found for {display_name}")
+            self._send_message(chat_id, self._t('no_orders_for_user', name=display_name))
             return {'status': 'no_orders'}
 
         # Group orders by status
@@ -222,23 +224,24 @@ class AdminOrderCommands(BaseHandler):
         cancelled_orders = [o for o in orders if o.status == 'cancelled']
         
         display_name = self._escape_html(customer.first_name or identifier)
-        message = f"📋 Orders for {display_name}:\n\n"
+        message = self._t('user_orders_title', user_id=None, name=display_name)
+        message += "\n\n"
         
         if active_orders:
-            message += "🟢 Active Orders:\n"
+            message += self._t('active_orders_label', user_id=None) + "\n"
             for order in active_orders:
                 offer = self.db.get_offer(order.offer_id)
-                offer_name = offer.name if offer else "Unknown"
+                offer_name = offer.name if offer else self._t('unknown', user_id=None)
                 from utils.timezone import to_cet_string
                 order_date = to_cet_string(order.created_at, '%Y-%m-%d')
                 message += f"• [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f} ({order.status})\n"
                 message += f"  ID: {order.order_id}\n"
         
         if cancelled_orders:
-            message += "\n❌ Cancelled Orders:\n"
+            message += "\n" + self._t('cancelled_orders_label', user_id=None) + "\n"
             for order in cancelled_orders[-3:]:  # Show last 3 cancelled
                 offer = self.db.get_offer(order.offer_id)
-                offer_name = offer.name if offer else "Unknown"
+                offer_name = offer.name if offer else self._t('unknown', user_id=None)
                 from utils.timezone import to_cet_string
                 order_date = to_cet_string(order.created_at, '%Y-%m-%d')
                 message += f"• [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
@@ -252,7 +255,7 @@ class AdminOrderCommands(BaseHandler):
         status_filter = args[0].lower() if args else 'active'
         
         if status_filter not in ['active', 'cancelled', 'ordered', 'all']:
-            self._send_message(chat_id, "Usage: /all_orders [active|cancelled|ordered|all]")
+            self._send_message(chat_id, self._t('usage_all_orders'))
             return {'status': 'invalid_args'}
 
         # Get all customers and their orders
@@ -272,7 +275,7 @@ class AdminOrderCommands(BaseHandler):
                 all_orders.append((customer, order))
         
         if not all_orders:
-            self._send_message(chat_id, f"📋 No {status_filter} orders found")
+            self._send_message(chat_id, self._t('no_orders_status', status=status_filter))
             return {'status': 'no_orders'}
         
         # Sort by date (newest first)
@@ -283,7 +286,10 @@ class AdminOrderCommands(BaseHandler):
         csv_filename = f"orders_{status_filter}_{self.environment}.csv"
         
         # Send CSV file
-        self._send_document(chat_id, csv_content, csv_filename, f"📊 {status_filter.title()} Orders CSV ({len(all_orders)} orders)")
+        caption = self._t('orders_csv_caption', user_id=None, 
+                         status=status_filter.title(), 
+                         count=len(all_orders))
+        self._send_document(chat_id, csv_content, csv_filename, caption)
         
         return {'status': 'success'}
     
@@ -311,7 +317,7 @@ class AdminOrderCommands(BaseHandler):
             from utils.timezone import to_cet_string
             order_date = to_cet_string(order.created_at, '%Y-%m-%d %H:%M')
             
-            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
             username = customer.username or ""
             
             writer.writerow([
