@@ -52,7 +52,7 @@
   "confirm": "✅ Bevestigen",
   "yes": "✅ Ja",
   "no": "❌ Nee",
-  "unauthorized": "❌ Je bent niet geautoriseerd om deze bot te gebruiken. Wacht op goedkeuring.",
+  "unauthorized": "❌ We hebben je verzoek voor UBBC ontvangen. Wacht nog even op goedkeuring. We sturen je zo snel mogelijk bericht.",
   "admin_only": "❌ Dit commando is alleen beschikbaar voor beheerders.",
   "usage_add_supplier": "Gebruik: /add_supplier <naam>",
   "usage_create_offer_legacy": "Gebruik: /create_offer <leverancier_naam> <naam> <prijs> <aantal_per_colli>",

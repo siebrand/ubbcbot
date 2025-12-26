@@ -52,7 +52,7 @@
   "confirm": "✅ Confirm",
   "yes": "✅ Yes",
   "no": "❌ No",
-  "unauthorized": "❌ You are not authorized to use this bot. Please wait for approval.",
+  "unauthorized": "❌ We've received your request for UBBC. Please wait for approval. We'll get back to you as soon as possible.",
   "admin_only": "❌ This command is only available to administrators.",
   "usage_add_supplier": "Usage: /add_supplier <name>",
   "usage_create_offer_legacy": "Usage: /create_offer <supplier_name> <name> <price> <box_size>",
