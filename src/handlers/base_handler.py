@@ -20,7 +20,7 @@ class BaseHandler:
         import requests
         try:
             url = f"https://api.telegram.org/bot{self.telegram_token}/getMe"
-            response = requests.get(url)
+            response = requests.get(url, timeout=20)
             if response.status_code == 200:
                 data = response.json()
                 self._bot_username = data['result']['username']
@@ -75,7 +75,7 @@ class BaseHandler:
         try:
             if self.environment == 'test':
                 logger.info(f"Sending message to chat {chat_id}: {text[:50]}...")
-            response = requests.post(url, json=data)
+            response = requests.post(url, json=data, timeout=20)
             if self.environment == 'test':
                 logger.info(f"Telegram API response: {response.status_code} - {response.text}")
             
@@ -102,7 +102,7 @@ class BaseHandler:
         }
         
         try:
-            response = requests.post(url, json=data)
+            response = requests.post(url, json=data, timeout=20)
             return response.status_code == 200
         except Exception as e:
             logger.error(f"Error deleting message: {e}")
@@ -144,7 +144,7 @@ class BaseHandler:
         try:
             if self.environment == 'test':
                 logger.info(f"Sending document to chat {chat_id}: {filename}")
-            response = requests.post(url, data=data, files=files)
+            response = requests.post(url, data=data, files=files, timeout=20)
             if self.environment == 'test':
                 logger.info(f"Telegram API response: {response.status_code}")
             return response.status_code == 200
@@ -226,7 +226,7 @@ class BaseHandler:
         try:
             if self.environment == 'test':
                 logger.info(f"Sending photo to chat {chat_id}: {photo_url}")
-            response = requests.post(url, json=data, timeout=30)
+            response = requests.post(url, json=data, timeout=20)
             if self.environment == 'test':
                 logger.info(f"Telegram API response: {response.status_code}")
             
@@ -260,7 +260,7 @@ class BaseHandler:
         try:
             if self.environment == 'test':
                 logger.info(f"Sending media group to chat {chat_id}: {len(media_group)} items")
-            response = requests.post(url, json=data, timeout=30)
+            response = requests.post(url, json=data, timeout=20)
             if self.environment == 'test':
                 logger.info(f"Telegram API response: {response.status_code}")
             

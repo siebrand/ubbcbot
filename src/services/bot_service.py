@@ -426,7 +426,7 @@ class BotService:
         try:
             url = f"https://api.telegram.org/bot{self.telegram_token}/answerCallbackQuery"
             data = {'callback_query_id': query_id}
-            response = requests.post(url, json=data)
+            response = requests.post(url, json=data, timeout=20)
             return response.status_code == 200
         except Exception as e:
             logger.error(f"Error answering callback query: {e}")
@@ -442,7 +442,7 @@ class BotService:
                 'message_id': message_id,
                 'reply_markup': {'inline_keyboard': []}
             }
-            response = requests.post(url, json=data)
+            response = requests.post(url, json=data, timeout=20)
             return response.status_code == 200
         except Exception as e:
             logger.error(f"Error removing keyboard: {e}")
@@ -802,7 +802,7 @@ class BotService:
         try:
             # Get file path
             url = f"https://api.telegram.org/bot{self.telegram_token}/getFile"
-            response = requests.get(url, params={'file_id': file_id})
+            response = requests.get(url, params={'file_id': file_id}, timeout=20)
             
             if response.status_code != 200:
                 return None
@@ -811,7 +811,7 @@ class BotService:
             
             # Download file
             download_url = f"https://api.telegram.org/file/bot{self.telegram_token}/{file_path}"
-            file_response = requests.get(download_url)
+            file_response = requests.get(download_url, timeout=20)
             
             if file_response.status_code == 200:
                 return file_response.content
