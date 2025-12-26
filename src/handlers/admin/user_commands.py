@@ -172,6 +172,7 @@ class UserCommands(BaseHandler):
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
         
         if not customer:
+            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=identifier))
             return {'status': 'user_not_found'}
         
         return self._show_user_edit_interface(customer, chat_id)
