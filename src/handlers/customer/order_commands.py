@@ -304,11 +304,26 @@ class CustomerOrderCommands(BaseHandler):
             
             customer_name = ' '.join(name_parts) if name_parts else customer.username or 'Unknown'
             
-            # Check if offer is now sold out
+            # Check if offer is now sold out and calculate remaining availability
             updated_offer = self.db.get_offer(offer.offer_id)
-            sold_out_text = " - SOLD OUT" if updated_offer and updated_offer.status == OfferStatus.SOLD_OUT.value else ""
+            availability_text = ""
             
-            message = f"🍺 {customer_name} ordered {quantity}x {offer.name}{sold_out_text}"
+            if updated_offer and updated_offer.status == OfferStatus.SOLD_OUT.value:
+                availability_text = " - SOLD OUT"
+            else:
+                # Calculate remaining availability
+                boxes = self.db.get_boxes_by_offer(offer.offer_id)
+                total_available = 0
+                for box in boxes:
+                    if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
+                        total_available += box.max_capacity - box.current_quantity
+                
+                if total_available > 6:
+                    availability_text = f" ({self._t('sufficient_available', force_group_lang=True)})"
+                elif total_available > 0:
+                    availability_text = f" ({self._t('units_available', force_group_lang=True, count=total_available)})"
+                # If total_available == 0 and not sold out, show nothing
+            message = f"🍺 {customer_name} ordered {quantity}x {offer.name}{availability_text}"
             result = self._send_message(int(group_id), message, force_group=True)
             return result.get('success', False)
             

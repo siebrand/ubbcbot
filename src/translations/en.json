@@ -279,5 +279,7 @@
   "status_inactive": "INACTIVE",
   "multiple_days_label": "[multiple days]",
   "subtotal_label": "Subtotal: €{total:.2f}",
+  "sufficient_available": "sufficient available",
+  "units_available": "{count} available",
   "open_orders_total_label": "📊 Open Orders Total: €{total:.2f}"
 }

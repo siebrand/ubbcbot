@@ -279,5 +279,7 @@
   "status_inactive": "INACTIEF",
   "multiple_days_label": "[meerdere dagen]",
   "subtotal_label": "Subtotaal: €{total:.2f}",
+  "sufficient_available": "voldoende beschikbaar",
+  "units_available": "{count} beschikbaar",
   "open_orders_total_label": "📊 Openstaande Bestellingen Totaal: €{total:.2f}"
 }
