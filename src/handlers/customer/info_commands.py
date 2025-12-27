@@ -363,6 +363,7 @@ class InfoCommands(BaseHandler):
             if len(status_groups) > 1:
                 message += f"{status_emoji} {status.upper()}:\n"
             
+            line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups[status]['items']:
                 # Determine date display
                 if len(data['dates']) == 1:
@@ -370,13 +371,17 @@ class InfoCommands(BaseHandler):
                 else:
                     date_display = "[multiple days]"
                 
-                order_line = f"{status_emoji} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
+                # Alternate diamond icons for better readability
+                line_icon = "🔸" if line_count % 2 == 0 else "🔹"
+                
+                order_line = f"{line_icon} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
                 
                 if show_ids:
                     ids_display = ', '.join(data['order_ids'])
                     order_line += f" - {ids_display}"
                 
                 message += order_line + "\n"
+                line_count += 1
             
             # Add status total if multiple statuses present
             if len(status_groups) > 1:
@@ -396,6 +401,7 @@ class InfoCommands(BaseHandler):
             if len(status_groups) > 1:
                 message += f"{status_emoji} CANCELLED:\n"
             
+            line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups['cancelled']['items']:
                 # Determine date display
                 if len(data['dates']) == 1:
@@ -403,13 +409,17 @@ class InfoCommands(BaseHandler):
                 else:
                     date_display = "[multiple days]"
                 
-                order_line = f"{status_emoji} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
+                # Alternate diamond icons for better readability
+                line_icon = "🔸" if line_count % 2 == 0 else "🔹"
+                
+                order_line = f"{line_icon} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
                 
                 if show_ids:
                     ids_display = ', '.join(data['order_ids'])
                     order_line += f" - {ids_display}"
                 
                 message += order_line + "\n"
+                line_count += 1
         
         # Add open orders total if no cancelled orders
         elif open_total > 0:
