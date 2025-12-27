@@ -170,6 +170,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/labeling_completed` - Complete labeling process for delivered orders
 - `/send_overviews` - Send delivery overviews to customers
 - `/mark_paid` - Mark customers as paid
+- `/failed_notifications` - View orders with failed delivery notifications
 
 ### Customer Commands
 - `/start` - Register and view help

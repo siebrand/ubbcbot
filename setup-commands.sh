@@ -75,7 +75,8 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"wholesale_delivery\", \"description\": \"Process wholesale deliveries\"},
          {\"command\": \"labeling_completed\", \"description\": \"Complete labeling process\"},
          {\"command\": \"send_overviews\", \"description\": \"Send delivery overviews\"},
-         {\"command\": \"mark_paid\", \"description\": \"Mark customers as paid\"}
+         {\"command\": \"mark_paid\", \"description\": \"Mark customers as paid\"},
+         {\"command\": \"failed_notifications\", \"description\": \"View failed delivery notifications\"}
        ],
        \"scope\": {\"type\": \"chat_administrators\", \"chat_id\": \"$DEFAULT_GROUP_ID\"}
      }" | jq .

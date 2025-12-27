@@ -431,6 +431,44 @@ class AdminOrderCommands(BaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'customers_shown'}
     
+    def handle_failed_notifications(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /failed_notifications command - show orders that couldn't be notified"""
+        from models.entities import AuthorizationStatus, OrderStatus
+        
+        # Get customers with LABELING_COMPLETED orders (these should have been notified)
+        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        failed_notifications = []
+        
+        for customer in customers:
+            orders = self.db.get_orders_by_customer(customer.customer_id)
+            labeling_completed_orders = [o for o in orders if o.status == OrderStatus.LABELING_COMPLETED.value]
+            if labeling_completed_orders:
+                # These are orders that should have been notified but are still in LABELING_COMPLETED
+                failed_notifications.append((customer, labeling_completed_orders))
+        
+        if not failed_notifications:
+            self._send_message(chat_id, "✅ No failed notifications - all labeling completed orders have been processed")
+            return {'status': 'no_failed'}
+        
+        # Show failed notifications
+        message = "⚠️ Orders with Failed Delivery Notifications:\n\n"
+        
+        for customer, orders in failed_notifications:
+            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+            total_amount = sum(order.total_price for order in orders)
+            message += f"👤 {customer_name} (@{customer.username or 'no_username'}):\n"
+            message += f"   💰 €{total_amount:.2f} ({len(orders)} orders)\n"
+            for order in orders:
+                offer = self.db.get_offer(order.offer_id)
+                offer_name = offer.name if offer else "Unknown"
+                message += f"   • {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
+            message += "\n"
+        
+        message += "\n💡 These customers need to be contacted manually or retry delivery overview sending."
+        
+        self._send_message(chat_id, message)
+        return {'status': 'failed_shown'}
+    
     def handle_export_orders_callback(self, chat_id: int, status_filter: str) -> Dict[str, Any]:
         """Handle export orders callback"""
         return self._export_orders_by_status(chat_id, status_filter)

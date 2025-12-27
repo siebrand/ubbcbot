@@ -131,6 +131,7 @@ class DeliveryOverviewHandler(BaseHandler):
             delivered_total = sum(order.total_price for order in delivered_orders)
             
             # Build message
+            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
             message = self._t('delivery_overview_title', user_id=None) + "\n\n"
             
             if delivered_orders:
@@ -150,15 +151,24 @@ class DeliveryOverviewHandler(BaseHandler):
                     delayed_qty = order.quantity - (order.received_quantity or 0)
                     message += f"• {delayed_qty}x {offer_name} - " + self._t('will_arrive_later', user_id=None) + "\n"
             
-            # Send message
+            # Send message to customer
             result = self._send_message(customer.telegram_user_id, message)
             
+            # Send copy to admin with customer info
+            admin_message = f"📋 Delivery Overview Sent to {customer_name} (@{customer.username or 'no_username'}):\n\n{message}"
+            
             if result.get('success'):
-                # Update orders to AWAITING_PAYMENT
+                # Update orders to AWAITING_PAYMENT only if customer message was sent
                 for order in delivered_orders:
                     self.db.update_order(order.order_id, {'status': OrderStatus.AWAITING_PAYMENT.value})
+                
+                # Send success notification to admin
+                self._send_message(self.admin_user_id, f"✅ {admin_message}")
                 return True
             else:
+                # Send failure notification to admin
+                error_msg = result.get('error', 'Unknown error')
+                self._send_message(self.admin_user_id, f"❌ FAILED to send to {customer_name}: {error_msg}\n\n{admin_message}")
                 return False
                 
         except Exception as e:
