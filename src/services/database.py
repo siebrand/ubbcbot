@@ -644,17 +644,17 @@ class DynamoDBService:
             print(f"Error generating presigned URL: {e}")
             return None
     
-    def get_suppliers_with_ordered_offers(self) -> List[Supplier]:
-        """Get suppliers that have boxes with ORDERED status"""
+    def get_suppliers_with_boxes_by_status(self, box_status: str) -> List[Supplier]:
+        """Get suppliers that have boxes with specified status"""
         try:
-            # Get all boxes with ORDERED status
+            # Get all boxes with specified status
             response = self.boxes_table.scan(
                 FilterExpression='#status = :status',
                 ExpressionAttributeNames={'#status': 'status'},
-                ExpressionAttributeValues={':status': 'ordered'}
+                ExpressionAttributeValues={':status': box_status}
             )
             
-            # Get unique offer IDs from ordered boxes
+            # Get unique offer IDs from boxes
             offer_ids = set()
             for item in response.get('Items', []):
                 offer_ids.add(item['offer_id'])
@@ -675,25 +675,25 @@ class DynamoDBService:
             
             return suppliers
         except Exception as e:
-            print(f"Error getting suppliers with ordered offers: {e}")
+            print(f"Error getting suppliers with {box_status} boxes: {e}")
             return []
 
-    def get_ordered_offers_by_supplier(self, supplier_name: str) -> List[Offer]:
-        """Get offers for a supplier that have boxes with ORDERED status"""
+    def get_offers_by_supplier_and_box_status(self, supplier_name: str, box_status: str) -> List[Offer]:
+        """Get offers for a supplier that have boxes with specified status"""
         try:
-            # Get all boxes with ORDERED status
+            # Get all boxes with specified status
             response = self.boxes_table.scan(
                 FilterExpression='#status = :status',
                 ExpressionAttributeNames={'#status': 'status'},
-                ExpressionAttributeValues={':status': 'ordered'}
+                ExpressionAttributeValues={':status': box_status}
             )
             
-            # Get offer IDs from ordered boxes
+            # Get offer IDs from boxes
             offer_ids = set()
             for item in response.get('Items', []):
                 offer_ids.add(item['offer_id'])
             
-            # Get offers for this supplier that have ordered boxes
+            # Get offers for this supplier that have boxes with specified status
             offers = []
             for offer_id in offer_ids:
                 offer = self.get_offer(offer_id)
@@ -702,8 +702,16 @@ class DynamoDBService:
             
             return offers
         except Exception as e:
-            print(f"Error getting ordered offers by supplier: {e}")
+            print(f"Error getting {box_status} offers by supplier: {e}")
             return []
+
+    def get_suppliers_with_ordered_offers(self) -> List[Supplier]:
+        """Get suppliers that have boxes with ORDERED status"""
+        return self.get_suppliers_with_boxes_by_status('ordered')
+
+    def get_ordered_offers_by_supplier(self, supplier_name: str) -> List[Offer]:
+        """Get offers for a supplier that have boxes with ORDERED status"""
+        return self.get_offers_by_supplier_and_box_status(supplier_name, 'ordered')
 
     def get_boxes_by_offer_with_orders(self, offer_id: int) -> List[Box]:
         """Get boxes for an offer that have orders"""
@@ -719,6 +727,96 @@ class DynamoDBService:
             return boxes_with_orders
         except Exception as e:
             print(f"Error getting boxes with orders: {e}")
+            return []
+
+    def get_suppliers_with_ready_for_labeling_offers(self) -> List[Supplier]:
+        """Get suppliers that have orders with READY_FOR_LABELING status"""
+        return self.get_suppliers_with_orders_by_status('ready_for_labeling')
+
+    def get_ready_for_labeling_offers_by_supplier(self, supplier_name: str) -> List[Offer]:
+        """Get offers for a supplier that have orders with READY_FOR_LABELING status"""
+        return self.get_offers_by_supplier_and_order_status(supplier_name, 'ready_for_labeling')
+
+    def get_boxes_by_offer_with_ready_orders(self, offer_id: int) -> List[Box]:
+        """Get boxes for an offer that have orders with READY_FOR_LABELING status"""
+        return self.get_boxes_by_offer_with_order_status(offer_id, 'ready_for_labeling')
+
+    def get_suppliers_with_orders_by_status(self, order_status: str) -> List[Supplier]:
+        """Get suppliers that have orders with specified status"""
+        try:
+            # Get all orders with specified status
+            response = self.orders_table.scan(
+                FilterExpression='#status = :status',
+                ExpressionAttributeNames={'#status': 'status'},
+                ExpressionAttributeValues={':status': order_status}
+            )
+            
+            # Get unique offer IDs from orders
+            offer_ids = set()
+            for item in response.get('Items', []):
+                offer_ids.add(item['offer_id'])
+            
+            # Get supplier names from offers
+            supplier_names = set()
+            for offer_id in offer_ids:
+                offer = self.get_offer(offer_id)
+                if offer:
+                    supplier_names.add(offer.supplier_name)
+            
+            # Get supplier objects
+            suppliers = []
+            for name in supplier_names:
+                supplier = self.get_supplier_by_name(name)
+                if supplier:
+                    suppliers.append(supplier)
+            
+            return suppliers
+        except Exception as e:
+            print(f"Error getting suppliers with {order_status} orders: {e}")
+            return []
+
+    def get_offers_by_supplier_and_order_status(self, supplier_name: str, order_status: str) -> List[Offer]:
+        """Get offers for a supplier that have orders with specified status"""
+        try:
+            # Get all orders with specified status
+            response = self.orders_table.scan(
+                FilterExpression='#status = :status',
+                ExpressionAttributeNames={'#status': 'status'},
+                ExpressionAttributeValues={':status': order_status}
+            )
+            
+            # Get offer IDs from orders
+            offer_ids = set()
+            for item in response.get('Items', []):
+                offer_ids.add(item['offer_id'])
+            
+            # Get offers for this supplier that have orders with specified status
+            offers = []
+            for offer_id in offer_ids:
+                offer = self.get_offer(offer_id)
+                if offer and offer.supplier_name == supplier_name:
+                    offers.append(offer)
+            
+            return offers
+        except Exception as e:
+            print(f"Error getting {order_status} offers by supplier: {e}")
+            return []
+
+    def get_boxes_by_offer_with_order_status(self, offer_id: int, order_status: str) -> List[Box]:
+        """Get boxes for an offer that have orders with specified status"""
+        try:
+            boxes = self.get_boxes_by_offer(offer_id)
+            boxes_with_status_orders = []
+            
+            for box in boxes:
+                orders = self.get_orders_by_box(box.box_id)
+                status_orders = [o for o in orders if o.status == order_status]
+                if status_orders:  # Only include boxes that have orders with specified status
+                    boxes_with_status_orders.append(box)
+            
+            return boxes_with_status_orders
+        except Exception as e:
+            print(f"Error getting boxes with {order_status} orders: {e}")
             return []
 
     def delete_offer_images(self, offer_id: int) -> bool:
