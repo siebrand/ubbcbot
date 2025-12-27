@@ -166,7 +166,10 @@ class CustomerOrderCommands(BaseHandler):
             total_available = 0
             for box in boxes:
                 if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
-                    total_available += box.max_capacity - box.current_quantity
+                    # Ensure box capacity values are integers
+                    max_cap = int(box.max_capacity) if hasattr(box.max_capacity, '__int__') else box.max_capacity
+                    current_qty = int(box.current_quantity) if hasattr(box.current_quantity, '__int__') else box.current_quantity
+                    total_available += max_cap - current_qty
             
             # Create new boxes if insufficient capacity and offer allows it
             if total_available < quantity:
@@ -185,7 +188,7 @@ class CustomerOrderCommands(BaseHandler):
                             min_breakeven=int(offer.min_quantity_breakeven)
                         )
                         self.db.create_box(new_box)
-                        total_available += box_size
+                        total_available += int(box_size)
                 else:
                     if total_available > 0:
                         self._send_message(chat_id, self._t('insufficient_quantity', user_id, 
@@ -208,8 +211,8 @@ class CustomerOrderCommands(BaseHandler):
                 box_id="",  # Will be set when assigning to boxes
                 offer_id=offer_id,
                 quantity=quantity,
-                unit_price=Decimal(str(offer.price_per_unit)),
-                total_price=Decimal(str(offer.price_per_unit)) * quantity,
+                unit_price=offer.price_per_unit,
+                total_price=offer.price_per_unit * quantity,
                 placed_by_admin=placed_by_admin
             )
 
