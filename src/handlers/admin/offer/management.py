@@ -30,7 +30,8 @@ class OfferManagementHandler(OfferBaseHandler):
         
         # Calculate boxes needed
         total_units = sum(order.quantity for order in pending_orders)
-        boxes_needed = (total_units + offer.wholesale_box_size - 1) // offer.wholesale_box_size  # Ceiling division
+        box_size = int(offer.wholesale_box_size)  # Convert Decimal to int
+        boxes_needed = (total_units + box_size - 1) // box_size  # Ceiling division
         
         # Show order summary
         message = self._t('wholesale_order_summary',
@@ -87,7 +88,7 @@ class OfferManagementHandler(OfferBaseHandler):
         pending_orders = [o for o in all_orders if o.status == 'pending']
         pending_orders.sort(key=lambda x: x.created_at)
         
-        units_available = boxes_ordered * offer.wholesale_box_size
+        units_available = boxes_ordered * box_size
         units_allocated = 0
         fulfilled_orders = []
         cancelled_orders = []
@@ -174,7 +175,7 @@ class OfferManagementHandler(OfferBaseHandler):
         # Create additional empty boxes if needed to match ordered capacity
         current_boxes = self.db.get_boxes_by_offer(offer.offer_id)
         current_capacity = sum(box.max_capacity for box in current_boxes)
-        ordered_capacity = boxes_ordered * offer.wholesale_box_size
+        ordered_capacity = boxes_ordered * box_size
         
         if ordered_capacity > current_capacity:
             boxes_to_create = boxes_ordered - len(current_boxes)
@@ -182,8 +183,8 @@ class OfferManagementHandler(OfferBaseHandler):
                 from models.entities import Box
                 new_box = Box(
                     offer_id=offer.offer_id,
-                    max_capacity=offer.wholesale_box_size,
-                    min_breakeven=offer.min_quantity_breakeven,
+                    max_capacity=box_size,
+                    min_breakeven=int(offer.min_quantity_breakeven),
                     status=BoxStatus.ORDERED.value
                 )
                 self.db.create_box(new_box)

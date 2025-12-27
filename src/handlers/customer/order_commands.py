@@ -182,7 +182,7 @@ class CustomerOrderCommands(BaseHandler):
                         new_box = Box(
                             offer_id=offer_id,
                             max_capacity=box_size,
-                            min_breakeven=offer.min_quantity_breakeven
+                            min_breakeven=int(offer.min_quantity_breakeven)
                         )
                         self.db.create_box(new_box)
                         total_available += box_size

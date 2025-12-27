@@ -99,8 +99,8 @@ class OfferCreationHandler(OfferBaseHandler):
                 # Create initial box
                 box = Box(
                     offer_id=offer_id,
-                    max_capacity=offer.wholesale_box_size,
-                    min_breakeven=offer.min_quantity_breakeven
+                    max_capacity=int(offer.wholesale_box_size),
+                    min_breakeven=int(offer.min_quantity_breakeven)
                 )
                 self.db.create_box(box)
 

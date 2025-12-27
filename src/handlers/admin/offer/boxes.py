@@ -22,8 +22,8 @@ class BoxManagementHandler(OfferBaseHandler):
             # Create new box
             box = Box(
                 offer_id=offer_id,
-                max_capacity=offer.wholesale_box_size,
-                min_breakeven=offer.min_quantity_breakeven
+                max_capacity=int(offer.wholesale_box_size),
+                min_breakeven=int(offer.min_quantity_breakeven)
             )
             
             if self.db.create_box(box):
