@@ -7,19 +7,13 @@ class NotificationHandler(OfferBaseHandler):
     
     def _send_rich_offer_message(self, chat_id: int, offer, preview: bool = False, force_group: bool = False):
         """Send rich offer message using offer_details formatting"""
-        # Import here to avoid circular imports
-        from handlers.customer.info_commands import InfoCommands
-        
         # Send announcement header for non-preview
         if not preview:
             header_message = self._t('new_offer_available')
             self._send_message(chat_id, header_message, force_group=force_group)
         
-        # Create info handler instance to reuse offer details formatting
-        info_handler = InfoCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        
-        # Use the existing rich offer details method
-        info_handler._send_rich_offer_details(chat_id, offer, user_id=999999)  # Use fake non-admin user ID
+        # Send the rich offer details directly with proper force_group handling
+        self._send_rich_offer_details_with_group_support(chat_id, offer, force_group=force_group)
         
         # Add order buttons for non-preview announcements
         if not preview:
@@ -34,7 +28,54 @@ class NotificationHandler(OfferBaseHandler):
             
             # Send order buttons message
             button_message = self._t('order_with_command', offer_id=offer.offer_id)
-            self._send_message(chat_id, button_message, reply_markup=reply_markup)
+            self._send_message(chat_id, button_message, reply_markup=reply_markup, force_group=force_group)
+
+    def _send_rich_offer_details_with_group_support(self, chat_id: int, offer, force_group: bool = False):
+        """Send rich offer details with group support"""
+        # Send images if available
+        if offer.images:
+            if len(offer.images) == 1:
+                try:
+                    image_url = offer.images[0]
+                    if 's3.amazonaws.com' in image_url:
+                        presigned_url = self.db.get_presigned_url(image_url)
+                        if presigned_url:
+                            image_url = presigned_url
+                    self._send_photo(chat_id, image_url, force_group=force_group)
+                except Exception as e:
+                    print(f"Failed to send image {image_url}: {e}")
+            else:
+                media_group = []
+                for image_url in offer.images[:10]:
+                    try:
+                        if 's3.amazonaws.com' in image_url:
+                            presigned_url = self.db.get_presigned_url(image_url)
+                            if presigned_url:
+                                image_url = presigned_url
+                        media_group.append({"type": "photo", "media": image_url})
+                    except Exception as e:
+                        print(f"Failed to prepare image {image_url}: {e}")
+                
+                if media_group:
+                    self._send_media_group(chat_id, media_group, force_group=force_group)
+        
+        # Build message
+        total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
+        available = total_capacity - total_ordered
+        
+        message = f"<b>{offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
+        message += f"{offer.description}\n"
+        
+        self._send_message(chat_id, message, parse_mode="HTML", force_group=force_group)
+    
+    def _get_offer_capacity_info(self, offer_id: int):
+        """Get order and capacity information for an offer"""
+        boxes = self.db.get_boxes_by_offer(offer_id)
+        total_capacity = sum(box.max_capacity for box in boxes)
+        all_orders = self.db.get_orders_by_offer(offer_id)
+        active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
+        total_ordered = sum(order.quantity for order in active_orders)
+        return total_ordered, total_capacity
 
     def _notify_subscribers_rich(self, offer):
         """Send rich offer notification to all subscribers in batches using offer_details formatting"""
