@@ -380,7 +380,7 @@ class InfoCommands(BaseHandler):
             
             # Add status total if multiple statuses present
             if len(status_groups) > 1:
-                message += self._t('subtotal_label', user_id, total=status_groups[status]['total_price']) + "\n\n"
+                message += "\n" + self._t('subtotal_label', user_id, total=status_groups[status]['total_price']) + "\n\n"
             
             # Add to open total if applicable
             if status in open_statuses:
@@ -388,7 +388,7 @@ class InfoCommands(BaseHandler):
         
         # Add open orders total before cancelled orders
         if open_total > 0 and 'cancelled' in status_groups:
-            message += self._t('open_orders_total_label', user_id, total=open_total) + "\n\n"
+            message += "\n" + self._t('open_orders_total_label', user_id, total=open_total) + "\n\n"
         
         # Show cancelled orders last (no total needed)
         if 'cancelled' in status_groups:
@@ -413,7 +413,7 @@ class InfoCommands(BaseHandler):
         
         # Add open orders total if no cancelled orders
         elif open_total > 0:
-            message += self._t('open_orders_total_label', user_id, total=open_total)
+            message += "\n" + self._t('open_orders_total_label', user_id, total=open_total)
 
         self._send_message(chat_id, message)
         return {'status': 'success'}
