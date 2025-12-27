@@ -29,12 +29,14 @@ class CallbackHandler:
             should_remove_keyboard = True
             if data.startswith('page_') and not data == 'page_info':
                 should_remove_keyboard = False
+            elif data.startswith('wd_'):  # Keep keyboard for wholesale delivery navigation
+                should_remove_keyboard = False
             
             if should_remove_keyboard:
                 self._edit_message_remove_keyboard(chat_id, message_id)
             
             # Wholesale delivery callbacks
-            elif data.startswith('wd_'):
+            if data.startswith('wd_'):
                 return self._handle_wholesale_delivery_callbacks(chat_id, user_id, data)
             
             # Export orders callbacks
