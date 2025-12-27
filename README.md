@@ -149,7 +149,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
 - `/add_box <offer_id>` - Add single box to offer (updates sold out offers to active)
 - `/box_status [active|ordered|completed|delivered|all]` - View box status and capacity (paginated)
-- `/fulfill_offer <offer_id>` - Start fulfillment process (button confirmation)
+- `/order_wholesale <offer_id>` - Start wholesale ordering process (button confirmation)
 - `/order_for <username> <offer_id> [quantity]` - Place order for another user (10-unit admin limit)
 - `/cancel_order <order_id>` - Cancel customer order (button confirmation)
 - `/user_orders <username>` - View orders for specific user

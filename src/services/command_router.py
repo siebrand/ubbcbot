@@ -126,8 +126,8 @@ class CommandRouter:
                 return self.handlers['offer'].handle_add_box(admin_target_chat, parts[1:])
             elif command == '/box_status':
                 return self.handlers['offer'].handle_box_status(admin_target_chat)
-            elif command == '/fulfill_offer':
-                return self.handlers['offer'].handle_fulfill_offer(admin_target_chat, parts[1:])
+            elif command == '/order_wholesale':
+                return self.handlers['offer'].handle_order_wholesale(admin_target_chat, parts[1:])
             elif command == '/update_offer_name':
                 return self.handlers['offer'].handle_update_offer_name(admin_target_chat, parts[1:])
             elif command == '/update_offer_price':

@@ -55,7 +55,7 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"cancel_offer\", \"description\": \"Cancel offer and all orders\"},
          {\"command\": \"add_box\", \"description\": \"Add box to offer\"},
          {\"command\": \"box_status\", \"description\": \"View box status\"},
-         {\"command\": \"fulfill_offer\", \"description\": \"Start offer fulfillment\"},
+         {\"command\": \"order_wholesale\", \"description\": \"Start wholesale ordering\"},
          {\"command\": \"order_for\", \"description\": \"Place order for user\"},
          {\"command\": \"cancel_order\", \"description\": \"Cancel order\"},
          {\"command\": \"user_orders\", \"description\": \"View user orders\"},

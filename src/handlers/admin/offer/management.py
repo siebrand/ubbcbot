@@ -5,10 +5,10 @@ from .base import OfferBaseHandler
 class OfferManagementHandler(OfferBaseHandler):
     """Handler for offer management operations"""
     
-    def handle_fulfill_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /fulfill_offer command"""
+    def handle_order_wholesale(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /order_wholesale command"""
         if not args:
-            self._send_message(chat_id, self._t('usage_fulfill_offer'))
+            self._send_message(chat_id, self._t('usage_order_wholesale'))
             return {'status': 'invalid_args'}
 
         offer, error = self._validate_and_get_offer(args, chat_id)
@@ -33,7 +33,7 @@ class OfferManagementHandler(OfferBaseHandler):
         boxes_needed = (total_units + offer.wholesale_box_size - 1) // offer.wholesale_box_size  # Ceiling division
         
         # Show order summary
-        message = self._t('fulfillment_summary',
+        message = self._t('wholesale_order_summary',
             offer_id=offer.offer_id,
             name=offer.name,
             price=offer.price_per_unit,
@@ -56,7 +56,7 @@ class OfferManagementHandler(OfferBaseHandler):
         # Add inline keyboard for confirmation
         keyboard = {
             "inline_keyboard": [[
-                {"text": self._t('fulfill_with_boxes', boxes=boxes_needed), "callback_data": f"confirm_fulfill_{offer.offer_id}_{boxes_needed}"},
+                {"text": self._t('order_wholesale_boxes', boxes=boxes_needed), "callback_data": f"confirm_order_wholesale_{offer.offer_id}_{boxes_needed}"},
                 {"text": self._t('cancel'), "callback_data": "cancel_action"}
             ]]
         }
@@ -64,10 +64,10 @@ class OfferManagementHandler(OfferBaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
     
-    def handle_confirm_fulfill(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /confirm_fulfill command"""
+    def handle_confirm_order_wholesale(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /confirm_order_wholesale command"""
         if len(args) < 2:
-            self._send_message(chat_id, self._t('usage_confirm_fulfill'))
+            self._send_message(chat_id, self._t('usage_confirm_order_wholesale'))
             return {'status': 'invalid_args'}
         
         offer, error = self._validate_and_get_offer(args, chat_id)

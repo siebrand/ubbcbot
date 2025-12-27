@@ -99,11 +99,11 @@ Rich chocolate stout with coffee undertones. Perfect for cold evenings.
 
 ## Phase 5: Fulfillment Process
 
-### 5.1 Admin Fulfills Offer
+### 5.1 Admin Orders Wholesale
 ```
-/fulfill_offer 1
+/order_wholesale 1
 ```
-*Click "Fulfill with 1 boxes" button*
+*Click "Order 1 boxes wholesale" button*
 
 ### 5.2 Verify Order Status
 ```
