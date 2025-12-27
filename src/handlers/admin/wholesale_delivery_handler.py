@@ -58,10 +58,11 @@ class WholesaleDeliveryHandler(BaseHandler):
     def _build_offer_keyboard(self, offers: List[Offer], supplier_id: str) -> Dict[str, Any]:
         """Build inline keyboard for offer selection"""
         keyboard = []
+        supplier_id_short = supplier_id[:8]
         for offer in offers:
             keyboard.append([{
                 "text": f"{offer.name} (€{offer.price_per_unit})",
-                "callback_data": f"wd_off:{offer.offer_id}:{supplier_id}"
+                "callback_data": f"wd_off:{offer.offer_id}:{supplier_id_short}"
             }])
         
         # Add back button
@@ -72,7 +73,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         
         return {"inline_keyboard": keyboard}
 
-    def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+    def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
         """Handle offer selection and show boxes"""
         offer = self.db.get_offer(offer_id)
         if not offer:
@@ -82,7 +83,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         if not boxes:
             return self._send_message(chat_id, self._t('no_boxes_with_orders', offer_name=offer.name))
 
-        keyboard = self._build_box_keyboard(boxes, offer_id, supplier_id)
+        keyboard = self._build_box_keyboard(boxes, offer_id, supplier_id_short)
         return self._edit_message(
             chat_id,
             self._t('select_box_for_delivery', offer_name=offer.name),
@@ -92,24 +93,25 @@ class WholesaleDeliveryHandler(BaseHandler):
     def _build_box_keyboard(self, boxes: List[Box], offer_id: int, supplier_id: str) -> Dict[str, Any]:
         """Build inline keyboard for box selection"""
         keyboard = []
+        supplier_id_short = supplier_id[:8]
         for box in boxes:
             orders = self.db.get_orders_by_box(box.box_id)
             total_units = sum(order.quantity for order in orders)
             
             keyboard.append([{
                 "text": f"Box {box.box_id[:8]}... ({total_units} units)",
-                "callback_data": f"wd_box:{box.box_id[:8]}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_box:{box.box_id[:8]}:{offer_id}:{supplier_id_short}"
             }])
         
         # Add back button
         keyboard.append([{
             "text": "← Back to Offers",
-            "callback_data": f"wd_back:offers:{supplier_id}"
+            "callback_data": f"wd_back:offers:{supplier_id_short}"
         }])
         
         return {"inline_keyboard": keyboard}
 
-    def handle_box_selection(self, chat_id: int, box_id_short: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+    def handle_box_selection(self, chat_id: int, box_id_short: str, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
         """Handle box selection and show triage options"""
         # Find the full box_id from the shortened version
         boxes = self.db.get_boxes_by_offer_with_orders(offer_id)
@@ -125,7 +127,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         orders = self.db.get_orders_by_box(box.box_id)
         total_units = sum(order.quantity for order in orders)
         
-        keyboard = self._build_triage_keyboard(box.box_id, offer_id, supplier_id)
+        keyboard = self._build_triage_keyboard(box.box_id, offer_id, supplier_id_short)
         
         message = self._t('box_delivery_triage', 
                          box_id=box.box_id[:8], 
@@ -137,32 +139,33 @@ class WholesaleDeliveryHandler(BaseHandler):
     def _build_triage_keyboard(self, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
         """Build triage interface keyboard"""
         box_id_short = box_id[:8]
+        supplier_id_short = supplier_id[:8]
         keyboard = [
             [{
                 "text": "✅ Full Delivery",
-                "callback_data": f"wd_action:{DeliveryAction.FULL.value}:{box_id_short}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_action:{DeliveryAction.FULL.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{
                 "text": "⏳ Delayed",
-                "callback_data": f"wd_action:{DeliveryAction.DELAYED.value}:{box_id_short}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_action:{DeliveryAction.DELAYED.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{
                 "text": "❌ Cancel",
-                "callback_data": f"wd_action:{DeliveryAction.CANCEL.value}:{box_id_short}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_action:{DeliveryAction.CANCEL.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{
                 "text": "⚠️ Incomplete",
-                "callback_data": f"wd_action:{DeliveryAction.INCOMPLETE.value}:{box_id_short}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_action:{DeliveryAction.INCOMPLETE.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{
                 "text": "← Back to Boxes",
-                "callback_data": f"wd_back:boxes:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_back:boxes:{offer_id}:{supplier_id_short}"
             }]
         ]
         
         return {"inline_keyboard": keyboard}
 
-    def handle_delivery_action(self, chat_id: int, action: str, box_id_short: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+    def handle_delivery_action(self, chat_id: int, action: str, box_id_short: str, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
         """Handle delivery action selection"""
         # Find the full box_id from the shortened version
         boxes = self.db.get_boxes_by_offer_with_orders(offer_id)
@@ -185,7 +188,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         elif action == DeliveryAction.CANCEL.value:
             return self._handle_cancelled_delivery(chat_id, box.box_id, orders)
         elif action == DeliveryAction.INCOMPLETE.value:
-            return self._handle_incomplete_delivery(chat_id, box.box_id, total_units, offer_id, supplier_id)
+            return self._handle_incomplete_delivery(chat_id, box.box_id, total_units, offer_id, supplier_id_short)
 
     def _handle_full_delivery(self, chat_id: int, box_id: str, orders: List[Order]) -> Dict[str, Any]:
         """Handle full delivery - all units received"""
@@ -340,20 +343,30 @@ class WholesaleDeliveryHandler(BaseHandler):
                 reply_markup=keyboard
             )
         elif target == 'offers' and args:
-            supplier_id = args[0]
-            supplier = self.db.get_supplier(supplier_id)
+            supplier_id_short = args[0]
+            # Find full supplier_id from shortened version
+            suppliers = self.db.get_suppliers_with_ordered_offers()
+            supplier = None
+            for s in suppliers:
+                if s.supplier_id.startswith(supplier_id_short):
+                    supplier = s
+                    break
+            
+            if not supplier:
+                return self._send_message(chat_id, self._t('supplier_not_found'))
+            
             offers = self.db.get_ordered_offers_by_supplier(supplier.name)
-            keyboard = self._build_offer_keyboard(offers, supplier_id)
+            keyboard = self._build_offer_keyboard(offers, supplier.supplier_id)
             return self._edit_message(
                 chat_id,
                 self._t('select_offer_for_delivery', supplier_name=supplier.name),
                 reply_markup=keyboard
             )
         elif target == 'boxes' and len(args) >= 2:
-            offer_id, supplier_id = int(args[0]), args[1]
+            offer_id, supplier_id_short = int(args[0]), args[1]
             offer = self.db.get_offer(offer_id)
             boxes = self.db.get_boxes_by_offer_with_orders(offer_id)
-            keyboard = self._build_box_keyboard(boxes, offer_id, supplier_id)
+            keyboard = self._build_box_keyboard(boxes, offer_id, supplier_id_short)
             return self._edit_message(
                 chat_id,
                 self._t('select_box_for_delivery', offer_name=offer.name),
