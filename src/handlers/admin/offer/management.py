@@ -83,6 +83,9 @@ class OfferManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('boxes_must_positive'))
             return {'status': 'invalid_quantity'}
         
+        # Get box size from offer
+        box_size = int(offer.wholesale_box_size)
+        
         # Get pending orders sorted by date ascending (oldest first)
         all_orders = self.db.get_orders_by_offer(offer.offer_id)
         pending_orders = [o for o in all_orders if o.status == 'pending']
