@@ -42,18 +42,51 @@ class BoxManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('invalid_offer_id'))
             return {'status': 'invalid_format'}
 
-    def handle_box_status(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
-        """Handle /box_status command with pagination"""
-        offers = self.db.list_offers()
-        active_offers = [offer for offer in offers if offer.status == OfferStatus.ACTIVE.value]
+    def handle_box_status(self, chat_id: int, args: list = None) -> Dict[str, Any]:
+        """Handle /box_status command with pagination and optional status filter"""
+        # Handle None args for backward compatibility
+        if args is None:
+            args = []
+            
+        # Parse arguments
+        page = 1
+        status_filter = 'active'  # default
         
-        if not active_offers:
-            self._send_message(chat_id, self._t('no_offers'))
+        if args:
+            if args[0].lower() in ['active', 'ordered', 'completed', 'delivered', 'all']:
+                status_filter = args[0].lower()
+                if len(args) > 1:
+                    try:
+                        page = int(args[1])
+                    except ValueError:
+                        pass
+            else:
+                try:
+                    page = int(args[0])
+                except ValueError:
+                    pass
+        
+        offers = self.db.list_offers()
+        
+        # Filter offers based on status
+        if status_filter == 'active':
+            filtered_offers = [offer for offer in offers if offer.status == OfferStatus.ACTIVE.value]
+        elif status_filter == 'ordered':
+            filtered_offers = [offer for offer in offers if offer.status == OfferStatus.ORDERED.value]
+        elif status_filter == 'completed':
+            filtered_offers = [offer for offer in offers if offer.status == OfferStatus.COMPLETED.value]
+        elif status_filter == 'delivered':
+            filtered_offers = [offer for offer in offers if offer.status == OfferStatus.DELIVERED.value]
+        else:  # all
+            filtered_offers = offers
+        
+        if not filtered_offers:
+            self._send_message(chat_id, f"❌ No {status_filter} offers found")
             return {'status': 'no_offers'}
         
         # Build list of offer-box combinations for pagination
         offer_boxes = []
-        for offer in active_offers:
+        for offer in filtered_offers:
             boxes = self.db.get_boxes_by_offer(offer.offer_id)
             boxes.sort(key=lambda x: x.box_id)
             for box in boxes:
@@ -62,7 +95,7 @@ class BoxManagementHandler(OfferBaseHandler):
         # Paginate results
         page_items, total_pages = self._paginate_list(offer_boxes, page, 10)
         
-        message = self._t('box_status_title', page=page, total_pages=total_pages) + "\n\n"
+        message = f"📦 Box Status ({status_filter.title()}) - Page {page}/{total_pages}:\n\n"
         message += "```\n"
         message += "Status  Offer ID  Box ID    Offer Name            Price   Units\n"
         message += "------  --------  --------  --------------------  ------  -----\n"
