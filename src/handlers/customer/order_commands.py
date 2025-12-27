@@ -240,16 +240,19 @@ class CustomerOrderCommands(BaseHandler):
             boxes_used = []
             
             while remaining_quantity > 0:
-                # Find available box
+                # Find available box - prioritize boxes with least available space (most filled)
                 boxes = self.db.get_boxes_by_offer(offer_id)
-                available_box = None
+                available_boxes = []
                 
                 for box in boxes:
                     if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
                         available_space = box.max_capacity - box.current_quantity
                         if available_space > 0:
-                            available_box = box
-                            break
+                            available_boxes.append((box, available_space))
+                
+                # Sort by available space (ascending) to fill boxes with least space first
+                available_boxes.sort(key=lambda x: x[1])
+                available_box = available_boxes[0][0] if available_boxes else None
 
                 # Should always find a box since we created one if needed
                 if not available_box:
