@@ -1,6 +1,9 @@
+import logging
 from typing import Dict, Any
 from models.entities import OfferStatus, OrderStatus, BoxStatus
 from .base import OfferBaseHandler
+
+logger = logging.getLogger()
 
 class OfferManagementHandler(OfferBaseHandler):
     """Handler for offer management operations"""
