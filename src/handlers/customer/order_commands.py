@@ -212,11 +212,11 @@ class CustomerOrderCommands(BaseHandler):
                             available_box = box
                             break
 
-                # Create new box only if offer is not ordered or later and no boxes are ordered
+                # Create new box only if offer is active and no boxes are ordered
                 if not available_box:
-                    # Check if offer is ordered/completed/delivered or any boxes are already ordered - if so, don't create new box
+                    # Check if offer allows new boxes (active status and no ordered boxes)
                     has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes)
-                    if offer.status in [OfferStatus.ORDERED.value, OfferStatus.COMPLETED.value, OfferStatus.DELIVERED.value] or has_ordered_boxes:
+                    if offer.status not in [OfferStatus.ACTIVE.value] or has_ordered_boxes:
                         self._send_message(chat_id, self._t('no_available_capacity', user_id))
                         return {'status': 'sold_out'}
                     
