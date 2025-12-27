@@ -243,14 +243,14 @@ class DynamoDBService:
             return None
 
     # Box operations
-    def create_box(self, box: Box) -> bool:
+    def create_box(self, box: Box) -> Optional[Box]:
         try:
             item = self._prepare_item(box.__dict__)
             self.boxes_table.put_item(Item=item)
-            return True
+            return box
         except Exception as e:
             print(f"Error creating box: {e}")
-            return False
+            return None
 
     def get_boxes_by_offer(self, offer_id: int) -> List[Box]:
         try:
@@ -291,14 +291,14 @@ class DynamoDBService:
             return False
 
     # Order operations
-    def create_order(self, order: Order) -> bool:
+    def create_order(self, order: Order) -> Optional[Order]:
         try:
             item = self._prepare_item(order.__dict__)
             self.orders_table.put_item(Item=item)
-            return True
+            return order
         except Exception as e:
             print(f"Error creating order: {e}")
-            return False
+            return None
 
     def get_orders_by_customer(self, customer_id: str) -> List[Order]:
         try:
