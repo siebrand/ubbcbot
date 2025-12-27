@@ -95,7 +95,7 @@ class WholesaleDeliveryHandler(BaseHandler):
             
             keyboard.append([{
                 "text": f"Box {box.box_id[:8]}... ({total_units} units)",
-                "callback_data": f"wd_box:{box.box_id}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_box:{box.box_id[:8]}:{offer_id}:{supplier_id}"
             }])
         
         # Add back button
@@ -106,19 +106,26 @@ class WholesaleDeliveryHandler(BaseHandler):
         
         return {"inline_keyboard": keyboard}
 
-    def handle_box_selection(self, chat_id: int, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+    def handle_box_selection(self, chat_id: int, box_id_short: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
         """Handle box selection and show triage options"""
-        box = self.db.get_box(box_id)
+        # Find the full box_id from the shortened version
+        boxes = self.db.get_boxes_by_offer_with_orders(offer_id)
+        box = None
+        for b in boxes:
+            if b.box_id.startswith(box_id_short):
+                box = b
+                break
+        
         if not box:
             return self._send_message(chat_id, self._t('box_not_found'))
 
-        orders = self.db.get_orders_by_box(box_id)
+        orders = self.db.get_orders_by_box(box.box_id)
         total_units = sum(order.quantity for order in orders)
         
-        keyboard = self._build_triage_keyboard(box_id, offer_id, supplier_id)
+        keyboard = self._build_triage_keyboard(box.box_id, offer_id, supplier_id)
         
         message = self._t('box_delivery_triage', 
-                         box_id=box_id[:8], 
+                         box_id=box.box_id[:8], 
                          total_units=total_units,
                          order_count=len(orders))
         
