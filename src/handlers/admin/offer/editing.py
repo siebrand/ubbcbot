@@ -104,8 +104,18 @@ class OfferEditingHandler(OfferBaseHandler):
             offer_id = int(args[0])
             new_description = ' '.join(args[1:]).strip()
             
-            if len(new_description) > 500:
+            if len(new_description) > 700:
+                # Return to edit interface instead of exiting
                 self._send_message(chat_id, self._t('description_too_long'))
+                
+                # Show edit interface again
+                keyboard = {
+                    "inline_keyboard": [
+                        [{"text": self._t('continue_editing'), "callback_data": f"offer_details_{offer_id}"}],
+                        [{"text": self._t('done_editing'), "callback_data": "done_editing"}]
+                    ]
+                }
+                self._send_message(chat_id, self._t('select_edit', chat_id), reply_markup=keyboard)
                 return {'status': 'invalid_description'}
             
             offer = self.db.get_offer(offer_id)

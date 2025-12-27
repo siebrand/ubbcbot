@@ -164,7 +164,7 @@
   "failed_update_offer_price": "❌ Kon aanbieding prijs niet bijwerken",
   "invalid_price_format": "❌ Ongeldig aanbieding ID of prijs formaat",
   "usage_update_offer_description": "Gebruik: /update_offer_description [aanbieding_id] [nieuwe_beschrijving]",
-  "description_too_long": "❌ Beschrijving te lang (max 500 tekens)",
+  "description_too_long": "❌ Beschrijving te lang (max 700 tekens)",
   "offer_description_updated": "✅ Aanbieding beschrijving bijgewerkt: '{old_desc}' → '{new_desc}'\n\nDoorgaan met bewerken?",
   "failed_update_offer_description": "❌ Kon aanbieding beschrijving niet bijwerken",
   "unknown_command": "❌ Onbekend commando",

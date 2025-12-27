@@ -165,7 +165,7 @@
   "failed_update_offer_price": "❌ Failed to update offer price",
   "invalid_price_format": "❌ Invalid offer ID or price format",
   "usage_update_offer_description": "Usage: /update_offer_description [offer_id] [new_description]",
-  "description_too_long": "❌ Description too long (max 500 characters)",
+  "description_too_long": "❌ Description too long (max 700 characters)",
   "offer_description_updated": "✅ Offer description updated: '{old_desc}' → '{new_desc}'\n\nContinue editing?",
   "failed_update_offer_description": "❌ Failed to update offer description",
   "unknown_command": "❌ Unknown command",
