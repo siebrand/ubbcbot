@@ -8,7 +8,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.delivery_service = WholesalerDeliveryService(db)
 
-    async def handle_wholesale_delivery(self, chat_id: int, user_id: int, args: List[str]) -> Dict[str, Any]:
+    def handle_wholesale_delivery(self, chat_id: int, user_id: int, args: List[str]) -> Dict[str, Any]:
         """Start wholesale delivery drill-down interface"""
         if not self._is_admin(user_id):
             return self._send_message(chat_id, self._t('admin_only', user_id))
@@ -35,7 +35,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         
         return {"inline_keyboard": keyboard}
 
-    async def handle_supplier_selection(self, chat_id: int, supplier_id: str) -> Dict[str, Any]:
+    def handle_supplier_selection(self, chat_id: int, supplier_id: str) -> Dict[str, Any]:
         """Handle supplier selection and show offers"""
         supplier = self.db.get_supplier(supplier_id)
         if not supplier:
@@ -69,7 +69,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         
         return {"inline_keyboard": keyboard}
 
-    async def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+    def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id: str) -> Dict[str, Any]:
         """Handle offer selection and show boxes"""
         offer = self.db.get_offer(offer_id)
         if not offer:
@@ -106,7 +106,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         
         return {"inline_keyboard": keyboard}
 
-    async def handle_box_selection(self, chat_id: int, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+    def handle_box_selection(self, chat_id: int, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
         """Handle box selection and show triage options"""
         box = self.db.get_box(box_id)
         if not box:
@@ -151,22 +151,22 @@ class WholesaleDeliveryHandler(BaseHandler):
         
         return {"inline_keyboard": keyboard}
 
-    async def handle_delivery_action(self, chat_id: int, action: str, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+    def handle_delivery_action(self, chat_id: int, action: str, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
         """Handle delivery action selection"""
         box = self.db.get_box(box_id)
         orders = self.db.get_orders_by_box(box_id)
         total_units = sum(order.quantity for order in orders)
 
         if action == DeliveryAction.FULL.value:
-            return await self._handle_full_delivery(chat_id, box_id, orders)
+            return self._handle_full_delivery(chat_id, box_id, orders)
         elif action == DeliveryAction.DELAYED.value:
-            return await self._handle_delayed_delivery(chat_id, box_id, orders)
+            return self._handle_delayed_delivery(chat_id, box_id, orders)
         elif action == DeliveryAction.CANCEL.value:
-            return await self._handle_cancelled_delivery(chat_id, box_id, orders)
+            return self._handle_cancelled_delivery(chat_id, box_id, orders)
         elif action == DeliveryAction.INCOMPLETE.value:
-            return await self._handle_incomplete_delivery(chat_id, box_id, total_units, offer_id, supplier_id)
+            return self._handle_incomplete_delivery(chat_id, box_id, total_units, offer_id, supplier_id)
 
-    async def _handle_full_delivery(self, chat_id: int, box_id: str, orders: List[Order]) -> Dict[str, Any]:
+    def _handle_full_delivery(self, chat_id: int, box_id: str, orders: List[Order]) -> Dict[str, Any]:
         """Handle full delivery - all units received"""
         success = self.delivery_service.process_wholesaler_delivery(
             box_id, 
@@ -179,7 +179,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 
-    async def _handle_delayed_delivery(self, chat_id: int, box_id: str, orders: List[Order]) -> Dict[str, Any]:
+    def _handle_delayed_delivery(self, chat_id: int, box_id: str, orders: List[Order]) -> Dict[str, Any]:
         """Handle delayed delivery - no units received but coming later"""
         success = self.delivery_service.process_wholesaler_delivery(box_id, 0, True)
         
@@ -188,7 +188,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 
-    async def _handle_cancelled_delivery(self, chat_id: int, box_id: str, orders: List[Order]) -> Dict[str, Any]:
+    def _handle_cancelled_delivery(self, chat_id: int, box_id: str, orders: List[Order]) -> Dict[str, Any]:
         """Handle cancelled delivery - no units received and won't come"""
         success = self.delivery_service.process_wholesaler_delivery(box_id, 0, False)
         
@@ -197,7 +197,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 
-    async def _handle_incomplete_delivery(self, chat_id: int, box_id: str, total_units: int, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+    def _handle_incomplete_delivery(self, chat_id: int, box_id: str, total_units: int, offer_id: int, supplier_id: str) -> Dict[str, Any]:
         """Handle incomplete delivery - prompt for received quantity"""
         # Store context for processing the reply
         self._store_delivery_context(chat_id, box_id, total_units, offer_id, supplier_id)
@@ -225,7 +225,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         )
         self.db.create_edit_context(context)
 
-    async def handle_incomplete_delivery_reply(self, chat_id: int, received_text: str, context_data: str) -> Dict[str, Any]:
+    def handle_incomplete_delivery_reply(self, chat_id: int, received_text: str, context_data: str) -> Dict[str, Any]:
         """Handle reply for incomplete delivery quantity"""
         try:
             parts = context_data.split(':')
@@ -238,18 +238,18 @@ class WholesaleDeliveryHandler(BaseHandler):
             
             if received_units == total_units:
                 # Full delivery
-                return await self._handle_full_delivery(chat_id, box_id, self.db.get_orders_by_box(box_id))
+                return self._handle_full_delivery(chat_id, box_id, self.db.get_orders_by_box(box_id))
             elif received_units == 0:
                 # Show delayed/cancel options
-                return await self._show_incomplete_options(chat_id, box_id, offer_id, supplier_id, received_units)
+                return self._show_incomplete_options(chat_id, box_id, offer_id, supplier_id, received_units)
             else:
                 # Partial delivery - show delayed/cancel options
-                return await self._show_incomplete_options(chat_id, box_id, offer_id, supplier_id, received_units)
+                return self._show_incomplete_options(chat_id, box_id, offer_id, supplier_id, received_units)
                 
         except (ValueError, IndexError):
             return self._send_message(chat_id, self._t('invalid_number_format'))
 
-    async def _show_incomplete_options(self, chat_id: int, box_id: str, offer_id: int, supplier_id: str, received_units: int) -> Dict[str, Any]:
+    def _show_incomplete_options(self, chat_id: int, box_id: str, offer_id: int, supplier_id: str, received_units: int) -> Dict[str, Any]:
         """Show options for handling remaining units after partial delivery"""
         keyboard = [
             [{
@@ -268,7 +268,7 @@ class WholesaleDeliveryHandler(BaseHandler):
             reply_markup={"inline_keyboard": keyboard}
         )
 
-    async def handle_partial_action(self, chat_id: int, action: str, box_id: str, received_units: int) -> Dict[str, Any]:
+    def handle_partial_action(self, chat_id: int, action: str, box_id: str, received_units: int) -> Dict[str, Any]:
         """Handle action for remaining units in partial delivery"""
         is_delayed = action == 'delayed'
         success = self.delivery_service.process_wholesaler_delivery(box_id, received_units, is_delayed)
@@ -285,7 +285,7 @@ class WholesaleDeliveryHandler(BaseHandler):
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 
-    async def handle_back_navigation(self, chat_id: int, target: str, *args) -> Dict[str, Any]:
+    def handle_back_navigation(self, chat_id: int, target: str, *args) -> Dict[str, Any]:
         """Handle back button navigation"""
         if target == 'suppliers':
             suppliers = self.db.get_suppliers_with_ordered_offers()
