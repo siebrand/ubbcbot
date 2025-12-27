@@ -16,12 +16,12 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
 
         suppliers = self.db.get_suppliers_with_ready_for_labeling_offers()
         if not suppliers:
-            return self._send_message(chat_id, self._t('no_ordered_offers', user_id))
+            return self._send_message(chat_id, self._t('no_ready_for_labeling_offers', user_id))
 
         keyboard = self._build_supplier_keyboard(suppliers, 'lc')
         return self._send_message(
             chat_id,
-            self._t('select_supplier_for_delivery', user_id),
+            self._t('select_supplier_for_labeling', user_id),
             reply_markup=keyboard
         )
 
@@ -30,7 +30,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         return super().handle_supplier_selection(
             chat_id, supplier_id_short, 'lc',
             self.db.get_suppliers_with_ready_for_labeling_offers,
-            'select_offer_for_delivery'
+            'select_offer_for_labeling'
         )
 
     def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
@@ -38,7 +38,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         return super().handle_offer_selection(
             chat_id, offer_id, supplier_id_short, 'lc',
             self.db.get_boxes_by_offer_with_ready_orders,
-            'select_box_for_delivery'
+            'select_box_for_labeling'
         )
 
     def handle_box_selection(self, chat_id: int, box_id_short: str, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
@@ -57,9 +57,9 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
             self.db.get_suppliers_with_ready_for_labeling_offers,
             lambda: self.db.get_ready_for_labeling_offers_by_supplier,
             self.db.get_boxes_by_offer_with_ready_orders,
-            'select_supplier_for_delivery',
-            'select_offer_for_delivery',
-            'select_box_for_delivery',
+            'select_supplier_for_labeling',
+            'select_offer_for_labeling', 
+            'select_box_for_labeling',
             *args
         )
 
