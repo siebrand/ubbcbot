@@ -569,8 +569,8 @@ class InfoCommands(BaseHandler):
         
         message = ""
         if is_draft and is_admin:
-            message = self._t('preview_offer_look')
-        
+            message = self._t('preview_offer_look') + "\n"
+
         if offer.status == OfferStatus.ACTIVE.value:
             # Get availability for active offers
             total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
