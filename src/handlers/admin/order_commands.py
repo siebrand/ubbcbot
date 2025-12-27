@@ -436,19 +436,5 @@ class AdminOrderCommands(BaseHandler):
         return self._export_orders_by_status(chat_id, status_filter)
     
     def _find_customer_by_identifier(self, identifier: str):
-        """Find customer by username or name"""
-        # Try by username first (exact match)
-        if identifier.startswith('@'):
-            identifier = identifier[1:]  # Remove @ prefix
-        
-        # Try exact username match
-        customer = self.db.get_customer_by_username(identifier)
-        if customer:
-            return customer
-        
-        # Try exact name match
-        customer = self.db.get_customer_by_name(identifier)
-        if customer:
-            return customer
-        
-        return None
+        """Find customer by username or name using existing ambiguity check"""
+        return self._find_customer_with_ambiguity_check(identifier, 0, "order_for_select")
