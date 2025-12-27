@@ -329,7 +329,7 @@ class AdminOrderCommands(BaseHandler):
         # CSV headers
         headers = [
             'Customer_Name', 'Telegram_Username', 'Offer_Name', 
-            'Box_ID', 'Unit_Count', 'Total_Price_to_Charge'
+            'Box_ID', 'Unit_Count', 'Unit_Price', 'Total_Price_to_Charge'
         ]
         
         csv_content = ','.join(headers) + '\n'
@@ -349,7 +349,7 @@ class AdminOrderCommands(BaseHandler):
                 offer_name = offer.name if offer else "Unknown"
                 username = customer.username or ""
                 
-                csv_content += f'"{customer_name}","{username}","{offer_name}","{order.box_id}",{order.quantity},{order.total_price:.2f}\n'
+                csv_content += f'"{customer_name}","{username}","{offer_name}","{order.box_id}",{order.quantity},{order.unit_price:.2f},{order.total_price:.2f}\n'
         
         return csv_content
 
