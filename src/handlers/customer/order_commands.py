@@ -41,7 +41,7 @@ class CustomerOrderCommands(BaseHandler):
                 self._send_message(chat_id, self._t('customer_not_found', user_id))
                 return {'status': 'customer_not_found'}
 
-            # Check for existing orders and enforce 5-unit limit
+            # Check for existing orders and enforce 5-unit limit BEFORE creating boxes
             existing_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) 
                              if o.offer_id == offer_id and o.status in ['pending', 'ordered']]
             total_existing = sum(order.quantity for order in existing_orders)
@@ -64,7 +64,7 @@ class CustomerOrderCommands(BaseHandler):
                 
                 self._send_message(chat_id, message)
                 return {'status': 'limit_exceeded'}
-            
+
             # Check for existing orders for duplicate confirmation
             if existing_orders:
                 message = self._t('duplicate_order_warning', user_id, offer_name=offer.name)
@@ -161,24 +161,44 @@ class CustomerOrderCommands(BaseHandler):
     def execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
         """Execute order placement"""
         try:
-            # Check total available capacity before accepting order
+            # Check total available capacity and create new box if needed
             boxes = self.db.get_boxes_by_offer(offer_id)
             total_available = 0
             for box in boxes:
                 if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
                     total_available += box.max_capacity - box.current_quantity
             
-            # If no boxes exist, we can create one with full capacity
-            if not boxes:
-                total_available = offer.wholesale_box_size
-            
-            if quantity > total_available:
-                if total_available > 0:
-                    self._send_message(chat_id, self._t('insufficient_quantity', user_id, 
-                                                      requested=quantity, 
-                                                      available=total_available))
+            # Create new boxes if insufficient capacity and offer allows it
+            if total_available < quantity:
+                has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes) if boxes else False
+                if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes:
+                    # Calculate how many new boxes needed
+                    needed_capacity = quantity - total_available
+                    boxes_needed = (needed_capacity + offer.wholesale_box_size - 1) // offer.wholesale_box_size  # Ceiling division
+                    
+                    # Create the required number of boxes
+                    for _ in range(boxes_needed):
+                        new_box = Box(
+                            offer_id=offer_id,
+                            max_capacity=offer.wholesale_box_size,
+                            min_breakeven=offer.min_quantity_breakeven
+                        )
+                        self.db.create_box(new_box)
+                        total_available += new_box.max_capacity
                 else:
-                    self._send_message(chat_id, self._t('sold_out', user_id))
+                    if total_available > 0:
+                        self._send_message(chat_id, self._t('insufficient_quantity', user_id, 
+                                                          requested=quantity, 
+                                                          available=total_available))
+                    else:
+                        self._send_message(chat_id, self._t('sold_out', user_id))
+                    return {'status': 'insufficient_capacity'}
+            
+            # Final capacity check
+            if quantity > total_available:
+                self._send_message(chat_id, self._t('insufficient_quantity', user_id, 
+                                                  requested=quantity, 
+                                                  available=total_available))
                 return {'status': 'insufficient_capacity'}
 
             # Create single order
@@ -212,20 +232,11 @@ class CustomerOrderCommands(BaseHandler):
                             available_box = box
                             break
 
-                # Create new box only if offer is active and no boxes are ordered
+                # Should always find a box since we created one if needed
                 if not available_box:
-                    # Check if offer allows new boxes (active status and no ordered boxes)
-                    has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes)
-                    if offer.status not in [OfferStatus.ACTIVE.value] or has_ordered_boxes:
-                        self._send_message(chat_id, self._t('no_available_capacity', user_id))
-                        return {'status': 'sold_out'}
-                    
-                    available_box = Box(
-                        offer_id=offer_id,
-                        max_capacity=offer.wholesale_box_size,
-                        min_breakeven=offer.min_quantity_breakeven
-                    )
-                    self.db.create_box(available_box)
+                    logger.error(f"No available box found for offer {offer_id} after capacity check")
+                    self._send_message(chat_id, self._t('order_processing_failed', user_id))
+                    return {'status': 'error'}
 
                 # Calculate how much can fit in this box
                 available_space = available_box.max_capacity - available_box.current_quantity
