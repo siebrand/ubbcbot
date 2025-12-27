@@ -324,7 +324,7 @@ class AdminOrderCommands(BaseHandler):
         
         return {'status': 'success'}
     
-    def _generate_pick_list_csv(self, orders_data: list) -> bytes:
+    def _generate_pick_list_csv(self, orders_data: list) -> str:
         """Generate pick list CSV content grouped by customer"""
         # CSV headers
         headers = [
@@ -351,7 +351,7 @@ class AdminOrderCommands(BaseHandler):
                 
                 csv_content += f'"{customer_name}","{username}","{offer_name}","{order.box_id}",{order.quantity},{order.total_price:.2f}\n'
         
-        return csv_content.encode('utf-8')
+        return csv_content
 
     def handle_user_orders_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         """Handle user selection from disambiguation buttons for user_orders"""
