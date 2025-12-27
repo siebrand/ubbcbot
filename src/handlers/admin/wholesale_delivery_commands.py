@@ -20,3 +20,27 @@ class WholesaleDeliveryCommands(BaseHandler):
             return self._send_message(chat_id, self._t('admin_only', user_id))
         
         return self.delivery_handler.handle_incomplete_delivery_reply(chat_id, text, context_data)
+
+    def handle_supplier_selection(self, chat_id: int, supplier_id: str) -> Dict[str, Any]:
+        """Handle supplier selection"""
+        return self.delivery_handler.handle_supplier_selection(chat_id, supplier_id)
+
+    def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+        """Handle offer selection"""
+        return self.delivery_handler.handle_offer_selection(chat_id, offer_id, supplier_id)
+
+    def handle_box_selection(self, chat_id: int, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+        """Handle box selection"""
+        return self.delivery_handler.handle_box_selection(chat_id, box_id, offer_id, supplier_id)
+
+    def handle_delivery_action(self, chat_id: int, action: str, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+        """Handle delivery action"""
+        return self.delivery_handler.handle_delivery_action(chat_id, action, box_id, offer_id, supplier_id)
+
+    def handle_partial_action(self, chat_id: int, action: str, box_id: str, received_units: int) -> Dict[str, Any]:
+        """Handle partial delivery action"""
+        return self.delivery_handler.handle_partial_action(chat_id, action, box_id, received_units)
+
+    def handle_back_navigation(self, chat_id: int, target: str, *args) -> Dict[str, Any]:
+        """Handle back navigation"""
+        return self.delivery_handler.handle_back_navigation(chat_id, target, *args)
