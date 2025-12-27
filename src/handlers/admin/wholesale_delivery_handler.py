@@ -1,12 +1,12 @@
 from typing import Dict, Any, List, Optional
 import logging
-from handlers.base_handler import BaseHandler
+from handlers.admin.base_box_workflow_handler import BaseBoxWorkflowHandler
 from models.entities import Supplier, Offer, Box, Order, OrderStatus, DeliveryAction
 from services.wholesaler_delivery import WholesalerDeliveryService
 
 logger = logging.getLogger()
 
-class WholesaleDeliveryHandler(BaseHandler):
+class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.delivery_service = WholesalerDeliveryService(db)
@@ -20,126 +20,54 @@ class WholesaleDeliveryHandler(BaseHandler):
         if not suppliers:
             return self._send_message(chat_id, self._t('no_ordered_offers', user_id))
 
-        keyboard = self._build_supplier_keyboard(suppliers)
+        keyboard = self._build_supplier_keyboard(suppliers, 'wd')
         return self._send_message(
             chat_id,
             self._t('select_supplier_for_delivery', user_id),
             reply_markup=keyboard
         )
 
-    def _build_supplier_keyboard(self, suppliers: List[Supplier]) -> Dict[str, Any]:
-        """Build inline keyboard for supplier selection"""
-        keyboard = []
-        for supplier in suppliers:
-            keyboard.append([{
-                "text": supplier.name,
-                "callback_data": f"wd_sup:{supplier.supplier_id}"
-            }])
-        
-        return {"inline_keyboard": keyboard}
-
-    def handle_supplier_selection(self, chat_id: int, supplier_id: str) -> Dict[str, Any]:
+    def handle_supplier_selection(self, chat_id: int, supplier_id_short: str) -> Dict[str, Any]:
         """Handle supplier selection and show offers"""
-        supplier = self.db.get_supplier(supplier_id)
-        if not supplier:
-            return self._send_message(chat_id, self._t('supplier_not_found'))
-
-        offers = self.db.get_ordered_offers_by_supplier(supplier.name)
-        if not offers:
-            return self._send_message(chat_id, self._t('no_ordered_offers_for_supplier', supplier_name=supplier.name))
-
-        keyboard = self._build_offer_keyboard(offers, supplier_id)
-        return self._edit_message(
-            chat_id,
-            self._t('select_offer_for_delivery', supplier_name=supplier.name),
-            reply_markup=keyboard
+        return super().handle_supplier_selection(
+            chat_id, supplier_id_short, 'wd',
+            self.db.get_suppliers_with_ordered_offers,
+            'select_offer_for_delivery'
         )
-
-    def _build_offer_keyboard(self, offers: List[Offer], supplier_id: str) -> Dict[str, Any]:
-        """Build inline keyboard for offer selection"""
-        keyboard = []
-        supplier_id_short = supplier_id[:8]
-        for offer in offers:
-            keyboard.append([{
-                "text": f"{offer.name} (€{offer.price_per_unit})",
-                "callback_data": f"wd_off:{offer.offer_id}:{supplier_id_short}"
-            }])
-        
-        # Add back button
-        keyboard.append([{
-            "text": "← Back to Suppliers",
-            "callback_data": "wd_back:suppliers"
-        }])
-        
-        return {"inline_keyboard": keyboard}
 
     def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
         """Handle offer selection and show boxes"""
-        offer = self.db.get_offer(offer_id)
-        if not offer:
-            return self._send_message(chat_id, self._t('offer_not_found'))
-
-        boxes = self.db.get_boxes_by_offer_with_orders(offer_id)
-        if not boxes:
-            return self._send_message(chat_id, self._t('no_boxes_with_orders', offer_name=offer.name))
-
-        keyboard = self._build_box_keyboard(boxes, offer_id, supplier_id_short)
-        return self._edit_message(
-            chat_id,
-            self._t('select_box_for_delivery', offer_name=offer.name),
-            reply_markup=keyboard
+        return super().handle_offer_selection(
+            chat_id, offer_id, supplier_id_short, 'wd',
+            self.db.get_boxes_by_offer_with_orders,
+            'select_box_for_delivery'
         )
-
-    def _build_box_keyboard(self, boxes: List[Box], offer_id: int, supplier_id: str) -> Dict[str, Any]:
-        """Build inline keyboard for box selection"""
-        keyboard = []
-        supplier_id_short = supplier_id[:8]
-        for box in boxes:
-            orders = self.db.get_orders_by_box(box.box_id)
-            total_units = sum(order.quantity for order in orders)
-            
-            keyboard.append([{
-                "text": f"Box {box.box_id[:8]}... ({total_units} units)",
-                "callback_data": f"wd_box:{box.box_id[:8]}:{offer_id}:{supplier_id_short}"
-            }])
-        
-        # Add back button
-        keyboard.append([{
-            "text": "← Back to Offers",
-            "callback_data": f"wd_back:offers:{supplier_id_short}"
-        }])
-        
-        return {"inline_keyboard": keyboard}
 
     def handle_box_selection(self, chat_id: int, box_id_short: str, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
         """Handle box selection and show triage options"""
-        # Find the full box_id from the shortened version
-        boxes = self.db.get_boxes_by_offer_with_orders(offer_id)
-        box = None
-        for b in boxes:
-            if b.box_id.startswith(box_id_short):
-                box = b
-                break
-        
-        if not box:
-            return self._send_message(chat_id, self._t('box_not_found'))
+        return super().handle_box_selection(
+            chat_id, box_id_short, offer_id, supplier_id_short,
+            self.db.get_boxes_by_offer_with_orders,
+            self._build_triage_keyboard,
+            'box_delivery_triage'
+        )
 
-        orders = self.db.get_orders_by_box(box.box_id)
-        total_units = sum(order.quantity for order in orders)
-        
-        keyboard = self._build_triage_keyboard(box.box_id, offer_id, supplier_id_short)
-        
-        message = self._t('box_delivery_triage', 
-                         box_id=box.box_id[:8], 
-                         total_units=total_units,
-                         order_count=len(orders))
-        
-        return self._edit_message(chat_id, message, reply_markup=keyboard)
+    def handle_back_navigation(self, chat_id: int, target: str, *args) -> Dict[str, Any]:
+        """Handle back button navigation"""
+        return super().handle_back_navigation(
+            chat_id, target, 'wd',
+            self.db.get_suppliers_with_ordered_offers,
+            lambda: self.db.get_ordered_offers_by_supplier,
+            self.db.get_boxes_by_offer_with_orders,
+            'select_supplier_for_delivery',
+            'select_offer_for_delivery', 
+            'select_box_for_delivery',
+            *args
+        )
 
-    def _build_triage_keyboard(self, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+    def _build_triage_keyboard(self, box_id: str, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
         """Build triage interface keyboard"""
         box_id_short = box_id[:8]
-        supplier_id_short = supplier_id[:8]
         keyboard = [
             [{
                 "text": "✅ Full Delivery",
@@ -332,49 +260,3 @@ class WholesaleDeliveryHandler(BaseHandler):
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 
-    def handle_back_navigation(self, chat_id: int, target: str, *args) -> Dict[str, Any]:
-        """Handle back button navigation"""
-        if target == 'suppliers':
-            suppliers = self.db.get_suppliers_with_ordered_offers()
-            keyboard = self._build_supplier_keyboard(suppliers)
-            return self._edit_message(
-                chat_id,
-                self._t('select_supplier_for_delivery'),
-                reply_markup=keyboard
-            )
-        elif target == 'offers' and args:
-            supplier_id_short = args[0]
-            # Find full supplier_id from shortened version
-            suppliers = self.db.get_suppliers_with_ordered_offers()
-            supplier = None
-            for s in suppliers:
-                if s.supplier_id.startswith(supplier_id_short):
-                    supplier = s
-                    break
-            
-            if not supplier:
-                return self._send_message(chat_id, self._t('supplier_not_found'))
-            
-            offers = self.db.get_ordered_offers_by_supplier(supplier.name)
-            keyboard = self._build_offer_keyboard(offers, supplier.supplier_id)
-            return self._edit_message(
-                chat_id,
-                self._t('select_offer_for_delivery', supplier_name=supplier.name),
-                reply_markup=keyboard
-            )
-        elif target == 'boxes' and len(args) >= 2:
-            offer_id, supplier_id_short = int(args[0]), args[1]
-            offer = self.db.get_offer(offer_id)
-            boxes = self.db.get_boxes_by_offer_with_orders(offer_id)
-            keyboard = self._build_box_keyboard(boxes, offer_id, supplier_id_short)
-            return self._edit_message(
-                chat_id,
-                self._t('select_box_for_delivery', offer_name=offer.name),
-                reply_markup=keyboard
-            )
-
-    def _edit_message(self, chat_id: int, text: str, reply_markup: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Edit message with new content and keyboard"""
-        # This would be implemented to edit the existing message
-        # For now, send a new message (in real implementation, use editMessageText)
-        return self._send_message(chat_id, text, reply_markup=reply_markup)
