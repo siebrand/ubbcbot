@@ -87,6 +87,12 @@ class CallbackHandler:
             elif data.startswith('confirm_cancel_offer_'):
                 offer_id = data.split('_')[3]
                 return self.handlers['offer'].handle_confirm_cancel_offer(chat_id, [offer_id])
+            elif data.startswith('confirm_order_wholesale_'):
+                parts = data.split('_')
+                if len(parts) >= 5:
+                    offer_id = parts[3]
+                    boxes = parts[4]
+                    return self.handlers['offer'].handle_confirm_order_wholesale(chat_id, [offer_id, boxes])
             elif data.startswith('confirm_fulfill_'):
                 parts = data.split('_')
                 if len(parts) >= 4:
