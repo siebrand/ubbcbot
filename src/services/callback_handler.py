@@ -22,6 +22,8 @@ class CallbackHandler:
             message_id = callback_query['message']['message_id']
             data = callback_query['data']
             
+            logger.info(f"Processing callback: {data}")
+            
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
             
@@ -89,10 +91,14 @@ class CallbackHandler:
                 return self.handlers['offer'].handle_confirm_cancel_offer(chat_id, [offer_id])
             elif data.startswith('confirm_order_wholesale_'):
                 parts = data.split('_')
+                logger.info(f"Wholesale callback parts: {parts}")
                 if len(parts) >= 5:
                     offer_id = parts[3]
                     boxes = parts[4]
+                    logger.info(f"Calling handle_confirm_order_wholesale with offer_id={offer_id}, boxes={boxes}")
                     return self.handlers['offer'].handle_confirm_order_wholesale(chat_id, [offer_id, boxes])
+                else:
+                    logger.error(f"Invalid wholesale callback format: {data}")
             elif data.startswith('confirm_fulfill_'):
                 parts = data.split('_')
                 if len(parts) >= 4:
