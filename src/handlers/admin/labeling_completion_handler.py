@@ -16,12 +16,12 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
 
         suppliers = self.db.get_suppliers_with_ready_for_labeling_offers()
         if not suppliers:
-            return self._send_message(chat_id, self._t('no_ready_for_labeling_offers', user_id))
+            return self._send_message(chat_id, self._t('no_ordered_offers', user_id))
 
         keyboard = self._build_supplier_keyboard(suppliers, 'lc')
         return self._send_message(
             chat_id,
-            self._t('select_supplier_for_labeling', user_id),
+            self._t('select_supplier_for_delivery', user_id),
             reply_markup=keyboard
         )
 
@@ -30,7 +30,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         return super().handle_supplier_selection(
             chat_id, supplier_id_short, 'lc',
             self.db.get_suppliers_with_ready_for_labeling_offers,
-            'select_offer_for_labeling'
+            'select_offer_for_delivery'
         )
 
     def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
@@ -38,7 +38,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         return super().handle_offer_selection(
             chat_id, offer_id, supplier_id_short, 'lc',
             self.db.get_boxes_by_offer_with_ready_orders,
-            'select_box_for_labeling'
+            'select_box_for_delivery'
         )
 
     def handle_box_selection(self, chat_id: int, box_id_short: str, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
@@ -47,7 +47,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
             chat_id, box_id_short, offer_id, supplier_id_short,
             self.db.get_boxes_by_offer_with_ready_orders,
             self._build_labeling_keyboard,
-            'box_labeling_completion'
+            'box_delivery_triage'
         )
 
     def handle_back_navigation(self, chat_id: int, target: str, *args) -> Dict[str, Any]:
@@ -57,9 +57,9 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
             self.db.get_suppliers_with_ready_for_labeling_offers,
             lambda: self.db.get_ready_for_labeling_offers_by_supplier,
             self.db.get_boxes_by_offer_with_ready_orders,
-            'select_supplier_for_labeling',
-            'select_offer_for_labeling',
-            'select_box_for_labeling',
+            'select_supplier_for_delivery',
+            'select_offer_for_delivery',
+            'select_box_for_delivery',
             *args
         )
 
@@ -100,7 +100,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         ready_orders = [o for o in orders if o.status == OrderStatus.READY_FOR_LABELING.value]
         
         if not ready_orders:
-            return self._send_message(chat_id, self._t('no_ready_for_labeling_orders', box_id=box.box_id[:8]))
+            return self._send_message(chat_id, self._t('no_labeling_orders', box_id=box.box_id[:8]))
 
         # Update all ready orders to LABELING_COMPLETED
         updated_count = 0
@@ -111,6 +111,6 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         if updated_count > 0:
             return self._send_message(chat_id, self._t('labeling_completed_success', 
                                                      box_id=box.box_id[:8], 
-                                                     count=updated_count))
+                                                     updated_count=updated_count))
         else:
-            return self._send_message(chat_id, self._t('labeling_completion_failed', box_id=box.box_id[:8]))
+            return self._send_message(chat_id, self._t('delivery_processing_failed'))
