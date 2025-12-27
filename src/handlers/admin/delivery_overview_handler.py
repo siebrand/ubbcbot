@@ -6,49 +6,54 @@ from decimal import Decimal
 class DeliveryOverviewHandler(BaseHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
-        self.current_batch = 0
-        self.customers_data = []
     
     def start_send_overviews(self, chat_id: int) -> Dict[str, Any]:
         """Start the delivery overview sending process"""
         # Get customers with LABELING_COMPLETED orders
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-        self.customers_data = []
+        customers_data = []
         
         for customer in customers:
             orders = self.db.get_orders_by_customer(customer.customer_id)
             labeling_completed_orders = [o for o in orders if o.status == OrderStatus.LABELING_COMPLETED.value]
             if labeling_completed_orders:
                 # Separate delivered and delayed items
-                delivered_orders = [o for o in labeling_completed_orders if o.received_quantity == o.quantity]
-                delayed_orders = [o for o in labeling_completed_orders if o.received_quantity < o.quantity]
+                delivered_orders = [o for o in labeling_completed_orders if (o.received_quantity or 0) >= o.quantity]
+                delayed_orders = [o for o in labeling_completed_orders if (o.received_quantity or 0) < o.quantity]
                 
-                self.customers_data.append({
-                    'customer': customer,
-                    'delivered_orders': delivered_orders,
-                    'delayed_orders': delayed_orders
+                customers_data.append({
+                    'customer_id': customer.customer_id,
+                    'delivered_order_ids': [o.order_id for o in delivered_orders],
+                    'delayed_order_ids': [o.order_id for o in delayed_orders]
                 })
         
-        if not self.customers_data:
-            self._send_message(chat_id, "❌ No customers with orders ready for delivery overview")
-            return {'status': 'no_customers'}
+        if not customers_data:
+            return self._send_message(chat_id, self._t('no_customers_ready_overview', user_id=None))
         
-        self.current_batch = 0
-        return self._request_payment_link(chat_id)
+        # Store customers data in context for later use
+        import json
+        context_data = {
+            'customers_data': customers_data,
+            'current_batch': 0
+        }
+        self._store_context(chat_id, 'delivery_overview_data', json.dumps(context_data))
+        
+        return self._request_payment_link(chat_id, customers_data, 0)
     
-    def _request_payment_link(self, chat_id: int) -> Dict[str, Any]:
+    def _request_payment_link(self, chat_id: int, customers_data: list, current_batch: int) -> Dict[str, Any]:
         """Request payment link for current batch"""
-        remaining_customers = len(self.customers_data) - (self.current_batch * 50)
+        remaining_customers = len(customers_data) - (current_batch * 50)
         batch_size = min(50, remaining_customers)
-        batch_number = self.current_batch + 1
-        total_batches = (len(self.customers_data) + 49) // 50
+        batch_number = current_batch + 1
+        total_batches = (len(customers_data) + 49) // 50
         
-        message = f"💳 Payment Link Request (Batch {batch_number}/{total_batches}):\n\n"
-        message += f"👥 Customers in this batch: {batch_size}\n"
-        message += f"📧 Please provide the payment link for these {batch_size} customers:"
+        message = self._t('payment_link_request', user_id=None,
+                         batch_number=batch_number,
+                         total_batches=total_batches,
+                         batch_size=batch_size)
         
         # Store context for reply handling
-        self._store_context(chat_id, 'payment_link_input', str(self.current_batch))
+        self._store_context(chat_id, 'payment_link_input', str(current_batch))
         
         self._send_message(chat_id, message, reply_markup={"force_reply": True, "input_field_placeholder": "Enter payment link"})
         return {'status': 'awaiting_payment_link'}
@@ -56,11 +61,20 @@ class DeliveryOverviewHandler(BaseHandler):
     def handle_payment_link_input(self, chat_id: int, payment_link: str, batch_str: str) -> Dict[str, Any]:
         """Handle payment link input and send overviews"""
         try:
+            # Get stored customers data from context
+            context = self.db.get_edit_context_by_chat_id(chat_id)
+            if not context or context.edit_type != 'delivery_overview_data':
+                return self._send_message(chat_id, "❌ Session expired. Please restart with /send_overviews")
+            
+            import json
+            context_data = json.loads(context.entity_id)
+            customers_data = context_data['customers_data']
+            
             batch_index = int(batch_str)
             start_idx = batch_index * 50
-            end_idx = min(start_idx + 50, len(self.customers_data))
+            end_idx = min(start_idx + 50, len(customers_data))
             
-            batch_customers = self.customers_data[start_idx:end_idx]
+            batch_customers = customers_data[start_idx:end_idx]
             sent_count = 0
             
             for customer_data in batch_customers:
@@ -68,18 +82,30 @@ class DeliveryOverviewHandler(BaseHandler):
                     sent_count += 1
             
             # Update batch counter
-            self.current_batch += 1
+            current_batch = batch_index + 1
             
-            message = f"✅ Batch {batch_index + 1} completed: {sent_count}/{len(batch_customers)} overviews sent\n\n"
+            message = self._t('batch_completed', user_id=None, 
+                            batch_number=batch_index + 1, 
+                            sent_count=sent_count, 
+                            batch_size=len(batch_customers))
             
             # Check if more batches needed
-            if self.current_batch * 50 < len(self.customers_data):
+            if current_batch * 50 < len(customers_data):
                 message += "📧 Ready for next batch..."
                 self._send_message(chat_id, message)
-                return self._request_payment_link(chat_id)
+                
+                # Update context with new batch number
+                context_data['current_batch'] = current_batch
+                self._store_context(chat_id, 'delivery_overview_data', json.dumps(context_data))
+                
+                return self._request_payment_link(chat_id, customers_data, current_batch)
             else:
-                message += f"🎉 All delivery overviews sent!\nTotal customers notified: {len(self.customers_data)}"
+                message += self._t('all_overviews_sent', user_id=None, total_customers=len(customers_data))
                 self._send_message(chat_id, message)
+                
+                # Clean up context
+                self.db.delete_edit_context(context.context_id)
+                
                 return {'status': 'completed'}
                 
         except Exception as e:
@@ -89,32 +115,40 @@ class DeliveryOverviewHandler(BaseHandler):
     def _send_delivery_overview(self, customer_data: Dict, payment_link: str) -> bool:
         """Send delivery overview to a customer"""
         try:
-            customer = customer_data['customer']
-            delivered_orders = customer_data['delivered_orders']
-            delayed_orders = customer_data['delayed_orders']
+            # Get customer and orders from IDs
+            customer = self.db.get_customer(customer_data['customer_id'])
+            if not customer:
+                return False
+            
+            delivered_orders = [self.db.get_order(order_id) for order_id in customer_data['delivered_order_ids']]
+            delayed_orders = [self.db.get_order(order_id) for order_id in customer_data['delayed_order_ids']]
+            
+            # Filter out None orders
+            delivered_orders = [o for o in delivered_orders if o]
+            delayed_orders = [o for o in delayed_orders if o]
             
             # Calculate totals
             delivered_total = sum(order.total_price for order in delivered_orders)
             
             # Build message
-            message = f"📦 Delivery Overview\n\n"
+            message = self._t('delivery_overview_title', user_id=None) + "\n\n"
             
             if delivered_orders:
-                message += "✅ Ready for Pickup:\n"
+                message += self._t('ready_for_pickup', user_id=None) + "\n"
                 for order in delivered_orders:
                     offer = self.db.get_offer(order.offer_id)
                     offer_name = offer.name if offer else "Unknown"
                     message += f"• {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
-                message += f"\nTotal to pay: €{delivered_total:.2f}\n"
-                message += f"Payment: {payment_link}\n\n"
+                message += self._t('total_to_pay', user_id=None, total=delivered_total)
+                message += self._t('payment_link', user_id=None, link=payment_link) + "\n\n"
             
             if delayed_orders:
-                message += "⏳ Delayed Items (for your information):\n"
+                message += self._t('delayed_items_info', user_id=None) + "\n"
                 for order in delayed_orders:
                     offer = self.db.get_offer(order.offer_id)
                     offer_name = offer.name if offer else "Unknown"
-                    delayed_qty = order.quantity - order.received_quantity
-                    message += f"• {delayed_qty}x {offer_name} - will arrive later\n"
+                    delayed_qty = order.quantity - (order.received_quantity or 0)
+                    message += f"• {delayed_qty}x {offer_name} - " + self._t('will_arrive_later', user_id=None) + "\n"
             
             # Send message
             result = self._send_message(customer.telegram_user_id, message)
@@ -128,7 +162,7 @@ class DeliveryOverviewHandler(BaseHandler):
                 return False
                 
         except Exception as e:
-            print(f"Error sending delivery overview to customer {customer.customer_id}: {e}")
+            print(f"Error sending delivery overview to customer {customer_data['customer_id']}: {e}")
             return False
     
     def handle_mark_customer_paid(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
