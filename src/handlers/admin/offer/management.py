@@ -15,7 +15,7 @@ class OfferManagementHandler(OfferBaseHandler):
         if error:
             return error
             
-        if offer.status != OfferStatus.ACTIVE.value:
+        if offer.status not in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value]:
             self._send_message(chat_id, self._t('offer_not_active'))
             return {'status': 'offer_not_active'}
         
