@@ -188,9 +188,9 @@ class OfferManagementHandler(OfferBaseHandler):
                 )
                 self.db.create_box(new_box)
         
-        # Clean up empty boxes (delete boxes with 0 orders)
+        # Clean up empty boxes (delete boxes with 0 orders and not ORDERED status)
         boxes = self.db.get_boxes_by_offer(offer.offer_id)
-        empty_boxes = [box for box in boxes if box.current_quantity == 0]
+        empty_boxes = [box for box in boxes if box.current_quantity == 0 and box.status != BoxStatus.ORDERED.value]
         deleted_boxes = 0
         for box in empty_boxes:
             if self.db.delete_box(box.box_id):

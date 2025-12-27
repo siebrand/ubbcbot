@@ -645,19 +645,26 @@ class DynamoDBService:
             return None
     
     def get_suppliers_with_ordered_offers(self) -> List[Supplier]:
-        """Get suppliers that have offers with ORDERED status"""
+        """Get suppliers that have boxes with ORDERED status"""
         try:
-            # Get all ORDERED offers
-            response = self.offers_table.scan(
+            # Get all boxes with ORDERED status
+            response = self.boxes_table.scan(
                 FilterExpression='#status = :status',
                 ExpressionAttributeNames={'#status': 'status'},
                 ExpressionAttributeValues={':status': 'ordered'}
             )
             
-            # Get unique supplier names
-            supplier_names = set()
+            # Get unique offer IDs from ordered boxes
+            offer_ids = set()
             for item in response.get('Items', []):
-                supplier_names.add(item['supplier_name'])
+                offer_ids.add(item['offer_id'])
+            
+            # Get supplier names from offers
+            supplier_names = set()
+            for offer_id in offer_ids:
+                offer = self.get_offer(offer_id)
+                if offer:
+                    supplier_names.add(offer.supplier_name)
             
             # Get supplier objects
             suppliers = []
@@ -672,17 +679,28 @@ class DynamoDBService:
             return []
 
     def get_ordered_offers_by_supplier(self, supplier_name: str) -> List[Offer]:
-        """Get ORDERED offers for a specific supplier"""
+        """Get offers for a supplier that have boxes with ORDERED status"""
         try:
-            response = self.offers_table.scan(
-                FilterExpression='supplier_name = :supplier AND #status = :status',
+            # Get all boxes with ORDERED status
+            response = self.boxes_table.scan(
+                FilterExpression='#status = :status',
                 ExpressionAttributeNames={'#status': 'status'},
-                ExpressionAttributeValues={
-                    ':supplier': supplier_name,
-                    ':status': 'ordered'
-                }
+                ExpressionAttributeValues={':status': 'ordered'}
             )
-            return [Offer(**item) for item in response.get('Items', [])]
+            
+            # Get offer IDs from ordered boxes
+            offer_ids = set()
+            for item in response.get('Items', []):
+                offer_ids.add(item['offer_id'])
+            
+            # Get offers for this supplier that have ordered boxes
+            offers = []
+            for offer_id in offer_ids:
+                offer = self.get_offer(offer_id)
+                if offer and offer.supplier_name == supplier_name:
+                    offers.append(offer)
+            
+            return offers
         except Exception as e:
             print(f"Error getting ordered offers by supplier: {e}")
             return []
