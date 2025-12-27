@@ -167,6 +167,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/cancel_discount` - Cancel active discount
 - `/discount_status` - View current discount status
 - `/wholesale_delivery` - Process wholesale deliveries and manage delivery status
+- `/labeling_completed` - Complete labeling process for delivered orders
 - `/send_overviews` - Send delivery overviews to customers
 - `/mark_paid` - Mark customers as paid
 

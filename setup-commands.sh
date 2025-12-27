@@ -73,6 +73,7 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"cancel_discount\", \"description\": \"Cancel discount\"},
          {\"command\": \"discount_status\", \"description\": \"View discount status\"},
          {\"command\": \"wholesale_delivery\", \"description\": \"Process wholesale deliveries\"},
+         {\"command\": \"labeling_completed\", \"description\": \"Complete labeling process\"},
          {\"command\": \"send_overviews\", \"description\": \"Send delivery overviews\"},
          {\"command\": \"mark_paid\", \"description\": \"Mark customers as paid\"}
        ],

@@ -39,6 +39,10 @@ class CallbackHandler:
             if data.startswith('wd_'):
                 return self._handle_wholesale_delivery_callbacks(chat_id, user_id, data)
             
+            # Labeling completion callbacks
+            elif data.startswith('lc_'):
+                return self._handle_labeling_completion_callbacks(chat_id, user_id, data)
+            
             # Export orders callbacks
             elif data.startswith('export_orders_'):
                 status_filter = data.replace('export_orders_', '')
@@ -361,6 +365,36 @@ class CallbackHandler:
             target = parts[1]
             args = parts[2:] if len(parts) > 2 else []
             return self.handlers['wholesale_delivery'].handle_back_navigation(chat_id, target, *args)
+        
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        return base_handler._send_message(chat_id, base_handler._t('unknown_callback', user_id))
+    
+    def _handle_labeling_completion_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
+        """Handle labeling completion callbacks"""
+        if not self._is_admin(user_id):
+            from handlers.base_handler import BaseHandler
+            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            return base_handler._send_message(chat_id, base_handler._t('admin_only', user_id))
+        
+        parts = data.split(':')
+        
+        if parts[0] == 'lc_sup':  # Supplier selection
+            supplier_id_short = parts[1]
+            return self.handlers['labeling'].handle_supplier_selection(chat_id, supplier_id_short)
+        elif parts[0] == 'lc_off':  # Offer selection
+            offer_id, supplier_id_short = int(parts[1]), parts[2]
+            return self.handlers['labeling'].handle_offer_selection(chat_id, offer_id, supplier_id_short)
+        elif parts[0] == 'lc_box':  # Box selection
+            box_id_short, offer_id, supplier_id_short = parts[1], int(parts[2]), parts[3]
+            return self.handlers['labeling'].handle_box_selection(chat_id, box_id_short, offer_id, supplier_id_short)
+        elif parts[0] == 'lc_action':  # Labeling action
+            action, box_id_short, offer_id, supplier_id_short = parts[1], parts[2], int(parts[3]), parts[4]
+            return self.handlers['labeling'].handle_labeling_action(chat_id, action, box_id_short, offer_id, supplier_id_short)
+        elif parts[0] == 'lc_back':  # Back navigation
+            target = parts[1]
+            args = parts[2:] if len(parts) > 2 else []
+            return self.handlers['labeling'].handle_back_navigation(chat_id, target, *args)
         
         from handlers.base_handler import BaseHandler
         base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)

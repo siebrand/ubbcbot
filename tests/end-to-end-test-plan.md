@@ -128,6 +128,16 @@ Rich chocolate stout with coffee undertones. Perfect for cold evenings.
 ### 6.3 Process Full Delivery
 *Click "Full Delivery" button*
 
+### 6.4 Complete Labeling
+```
+/labeling_completed
+```
+*Follow prompts:*
+1. Click "TestBrewery" button
+2. Click offer button for "IPA Special Edition"
+3. Click box button for the full box
+4. Click "Complete Labeling" button
+
 ---
 
 ## Phase 7: Delivery Overview and Payment
@@ -186,7 +196,7 @@ https://payment.example.com/ubbc-test-batch-1
 - Box status: ORDERED
 
 ### After Phase 6:
-- All orders status: READY_FOR_LABELING
+- All orders status: LABELING_COMPLETED
 
 ### After Phase 7:
 - All orders status: COMPLETED
