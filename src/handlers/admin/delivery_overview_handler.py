@@ -127,8 +127,18 @@ class DeliveryOverviewHandler(BaseHandler):
             # Calculate totals
             delivered_total = sum(order.total_price for order in delivered_orders)
             
-            # Build message
-            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+            # Build customer name with all available info
+            name_parts = []
+            if customer.first_name:
+                name_parts.append(customer.first_name)
+            if customer.last_name:
+                name_parts.append(customer.last_name)
+            customer_name = " ".join(name_parts) or "Unknown"
+            
+            # Add nickname if available
+            if customer.username:
+                customer_name += f" (@{customer.username})"
+            
             message = self._t('delivery_overview_title', user_id=None) + "\n\n"
             
             if delivered_orders:
@@ -152,7 +162,7 @@ class DeliveryOverviewHandler(BaseHandler):
             result = self._send_message(customer.telegram_user_id, message)
             
             # Send copy to admin with customer info
-            admin_message = f"📋 Delivery Overview Sent to {customer_name} (@{customer.username or 'no_username'}):\n\n{message}"
+            admin_message = f"📋 Delivery Overview Sent to {customer_name}:\n\n{message}"
             
             if result.get('success'):
                 # Update orders to AWAITING_PAYMENT only if customer message was sent
