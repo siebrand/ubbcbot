@@ -1,7 +1,10 @@
 from typing import Dict, Any, List, Optional
+import logging
 from handlers.base_handler import BaseHandler
 from models.entities import Supplier, Offer, Box, Order, OrderStatus, DeliveryAction
 from services.wholesaler_delivery import WholesalerDeliveryService
+
+logger = logging.getLogger()
 
 class WholesaleDeliveryHandler(BaseHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
@@ -133,22 +136,23 @@ class WholesaleDeliveryHandler(BaseHandler):
 
     def _build_triage_keyboard(self, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
         """Build triage interface keyboard"""
+        box_id_short = box_id[:8]
         keyboard = [
             [{
                 "text": "✅ Full Delivery",
-                "callback_data": f"wd_action:{DeliveryAction.FULL.value}:{box_id}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_action:{DeliveryAction.FULL.value}:{box_id_short}:{offer_id}:{supplier_id}"
             }],
             [{
                 "text": "⏳ Delayed",
-                "callback_data": f"wd_action:{DeliveryAction.DELAYED.value}:{box_id}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_action:{DeliveryAction.DELAYED.value}:{box_id_short}:{offer_id}:{supplier_id}"
             }],
             [{
                 "text": "❌ Cancel",
-                "callback_data": f"wd_action:{DeliveryAction.CANCEL.value}:{box_id}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_action:{DeliveryAction.CANCEL.value}:{box_id_short}:{offer_id}:{supplier_id}"
             }],
             [{
                 "text": "⚠️ Incomplete",
-                "callback_data": f"wd_action:{DeliveryAction.INCOMPLETE.value}:{box_id}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_action:{DeliveryAction.INCOMPLETE.value}:{box_id_short}:{offer_id}:{supplier_id}"
             }],
             [{
                 "text": "← Back to Boxes",
@@ -158,20 +162,30 @@ class WholesaleDeliveryHandler(BaseHandler):
         
         return {"inline_keyboard": keyboard}
 
-    def handle_delivery_action(self, chat_id: int, action: str, box_id: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+    def handle_delivery_action(self, chat_id: int, action: str, box_id_short: str, offer_id: int, supplier_id: str) -> Dict[str, Any]:
         """Handle delivery action selection"""
-        box = self.db.get_box(box_id)
-        orders = self.db.get_orders_by_box(box_id)
+        # Find the full box_id from the shortened version
+        boxes = self.db.get_boxes_by_offer_with_orders(offer_id)
+        box = None
+        for b in boxes:
+            if b.box_id.startswith(box_id_short):
+                box = b
+                break
+        
+        if not box:
+            return self._send_message(chat_id, self._t('box_not_found'))
+        
+        orders = self.db.get_orders_by_box(box.box_id)
         total_units = sum(order.quantity for order in orders)
 
         if action == DeliveryAction.FULL.value:
-            return self._handle_full_delivery(chat_id, box_id, orders)
+            return self._handle_full_delivery(chat_id, box.box_id, orders)
         elif action == DeliveryAction.DELAYED.value:
-            return self._handle_delayed_delivery(chat_id, box_id, orders)
+            return self._handle_delayed_delivery(chat_id, box.box_id, orders)
         elif action == DeliveryAction.CANCEL.value:
-            return self._handle_cancelled_delivery(chat_id, box_id, orders)
+            return self._handle_cancelled_delivery(chat_id, box.box_id, orders)
         elif action == DeliveryAction.INCOMPLETE.value:
-            return self._handle_incomplete_delivery(chat_id, box_id, total_units, offer_id, supplier_id)
+            return self._handle_incomplete_delivery(chat_id, box.box_id, total_units, offer_id, supplier_id)
 
     def _handle_full_delivery(self, chat_id: int, box_id: str, orders: List[Order]) -> Dict[str, Any]:
         """Handle full delivery - all units received"""
@@ -258,14 +272,15 @@ class WholesaleDeliveryHandler(BaseHandler):
 
     def _show_incomplete_options(self, chat_id: int, box_id: str, offer_id: int, supplier_id: str, received_units: int) -> Dict[str, Any]:
         """Show options for handling remaining units after partial delivery"""
+        box_id_short = box_id[:8]
         keyboard = [
             [{
                 "text": "⏳ Remaining Delayed",
-                "callback_data": f"wd_partial:delayed:{box_id}:{received_units}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_partial:delayed:{box_id_short}:{received_units}"
             }],
             [{
                 "text": "❌ Remaining Cancelled",
-                "callback_data": f"wd_partial:cancel:{box_id}:{received_units}:{offer_id}:{supplier_id}"
+                "callback_data": f"wd_partial:cancel:{box_id_short}:{received_units}"
             }]
         ]
         
@@ -275,17 +290,39 @@ class WholesaleDeliveryHandler(BaseHandler):
             reply_markup={"inline_keyboard": keyboard}
         )
 
-    def handle_partial_action(self, chat_id: int, action: str, box_id: str, received_units: int) -> Dict[str, Any]:
+    def handle_partial_action(self, chat_id: int, action: str, box_id_short: str, received_units: int) -> Dict[str, Any]:
         """Handle action for remaining units in partial delivery"""
+        # Find the full box_id from the shortened version by searching all boxes
+        # Since we don't have offer_id here, we need to search across all boxes
+        all_boxes = []
+        try:
+            # Get all offers and their boxes to find the matching box
+            offers = self.db.get_all_offers()
+            for offer in offers:
+                boxes = self.db.get_boxes_by_offer_with_orders(offer.offer_id)
+                all_boxes.extend(boxes)
+        except Exception as e:
+            logger.error(f"Error getting boxes for partial action: {e}")
+            return self._send_message(chat_id, self._t('box_not_found'))
+        
+        box = None
+        for b in all_boxes:
+            if b.box_id.startswith(box_id_short):
+                box = b
+                break
+        
+        if not box:
+            return self._send_message(chat_id, self._t('box_not_found'))
+        
         is_delayed = action == 'delayed'
-        success = self.delivery_service.process_wholesaler_delivery(box_id, received_units, is_delayed)
+        success = self.delivery_service.process_wholesaler_delivery(box.box_id, received_units, is_delayed)
         
         if success:
             action_text = 'delayed' if is_delayed else 'cancelled'
             return self._send_message(
                 chat_id, 
                 self._t('partial_delivery_processed', 
-                       box_id=box_id[:8], 
+                       box_id=box.box_id[:8], 
                        received_units=received_units,
                        action=action_text)
             )
