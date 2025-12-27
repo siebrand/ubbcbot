@@ -291,6 +291,7 @@
   "select_supplier_for_delivery": "📦 Select supplier for delivery processing:",
   "select_supplier_for_labeling": "📦 Select supplier for labeling completion:",
   "no_ordered_offers_for_supplier": "❌ No ORDERED offers found for supplier '{supplier_name}'",
+  "no_ready_for_labeling_offers_for_supplier": "❌ No offers with READY_FOR_LABELING orders found for supplier '{supplier_name}'",
   "select_offer_for_delivery": "🍺 Select offer for delivery (Supplier: {supplier_name}):",
   "select_offer_for_labeling": "🍺 Select offer for labeling (Supplier: {supplier_name}):",
   "no_boxes_with_orders": "❌ No boxes with orders found for offer '{offer_name}'",

@@ -60,10 +60,11 @@ class BaseBoxWorkflowHandler(BaseHandler):
         return {"inline_keyboard": keyboard}
 
     def handle_supplier_selection(self, chat_id: int, supplier_id_short: str, callback_prefix: str, 
-                                 get_offers_func, select_offer_msg_key: str) -> Dict[str, Any]:
+                                 get_suppliers_func, get_offers_func, select_offer_msg_key: str, 
+                                 no_offers_msg_key: str = 'no_ordered_offers_for_supplier') -> Dict[str, Any]:
         """Handle supplier selection and show offers"""
         # Find full supplier_id from shortened version
-        suppliers = get_offers_func()
+        suppliers = get_suppliers_func()
         supplier = None
         for s in suppliers:
             if s.supplier_id.startswith(supplier_id_short):
@@ -73,9 +74,9 @@ class BaseBoxWorkflowHandler(BaseHandler):
         if not supplier:
             return self._send_message(chat_id, self._t('supplier_not_found'))
 
-        offers = self.db.get_ordered_offers_by_supplier(supplier.name)
+        offers = get_offers_func(supplier.name)
         if not offers:
-            return self._send_message(chat_id, self._t('no_ordered_offers_for_supplier', supplier_name=supplier.name))
+            return self._send_message(chat_id, self._t(no_offers_msg_key, supplier_name=supplier.name))
 
         keyboard = self._build_offer_keyboard(offers, supplier_id_short, callback_prefix)
         return self._edit_message(
@@ -131,6 +132,7 @@ class BaseBoxWorkflowHandler(BaseHandler):
     def handle_back_navigation(self, chat_id: int, target: str, callback_prefix: str, 
                              get_suppliers_func, get_offers_func, get_boxes_func,
                              select_supplier_msg_key: str, select_offer_msg_key: str, select_box_msg_key: str,
+                             no_offers_msg_key: str = 'no_ordered_offers_for_supplier',
                              *args) -> Dict[str, Any]:
         """Handle back button navigation"""
         if target == 'suppliers':
@@ -154,7 +156,7 @@ class BaseBoxWorkflowHandler(BaseHandler):
             if not supplier:
                 return self._send_message(chat_id, self._t('supplier_not_found'))
             
-            offers = self.db.get_ordered_offers_by_supplier(supplier.name)
+            offers = get_offers_func(supplier.name)
             keyboard = self._build_offer_keyboard(offers, supplier.supplier_id[:8], callback_prefix)
             return self._edit_message(
                 chat_id,

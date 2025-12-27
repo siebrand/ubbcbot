@@ -32,6 +32,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         return super().handle_supplier_selection(
             chat_id, supplier_id_short, 'wd',
             self.db.get_suppliers_with_ordered_offers,
+            self.db.get_ordered_offers_by_supplier,
             'select_offer_for_delivery'
         )
 
@@ -57,7 +58,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         return super().handle_back_navigation(
             chat_id, target, 'wd',
             self.db.get_suppliers_with_ordered_offers,
-            lambda: self.db.get_ordered_offers_by_supplier,
+            self.db.get_ordered_offers_by_supplier,
             self.db.get_boxes_by_offer_with_orders,
             'select_supplier_for_delivery',
             'select_offer_for_delivery', 

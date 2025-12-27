@@ -291,6 +291,7 @@
   "select_supplier_for_delivery": "📦 Selecteer leverancier voor leveringsverwerking:",
   "select_supplier_for_labeling": "📦 Selecteer leverancier voor labeling voltooiing:",
   "no_ordered_offers_for_supplier": "❌ Geen BESTELDE aanbiedingen gevonden voor leverancier '{supplier_name}'",
+  "no_ready_for_labeling_offers_for_supplier": "❌ Geen aanbiedingen met KLAAR_VOOR_LABELING bestellingen gevonden voor leverancier '{supplier_name}'",
   "select_offer_for_delivery": "🍺 Selecteer aanbieding voor levering (Leverancier: {supplier_name}):",
   "select_offer_for_labeling": "🍺 Selecteer aanbieding voor labeling (Leverancier: {supplier_name}):",
   "no_boxes_with_orders": "❌ Geen dozen met bestellingen gevonden voor aanbieding '{offer_name}'",
