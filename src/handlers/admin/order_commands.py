@@ -434,3 +434,31 @@ class AdminOrderCommands(BaseHandler):
     def handle_export_orders_callback(self, chat_id: int, status_filter: str) -> Dict[str, Any]:
         """Handle export orders callback"""
         return self._export_orders_by_status(chat_id, status_filter)
+    
+    def _find_customer_by_identifier(self, identifier: str):
+        """Find customer by username or name"""
+        # Try by username first (exact match)
+        if identifier.startswith('@'):
+            identifier = identifier[1:]  # Remove @ prefix
+        
+        customers = self.db.get_all_customers()
+        
+        # Try exact username match
+        for customer in customers:
+            if customer.username and customer.username.lower() == identifier.lower():
+                return customer
+        
+        # Try exact name match (first name or full name)
+        for customer in customers:
+            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+            if (customer.first_name and customer.first_name.lower() == identifier.lower()) or \
+               (full_name.lower() == identifier.lower()):
+                return customer
+        
+        # Try partial name match
+        for customer in customers:
+            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+            if identifier.lower() in full_name.lower():
+                return customer
+        
+        return None
