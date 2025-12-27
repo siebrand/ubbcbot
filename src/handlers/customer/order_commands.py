@@ -157,7 +157,12 @@ class CustomerOrderCommands(BaseHandler):
                 total_available = offer.wholesale_box_size
             
             if quantity > total_available:
-                self._send_message(chat_id, self._t('sold_out', user_id))
+                if total_available > 0:
+                    self._send_message(chat_id, self._t('insufficient_quantity', user_id, 
+                                                      requested=quantity, 
+                                                      available=total_available))
+                else:
+                    self._send_message(chat_id, self._t('sold_out', user_id))
                 return {'status': 'insufficient_capacity'}
 
             # Create single order

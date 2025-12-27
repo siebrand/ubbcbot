@@ -59,6 +59,7 @@
   "usage_order": "Gebruik: /order <aanbieding_id> [aantal]",
   "invalid_offer_id": "❌ Ongeldig aanbieding ID",
   "sold_out": "❌ Deze aanbieding is uitverkocht",
+  "insufficient_quantity": "❌ Je bestelt meer dan beschikbaar. Er zijn nog {available} stuks beschikbaar om te bestellen.",
   "quantity_limit": "❌ Maximum {limit} stuks per bestelling",
   "my_orders_title": "📦 Jouw Bestellingen:",
   "no_orders": "Je hebt geen bestellingen",
