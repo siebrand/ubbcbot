@@ -23,7 +23,15 @@ class CustomerOrderCommands(BaseHandler):
 
             # Get offer
             offer = self.db.get_offer(offer_id)
-            if not offer or offer.status != OfferStatus.ACTIVE.value:
+            if not offer:
+                self._send_message(chat_id, self._t('offer_not_found', user_id))
+                return {'status': 'offer_not_found'}
+            
+            if offer.status == OfferStatus.SOLD_OUT.value:
+                self._send_message(chat_id, self._t('offer_sold_out_named', user_id, offer_name=offer.name))
+                return {'status': 'sold_out'}
+            
+            if offer.status != OfferStatus.ACTIVE.value:
                 self._send_message(chat_id, self._t('offer_not_found', user_id))
                 return {'status': 'offer_not_found'}
 
@@ -102,7 +110,15 @@ class CustomerOrderCommands(BaseHandler):
 
             # Get offer and customer
             offer = self.db.get_offer(offer_id)
-            if not offer or offer.status != OfferStatus.ACTIVE.value:
+            if not offer:
+                self._send_message(chat_id, self._t('offer_not_found', user_id))
+                return {'status': 'offer_not_found'}
+            
+            if offer.status == OfferStatus.SOLD_OUT.value:
+                self._send_message(chat_id, self._t('offer_sold_out_named', user_id, offer_name=offer.name))
+                return {'status': 'sold_out'}
+            
+            if offer.status != OfferStatus.ACTIVE.value:
                 self._send_message(chat_id, self._t('offer_not_found_inactive', user_id))
                 return {'status': 'offer_not_found'}
 

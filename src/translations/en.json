@@ -59,6 +59,7 @@
   "usage_order": "Usage: /order <offer_id> [quantity]",
   "invalid_offer_id": "❌ Invalid offer ID",
   "sold_out": "❌ This offer is sold out",
+  "offer_sold_out_named": "❌ {offer_name} cannot be ordered as it is sold out",
   "insufficient_quantity": "❌ You're ordering more than available. There are {available} units still available to be ordered.",
   "quantity_limit": "❌ Maximum {limit} units per order",
   "my_orders_title": "📦 Your Orders:",
