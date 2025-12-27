@@ -31,6 +31,8 @@ class CallbackHandler:
                 should_remove_keyboard = False
             elif data.startswith('wd_'):  # Keep keyboard for wholesale delivery navigation
                 should_remove_keyboard = False
+            elif data.startswith('order_'):  # Keep keyboard for order buttons so multiple people can order
+                should_remove_keyboard = False
             
             if should_remove_keyboard:
                 self._edit_message_remove_keyboard(chat_id, message_id)
