@@ -292,9 +292,19 @@ class CustomerOrderCommands(BaseHandler):
             return {'status': 'error'}
     
     def _check_and_update_offer_status(self, offer_id: int):
-        """Check if offer should be marked as sold out"""
+        """Check if offer should be marked as sold out - only if boxes are already ordered"""
         try:
+            offer = self.db.get_offer(offer_id)
+            if not offer or offer.status != OfferStatus.ACTIVE.value:
+                return
+            
             boxes = self.db.get_boxes_by_offer(offer_id)
+            
+            # Only mark as sold out if there are ordered boxes and all capacity is used
+            has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes)
+            if not has_ordered_boxes:
+                return  # Don't mark as sold out if no boxes are ordered yet
+            
             total_capacity = sum(box.max_capacity for box in boxes)
             total_ordered = sum(box.current_quantity for box in boxes)
             
