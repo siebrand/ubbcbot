@@ -174,17 +174,18 @@ class CustomerOrderCommands(BaseHandler):
                 if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes:
                     # Calculate how many new boxes needed
                     needed_capacity = quantity - total_available
-                    boxes_needed = (needed_capacity + offer.wholesale_box_size - 1) // offer.wholesale_box_size  # Ceiling division
+                    box_size = int(offer.wholesale_box_size)  # Convert Decimal to int
+                    boxes_needed = (needed_capacity + box_size - 1) // box_size  # Ceiling division
                     
                     # Create the required number of boxes
                     for _ in range(boxes_needed):
                         new_box = Box(
                             offer_id=offer_id,
-                            max_capacity=offer.wholesale_box_size,
+                            max_capacity=box_size,
                             min_breakeven=offer.min_quantity_breakeven
                         )
                         self.db.create_box(new_box)
-                        total_available += new_box.max_capacity
+                        total_available += box_size
                 else:
                     if total_available > 0:
                         self._send_message(chat_id, self._t('insufficient_quantity', user_id, 
