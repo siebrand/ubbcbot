@@ -441,24 +441,14 @@ class AdminOrderCommands(BaseHandler):
         if identifier.startswith('@'):
             identifier = identifier[1:]  # Remove @ prefix
         
-        customers = self.db.get_all_customers()
-        
         # Try exact username match
-        for customer in customers:
-            if customer.username and customer.username.lower() == identifier.lower():
-                return customer
+        customer = self.db.get_customer_by_username(identifier)
+        if customer:
+            return customer
         
-        # Try exact name match (first name or full name)
-        for customer in customers:
-            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-            if (customer.first_name and customer.first_name.lower() == identifier.lower()) or \
-               (full_name.lower() == identifier.lower()):
-                return customer
-        
-        # Try partial name match
-        for customer in customers:
-            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-            if identifier.lower() in full_name.lower():
-                return customer
+        # Try exact name match
+        customer = self.db.get_customer_by_name(identifier)
+        if customer:
+            return customer
         
         return None
