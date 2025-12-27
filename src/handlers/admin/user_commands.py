@@ -147,7 +147,6 @@ class UserCommands(BaseHandler):
         message = self._t('edit_user', chat_id, name=display_name, username=username_part) + "\n\n"
         message += self._t('first_name', chat_id, value=customer.first_name or self._t('not_set', chat_id)) + "\n"
         message += self._t('last_name', chat_id, value=customer.last_name or self._t('not_set', chat_id)) + "\n"
-        message += self._t('status', chat_id, value=customer.authorization_status) + "\n\n"
         message += self._t('select_edit', chat_id)
         
         keyboard = {
