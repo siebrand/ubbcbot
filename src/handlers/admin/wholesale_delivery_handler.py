@@ -320,4 +320,4 @@ class WholesaleDeliveryHandler(BaseHandler):
         """Edit message with new content and keyboard"""
         # This would be implemented to edit the existing message
         # For now, send a new message (in real implementation, use editMessageText)
-        return self._send_message(chat_id, text, reply_markup)
+        return self._send_message(chat_id, text, reply_markup=reply_markup)
