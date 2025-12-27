@@ -94,43 +94,68 @@ class OfferCreationHandler(OfferBaseHandler):
                 self._send_message(chat_id, self._t('offer_not_draft', status=offer.status))
                 return {'status': 'offer_not_draft'}
             
+            box_size = int(offer.wholesale_box_size)
+            if box_size == 1:
+                logger.info(f"DEBUG: Publishing box size 1 offer {offer_id} - {offer.name}")
+            
             # Update offer status to active
             if self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value}):
                 # Create initial box
                 box = Box(
                     offer_id=offer_id,
-                    max_capacity=int(offer.wholesale_box_size),
+                    max_capacity=box_size,
                     min_breakeven=int(offer.min_quantity_breakeven)
                 )
-                self.db.create_box(box)
+                created_box = self.db.create_box(box)
+                
+                if box_size == 1:
+                    logger.info(f"DEBUG: Box size 1 - Created initial box {created_box.box_id if created_box else 'FAILED'}")
 
                 # Auto-order 1 unit for admin
                 admin_customer = self.db.get_customer_by_telegram_id(self.admin_user_id)
                 if admin_customer:
+                    if box_size == 1:
+                        logger.info(f"DEBUG: Box size 1 - Creating auto-order for admin {admin_customer.customer_id}")
+                    
                     admin_order = Order(
                         customer_id=admin_customer.customer_id,
-                        box_id=box.box_id,
+                        box_id=created_box.box_id,
                         offer_id=offer_id,
                         quantity=1,
                         unit_price=offer.price_per_unit,
                         total_price=offer.price_per_unit
                     )
-                    self.db.create_order(admin_order)
+                    created_admin_order = self.db.create_order(admin_order)
+                    
+                    if box_size == 1:
+                        logger.info(f"DEBUG: Box size 1 - Created admin order {created_admin_order.order_id if created_admin_order else 'FAILED'}")
                     
                     # Update box quantity
                     updates = {'current_quantity': 1}
-                    if 1 >= box.max_capacity:
+                    if 1 >= created_box.max_capacity:
                         updates['status'] = BoxStatus.FULL.value
-                    elif 1 >= box.min_breakeven:
+                    elif 1 >= created_box.min_breakeven:
                         updates['status'] = BoxStatus.MINIMUM_REACHED.value
                     
-                    self.db.update_box(box.box_id, updates)
+                    box_update_result = self.db.update_box(created_box.box_id, updates)
+                    
+                    if box_size == 1:
+                        logger.info(f"DEBUG: Box size 1 - Updated box status to {updates.get('status', 'OPEN')}, result: {box_update_result}")
+                else:
+                    if box_size == 1:
+                        logger.error(f"DEBUG: Box size 1 - Admin customer not found for user_id {self.admin_user_id}")
 
                 # Update offer object for announcement
                 offer.status = OfferStatus.ACTIVE.value
                 
+                if box_size == 1:
+                    logger.info(f"DEBUG: Box size 1 - Starting offer announcement")
+                
                 # Announce offer to default group and subscribers
                 self._announce_offer(offer)
+                
+                if box_size == 1:
+                    logger.info(f"DEBUG: Box size 1 - Completed offer announcement")
                 
                 self._send_message(chat_id, self._t('offer_published_announced', offer_id=offer_id))
                 return {'status': 'success'}
@@ -146,9 +171,21 @@ class OfferCreationHandler(OfferBaseHandler):
         """Announce new offer to default group and subscribers using rich format"""
         default_group_id = os.environ.get('DEFAULT_GROUP_ID')
         
+        box_size = int(offer.wholesale_box_size)
+        if box_size == 1:
+            logger.info(f"DEBUG: Box size 1 - Announcing offer {offer.offer_id} to group {default_group_id}")
+        
         # Send rich offer message to default group
         if default_group_id:
-            self._send_rich_offer_message(int(default_group_id), offer, force_group=True)
+            group_result = self._send_rich_offer_message(int(default_group_id), offer, force_group=True)
+            if box_size == 1:
+                logger.info(f"DEBUG: Box size 1 - Group announcement result: {group_result}")
         
         # Send to subscribers in batches
-        self._notify_subscribers_rich(offer)
+        if box_size == 1:
+            logger.info(f"DEBUG: Box size 1 - Starting subscriber notifications")
+        
+        subscriber_result = self._notify_subscribers_rich(offer)
+        
+        if box_size == 1:
+            logger.info(f"DEBUG: Box size 1 - Subscriber notifications completed")

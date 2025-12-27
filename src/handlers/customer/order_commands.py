@@ -161,6 +161,10 @@ class CustomerOrderCommands(BaseHandler):
     def execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
         """Execute order placement"""
         try:
+            box_size = int(offer.wholesale_box_size)
+            if box_size == 1:
+                logger.info(f"DEBUG: Processing order for box size 1 offer {offer_id}, quantity {quantity}, customer {customer.customer_id}")
+            
             # Check total available capacity and create new box if needed
             boxes = self.db.get_boxes_by_offer(offer_id)
             total_available = 0
@@ -171,23 +175,30 @@ class CustomerOrderCommands(BaseHandler):
                     current_qty = int(box.current_quantity) if hasattr(box.current_quantity, '__int__') else box.current_quantity
                     total_available += max_cap - current_qty
             
+            if box_size == 1:
+                logger.info(f"DEBUG: Box size 1 - Found {len(boxes)} boxes, total_available: {total_available}")
+            
             # Create new boxes if insufficient capacity and offer allows it
             if total_available < quantity:
                 has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes) if boxes else False
                 if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes:
                     # Calculate how many new boxes needed
                     needed_capacity = quantity - total_available
-                    box_size = int(offer.wholesale_box_size)  # Convert Decimal to int
                     boxes_needed = (needed_capacity + box_size - 1) // box_size  # Ceiling division
                     
+                    if box_size == 1:
+                        logger.info(f"DEBUG: Box size 1 - Creating {boxes_needed} new boxes for needed_capacity {needed_capacity}")
+                    
                     # Create the required number of boxes
-                    for _ in range(boxes_needed):
+                    for i in range(boxes_needed):
                         new_box = Box(
                             offer_id=offer_id,
                             max_capacity=box_size,
                             min_breakeven=int(offer.min_quantity_breakeven)
                         )
-                        self.db.create_box(new_box)
+                        created_box = self.db.create_box(new_box)
+                        if box_size == 1:
+                            logger.info(f"DEBUG: Box size 1 - Created box {i+1}/{boxes_needed}, box_id: {created_box.box_id if created_box else 'FAILED'}")
                         total_available += int(box_size)
                 else:
                     if total_available > 0:
@@ -216,9 +227,13 @@ class CustomerOrderCommands(BaseHandler):
                 placed_by_admin=placed_by_admin
             )
 
-            if not self.db.create_order(order):
+            created_order = self.db.create_order(order)
+            if not created_order:
                 self._send_message(chat_id, self._t('order_failed', user_id))
                 return {'status': 'error'}
+            
+            if box_size == 1:
+                logger.info(f"DEBUG: Box size 1 - Created order {created_order.order_id}, quantity {quantity}")
 
             # Now assign order to boxes and update quantities
             remaining_quantity = quantity
@@ -297,7 +312,11 @@ class CustomerOrderCommands(BaseHandler):
             
             # Send notification to default channel for all successful orders (not just private chats)
             if not placed_by_admin:  # Don't notify for admin orders
-                self._notify_channel_order(customer, offer, quantity)
+                if box_size == 1:
+                    logger.info(f"DEBUG: Box size 1 - Sending group notification for order {created_order.order_id}")
+                notification_result = self._notify_channel_order(customer, offer, quantity)
+                if box_size == 1:
+                    logger.info(f"DEBUG: Box size 1 - Group notification result: {notification_result}")
             
             return {'status': 'success'}
             
@@ -349,7 +368,10 @@ class CustomerOrderCommands(BaseHandler):
         try:
             group_id = os.environ.get('DEFAULT_GROUP_ID')
             if not group_id:
-                return
+                box_size = int(offer.wholesale_box_size)
+                if box_size == 1:
+                    logger.info(f"DEBUG: Box size 1 - No DEFAULT_GROUP_ID configured")
+                return False
             
             customer_name = self._get_public_name(customer)
             
@@ -372,13 +394,23 @@ class CustomerOrderCommands(BaseHandler):
                 elif total_available > 0:
                     availability_text = f" ({self._t('units_available', force_group_lang=True, count=total_available)})"
                 # If total_available == 0 and not sold out, show nothing
+            
             message = f"🍺 {customer_name} ordered {quantity}x {offer.name}{availability_text}"
+            box_size = int(offer.wholesale_box_size)
+            if box_size == 1:
+                logger.info(f"DEBUG: Box size 1 - Sending group message: {message}")
+            
             result = self._send_message(int(group_id), message, force_group=True)
-            return result.get('success', False)
+            success = result.get('success', False)
+            
+            if box_size == 1:
+                logger.info(f"DEBUG: Box size 1 - Group message send result: {success}")
+            
+            return success
             
         except Exception as e:
             logger.error(f"Error sending group notification: {e}")
-    
+            return False
     def _delete_offer_notifications(self, offer_id: int):
         """Delete notification messages for sold out offer"""
         try:

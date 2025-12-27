@@ -1,19 +1,30 @@
 import time
+import logging
 from models.entities import AuthorizationStatus, NotificationMessage
 from .base import OfferBaseHandler
+
+logger = logging.getLogger()
 
 class NotificationHandler(OfferBaseHandler):
     """Handler for offer notifications and announcements"""
     
     def _send_rich_offer_message(self, chat_id: int, offer, preview: bool = False, force_group: bool = False):
         """Send rich offer message using offer_details formatting"""
+        box_size = int(offer.wholesale_box_size)
+        if box_size == 1:
+            logger.info(f"DEBUG: Box size 1 - Sending rich offer message to chat {chat_id}, preview: {preview}, force_group: {force_group}")
+        
         # Send announcement header for non-preview
         if not preview:
             header_message = self._t('new_offer_available')
-            self._send_message(chat_id, header_message, force_group=force_group)
+            header_result = self._send_message(chat_id, header_message, force_group=force_group)
+            if box_size == 1:
+                logger.info(f"DEBUG: Box size 1 - Header message result: {header_result}")
         
         # Send the rich offer details directly with proper force_group handling
-        self._send_rich_offer_details_with_group_support(chat_id, offer, force_group=force_group)
+        details_result = self._send_rich_offer_details_with_group_support(chat_id, offer, force_group=force_group)
+        if box_size == 1:
+            logger.info(f"DEBUG: Box size 1 - Details message completed")
         
         # Add order buttons for non-preview announcements
         if not preview:
@@ -28,7 +39,9 @@ class NotificationHandler(OfferBaseHandler):
             
             # Send order buttons message
             button_message = self._t('order_with_command', offer_id=offer.offer_id)
-            self._send_message(chat_id, button_message, reply_markup=reply_markup, force_group=force_group)
+            button_result = self._send_message(chat_id, button_message, reply_markup=reply_markup, force_group=force_group)
+            if box_size == 1:
+                logger.info(f"DEBUG: Box size 1 - Button message result: {button_result}")
 
     def _send_rich_offer_details_with_group_support(self, chat_id: int, offer, force_group: bool = False):
         """Send rich offer details with group support"""
@@ -83,19 +96,30 @@ class NotificationHandler(OfferBaseHandler):
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
         subscribers = [c for c in customers if getattr(c, 'subscribed_to_offers', False)]
         
+        box_size = int(offer.wholesale_box_size)
+        if box_size == 1:
+            logger.info(f"DEBUG: Box size 1 - Notifying {len(subscribers)} subscribers for offer {offer.offer_id}")
+        
         # Send in batches to avoid rate limits (30 messages per second max)
         batch_size = 25
         for i in range(0, len(subscribers), batch_size):
             batch = subscribers[i:i + batch_size]
             
+            if box_size == 1:
+                logger.info(f"DEBUG: Box size 1 - Processing batch {i//batch_size + 1}, {len(batch)} subscribers")
+            
             for customer in batch:
                 try:
                     # Use the same rich offer message method for consistency
                     self._send_rich_offer_message(customer.telegram_user_id, offer, preview=False, force_group=False)
+                    if box_size == 1:
+                        logger.info(f"DEBUG: Box size 1 - Notified subscriber {customer.customer_id}")
                 except Exception as e:
                     # Log error but continue with other subscribers
                     import logging
                     logging.error(f"Failed to notify subscriber {customer.customer_id}: {e}")
+                    if box_size == 1:
+                        logger.error(f"DEBUG: Box size 1 - Failed to notify subscriber {customer.customer_id}: {e}")
             
             # Rate limiting: wait 1 second between batches
             if i + batch_size < len(subscribers):
