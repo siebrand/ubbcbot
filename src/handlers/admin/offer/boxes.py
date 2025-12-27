@@ -115,7 +115,7 @@ class BoxManagementHandler(OfferBaseHandler):
             units_str = f"{box.current_quantity}/{box.max_capacity}"
             box_id_short = box.box_id[:8] if len(box.box_id) > 8 else box.box_id
             
-            message += f"{status_emoji:<7}  {str(offer.offer_id):<4}  {box_id_short:<8}  {offer_name:<20}  {price_str:>6}  {units_str:>5}\n"
+            message += f"{status_emoji}     {str(offer.offer_id):<4}  {box_id_short:<8}  {offer_name:<20}  {price_str:>6}  {units_str:>5}\n"
         
         message += "```"
         
