@@ -111,8 +111,13 @@ class OfferCreationHandler(OfferBaseHandler):
                 )
                 created_box = self.db.create_box(box)
                 
+                if not created_box:
+                    logger.error(f"Failed to create box for offer {offer_id}")
+                    self._send_message(chat_id, self._t('failed_publish_offer'))
+                    return {'status': 'error'}
+                
                 if box_size == 1:
-                    logger.info(f"DEBUG: Box size 1 - Created initial box {created_box.box_id if created_box else 'FAILED'}")
+                    logger.info(f"DEBUG: Box size 1 - Created initial box {created_box.box_id}")
 
                 # Auto-order 1 unit for admin
                 admin_customer = self.db.get_customer_by_telegram_id(self.admin_user_id)
@@ -130,8 +135,13 @@ class OfferCreationHandler(OfferBaseHandler):
                     )
                     created_admin_order = self.db.create_order(admin_order)
                     
+                    if not created_admin_order:
+                        logger.error(f"Failed to create admin order for offer {offer_id}")
+                        self._send_message(chat_id, self._t('failed_publish_offer'))
+                        return {'status': 'error'}
+                    
                     if box_size == 1:
-                        logger.info(f"DEBUG: Box size 1 - Created admin order {created_admin_order.order_id if created_admin_order else 'FAILED'}")
+                        logger.info(f"DEBUG: Box size 1 - Created admin order {created_admin_order.order_id}")
                     
                     # Update box quantity
                     updates = {'current_quantity': 1}
@@ -142,9 +152,13 @@ class OfferCreationHandler(OfferBaseHandler):
                     
                     box_update_result = self.db.update_box(created_box.box_id, updates)
                     
+                    if not box_update_result:
+                        logger.error(f"Failed to update box {created_box.box_id} for offer {offer_id}")
+                    
                     if box_size == 1:
                         logger.info(f"DEBUG: Box size 1 - Updated box status to {updates.get('status', 'OPEN')}, result: {box_update_result}")
                 else:
+                    logger.error(f"Admin customer not found for user_id {self.admin_user_id}")
                     if box_size == 1:
                         logger.error(f"DEBUG: Box size 1 - Admin customer not found for user_id {self.admin_user_id}")
 
