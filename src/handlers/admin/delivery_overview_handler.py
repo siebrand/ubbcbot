@@ -36,7 +36,7 @@ class DeliveryOverviewHandler(BaseHandler):
             'customers_data': customers_data,
             'current_batch': 0
         }
-        self._store_context(chat_id, 'delivery_overview_data', json.dumps(context_data))
+        self._store_context(chat_id, 'payment_link_input', json.dumps(context_data))
         
         return self._request_payment_link(chat_id, customers_data, 0)
     
@@ -53,7 +53,12 @@ class DeliveryOverviewHandler(BaseHandler):
                          batch_size=batch_size)
         
         # Store context for reply handling
-        self._store_context(chat_id, 'payment_link_input', str(current_batch))
+        import json
+        context_data = {
+            'customers_data': customers_data,
+            'current_batch': current_batch
+        }
+        self._store_context(chat_id, 'payment_link_input', json.dumps(context_data))
         
         self._send_message(chat_id, message, reply_markup={"force_reply": True, "input_field_placeholder": "Enter payment link"})
         return {'status': 'awaiting_payment_link'}
@@ -62,15 +67,11 @@ class DeliveryOverviewHandler(BaseHandler):
         """Handle payment link input and send overviews"""
         try:
             # Get stored customers data from context
-            context = self.db.get_edit_context_by_chat_id(chat_id)
-            if not context or context.edit_type != 'delivery_overview_data':
-                return self._send_message(chat_id, "❌ Session expired. Please restart with /send_overviews")
-            
             import json
-            context_data = json.loads(context.entity_id)
+            context_data = json.loads(batch_str)
             customers_data = context_data['customers_data']
             
-            batch_index = int(batch_str)
+            batch_index = context_data['current_batch']
             start_idx = batch_index * 50
             end_idx = min(start_idx + 50, len(customers_data))
             
@@ -96,15 +97,11 @@ class DeliveryOverviewHandler(BaseHandler):
                 
                 # Update context with new batch number
                 context_data['current_batch'] = current_batch
-                self._store_context(chat_id, 'delivery_overview_data', json.dumps(context_data))
                 
                 return self._request_payment_link(chat_id, customers_data, current_batch)
             else:
                 message += self._t('all_overviews_sent', user_id=None, total_customers=len(customers_data))
                 self._send_message(chat_id, message)
-                
-                # Clean up context
-                self.db.delete_edit_context(context.context_id)
                 
                 return {'status': 'completed'}
                 
