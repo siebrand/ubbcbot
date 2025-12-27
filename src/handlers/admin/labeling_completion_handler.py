@@ -1,7 +1,7 @@
 from typing import Dict, Any, List
 import logging
 from handlers.admin.base_box_workflow_handler import BaseBoxWorkflowHandler
-from models.entities import OrderStatus
+from models.entities import OrderStatus, BoxStatus, OfferStatus
 
 logger = logging.getLogger()
 
@@ -109,8 +109,32 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
                 updated_count += 1
 
         if updated_count > 0:
+            # Check if offer should be completed (only if sold out and all boxes delivered)
+            self._check_and_update_offer_status(offer_id)
+            
             return self._send_message(chat_id, self._t('labeling_completed_success', 
                                                      box_id=box.box_id[:8], 
                                                      updated_count=updated_count))
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
+
+    def _check_and_update_offer_status(self, offer_id: int):
+        """Check if offer should be completed: must be SOLD_OUT and all boxes DELIVERED"""
+        try:
+            offer = self.db.get_offer(offer_id)
+            if not offer or offer.status != OfferStatus.SOLD_OUT.value:
+                return  # Only complete offers that are already sold out
+            
+            boxes = self.db.get_boxes_by_offer(offer_id)
+            if not boxes:
+                return
+            
+            # Check if all boxes are delivered
+            all_delivered = all(box.status == BoxStatus.DELIVERED.value for box in boxes)
+            
+            if all_delivered:
+                # Update offer status to COMPLETED
+                self.db.update_offer(offer_id, {'status': OfferStatus.COMPLETED.value})
+                logger.info(f"Updated offer {offer_id} status to COMPLETED - sold out and all boxes delivered")
+        except Exception as e:
+            logger.error(f"Error checking offer status for offer {offer_id}: {e}")

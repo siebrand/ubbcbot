@@ -75,3 +75,6 @@ A commit message must always be suggested right after completing changes to file
 - Production environment: clean messages without prefixes
 - Order cancellation: Admin-only with confirmation for full boxes
 - Cancelled orders: Automatic inventory correction and customer notification
+- Box status workflow: open → minimum_reached → full → ordered → delivered (during wholesale delivery)
+- Offer completion: Only SOLD_OUT offers can be marked COMPLETED when all boxes are delivered
+- Labeling completion: Updates orders to LABELING_COMPLETED status, checks for offer completion
