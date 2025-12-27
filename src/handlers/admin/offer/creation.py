@@ -1,8 +1,11 @@
 import os
+import logging
 from typing import Dict, Any
 from decimal import Decimal
 from models.entities import Offer, Box, Order, BoxStatus, OfferStatus
 from .base import OfferBaseHandler
+
+logger = logging.getLogger()
 
 class OfferCreationHandler(OfferBaseHandler):
     """Handler for offer creation and publishing"""
