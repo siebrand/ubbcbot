@@ -64,8 +64,8 @@ class BoxManagementHandler(OfferBaseHandler):
         
         message = self._t('box_status_title', page=page, total_pages=total_pages) + "\n\n"
         message += "```\n"
-        message += "Status  Offer                     Price   Units\n"
-        message += "------  ------------------------  ------  -----\n"
+        message += "Status  Offer ID  Box ID    Offer Name            Price   Units\n"
+        message += "------  --------  --------  --------------------  ------  -----\n"
         
         for offer, box in page_items:
             status_emoji = {
@@ -77,11 +77,12 @@ class BoxManagementHandler(OfferBaseHandler):
             }.get(box.status, "❓")
             
             # Truncate offer name to fit table
-            offer_name = offer.name[:24] if len(offer.name) > 24 else offer.name
+            offer_name = offer.name[:20] if len(offer.name) > 20 else offer.name
             price_str = f"€{offer.price_per_unit:.2f}"
             units_str = f"{box.current_quantity}/{box.max_capacity}"
+            box_id_short = box.box_id[:8] if len(box.box_id) > 8 else box.box_id
             
-            message += f"{status_emoji:<7}  {offer_name:<24}  {price_str:>6}  {units_str:>5}\n"
+            message += f"{status_emoji:<7}  {offer.offer_id:>8}  {box_id_short:<8}  {offer_name:<20}  {price_str:>6}  {units_str:>5}\n"
         
         message += "```"
         
