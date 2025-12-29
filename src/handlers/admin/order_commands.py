@@ -205,13 +205,41 @@ class AdminOrderCommands(BaseHandler):
     def handle_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /user_orders command"""
         if not args:
-            self._send_message(chat_id, self._t('usage_user_orders'))
-            return {'status': 'invalid_args'}
+            # Show button-based UI to ask for username
+            message = self._t('enter_username_for_orders', chat_id)
+            keyboard = {
+                "inline_keyboard": [[
+                    {"text": "📝 Enter Username", "callback_data": "enter_username_orders"}
+                ]]
+            }
+            self._send_message(chat_id, message, reply_markup=keyboard)
+            return {'status': 'awaiting_input'}
 
         identifier = ' '.join(args)
         customer = self._find_customer_with_ambiguity_check(identifier, chat_id, "user_orders_select")
         
         if customer is None:
+            # Check if disambiguation was shown or if no customer was found
+            # Try to find any customer to determine if disambiguation was shown
+            from models.entities import AuthorizationStatus
+            all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+            all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
+            
+            # Check if any customer matches the identifier
+            found_any = False
+            for customer in all_customers:
+                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+                if (customer.username and customer.username.lower() == identifier.lstrip('@').lower()) or \
+                   (customer.first_name and customer.first_name.lower() == identifier.lower()) or \
+                   full_name.lower() == identifier.lower() or \
+                   full_name.lower().startswith(identifier.lower()):
+                    found_any = True
+                    break
+            
+            if not found_any:
+                self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=identifier))
+                return {'status': 'user_not_found'}
+            
             return {'status': 'disambiguation_shown'}
 
         return self._show_user_orders(chat_id, customer)
@@ -476,3 +504,9 @@ class AdminOrderCommands(BaseHandler):
     def _find_customer_by_identifier(self, identifier: str):
         """Find customer by username or name using existing ambiguity check"""
         return self._find_customer_with_ambiguity_check(identifier, 0, "order_for_select")
+    
+    def handle_enter_username_orders(self, chat_id: int) -> Dict[str, Any]:
+        """Handle enter username callback for user orders"""
+        message = self._t('enter_username_for_orders', chat_id)
+        self._send_message(chat_id, message)
+        return {'status': 'awaiting_username'}

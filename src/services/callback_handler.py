@@ -135,6 +135,8 @@ class CallbackHandler:
             elif data.startswith('user_orders_select_'):
                 customer_id = data.split('_')[3]
                 return self.handlers['admin_order'].handle_user_orders_select(chat_id, customer_id)
+            elif data == 'enter_username_orders':
+                return self._start_user_orders_input(chat_id)
             elif data == 'done_editing':
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
