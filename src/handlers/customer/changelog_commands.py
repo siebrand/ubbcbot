@@ -6,6 +6,27 @@ class ChangelogCommands(BaseHandler):
         """Handle /changelog command"""
         changelog = """📋 <b>UBBC Bot Changelog</b>
 
+<b>Up to 2025-12-29</b>
+
+<b>User-Facing Updates</b>
+• <b>Enhanced Order Management</b> - Improved order display with better formatting and status indicators
+• <b>Better Error Messages</b> - More descriptive messages when offers are sold out or unavailable
+• <b>Improved Order Notifications</b> - Clearer status updates and better formatting in order confirmations
+
+<b>Admin-Facing Updates</b>
+• <b>Button-Based Admin Workflows</b> - Interactive UI for /user_orders, /cancel_order, and /order_for commands
+• <b>Enhanced Customer Search</b> - Unified search with disambiguation for partial name matches across all commands
+• <b>Comprehensive Admin Panel</b> - New /admin command with organized button interface for all admin functions
+• <b>Improved Order Cancellation</b> - Step-by-step workflow with user selection and order listing with cancel option
+• <b>Enhanced User Management</b> - Better customer search and editing with consolidated methods
+• <b>Streamlined Order Placement</b> - /order_for now uses button workflow: username → offer selection → quantity (1/2/Other)
+• <b>Better Delivery Management</b> - Enhanced wholesale delivery and labeling completion workflows
+• <b>Improved Box Status Tracking</b> - Better status transitions and capacity management
+• <b>Enhanced CSV Exports</b> - Improved order exports with better formatting and status filtering
+• <b>Comprehensive Help System</b> - Organized help sections with detailed command documentation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 <b>Up to 2025-12-26</b>
 
 <b>User-Facing Updates</b>
