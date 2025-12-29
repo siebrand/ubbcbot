@@ -378,5 +378,6 @@
   "back_to_admin": "⬅️ Terug naar Admin Paneel",
   "add_supplier_prompt": "➕ Nieuwe Leverancier Toevoegen\n\nKlik op de knop hieronder om een leverancier toe te voegen:",
   "add_supplier_button": "📝 Leverancier Naam Invoeren",
-  "enter_supplier_name": "📝 Voer de naam in voor de nieuwe leverancier:"
+  "enter_supplier_name": "📝 Voer de naam in voor de nieuwe leverancier:",
+  "enter_username_for_orders": "📝 Voer gebruikersnaam of naam in om bestellingen te bekijken:"
 }

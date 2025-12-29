@@ -268,6 +268,8 @@ class BotService:
             return self.user_commands.handle_update_user_last_name(chat_id, [entity_id, text])
         elif edit_type == 'add_supplier_name':
             return self.supplier_commands._create_supplier(chat_id, text)
+        elif edit_type == 'user_orders_input':
+            return self.admin_order_commands.handle_user_orders(chat_id, [text])
         elif edit_type == 'incomplete_delivery':
             return self.wholesale_delivery_commands.handle_incomplete_delivery_reply(chat_id, user_id, text, entity_id)
         elif edit_type == 'payment_link_input':

@@ -378,5 +378,6 @@
   "back_to_admin": "⬅️ Back to Admin Panel",
   "add_supplier_prompt": "➕ Add New Supplier\n\nClick the button below to start adding a supplier:",
   "add_supplier_button": "📝 Enter Supplier Name",
-  "enter_supplier_name": "📝 Enter the name for the new supplier:"
+  "enter_supplier_name": "📝 Enter the name for the new supplier:",
+  "enter_username_for_orders": "📝 Enter username or name to view orders:"
 }

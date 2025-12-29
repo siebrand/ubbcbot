@@ -485,7 +485,7 @@ class CallbackHandler:
             'cmd_box_status': lambda: self.handlers['offer'].handle_box_status(chat_id),
             'cmd_order_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
             'cmd_all_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
-            'cmd_user_orders': lambda: self._send_usage_message(chat_id, 'usage_user_orders'),
+            'cmd_user_orders': lambda: self._start_user_orders_input(chat_id),
             'cmd_cancel_order': lambda: self._send_usage_message(chat_id, 'usage_cancel_order'),
             'cmd_order_for': lambda: self._send_usage_message(chat_id, 'usage_order_for'),
             'cmd_pending_users': lambda: self.handlers['user'].handle_pending_users(chat_id),
@@ -524,6 +524,21 @@ class CallbackHandler:
             chat_id, 
             base_handler._t('enter_supplier_name'),
             reply_markup={"force_reply": True, "input_field_placeholder": "Enter supplier name"}
+        )
+        return {'status': 'text_input_required'}
+    
+    def _start_user_orders_input(self, chat_id: int) -> Dict[str, Any]:
+        """Start user orders process with text input"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        # Store context for text input
+        self._store_edit_context(chat_id, 'user_orders_input', 'new')
+        
+        base_handler._send_message(
+            chat_id, 
+            base_handler._t('enter_username_for_orders'),
+            reply_markup={"force_reply": True, "input_field_placeholder": "Enter username or name"}
         )
         return {'status': 'text_input_required'}
     
