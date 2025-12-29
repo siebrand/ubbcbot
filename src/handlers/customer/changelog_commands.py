@@ -2,13 +2,12 @@ from typing import Dict, Any
 from handlers.base_handler import BaseHandler
 
 class ChangelogCommands(BaseHandler):
-    def handle_changelog(self, chat_id: int, user_id: int) -> Dict[str, Any]:
-        """Handle /changelog command"""
-        changelog = """📋 <b>UBBC Bot Changelog</b>
-
-<b>Up to 2025-12-29</b>
-
-<b>User-Facing Updates</b>
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.changelog_entries = [
+            {
+                "title": "Up to 2025-12-29",
+                "content": """<b>User-Facing Updates</b>
 • <b>Enhanced Order Management</b> - Improved order display with better formatting and status indicators
 • <b>Better Error Messages</b> - More descriptive messages when offers are sold out or unavailable
 • <b>Improved Order Notifications</b> - Clearer status updates and better formatting in order confirmations
@@ -23,13 +22,11 @@ class ChangelogCommands(BaseHandler):
 • <b>Better Delivery Management</b> - Enhanced wholesale delivery and labeling completion workflows
 • <b>Improved Box Status Tracking</b> - Better status transitions and capacity management
 • <b>Enhanced CSV Exports</b> - Improved order exports with better formatting and status filtering
-• <b>Comprehensive Help System</b> - Organized help sections with detailed command documentation
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>Up to 2025-12-26</b>
-
-<b>User-Facing Updates</b>
+• <b>Comprehensive Help System</b> - Organized help sections with detailed command documentation"""
+            },
+            {
+                "title": "Up to 2025-12-26",
+                "content": """<b>User-Facing Updates</b>
 • <b>Enhanced Privacy Protection</b> - Group order announcements now show abbreviated names ("Firstname L.") instead of full names for privacy
 • <b>Improved Offer Browsing</b> - New <code>/list_offers sold_out</code> parameter to view recently sold out offers from the last 7 days
 • <b>Better availability indicators</b> - Order announcements show "sufficient available" vs specific counts
@@ -47,13 +44,11 @@ class ChangelogCommands(BaseHandler):
 • <b>Edit Offer button</b> - Direct access from offer details view for quick editing
 • <b>Seamless editing workflow</b> - Return to edit menu after field updates with maintained context
 • <b>System Reliability</b> - Improved HTTP request handling with proper timeouts and better error handling
-• <b>Modular service architecture</b> - Better maintainability with reduced code duplication and improved callback handling
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>Up to 2025-12-25</b>
-
-<b>User-Facing Updates</b>
+• <b>Modular service architecture</b> - Better maintainability with reduced code duplication and improved callback handling"""
+            },
+            {
+                "title": "Up to 2025-12-25",
+                "content": """<b>User-Facing Updates</b>
 • <b>New /offer_details command</b> - View detailed offer information with images and descriptions
 • <b>Interactive order buttons</b> - Click buttons to place orders instead of typing commands
 • <b>Rich offer displays</b> - Offers now show images, detailed descriptions, and better formatting
@@ -69,6 +64,29 @@ class ChangelogCommands(BaseHandler):
 • <b>User search functionality</b> - Search users by name in /list_users command
 • <b>Draft offer management</b> - Select and preview draft offers before publishing
 • <b>Improved offer editing</b> - Interactive buttons for editing offer details"""
-
-        self._send_message(chat_id, changelog, parse_mode="HTML")
+            }
+        ]
+    
+    def handle_changelog(self, chat_id: int, user_id: int, page: int = 1) -> Dict[str, Any]:
+        """Handle /changelog command with pagination"""
+        if not self.changelog_entries:
+            self._send_message(chat_id, "No changelog entries available.")
+            return {'status': 'no_entries'}
+        
+        # Paginate entries (1 entry per page for readability)
+        page_entries, total_pages = self._paginate_list(self.changelog_entries, page, 1)
+        
+        if not page_entries:
+            self._send_message(chat_id, "Invalid page number.")
+            return {'status': 'invalid_page'}
+        
+        entry = page_entries[0]
+        message = f"📋 <b>UBBC Bot Changelog</b>\n\n<b>{entry['title']}</b>\n\n{entry['content']}"
+        
+        # Add pagination keyboard if needed
+        keyboard = None
+        if total_pages > 1:
+            keyboard = self._build_pagination_keyboard(page, total_pages, "changelog")
+        
+        self._send_message(chat_id, message, parse_mode="HTML", reply_markup=keyboard)
         return {'status': 'success'}

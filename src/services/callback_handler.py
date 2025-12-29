@@ -183,6 +183,8 @@ class CallbackHandler:
                         return self.handlers['user'].handle_list_users(chat_id, page, status_filter)
                     elif entity_type == 'subscribers':
                         return self.handlers['user'].handle_list_subscribers(chat_id, page)
+                    elif entity_type == 'changelog':
+                        return self.handlers['changelog'].handle_changelog(chat_id, user_id, page)
             elif data == 'page_info':
                 return {'status': 'page_info'}
             

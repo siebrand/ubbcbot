@@ -97,7 +97,7 @@ class CommandRouter:
         elif command == '/confirm_order':
             return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, parts[1:])
         elif command == '/changelog':
-            return self.handlers['changelog'].handle_changelog(target_chat, user_id)
+            return self.handlers['changelog'].handle_changelog(target_chat, user_id, 1)
 
         # Admin-only commands
         if self._is_admin(user_id):
