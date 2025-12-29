@@ -7,6 +7,7 @@ from telegram import Bot
 from telegram.constants import ParseMode
 from telegram.error import TelegramError
 from io import BytesIO
+from utils.validation import ValidationUtils
 
 logger = logging.getLogger()
 
@@ -19,6 +20,7 @@ class BaseHandler:
         self._bot_username = None
         self._translations = {}
         self.bot = Bot(token=telegram_token) if telegram_token else None
+        self.validator = ValidationUtils(db, self._t)
 
     def _load_translations(self, lang: str) -> Dict[str, str]:
         """Load translations for given language"""
@@ -202,35 +204,19 @@ class BaseHandler:
     
     def _validate_and_get_offer(self, args: list, chat_id: int):
         """Validate offer ID and return offer or send error"""
-        if not args:
-            return None, {'status': 'invalid_args'}
-        
-        try:
-            offer_id = int(args[0])
-            offer = self.db.get_offer(offer_id)
-            if not offer:
-                self._send_message(chat_id, self._t('offer_not_found'))
-                return None, {'status': 'offer_not_found'}
-            return offer, None
-        except ValueError:
-            self._send_message(chat_id, self._t('invalid_offer_id'))
-            return None, {'status': 'invalid_format'}
+        offer, error = self.validator.validate_and_get_offer(args)
+        if error:
+            if 'message' in error:
+                self._send_message(chat_id, error['message'])
+        return offer, error
     
     def _validate_and_get_customer(self, args: list, chat_id: int):
         """Validate customer ID and return customer or send error"""
-        if not args:
-            return None, {'status': 'invalid_args'}
-        
-        try:
-            customer_id = int(args[0])
-            customer = self.db.get_customer(customer_id)
-            if not customer:
-                self._send_message(chat_id, self._t('customer_not_found'))
-                return None, {'status': 'customer_not_found'}
-            return customer, None
-        except ValueError:
-            self._send_message(chat_id, self._t('invalid_customer_id'))
-            return None, {'status': 'invalid_format'}
+        customer, error = self.validator.validate_and_get_customer(args)
+        if error:
+            if 'message' in error:
+                self._send_message(chat_id, error['message'])
+        return customer, error
     
     def _parse_int_arg(self, arg: str, error_key: str, chat_id: int):
         """Parse integer argument or send error"""
@@ -296,48 +282,14 @@ class BaseHandler:
     
     def _find_customer_with_disambiguation(self, identifier: str, chat_id: int, callback_prefix: str):
         """Find customer with disambiguation UI if multiple matches"""
-        from models.entities import AuthorizationStatus
-        all_customers = []
-        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value))
-        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
-        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.REJECTED.value))
+        customer, error = self.validator.find_customer_with_disambiguation(identifier, chat_id, callback_prefix)
         
-        search_lower = identifier.lower()
-        matches = []
-        for customer in all_customers:
-            first_name = (customer.first_name or "").lower()
-            last_name = (customer.last_name or "").lower()
-            username = (customer.username or "").lower()
-            full_name = f"{first_name} {last_name}".strip()
-
-            if (search_lower in first_name or
-                    search_lower in last_name or
-                    search_lower in username or
-                    search_lower in full_name):
-                matches.append(customer)
+        if error:
+            if error['status'] == 'user_not_found':
+                self._send_message(chat_id, error['message'])
+                return None, error
+            elif error['status'] == 'disambiguation_shown':
+                self._send_message(chat_id, error['message'], reply_markup=error['keyboard'])
+                return None, error
         
-        if not matches:
-            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=identifier))
-            return None, {'status': 'user_not_found'}
-        
-        if len(matches) == 1:
-            return matches[0], None
-        
-        # Multiple matches - show disambiguation
-        message = self._t('multiple_users_found', chat_id, identifier=identifier) + "\n\n"
-        keyboard_buttons = []
-        
-        for customer in matches[:10]:  # Limit to 10 matches
-            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-            username_part = f" (@{customer.username})" if customer.username else ""
-            
-            keyboard_buttons.append([{
-                "text": f"📝 {full_name}{username_part}",
-                "callback_data": f"{callback_prefix}_{customer.customer_id}"
-            }])
-        
-        keyboard_buttons.append([{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}])
-        keyboard = {"inline_keyboard": keyboard_buttons}
-        
-        self._send_message(chat_id, message, reply_markup=keyboard)
-        return None, {'status': 'disambiguation_shown'}
+        return customer, None

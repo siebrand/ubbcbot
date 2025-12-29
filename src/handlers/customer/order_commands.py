@@ -42,27 +42,9 @@ class CustomerOrderCommands(BaseHandler):
                 return {'status': 'customer_not_found'}
 
             # Check for existing orders and enforce 5-unit limit BEFORE creating boxes
-            existing_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) 
-                             if o.offer_id == offer_id and o.status in ['pending', 'ordered']]
-            total_existing = sum(order.quantity for order in existing_orders)
-            
-            if total_existing + quantity > 5:
-                message = self._t('order_limit_exceeded', user_id, 
-                                offer_name=offer.name, 
-                                total_existing=total_existing)
-                message += "\n\n"
-                for order in existing_orders:
-                    from utils.timezone import to_cet_string
-                    order_date = to_cet_string(order.created_at, '%Y-%m-%d')
-                    message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
-                
-                remaining_allowed = 5 - total_existing
-                if remaining_allowed > 0:
-                    message += self._t('remaining_units_allowed', user_id, remaining=remaining_allowed)
-                else:
-                    message += self._t('limit_reached', user_id)
-                
-                self._send_message(chat_id, message)
+            valid, limit_message = self.validator.validate_order_limit(customer.customer_id, offer_id, quantity)
+            if not valid:
+                self._send_message(chat_id, limit_message)
                 return {'status': 'limit_exceeded'}
 
             # Check for existing orders for duplicate confirmation
@@ -128,27 +110,9 @@ class CustomerOrderCommands(BaseHandler):
                 return {'status': 'customer_not_found'}
             
             # Check 5-unit limit for confirmed orders
-            existing_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) 
-                             if o.offer_id == offer_id and o.status in ['pending', 'ordered']]
-            total_existing = sum(order.quantity for order in existing_orders)
-            
-            if total_existing + quantity > 5:
-                message = self._t('order_limit_exceeded', user_id, 
-                                offer_name=offer.name, 
-                                total_existing=total_existing)
-                message += "\n\n"
-                for order in existing_orders:
-                    from utils.timezone import to_cet_string
-                    order_date = to_cet_string(order.created_at, '%Y-%m-%d')
-                    message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
-                
-                remaining_allowed = 5 - total_existing
-                if remaining_allowed > 0:
-                    message += self._t('remaining_units_allowed', user_id, remaining=remaining_allowed)
-                else:
-                    message += self._t('limit_reached', user_id)
-                
-                self._send_message(chat_id, message)
+            valid, limit_message = self.validator.validate_order_limit(customer.customer_id, offer_id, quantity)
+            if not valid:
+                self._send_message(chat_id, limit_message)
                 return {'status': 'limit_exceeded'}
             
             # Execute the order without duplicate check
