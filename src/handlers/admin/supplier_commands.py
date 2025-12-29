@@ -1,8 +1,13 @@
 from typing import Dict, Any
 from handlers.base_handler import BaseHandler
 from models.entities import Supplier
+from utils.update_utils import UpdateUtils
 
 class SupplierCommands(BaseHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.update_utils = UpdateUtils(self.db, self._t, self._send_message)
+        self.update_utils._show_supplier_edit_interface = self._show_edit_interface
     def handle_add_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /add_supplier command"""
         if not args:
@@ -182,100 +187,12 @@ class SupplierCommands(BaseHandler):
     
     def handle_update_supplier_name(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_supplier_name command"""
-        if len(args) < 2:
-            self._send_message(chat_id, self._t('usage_update_supplier_name', chat_id))
-            return {'status': 'invalid_args'}
-        
-        supplier_id = args[0]
-        new_name = ' '.join(args[1:]).strip()
-        
-        if len(new_name) > 50:
-            self._send_message(chat_id, self._t('supplier_name_too_long', chat_id))
-            return {'status': 'invalid_name'}
-        
-        if '<' in new_name or '>' in new_name:
-            self._send_message(chat_id, self._t('supplier_name_invalid_chars', chat_id))
-            return {'status': 'invalid_name'}
-        
-        supplier = self.db.get_supplier(supplier_id)
-        if not supplier:
-            self._send_message(chat_id, self._t('supplier_not_found'))
-            return {'status': 'supplier_not_found'}
-        
-        # Check for duplicate name
-        existing = self.db.get_supplier_by_name(new_name)
-        if existing and existing.supplier_id != supplier_id:
-            self._send_message(chat_id, self._t('supplier_name_exists', name=new_name))
-            return {'status': 'duplicate_name'}
-        
-        if self.db.update_supplier(supplier_id, {'name': new_name}):
-            self._send_message(chat_id, self._t('supplier_name_updated', chat_id, old_name=supplier.name, new_name=new_name))
-            # Get updated supplier and show edit interface
-            updated_supplier = self.db.get_supplier(supplier_id)
-            if updated_supplier:
-                return self._show_edit_interface(chat_id, updated_supplier)
-            return {'status': 'success'}
-        else:
-            self._send_message(chat_id, self._t('failed_update_supplier_name', chat_id))
-            return {'status': 'error'}
+        return self.update_utils.handle_supplier_update(chat_id, args, 'name')
     
     def handle_update_supplier_contact(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_supplier_contact command"""
-        if len(args) < 2:
-            self._send_message(chat_id, self._t('usage_update_supplier_contact', chat_id))
-            return {'status': 'invalid_args'}
-        
-        supplier_id = args[0]
-        contact_email = args[1]
-        
-        # Basic email validation
-        if '@' not in contact_email or '.' not in contact_email:
-            self._send_message(chat_id, self._t('invalid_email', chat_id))
-            return {'status': 'invalid_email'}
-        
-        supplier = self.db.get_supplier(supplier_id)
-        if not supplier:
-            self._send_message(chat_id, self._t('supplier_not_found'))
-            return {'status': 'supplier_not_found'}
-        
-        if self.db.update_supplier(supplier_id, {'contact_email': contact_email}):
-            old_contact = supplier.contact_email or self._t('not_set')
-            self._send_message(chat_id, self._t('supplier_contact_updated', old_contact=old_contact, new_contact=contact_email))
-            # Get updated supplier and show edit interface
-            updated_supplier = self.db.get_supplier(supplier_id)
-            if updated_supplier:
-                return self._show_edit_interface(chat_id, updated_supplier)
-            return {'status': 'success'}
-        else:
-            self._send_message(chat_id, self._t('failed_update_supplier_contact', chat_id))
-            return {'status': 'error'}
+        return self.update_utils.handle_supplier_update(chat_id, args, 'contact_email')
     
     def handle_update_supplier_full_name(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_supplier_full_name command"""
-        if len(args) < 2:
-            self._send_message(chat_id, self._t('usage_update_supplier_full_name'))
-            return {'status': 'invalid_args'}
-        
-        supplier_id = args[0]
-        new_full_name = ' '.join(args[1:]).strip()
-        
-        if len(new_full_name) > 100:
-            self._send_message(chat_id, self._t('supplier_full_name_too_long'))
-            return {'status': 'invalid_name'}
-        
-        supplier = self.db.get_supplier(supplier_id)
-        if not supplier:
-            self._send_message(chat_id, self._t('supplier_not_found'))
-            return {'status': 'supplier_not_found'}
-        
-        if self.db.update_supplier(supplier_id, {'full_name': new_full_name}):
-            old_full_name = supplier.full_name or self._t('not_set')
-            self._send_message(chat_id, self._t('supplier_full_name_updated', old_full_name=old_full_name, new_full_name=new_full_name))
-            # Get updated supplier and show edit interface
-            updated_supplier = self.db.get_supplier(supplier_id)
-            if updated_supplier:
-                return self._show_edit_interface(chat_id, updated_supplier)
-            return {'status': 'success'}
-        else:
-            self._send_message(chat_id, self._t('failed_update_supplier_full_name'))
-            return {'status': 'error'}
+        return self.update_utils.handle_supplier_update(chat_id, args, 'full_name')

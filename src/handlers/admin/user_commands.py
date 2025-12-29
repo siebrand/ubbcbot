@@ -1,8 +1,13 @@
 from typing import Dict, Any, Optional
 from handlers.base_handler import BaseHandler
 from models.entities import AuthorizationStatus
+from utils.update_utils import UpdateUtils
 
 class UserCommands(BaseHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.update_utils = UpdateUtils(self.db, self._t, self._send_message)
+        self.update_utils._show_customer_edit_interface = self._show_user_edit_interface
     def _approve_user_by_customer(self, chat_id: int, customer) -> Dict[str, Any]:
         """Shared approval logic for customer object"""
         if customer.authorization_status == AuthorizationStatus.APPROVED.value:
@@ -176,67 +181,11 @@ class UserCommands(BaseHandler):
     
     def handle_update_user_first_name(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_user_first_name command"""
-        if len(args) < 2:
-            self._send_message(chat_id, self._t('usage_update_user_first_name', chat_id))
-            return {'status': 'invalid_args'}
-        
-        customer_id = args[0]
-        new_first_name = ' '.join(args[1:]).strip()
-        
-        if len(new_first_name) > 100:
-            self._send_message(chat_id, self._t('name_too_long', chat_id, field="First name"))
-            return {'status': 'invalid_name'}
-        
-        customer = self.db.get_customer(customer_id)
-        if not customer:
-            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=customer_id))
-            return {'status': 'user_not_found'}
-        
-        if self.db.update_customer(customer_id, {'first_name': new_first_name}):
-            old_name = customer.first_name or self._t('not_set', chat_id)
-            self._send_message(chat_id, self._t('first_name_updated', chat_id, old_name=old_name, new_name=new_first_name))
-            
-            # Return to edit interface
-            updated_customer = self.db.get_customer(customer_id)
-            if updated_customer:
-                return self.handle_update_user(chat_id, [f"{updated_customer.first_name or ''} {updated_customer.last_name or ''}".strip() or updated_customer.username or str(updated_customer.customer_id)])
-            
-            return {'status': 'success'}
-        else:
-            self._send_message(chat_id, self._t('failed_update_first_name', chat_id))
-            return {'status': 'error'}
+        return self.update_utils.handle_customer_update(chat_id, args, 'first_name')
     
     def handle_update_user_last_name(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_user_last_name command"""
-        if len(args) < 2:
-            self._send_message(chat_id, self._t('usage_update_user_last_name', chat_id))
-            return {'status': 'invalid_args'}
-        
-        customer_id = args[0]
-        new_last_name = ' '.join(args[1:]).strip()
-        
-        if len(new_last_name) > 100:
-            self._send_message(chat_id, self._t('name_too_long', chat_id, field="Last name"))
-            return {'status': 'invalid_name'}
-        
-        customer = self.db.get_customer(customer_id)
-        if not customer:
-            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=customer_id))
-            return {'status': 'user_not_found'}
-        
-        if self.db.update_customer(customer_id, {'last_name': new_last_name}):
-            old_name = customer.last_name or self._t('not_set', chat_id)
-            self._send_message(chat_id, self._t('last_name_updated', chat_id, old_name=old_name, new_name=new_last_name))
-            
-            # Return to edit interface
-            updated_customer = self.db.get_customer(customer_id)
-            if updated_customer:
-                return self.handle_update_user(chat_id, [f"{updated_customer.first_name or ''} {updated_customer.last_name or ''}".strip() or updated_customer.username or str(updated_customer.customer_id)])
-            
-            return {'status': 'success'}
-        else:
-            self._send_message(chat_id, self._t('failed_update_last_name', chat_id))
-            return {'status': 'error'}
+        return self.update_utils.handle_customer_update(chat_id, args, 'last_name')
 
 
 
