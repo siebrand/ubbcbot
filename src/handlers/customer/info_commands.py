@@ -606,8 +606,8 @@ class InfoCommands(BaseHandler):
                 reply_markup = {
                     "inline_keyboard": [
                         [
-                            {"text": self._t('order_1_button'), "callback_data": f"order_{offer.offer_id}_1"},
-                            {"text": self._t('order_2_button'), "callback_data": f"order_{offer.offer_id}_2"}
+                            {"text": self._t('order_1'), "callback_data": f"order_{offer.offer_id}_1"},
+                            {"text": self._t('order_2'), "callback_data": f"order_{offer.offer_id}_2"}
                         ],
                         [{"text": self._t('edit_offer_button'), "callback_data": f"offer_details_{offer.offer_id}_edit"}]
                     ]
@@ -616,8 +616,8 @@ class InfoCommands(BaseHandler):
                 reply_markup = {
                     "inline_keyboard": [
                         [
-                            {"text": self._t('order_1_button'), "callback_data": f"order_{offer.offer_id}_1"},
-                            {"text": self._t('order_2_button'), "callback_data": f"order_{offer.offer_id}_2"}
+                            {"text": self._t('order_1'), "callback_data": f"order_{offer.offer_id}_1"},
+                            {"text": self._t('order_2'), "callback_data": f"order_{offer.offer_id}_2"}
                         ]
                     ]
                 }
