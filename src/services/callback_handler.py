@@ -171,9 +171,15 @@ class CallbackHandler:
                 return self._start_cancel_order_input(chat_id)
             elif data == 'enter_username_order_for':
                 return self._start_order_for_input(chat_id)
+            elif data.startswith('approve_user_select_'):
+                customer_id = data.split('_')[3]
+                return self.handlers['user'].handle_approve_user_select(chat_id, customer_id)
             elif data.startswith('order_for_user_select_'):
                 customer_id = data.split('_')[4]
                 return self.handlers['admin_order'].handle_order_for_user_select(chat_id, customer_id)
+            elif data.startswith('user_status_select_'):
+                customer_id = data.split('_')[3]
+                return self.handlers['user'].handle_user_status_select(chat_id, customer_id)
 
             elif data == 'done_editing':
                 from handlers.base_handler import BaseHandler
@@ -431,7 +437,7 @@ class CallbackHandler:
         command_map = {
             'cmd_add_supplier': lambda: self.handlers['supplier'].handle_add_supplier(chat_id, []),
             'cmd_list_suppliers': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
-            'cmd_edit_supplier': lambda: self._send_usage_message(chat_id, 'usage_edit_supplier'),
+            'cmd_edit_supplier': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
             'cmd_create_offer': lambda: self.handlers['offer'].handle_create_offer(chat_id, []),
             'cmd_list_offers': lambda: self.handlers['info'].handle_list_offers(chat_id, user_id, []),
             'cmd_box_status': lambda: self.handlers['offer'].handle_box_status(chat_id),
@@ -439,11 +445,11 @@ class CallbackHandler:
             'cmd_all_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
             'cmd_user_orders': lambda: self._start_user_orders_input(chat_id),
             'cmd_cancel_order': lambda: self.handlers['admin_order'].handle_cancel_order(chat_id, []),
-            'cmd_order_for': lambda: self._send_usage_message(chat_id, 'usage_order_for'),
+            'cmd_order_for': lambda: self.handlers['admin_order'].handle_order_for(chat_id, user_id, []),
             'cmd_pending_users': lambda: self.handlers['user'].handle_pending_users(chat_id),
             'cmd_list_users': lambda: self.handlers['user'].handle_list_users(chat_id, 1, 'all'),
-            'cmd_approve_user': lambda: self._send_usage_message(chat_id, 'usage_approve_user'),
-            'cmd_user_status': lambda: self._send_usage_message(chat_id, 'usage_user_status'),
+            'cmd_approve_user': lambda: self._start_approve_user_input(chat_id),
+            'cmd_user_status': lambda: self._start_user_status_input(chat_id),
             'cmd_wholesale_delivery': lambda: self.handlers['wholesale_delivery'].handle_wholesale_delivery(chat_id, user_id, []),
             'cmd_labeling_completed': lambda: self.handlers['labeling'].handle_labeling_completed(chat_id, user_id, []),
             'cmd_send_overviews': lambda: self.handlers['admin_order'].handle_send_overviews(chat_id, []),
@@ -479,6 +485,18 @@ class CallbackHandler:
     def _start_order_for_input(self, chat_id: int) -> Dict[str, Any]:
         """Start order_for process with text input"""
         return self.edit_context_manager.handle_input_prompts(chat_id, 'order_for_input')
+    
+    def _start_edit_supplier_input(self, chat_id: int) -> Dict[str, Any]:
+        """Start edit supplier process with text input"""
+        return self.edit_context_manager.handle_input_prompts(chat_id, 'edit_supplier_input')
+    
+    def _start_approve_user_input(self, chat_id: int) -> Dict[str, Any]:
+        """Start approve user process with text input"""
+        return self.edit_context_manager.handle_input_prompts(chat_id, 'approve_user_input')
+    
+    def _start_user_status_input(self, chat_id: int) -> Dict[str, Any]:
+        """Start user status process with text input"""
+        return self.edit_context_manager.handle_input_prompts(chat_id, 'user_status_input')
     
     def _send_usage_message(self, chat_id: int, usage_key: str) -> Dict[str, Any]:
         """Send usage message for commands that require parameters"""

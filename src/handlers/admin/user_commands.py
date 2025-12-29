@@ -5,6 +5,13 @@ from utils.update_utils import UpdateUtils
 from utils.pagination import PaginationUtils
 
 class UserCommands(BaseHandler):
+    # Status emoji mapping - single source of truth
+    STATUS_EMOJIS = {
+        AuthorizationStatus.UNAUTHORIZED.value: "⚠️",
+        AuthorizationStatus.APPROVED.value: "✅",
+        AuthorizationStatus.REJECTED.value: "❌"
+    }
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.update_utils = UpdateUtils(self.db, self._t, self._send_message)
@@ -84,7 +91,7 @@ class UserCommands(BaseHandler):
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "edit_user_select")
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "approve_user_select")
         
         if error:
             return error
@@ -123,7 +130,7 @@ class UserCommands(BaseHandler):
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "edit_user_select")
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "user_status_select")
         
         if error:
             return error
@@ -133,11 +140,7 @@ class UserCommands(BaseHandler):
             display_name += f" {self._escape_html(customer.last_name)}"
         
         username_part = f" (@{self._escape_html(customer.username)})" if customer.username else ""
-        status_emoji = {
-            AuthorizationStatus.UNAUTHORIZED.value: "⚠️",
-            AuthorizationStatus.APPROVED.value: "✅",
-            AuthorizationStatus.REJECTED.value: "❌"
-        }.get(customer.authorization_status, "❓")
+        status_emoji = self.STATUS_EMOJIS.get(customer.authorization_status, "❓")
         
         message = f"{status_emoji} {display_name}{username_part}\n"
         message += f"Status: {customer.authorization_status}"
@@ -192,8 +195,6 @@ class UserCommands(BaseHandler):
 
     def handle_list_users(self, chat_id: int, page: int = 1, status_filter: str = "all", search_string: str = None) -> Dict[str, Any]:
         """Handle /list_users command with pagination, filtering, and optional search"""
-        from models.entities import AuthorizationStatus
-
         # Get customers based on filter
         if status_filter == "all":
             customers = []
@@ -241,11 +242,7 @@ class UserCommands(BaseHandler):
                 display_name += f" {self._escape_html(customer.last_name)}"
 
             username_part = f" (@{self._escape_html(customer.username)})" if customer.username else ""
-            status_emoji = {
-                AuthorizationStatus.UNAUTHORIZED.value: "⚠️",
-                AuthorizationStatus.APPROVED.value: "✅",
-                AuthorizationStatus.REJECTED.value: "❌"
-            }.get(customer.authorization_status, "❓")
+            status_emoji = self.STATUS_EMOJIS.get(customer.authorization_status, "❓")
 
             message += f"{status_emoji} {display_name}{username_part}\n"
 
@@ -270,6 +267,38 @@ class UserCommands(BaseHandler):
             return {'status': 'user_not_found'}
         
         return self._show_user_edit_interface(customer, chat_id)
+    
+    def handle_user_status_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        """Handle user selection from disambiguation for user status"""
+        customer = self.db.get_customer(customer_id)
+        
+        if not customer:
+            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=customer_id))
+            return {'status': 'user_not_found'}
+        
+        # Show user status (same logic as handle_user_status but for specific customer)
+        display_name = self._escape_html(customer.first_name or "Unknown")
+        if customer.last_name:
+            display_name += f" {self._escape_html(customer.last_name)}"
+        
+        username_part = f" (@{self._escape_html(customer.username)})" if customer.username else ""
+        status_emoji = self.STATUS_EMOJIS.get(customer.authorization_status, "❓")
+        
+        message = f"{status_emoji} {display_name}{username_part}\n"
+        message += f"Status: {customer.authorization_status}"
+        
+        self._send_message(chat_id, message)
+        return {'status': 'success'}
+    
+    def handle_approve_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        """Handle user selection from disambiguation for approve user"""
+        customer = self.db.get_customer(customer_id)
+        
+        if not customer:
+            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=customer_id))
+            return {'status': 'user_not_found'}
+        
+        return self._approve_user_by_customer(chat_id, customer)
 
     def handle_approve_user_by_id(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         """Handle user approval by customer ID (called from button callback)"""

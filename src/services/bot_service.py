@@ -276,6 +276,18 @@ class BotService:
             return self.wholesale_delivery_commands.handle_incomplete_delivery_reply(chat_id, user_id, text, entity_id)
         elif edit_type == 'order_for_input':
             return self.admin_order_commands.handle_order_for(chat_id, user_id, [text])
+        elif edit_type == 'approve_user_input':
+            result = self.user_commands.handle_approve_user(chat_id, [text])
+            if result.get('status') == 'user_not_found':
+                # Return to admin users menu
+                return self.admin_commands_handler.handle_admin_users(chat_id, user_id)
+            return result
+        elif edit_type == 'user_status_input':
+            result = self.user_commands.handle_user_status(chat_id, [text])
+            if result.get('status') == 'user_not_found':
+                # Return to admin users menu
+                return self.admin_commands_handler.handle_admin_users(chat_id, user_id)
+            return result
         elif edit_type == 'order_for_quantity_input':
             # Parse customer_id and offer_id from entity_id
             parts = entity_id.split('_', 1)

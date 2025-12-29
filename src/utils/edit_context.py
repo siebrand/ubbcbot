@@ -169,6 +169,21 @@ class EditContextManager:
                 'context_type': 'order_for_input',
                 'prompt_key': 'enter_username_for_order_for',
                 'placeholder': 'Enter username or name'
+            },
+            'edit_supplier_input': {
+                'context_type': 'edit_supplier_input',
+                'prompt_key': 'enter_supplier_name_to_edit',
+                'placeholder': 'Enter supplier name'
+            },
+            'approve_user_input': {
+                'context_type': 'approve_user_input',
+                'prompt_key': 'enter_username_to_approve',
+                'placeholder': 'Enter username or name'
+            },
+            'user_status_input': {
+                'context_type': 'user_status_input',
+                'prompt_key': 'enter_username_for_status',
+                'placeholder': 'Enter username or name'
             }
         }
         
