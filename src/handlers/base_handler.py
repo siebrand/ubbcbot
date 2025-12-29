@@ -3,10 +3,6 @@ import logging
 import json
 import os
 from services.database import DynamoDBService
-from telegram import Bot
-from telegram.constants import ParseMode
-from telegram.error import TelegramError
-from io import BytesIO
 from utils.validation import ValidationUtils
 from utils.pagination import PaginationUtils
 
@@ -20,7 +16,6 @@ class BaseHandler:
         self.telegram_token = telegram_token
         self._bot_username = None
         self._translations = {}
-        self.bot = Bot(token=telegram_token) if telegram_token else None
         self.validator = ValidationUtils(db, self._t)
 
     def _load_translations(self, lang: str) -> Dict[str, str]:
@@ -64,17 +59,20 @@ class BaseHandler:
         """Get bot username from Telegram API"""
         if self._bot_username:
             return self._bot_username
-        
-        if not self.bot:
-            return "ubbc_test_bot" if self.environment == 'test' else "ubbc_bot"
-        
+            
+        import requests
         try:
-            bot_info = self.bot.get_me()
-            self._bot_username = bot_info.username
-            return self._bot_username
-        except TelegramError as e:
+            url = f"https://api.telegram.org/bot{self.telegram_token}/getMe"
+            response = requests.get(url, timeout=20)
+            if response.status_code == 200:
+                data = response.json()
+                self._bot_username = data['result']['username']
+                return self._bot_username
+        except Exception as e:
             logger.error(f"Error getting bot username: {e}")
-            return "ubbc_test_bot" if self.environment == 'test' else "ubbc_bot"
+        
+        # Fallback based on environment
+        return "ubbc_test_bot" if self.environment == 'test' else "ubbc_bot"
 
     def _is_admin(self, user_id: int) -> bool:
         """Check if user is admin"""
@@ -88,46 +86,78 @@ class BaseHandler:
 
     def _send_message(self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False) -> dict:
         """Send message to Telegram chat and return response with message_id"""
-        if not self.bot:
-            logger.error("Bot not initialized")
-            return {'success': False}
+        import requests
         
         if self.environment == 'test':
             text = f"TEST - {text}"
         
-        # In production, redirect to PM unless explicitly for group
-        if self.environment == 'prod' and chat_id < 0 and not force_group:
-            logger.info(f"Production group message blocked")
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
             return {'success': False}
         
+        # In production, redirect to PM unless explicitly for group
+        if self.environment == 'prod' and chat_id < 0 and not force_group:
+            # This is a group chat in production - we need user_id to send PM
+            # For now, just log and don't send (caller should handle PM sending)
+            logger.info(f"Production group message blocked: {text[:50]}...")
+            return {'success': False}
+            
+        url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
+        data = {
+            'chat_id': chat_id,
+            'text': text,
+            'disable_web_page_preview': True
+        }
+        
+        if parse_mode:
+            data['parse_mode'] = parse_mode
+        
+        if reply_markup:
+            data['reply_markup'] = reply_markup
+        
         try:
+            if self.environment == 'test':
+                logger.info(f"Sending message to chat {chat_id}: {text[:50]}...")
+            
             # Debug logging for box size 1 related messages
             if "box size 1" in text.lower() or ("ordered" in text.lower() and "🍺" in text):
-                logger.info(f"DEBUG: Box size 1 message - chat_id: {chat_id}, force_group: {force_group}")
+                logger.info(f"DEBUG: Box size 1 message - chat_id: {chat_id}, force_group: {force_group}, text: {text[:100]}...")
             
-            message = self.bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                parse_mode=parse_mode,
-                reply_markup=reply_markup,
-                disable_web_page_preview=True
-            )
-            return {'success': True, 'message_id': message.message_id}
+            response = requests.post(url, json=data, timeout=20)
+            if self.environment == 'test':
+                logger.info(f"Telegram API response: {response.status_code} - {response.text}")
             
-        except TelegramError as e:
-            logger.error(f"Telegram error: {e}")
-            if "box size 1" in text.lower():
-                logger.error(f"DEBUG: Box size 1 message failed: {e}")
+            if response.status_code == 200:
+                result = response.json()
+                return {'success': True, 'message_id': result['result']['message_id']}
+            else:
+                if "box size 1" in text.lower() or ("ordered" in text.lower() and "🍺" in text):
+                    logger.error(f"DEBUG: Box size 1 message failed - status: {response.status_code}, response: {response.text}")
+                return {'success': False}
+        except Exception as e:
+            logger.error(f"Error sending message: {e}")
+            if "box size 1" in text.lower() or ("ordered" in text.lower() and "🍺" in text):
+                logger.error(f"DEBUG: Box size 1 message exception: {e}")
             return {'success': False}
 
     def _delete_message(self, chat_id: int, message_id: int) -> bool:
         """Delete message from Telegram chat"""
-        if not self.bot:
+        import requests
+        
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
             return False
+            
+        url = f"https://api.telegram.org/bot{self.telegram_token}/deleteMessage"
+        data = {
+            'chat_id': chat_id,
+            'message_id': message_id
+        }
+        
         try:
-            self.bot.delete_message(chat_id=chat_id, message_id=message_id)
-            return True
-        except TelegramError as e:
+            response = requests.post(url, json=data, timeout=20)
+            return response.status_code == 200
+        except Exception as e:
             logger.error(f"Error deleting message: {e}")
             return False
 
@@ -138,22 +168,40 @@ class BaseHandler:
 
     def _send_document(self, chat_id: int, content: str, filename: str, caption: str = None) -> bool:
         """Send document to Telegram chat"""
-        if not self.bot:
-            return False
+        import requests
+        from io import BytesIO
         
         if self.environment == 'test' and caption:
             caption = f"TEST - {caption}"
         
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
+            return False
+            
+        url = f"https://api.telegram.org/bot{self.telegram_token}/sendDocument"
+        
+        # Convert string content to bytes
+        file_data = BytesIO(content.encode('utf-8'))
+        
+        files = {
+            'document': (filename, file_data, 'text/csv')
+        }
+        
+        data = {
+            'chat_id': chat_id
+        }
+        
+        if caption:
+            data['caption'] = caption
+        
         try:
-            file_data = BytesIO(content.encode('utf-8'))
-            self.bot.send_document(
-                chat_id=chat_id,
-                document=file_data,
-                filename=filename,
-                caption=caption
-            )
-            return True
-        except TelegramError as e:
+            if self.environment == 'test':
+                logger.info(f"Sending document to chat {chat_id}: {filename}")
+            response = requests.post(url, data=data, files=files, timeout=20)
+            if self.environment == 'test':
+                logger.info(f"Telegram API response: {response.status_code}")
+            return response.status_code == 200
+        except Exception as e:
             logger.error(f"Error sending document: {e}")
             return False
     
@@ -208,38 +256,75 @@ class BaseHandler:
     
     def _send_photo(self, chat_id: int, photo_url: str, caption: str = None, force_group: bool = False) -> dict:
         """Send photo to Telegram chat"""
-        if not self.bot:
-            return {'success': False}
+        import requests
         
         if self.environment == 'test' and caption:
             caption = f"TEST - {caption}"
         
-        if self.environment == 'prod' and chat_id < 0 and not force_group:
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
             return {'success': False}
         
+        # In production, redirect to PM unless explicitly for group
+        if self.environment == 'prod' and chat_id < 0 and not force_group:
+            logger.info(f"Production group photo blocked")
+            return {'success': False}
+            
+        url = f"https://api.telegram.org/bot{self.telegram_token}/sendPhoto"
+        data = {
+            'chat_id': chat_id,
+            'photo': photo_url
+        }
+        
+        if caption:
+            data['caption'] = caption
+        
         try:
-            message = self.bot.send_photo(
-                chat_id=chat_id,
-                photo=photo_url,
-                caption=caption
-            )
-            return {'success': True, 'message_id': message.message_id}
-        except TelegramError as e:
+            if self.environment == 'test':
+                logger.info(f"Sending photo to chat {chat_id}: {photo_url}")
+            response = requests.post(url, json=data, timeout=20)
+            if self.environment == 'test':
+                logger.info(f"Telegram API response: {response.status_code}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {'success': True, 'message_id': result['result']['message_id']}
+            return {'success': False}
+        except Exception as e:
             logger.error(f"Error sending photo: {e}")
             return {'success': False}
     
     def _send_media_group(self, chat_id: int, media_group: list, force_group: bool = False) -> dict:
         """Send media group to Telegram chat"""
-        if not self.bot:
+        import requests
+        
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
             return {'success': False}
         
+        # In production, redirect to PM unless explicitly for group
         if self.environment == 'prod' and chat_id < 0 and not force_group:
+            logger.info(f"Production group media group blocked")
             return {'success': False}
+            
+        url = f"https://api.telegram.org/bot{self.telegram_token}/sendMediaGroup"
+        data = {
+            'chat_id': chat_id,
+            'media': media_group
+        }
         
         try:
-            messages = self.bot.send_media_group(chat_id=chat_id, media=media_group)
-            return {'success': True, 'message_ids': [msg.message_id for msg in messages]}
-        except TelegramError as e:
+            if self.environment == 'test':
+                logger.info(f"Sending media group to chat {chat_id}: {len(media_group)} items")
+            response = requests.post(url, json=data, timeout=20)
+            if self.environment == 'test':
+                logger.info(f"Telegram API response: {response.status_code}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                return {'success': True, 'message_ids': [msg['message_id'] for msg in result['result']]}
+            return {'success': False}
+        except Exception as e:
             logger.error(f"Error sending media group: {e}")
             return {'success': False}
     
