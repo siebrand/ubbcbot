@@ -223,7 +223,7 @@
   "help_orders": "🛍️ Bestelcommando's:\n\n/order <aanbieding_id> [aantal] - Bestelling plaatsen\n/confirm_order <aanbieding_id> <aantal> - Dubbele bestelling bevestigen\n/my_orders [id] - Eigen bestellingen bekijken",
   "help_suppliers": "🏢 Leverancierbeheer:\n\n/add_supplier <naam> - Leverancier toevoegen\n/retire_supplier <naam> - Leverancier afvoeren\n/list_suppliers [active|retired|all] - Leveranciers bekijken\n/edit_supplier <naam> - Leveranciergegevens bewerken",
   "help_offers": "🍺 Aanbiedingenbeheer:\n\n/create_offer <leverancier> <naam> <prijs> <aantal_per_colli> - Conceptaanbieding maken\n/offer_details <aanbieding_id> - Aanbiedingsgegevens bekijken en bewerken\n/preview_offer <aanbieding_id> - Aanbieding bekijken\n/publish_offer <aanbieding_id> - Conceptaanbieding publiceren\n/cancel_offer <aanbieding_id> - Aanbieding annuleren, incl. bestellingen\n/add_box <aanbieding_id> - Aanbod verruimen\n/box_status [active|ordered|completed|delivered|all] - Collistatus bekijken\n/order_wholesale <aanbieding_id> - Groothandel bestelling starten",
-  "help_users": "👥 Gebruikersbeheer:\n\n/pending_users - Gebruikers goedkeuren\n/list_users - Gebruikers bekijken\n/approve_user <gebruikersnaam> - Gebruiker goedkeuren\n/reject_user <gebruikersnaam> - Gebruiker afwijzen\n/user_status <gebruikersnaam> - Gebruikersstatus controleren\n/update_user <gebruikersnaam> <voornaam> [achternaam] - Naam bijwerken\n/order_for <gebruikersnaam> <aanbieding_id> [aantal] - Bestelling voor gebruiker plaatsen\n/cancel_order <bestelling_id> - Bestelling annuleren\n/user_orders <gebruikersnaam> - Bestellingen van gebruiker bekijken\n/all_orders [status] - CSV met bestellingen downloaden",
+  "help_users": "👥 Gebruikersbeheer:\n\n/pending_users - Gebruikers goedkeuren\n/list_users - Gebruikers bekijken\n/approve_user <gebruikersnaam> - Gebruiker goedkeuren\n/reject_user <gebruikersnaam> - Gebruiker afwijzen\n/user_status <gebruikersnaam> - Gebruikersstatus controleren\n/update_user <gebruikersnaam> <voornaam> [achternaam] - Naam bijwerken\n/order_for <gebruikersnaam> <aanbieding_id> [aantal] - Bestelling voor gebruiker plaatsen\n/cancel_order [gebruikersnaam|bestelling_id] - Bestelling annuleren\n/user_orders [gebruikersnaam] - Bestellingen van gebruiker bekijken\n/all_orders [status] - CSV met bestellingen downloaden",
   "help_delivery": "📦 Leveringsbeheer:\n\n/wholesale_delivery - Groothandelleveringen verwerken\n/labeling_completed - Labeling voltooien\n/send_overviews - Leveringsoverzichten naar klanten sturen\n/mark_paid - Klanten als betaald markeren\n/failed_notifications - Mislukte leveringsmeldingen bekijken\n/create_discount <percentage> [uren] - Korting aanmaken\n/cancel_discount - Korting annuleren\n/discount_status - Kortingsstatus bekijken",
   "admin_only_section": "❌ Alleen-admin sectie",
   "unknown_section": "❌ Onbekende sectie: {section}\n\nBeschikbare secties: {sections}",
@@ -379,5 +379,7 @@
   "add_supplier_prompt": "➕ Nieuwe Leverancier Toevoegen\n\nKlik op de knop hieronder om een leverancier toe te voegen:",
   "add_supplier_button": "📝 Leverancier Naam Invoeren",
   "enter_supplier_name": "📝 Voer de naam in voor de nieuwe leverancier:",
-  "enter_username_for_orders": "📝 Voer gebruikersnaam of naam in om bestellingen te bekijken:"
+  "enter_username_for_orders": "📝 Voer gebruikersnaam of naam in om bestellingen te bekijken:",
+  "enter_username_for_cancel": "📝 Voer gebruikersnaam of naam in om bestellingen te annuleren:",
+  "no_active_orders_for_user": "📋 Geen actieve bestellingen gevonden voor {name}"
 }

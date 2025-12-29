@@ -135,8 +135,20 @@ class CallbackHandler:
             elif data.startswith('user_orders_select_'):
                 customer_id = data.split('_')[3]
                 return self.handlers['admin_order'].handle_user_orders_select(chat_id, customer_id)
+            elif data.startswith('cancel_order_user_select_'):
+                customer_id = data.split('_')[4]
+                return self.handlers['admin_order'].handle_cancel_order_user_select(chat_id, customer_id)
+            elif data.startswith('cancel_order_confirm_'):
+                order_id = data.split('_')[3]
+                return self.handlers['admin_order']._handle_cancel_order_by_id(chat_id, order_id)
+            elif data.startswith('cancel_orders_page_'):
+                parts = data.split('_')
+                customer_id, page = parts[3], int(parts[4])
+                return self.handlers['admin_order'].handle_cancel_orders_page(chat_id, customer_id, page)
             elif data == 'enter_username_orders':
                 return self._start_user_orders_input(chat_id)
+            elif data == 'enter_username_cancel':
+                return self._start_cancel_order_input(chat_id)
             elif data == 'done_editing':
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -488,7 +500,7 @@ class CallbackHandler:
             'cmd_order_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
             'cmd_all_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
             'cmd_user_orders': lambda: self._start_user_orders_input(chat_id),
-            'cmd_cancel_order': lambda: self._send_usage_message(chat_id, 'usage_cancel_order'),
+            'cmd_cancel_order': lambda: self.handlers['admin_order'].handle_cancel_order(chat_id, []),
             'cmd_order_for': lambda: self._send_usage_message(chat_id, 'usage_order_for'),
             'cmd_pending_users': lambda: self.handlers['user'].handle_pending_users(chat_id),
             'cmd_list_users': lambda: self.handlers['user'].handle_list_users(chat_id, 1, 'all'),
@@ -540,6 +552,21 @@ class CallbackHandler:
         base_handler._send_message(
             chat_id, 
             base_handler._t('enter_username_for_orders'),
+            reply_markup={"force_reply": True, "input_field_placeholder": "Enter username or name"}
+        )
+        return {'status': 'text_input_required'}
+    
+    def _start_cancel_order_input(self, chat_id: int) -> Dict[str, Any]:
+        """Start cancel order process with text input"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        # Store context for text input
+        self._store_edit_context(chat_id, 'cancel_order_input', 'new')
+        
+        base_handler._send_message(
+            chat_id, 
+            base_handler._t('enter_username_for_cancel'),
             reply_markup={"force_reply": True, "input_field_placeholder": "Enter username or name"}
         )
         return {'status': 'text_input_required'}

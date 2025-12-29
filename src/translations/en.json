@@ -224,7 +224,7 @@
   "help_orders": "🛍️ Order Commands:\n\n/order <offer_id> [quantity] - Place an order\n/confirm_order <offer_id> <quantity> - Confirm duplicate order\n/my_orders [id] - View your orders",
   "help_suppliers": "🏢 Supplier Management:\n\n/add_supplier <name> - Add supplier\n/retire_supplier <name> - Retire supplier\n/list_suppliers [active|retired|all] - List suppliers\n/edit_supplier <name> - Edit supplier details",
   "help_offers": "🍺 Offer Management:\n\n/create_offer <supplier> <name> <price> <box_size> - Create draft offer\n/offer_details <offer_id> - View and edit offer details\n/preview_offer <offer_id> - Preview offer appearance\n/publish_offer <offer_id> - Publish draft offer\n/cancel_offer <offer_id> - Cancel offer and all orders\n/add_box <offer_id> - Add box to offer\n/box_status [active|ordered|completed|delivered|all] - View box status\n/order_wholesale <offer_id> - Start wholesale ordering process",
-  "help_users": "👥 User Management:\n\n/pending_users - View users awaiting approval\n/list_users - View all customers\n/approve_user <username> - Approve user\n/reject_user <username> - Reject user\n/user_status <username> - Check user status\n/update_user <username> <first_name> [last_name] - Update name\n/order_for <username> <offer_id> [quantity] - Place order for user\n/cancel_order <order_id> - Cancel customer order\n/user_orders <username> - View orders for user\n/all_orders [status] - Download CSV of orders",
+  "help_users": "👥 User Management:\n\n/pending_users - View users awaiting approval\n/list_users - View all customers\n/approve_user <username> - Approve user\n/reject_user <username> - Reject user\n/user_status <username> - Check user status\n/update_user <username> <first_name> [last_name] - Update name\n/order_for <username> <offer_id> [quantity] - Place order for user\n/cancel_order [username|order_id] - Cancel customer order\n/user_orders [username] - View orders for user\n/all_orders [status] - Download CSV of orders",
   "help_delivery": "📦 Delivery Management:\n\n/wholesale_delivery - Process wholesale deliveries\n/labeling_completed - Complete labeling process\n/send_overviews - Send delivery overviews to customers\n/mark_paid - Mark customers as paid\n/failed_notifications - View failed delivery notifications\n/create_discount <percentage> [hours] - Create discount\n/cancel_discount - Cancel active discount\n/discount_status - View discount status",
   "admin_only_section": "❌ Admin-only section",
   "unknown_section": "❌ Unknown section: {section}\n\nAvailable sections: {sections}",
@@ -379,5 +379,7 @@
   "add_supplier_prompt": "➕ Add New Supplier\n\nClick the button below to start adding a supplier:",
   "add_supplier_button": "📝 Enter Supplier Name",
   "enter_supplier_name": "📝 Enter the name for the new supplier:",
-  "enter_username_for_orders": "📝 Enter username or name to view orders:"
+  "enter_username_for_orders": "📝 Enter username or name to view orders:",
+  "enter_username_for_cancel": "📝 Enter username or name to cancel orders:",
+  "no_active_orders_for_user": "📋 No active orders found for {name}"
 }

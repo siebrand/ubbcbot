@@ -6,11 +6,52 @@ from models.entities import Order, Box, BoxStatus, OfferStatus
 class AdminOrderCommands(BaseHandler):
     def handle_cancel_order(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /cancel_order command"""
-        error = self._validate_args(args, 1, 'usage_cancel_order', chat_id)
-        if error:
-            return error
+        if not args:
+            # Show button-based UI to ask for username
+            message = self._t('enter_username_for_cancel', chat_id)
+            keyboard = {
+                "inline_keyboard": [[
+                    {"text": "📝 Enter Username", "callback_data": "enter_username_cancel"}
+                ]]
+            }
+            self._send_message(chat_id, message, reply_markup=keyboard)
+            return {'status': 'awaiting_input'}
 
-        order_id = args[0]
+        # Check if it's an order ID (numeric) or username
+        if len(args) == 1 and args[0].isdigit():
+            # Legacy behavior - direct order ID
+            return self._handle_cancel_order_by_id(chat_id, args[0])
+        
+        # Username provided - show orders for cancellation
+        identifier = ' '.join(args)
+        customer = self._find_customer_with_ambiguity_check(identifier, chat_id, "cancel_order_user_select")
+        
+        if customer is None:
+            # Check if no customer was found
+            from models.entities import AuthorizationStatus
+            all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+            all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
+            
+            found_any = False
+            for customer in all_customers:
+                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+                if (customer.username and customer.username.lower() == identifier.lstrip('@').lower()) or \
+                   (customer.first_name and customer.first_name.lower() == identifier.lower()) or \
+                   full_name.lower() == identifier.lower() or \
+                   full_name.lower().startswith(identifier.lower()):
+                    found_any = True
+                    break
+            
+            if not found_any:
+                self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=identifier))
+                return {'status': 'user_not_found'}
+            
+            return {'status': 'disambiguation_shown'}
+
+        return self._show_user_orders_for_cancel(chat_id, customer)
+    
+    def _handle_cancel_order_by_id(self, chat_id: int, order_id: str) -> Dict[str, Any]:
+        """Handle cancel order by direct order ID (legacy behavior)"""
         order = self.db.get_order(order_id)
         
         if not order:
@@ -54,6 +95,49 @@ class AdminOrderCommands(BaseHandler):
         
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'confirmation_required'}
+    
+    def _show_user_orders_for_cancel(self, chat_id: int, customer, page: int = 1) -> Dict[str, Any]:
+        """Show user's active orders with cancel buttons"""
+        orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) 
+                 if o.status in ['pending', 'ordered']]
+        
+        if not orders:
+            display_name = f"{customer.first_name} {customer.last_name}" or "Unknown"
+            self._send_message(chat_id, self._t('no_active_orders_for_user', chat_id, name=display_name))
+            return {'status': 'no_orders'}
+
+        # Paginate orders
+        page_orders, total_pages = self._paginate_list(orders, page, 10)
+        
+        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or "Unknown")
+        message = f"❌ Cancel Order for {display_name} (Page {page}/{total_pages}):\n\n"
+        
+        keyboard_buttons = []
+        for order in page_orders:
+            offer = self.db.get_offer(order.offer_id)
+            offer_name = offer.name if offer else self._t('unknown', user_id=None)
+            from utils.timezone import to_cet_string
+            order_date = to_cet_string(order.created_at, '%Y-%m-%d')
+            
+            button_text = f"❌ [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f}"
+            keyboard_buttons.append([{
+                "text": button_text,
+                "callback_data": f"cancel_order_confirm_{order.order_id}"
+            }])
+        
+        # Add pagination if needed
+        if total_pages > 1:
+            nav_buttons = []
+            if page > 1:
+                nav_buttons.append({"text": "◀️ Previous", "callback_data": f"cancel_orders_page_{customer.customer_id}_{page - 1}"})
+            nav_buttons.append({"text": f"Page {page}/{total_pages}", "callback_data": "page_info"})
+            if page < total_pages:
+                nav_buttons.append({"text": "Next ▶️", "callback_data": f"cancel_orders_page_{customer.customer_id}_{page + 1}"})
+            keyboard_buttons.append(nav_buttons)
+        
+        keyboard = {"inline_keyboard": keyboard_buttons}
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
 
     def handle_confirm_cancel(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_cancel command - now called from button callback"""
@@ -505,8 +589,22 @@ class AdminOrderCommands(BaseHandler):
         """Find customer by username or name using existing ambiguity check"""
         return self._find_customer_with_ambiguity_check(identifier, 0, "order_for_select")
     
-    def handle_enter_username_orders(self, chat_id: int) -> Dict[str, Any]:
-        """Handle enter username callback for user orders"""
-        message = self._t('enter_username_for_orders', chat_id)
-        self._send_message(chat_id, message)
-        return {'status': 'awaiting_username'}
+    def handle_cancel_order_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        """Handle user selection from disambiguation for cancel order"""
+        customer = self.db.get_customer(customer_id)
+        
+        if not customer:
+            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=customer_id))
+            return {'status': 'user_not_found'}
+        
+        return self._show_user_orders_for_cancel(chat_id, customer)
+    
+    def handle_cancel_orders_page(self, chat_id: int, customer_id: str, page: int) -> Dict[str, Any]:
+        """Handle pagination for cancel orders list"""
+        customer = self.db.get_customer(customer_id)
+        
+        if not customer:
+            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=customer_id))
+            return {'status': 'user_not_found'}
+        
+        return self._show_user_orders_for_cancel(chat_id, customer, page)
