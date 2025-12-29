@@ -126,7 +126,7 @@
   "usage_order_wholesale": "Gebruik: /order_wholesale [aanbieding_id]",
   "offer_not_active": "❌ Aanbieding is niet actief",
   "no_pending_orders": "❌ Geen wachtende bestellingen voor deze aanbieding",
-  "wholesale_order_summary": "📋 Groothandel Bestelling Samenvatting voor Aanbieding {offer_id}:\n🍺 {name} - €{price:.2f}\n📦 Aantal per colli: {box_size} stuks\n\n📈 Totaal wachtende stuks: {total_units}\n📦 Dozen nodig: {boxes_needed}\n\n📋 Wachtende Bestellingen ({order_count} bestellingen):",
+  "wholesale_order_summary": "📋 Groothandel Bestelling Samenvatting voor Aanbieding {offer_id}:\n\n🍺 {name} - €{price:.2f}\n📦 Aantal per colli: {box_size} stuks\n\n📈 Totaal wachtende stuks: {total_units}\n📦 Dozen nodig: {boxes_needed}\n\n📋 Wachtende Bestellingen ({order_count} bestellingen):\n\n",
   "order_wholesale_boxes": "✅ Bestel {boxes} dozen groothandel",
   "usage_confirm_order_wholesale": "Gebruik: /confirm_order_wholesale <aanbieding_id> <bestelde_dozen>",
   "boxes_must_positive": "❌ Bestelde dozen moet positief zijn",

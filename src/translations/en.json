@@ -126,7 +126,7 @@
   "usage_order_wholesale": "Usage: /order_wholesale [offer_id]",
   "offer_not_active": "❌ Offer is not active",
   "no_pending_orders": "❌ No pending orders for this offer",
-  "wholesale_order_summary": "📋 Wholesale Order Summary for Offer {offer_id}:\n🍺 {name} - €{price:.2f}\n📦 Box size: {box_size} units\n\n📈 Total pending units: {total_units}\n📦 Boxes needed: {boxes_needed}\n\n📋 Pending Orders ({order_count} orders):",
+  "wholesale_order_summary": "📋 Wholesale Order Summary for Offer {offer_id}:\n\n🍺 {name} - €{price:.2f}\n📦 Box size: {box_size} units\n\n📈 Total pending units: {total_units}\n📦 Boxes needed: {boxes_needed}\n\n📋 Pending Orders ({order_count} orders):\n\n",
   "order_wholesale_boxes": "✅ Order {boxes} boxes wholesale",
   "usage_confirm_order_wholesale": "Usage: /confirm_order_wholesale <offer_id> <boxes_ordered>",
   "boxes_must_positive": "❌ Boxes ordered must be positive",
