@@ -382,5 +382,6 @@
   "no_active_orders_for_user": "📋 No active orders found for {name}",
   "enter_quantity_1_to_10": "📝 Please enter quantity (1-10):",
   "quantity_must_be_1_to_10": "❌ Quantity must be between 1 and 10",
-  "enter_valid_number": "❌ Please enter a valid number"
+  "enter_valid_number": "❌ Please enter a valid number",
+  "other_quantity": "📝 Other"
 }

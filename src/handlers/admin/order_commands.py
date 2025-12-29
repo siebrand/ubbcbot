@@ -569,7 +569,7 @@ class AdminOrderCommands(BaseHandler):
         keyboard_buttons = [
             [{"text": self._t('order_1', user_id=None), "callback_data": f"order_for_quantity_{customer.customer_id}_{offer.offer_id}_1"}],
             [{"text": self._t('order_2', user_id=None), "callback_data": f"order_for_quantity_{customer.customer_id}_{offer.offer_id}_2"}],
-            [{"text": "📝 Other", "callback_data": f"order_for_other_{customer.customer_id}_{offer.offer_id}"}],
+            [{"text": self._t('other_quantity', user_id=None), "callback_data": f"order_for_other_{customer.customer_id}_{offer.offer_id}"}],
             [{"text": self._t('cancel', user_id=None), "callback_data": "cancel_action"}]
         ]
         
