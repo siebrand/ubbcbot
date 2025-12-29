@@ -274,6 +274,8 @@ class BotService:
             return self.admin_order_commands.handle_cancel_order(chat_id, [text])
         elif edit_type == 'incomplete_delivery':
             return self.wholesale_delivery_commands.handle_incomplete_delivery_reply(chat_id, user_id, text, entity_id)
+        elif edit_type == 'order_for_input':
+            return self.admin_order_commands.handle_order_for(chat_id, user_id, [text])
         elif edit_type == 'payment_link_input':
             return self.delivery_overview_handler.handle_payment_link_input(chat_id, text, entity_id)
         

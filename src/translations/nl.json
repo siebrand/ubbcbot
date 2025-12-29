@@ -381,5 +381,6 @@
   "enter_supplier_name": "📝 Voer de naam in voor de nieuwe leverancier:",
   "enter_username_for_orders": "📝 Voer gebruikersnaam of naam in om bestellingen te bekijken:",
   "enter_username_for_cancel": "📝 Voer gebruikersnaam of naam in om bestellingen te annuleren:",
+  "enter_username_for_order_for": "📝 Voer gebruikersnaam of naam in om bestelling voor te plaatsen:",
   "no_active_orders_for_user": "📋 Geen actieve bestellingen gevonden voor {name}"
 }

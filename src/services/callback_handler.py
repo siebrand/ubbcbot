@@ -78,8 +78,26 @@ class CallbackHandler:
             
             # Order callbacks
             if data.startswith('order_'):
-                parts = data.split('_')
-                if len(parts) >= 3:
+                if data.startswith('order_for_offer_'):
+                    parts = data.split('_')
+                    logger.info(f"order_for_offer callback parts: {parts}")
+                    if len(parts) >= 5:
+                        customer_id, offer_id = parts[3], parts[4]
+                        logger.info(f"Parsed customer_id: {customer_id}, offer_id: {offer_id}")
+                        return self.handlers['admin_order'].handle_order_for_offer_select(chat_id, customer_id, offer_id)
+                    else:
+                        logger.error(f"Invalid order_for_offer callback format: {data}, parts: {parts}")
+                        return {'status': 'invalid_format'}
+                elif data.startswith('order_for_quantity_'):
+                    parts = data.split('_')
+                    customer_id, offer_id, quantity = parts[3], parts[4], parts[5]
+                    return self.handlers['admin_order'].handle_order_for_quantity_select(chat_id, customer_id, offer_id, quantity)
+                elif data.startswith('order_for_other_'):
+                    parts = data.split('_')
+                    customer_id, offer_id = parts[3], parts[4]
+                    return self.handlers['admin_order'].handle_order_for_other_quantity(chat_id, customer_id, offer_id)
+                elif len(data.split('_')) >= 3:
+                    parts = data.split('_')
                     offer_id = parts[1]
                     quantity = parts[2]
                     return self.handlers['customer_order'].handle_order(chat_id, user_id, [offer_id, quantity])
@@ -149,6 +167,12 @@ class CallbackHandler:
                 return self._start_user_orders_input(chat_id)
             elif data == 'enter_username_cancel':
                 return self._start_cancel_order_input(chat_id)
+            elif data == 'enter_username_order_for':
+                return self._start_order_for_input(chat_id)
+            elif data.startswith('order_for_user_select_'):
+                customer_id = data.split('_')[4]
+                return self.handlers['admin_order'].handle_order_for_user_select(chat_id, customer_id)
+
             elif data == 'done_editing':
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -569,6 +593,21 @@ class CallbackHandler:
         base_handler._send_message(
             chat_id, 
             base_handler._t('enter_username_for_cancel'),
+            reply_markup={"force_reply": True, "input_field_placeholder": "Enter username or name"}
+        )
+        return {'status': 'text_input_required'}
+    
+    def _start_order_for_input(self, chat_id: int) -> Dict[str, Any]:
+        """Start order_for process with text input"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        # Store context for text input
+        self._store_edit_context(chat_id, 'order_for_input', 'new')
+        
+        base_handler._send_message(
+            chat_id, 
+            base_handler._t('enter_username_for_order_for'),
             reply_markup={"force_reply": True, "input_field_placeholder": "Enter username or name"}
         )
         return {'status': 'text_input_required'}

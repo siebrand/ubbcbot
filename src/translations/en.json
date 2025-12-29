@@ -381,5 +381,6 @@
   "enter_supplier_name": "📝 Enter the name for the new supplier:",
   "enter_username_for_orders": "📝 Enter username or name to view orders:",
   "enter_username_for_cancel": "📝 Enter username or name to cancel orders:",
+  "enter_username_for_order_for": "📝 Enter username or name to place order for:",
   "no_active_orders_for_user": "📋 No active orders found for {name}"
 }
