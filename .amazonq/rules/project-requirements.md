@@ -10,6 +10,13 @@ This is a Telegram beer ordering bot built with AWS serverless architecture usin
 - Use Parameter Store for sensitive configuration
 - Follow resource naming convention: `ubbc-bot-{environment}-{resource-type}`
 - Lambda functions must have CloudWatch logs with 7-day retention
+- **CRITICAL**: When making changes to commands or functionality, ensure ALL calls and references are updated consistently across the entire codebase including:
+  - Command router mappings
+  - Admin panel callback handlers
+  - Help text and documentation
+  - Translation files
+  - Usage messages
+  - Any other references or dependencies
 
 ## Internationalization (i18n) Requirements
 - All user-facing strings must use the current key-based i18n system
