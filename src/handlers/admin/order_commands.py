@@ -24,30 +24,11 @@ class AdminOrderCommands(BaseHandler):
         
         # Username provided - show orders for cancellation
         identifier = ' '.join(args)
-        customer = self._find_customer_with_ambiguity_check(identifier, chat_id, "cancel_order_user_select")
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "cancel_order_user_select")
         
-        if customer is None:
-            # Check if no customer was found
-            from models.entities import AuthorizationStatus
-            all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-            all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
-            
-            found_any = False
-            for customer in all_customers:
-                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-                if (customer.username and customer.username.lower() == identifier.lstrip('@').lower()) or \
-                   (customer.first_name and customer.first_name.lower() == identifier.lower()) or \
-                   full_name.lower() == identifier.lower() or \
-                   full_name.lower().startswith(identifier.lower()):
-                    found_any = True
-                    break
-            
-            if not found_any:
-                self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=identifier))
-                return {'status': 'user_not_found'}
-            
-            return {'status': 'disambiguation_shown'}
-
+        if error:
+            return error
+        
         return self._show_user_orders_for_cancel(chat_id, customer)
     
     def _handle_cancel_order_by_id(self, chat_id: int, order_id: str) -> Dict[str, Any]:
@@ -175,7 +156,7 @@ class AdminOrderCommands(BaseHandler):
                 return {'status': 'invalid_quantity'}
 
             # Find target customer
-            target_customer = self._find_customer_by_identifier(username)
+            target_customer, _ = self._find_customer_with_disambiguation(username, 0, "")
             if not target_customer:
                 self._send_message(chat_id, self._t('user_not_found_username', username=username))
                 return {'status': 'user_not_found'}
@@ -300,32 +281,11 @@ class AdminOrderCommands(BaseHandler):
             return {'status': 'awaiting_input'}
 
         identifier = ' '.join(args)
-        customer = self._find_customer_with_ambiguity_check(identifier, chat_id, "user_orders_select")
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "user_orders_select")
         
-        if customer is None:
-            # Check if disambiguation was shown or if no customer was found
-            # Try to find any customer to determine if disambiguation was shown
-            from models.entities import AuthorizationStatus
-            all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-            all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
-            
-            # Check if any customer matches the identifier
-            found_any = False
-            for customer in all_customers:
-                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-                if (customer.username and customer.username.lower() == identifier.lstrip('@').lower()) or \
-                   (customer.first_name and customer.first_name.lower() == identifier.lower()) or \
-                   full_name.lower() == identifier.lower() or \
-                   full_name.lower().startswith(identifier.lower()):
-                    found_any = True
-                    break
-            
-            if not found_any:
-                self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=identifier))
-                return {'status': 'user_not_found'}
-            
-            return {'status': 'disambiguation_shown'}
-
+        if error:
+            return error
+        
         return self._show_user_orders(chat_id, customer)
     
     def _show_user_orders(self, chat_id: int, customer) -> Dict[str, Any]:
@@ -585,9 +545,7 @@ class AdminOrderCommands(BaseHandler):
         """Handle export orders callback"""
         return self._export_orders_by_status(chat_id, status_filter)
     
-    def _find_customer_by_identifier(self, identifier: str):
-        """Find customer by username or name using existing ambiguity check"""
-        return self._find_customer_with_ambiguity_check(identifier, 0, "order_for_select")
+
     
     def handle_cancel_order_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         """Handle user selection from disambiguation for cancel order"""

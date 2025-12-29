@@ -238,30 +238,7 @@ class UserCommands(BaseHandler):
             self._send_message(chat_id, self._t('failed_update_last_name', chat_id))
             return {'status': 'error'}
 
-    def _find_customer_by_identifier(self, identifier: str) -> Optional:
-        """Find customer by username or display name"""
-        # Try by username first (remove @ if present)
-        username = identifier.lstrip('@').lower()
-        customer = self.db.get_customer_by_username(username)
-        if customer:
-            return customer
-        
-        # Try by first name across all customers
-        from models.entities import AuthorizationStatus
-        all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
-        
-        matches = []
-        for customer in all_customers:
-            if customer.first_name and customer.first_name.lower() == identifier.lower():
-                matches.append(customer)
-            # Try first + last name combination
-            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-            if full_name.lower() == identifier.lower():
-                return customer  # Exact full name match takes priority
-        
-        # Return single match or None if multiple/no matches
-        return matches[0] if len(matches) == 1 else None
+
 
     def handle_list_users(self, chat_id: int, page: int = 1, status_filter: str = "all", search_string: str = None) -> Dict[str, Any]:
         """Handle /list_users command with pagination, filtering, and optional search"""
@@ -278,10 +255,10 @@ class UserCommands(BaseHandler):
 
         # Apply search filter if provided
         if search_string:
+            # Extract search logic from _find_customer_with_disambiguation
             search_lower = search_string.lower()
             filtered_customers = []
             for customer in customers:
-                # Search in first name, last name, username, and full name
                 first_name = (customer.first_name or "").lower()
                 last_name = (customer.last_name or "").lower()
                 username = (customer.username or "").lower()

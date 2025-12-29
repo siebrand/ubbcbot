@@ -379,86 +379,50 @@ class BaseHandler:
             logger.error(f"Error sending media group: {e}")
             return {'success': False}
     
-    def _find_customer_with_ambiguity_check(self, identifier: str, chat_id: int, callback_prefix: str = "edit_user_select"):
-        """Find customer with ambiguity handling for admin commands"""
-        # Try by username first (remove @ if present)
-        username = identifier.lstrip('@').lower()
-        customer = self.db.get_customer_by_username(username)
-        if customer:
-            return customer
-        
-        # Try by first name across all customers
+    def _find_customer_with_disambiguation(self, identifier: str, chat_id: int, callback_prefix: str):
+        """Find customer with disambiguation UI if multiple matches"""
         from models.entities import AuthorizationStatus
-        all_customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        all_customers = []
+        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value))
         all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
+        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.REJECTED.value))
         
+        search_lower = identifier.lower()
         matches = []
-        exact_full_name_match = None
-        partial_matches = []
-        
         for customer in all_customers:
-            # Check for exact full name match first
-            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-            if full_name.lower() == identifier.lower():
-                exact_full_name_match = customer
-                break
-            
-            # Check if full name starts with identifier
-            if full_name.lower().startswith(identifier.lower()):
-                partial_matches.append(customer)
-            
-            # Collect first name matches
-            if customer.first_name and customer.first_name.lower() == identifier.lower():
+            first_name = (customer.first_name or "").lower()
+            last_name = (customer.last_name or "").lower()
+            username = (customer.username or "").lower()
+            full_name = f"{first_name} {last_name}".strip()
+
+            if (search_lower in first_name or
+                    search_lower in last_name or
+                    search_lower in username or
+                    search_lower in full_name):
                 matches.append(customer)
         
-        # Return exact full name match if found
-        if exact_full_name_match:
-            return exact_full_name_match
+        if not matches:
+            self._send_message(chat_id, self._t('user_not_found', chat_id, identifier=identifier))
+            return None, {'status': 'user_not_found'}
         
-        # Return single partial match if found
-        if len(partial_matches) == 1:
-            return partial_matches[0]
-        elif len(partial_matches) > 1:
-            # Multiple partial matches - show options with buttons
-            message = self._t('multiple_users_starting', chat_id, identifier=identifier) + "\n\n"
-            keyboard_buttons = []
-            
-            for customer in partial_matches:
-                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-                username_part = f" (@{customer.username})" if customer.username else ""
-                
-                keyboard_buttons.append([{
-                    "text": f"📝 {full_name}",
-                    "callback_data": f"{callback_prefix}_{customer.customer_id}"
-                }])
-            
-            keyboard_buttons.append([{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}])
-            keyboard = {"inline_keyboard": keyboard_buttons}
-            
-            self._send_message(chat_id, message, reply_markup=keyboard)
-            return None
-        
-        # Handle first name matches
         if len(matches) == 1:
-            return matches[0]
-        elif len(matches) > 1:
-            # Multiple first name matches - show options with buttons
-            message = self._t('multiple_users_found', chat_id, identifier=identifier) + "\n\n"
-            keyboard_buttons = []
-            
-            for customer in matches:
-                full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-                username_part = f" (@{customer.username})" if customer.username else ""
-                
-                keyboard_buttons.append([{
-                    "text": f"📝 {full_name}",
-                    "callback_data": f"{callback_prefix}_{customer.customer_id}"
-                }])
-            
-            keyboard_buttons.append([{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}])
-            keyboard = {"inline_keyboard": keyboard_buttons}
-            
-            self._send_message(chat_id, message, reply_markup=keyboard)
-            return None
+            return matches[0], None
         
-        return None
+        # Multiple matches - show disambiguation
+        message = self._t('multiple_users_found', chat_id, identifier=identifier) + "\n\n"
+        keyboard_buttons = []
+        
+        for customer in matches[:10]:  # Limit to 10 matches
+            full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+            username_part = f" (@{customer.username})" if customer.username else ""
+            
+            keyboard_buttons.append([{
+                "text": f"📝 {full_name}{username_part}",
+                "callback_data": f"{callback_prefix}_{customer.customer_id}"
+            }])
+        
+        keyboard_buttons.append([{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}])
+        keyboard = {"inline_keyboard": keyboard_buttons}
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return None, {'status': 'disambiguation_shown'}
