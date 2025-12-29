@@ -78,10 +78,10 @@ class UserCommands(BaseHandler):
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "edit_user_select")
         
-        if customer is None:
-            return {'status': 'disambiguation_shown'}
+        if error:
+            return error
 
         return self._approve_user_by_customer(chat_id, customer)
 
@@ -92,10 +92,10 @@ class UserCommands(BaseHandler):
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "edit_user_select")
         
-        if customer is None:
-            return {'status': 'disambiguation_shown'}
+        if error:
+            return error
 
         # Update user status
         if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.REJECTED.value}):
@@ -117,10 +117,10 @@ class UserCommands(BaseHandler):
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "edit_user_select")
         
-        if customer is None:
-            return {'status': 'disambiguation_shown'}
+        if error:
+            return error
 
         display_name = self._escape_html(customer.first_name or "Unknown")
         if customer.last_name:
@@ -167,10 +167,10 @@ class UserCommands(BaseHandler):
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer = self._find_customer_with_ambiguity_check(identifier, chat_id)
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "edit_user_select")
         
-        if customer is None:
-            return {'status': 'disambiguation_shown'}
+        if error:
+            return error
         
         return self._show_user_edit_interface(customer, chat_id)
     
