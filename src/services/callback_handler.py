@@ -172,13 +172,13 @@ class CallbackHandler:
             elif data == 'enter_username_order_for':
                 return self._start_order_for_input(chat_id)
             elif data.startswith('approve_user_select_'):
-                customer_id = data.split('_')[3]
+                customer_id = data.replace('approve_user_select_', '')
                 return self.handlers['user'].handle_approve_user_select(chat_id, customer_id)
             elif data.startswith('order_for_user_select_'):
                 customer_id = data.split('_')[4]
                 return self.handlers['admin_order'].handle_order_for_user_select(chat_id, customer_id)
             elif data.startswith('user_status_select_'):
-                customer_id = data.split('_')[3]
+                customer_id = data.replace('user_status_select_', '')
                 return self.handlers['user'].handle_user_status_select(chat_id, customer_id)
 
             elif data == 'done_editing':

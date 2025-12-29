@@ -91,7 +91,7 @@ class UserCommands(BaseHandler):
             return {'status': 'invalid_args'}
 
         identifier = ' '.join(args)
-        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "approve_user_select")
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "approve_user_select", AuthorizationStatus.UNAUTHORIZED.value)
         
         if error:
             return error

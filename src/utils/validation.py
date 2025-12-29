@@ -33,12 +33,15 @@ class ValidationUtils:
         
         return True, None
     
-    def find_customer_with_disambiguation(self, identifier: str, chat_id: int, callback_prefix: str) -> Tuple[Optional[Any], Optional[Dict[str, Any]]]:
+    def find_customer_with_disambiguation(self, identifier: str, chat_id: int, callback_prefix: str, status_filter: str = None) -> Tuple[Optional[Any], Optional[Dict[str, Any]]]:
         """Find customer with disambiguation UI if multiple matches"""
-        all_customers = []
-        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value))
-        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
-        all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.REJECTED.value))
+        if status_filter:
+            all_customers = self.db.get_customers_by_status(status_filter)
+        else:
+            all_customers = []
+            all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value))
+            all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
+            all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.REJECTED.value))
         
         search_lower = identifier.lower()
         matches = []

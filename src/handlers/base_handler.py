@@ -328,9 +328,9 @@ class BaseHandler:
             logger.error(f"Error sending media group: {e}")
             return {'success': False}
     
-    def _find_customer_with_disambiguation(self, identifier: str, chat_id: int, callback_prefix: str):
+    def _find_customer_with_disambiguation(self, identifier: str, chat_id: int, callback_prefix: str, status_filter: str = None):
         """Find customer with disambiguation UI if multiple matches"""
-        customer, error = self.validator.find_customer_with_disambiguation(identifier, chat_id, callback_prefix)
+        customer, error = self.validator.find_customer_with_disambiguation(identifier, chat_id, callback_prefix, status_filter)
         
         if error:
             if error['status'] == 'user_not_found':
