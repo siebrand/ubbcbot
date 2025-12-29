@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any
 from telegram import Bot
 from telegram.error import TelegramError
+from utils.edit_context import EditContextManager
 
 logger = logging.getLogger()
 
@@ -14,6 +15,7 @@ class CallbackHandler:
         self.handlers = handlers
         self.media_handler = media_handler
         self.bot = Bot(token=telegram_token) if telegram_token else None
+        self.edit_context_manager = EditContextManager(db, self._t, self._send_message)
 
     def handle_callback_query(self, callback_query: Dict[str, Any]) -> Dict[str, Any]:
         """Handle inline button callbacks"""
@@ -286,109 +288,19 @@ class CallbackHandler:
     
     def _handle_supplier_edit(self, chat_id: int, field: str, supplier_id: str) -> Dict[str, Any]:
         """Handle supplier edit callbacks"""
-        supplier = self.db.get_supplier(supplier_id)
-        if not supplier:
-            from handlers.base_handler import BaseHandler
-            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            base_handler._send_message(chat_id, base_handler._t('supplier_not_found', user_id=chat_id, name=supplier_id))
-            return {'status': 'supplier_not_found'}
-        
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        
-        if field == 'status':
-            new_status = 'retired' if supplier.status == 'active' else 'active'
-            if self.db.update_supplier(supplier_id, {'status': new_status}):
-                base_handler._send_message(chat_id, base_handler._t('supplier_status_updated', user_id=None, 
-                                                                 name=supplier.name, status=new_status))
-                return {'status': 'success'}
-            else:
-                base_handler._send_message(chat_id, base_handler._t('failed_update_supplier_status', user_id=None))
-                return {'status': 'error'}
-        elif field == 'name':
-            self._store_edit_context(chat_id, 'supplier_name', supplier_id)
-            base_handler._send_message(chat_id, base_handler._t('enter_new_supplier_name', user_id=None, name=supplier.name), 
-                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter supplier name"})
-        elif field == 'contact':
-            self._store_edit_context(chat_id, 'supplier_contact', supplier_id)
-            base_handler._send_message(chat_id, base_handler._t('enter_supplier_contact', user_id=None, name=supplier.name), 
-                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter email address"})
-        elif field == 'full_name':
-            self._store_edit_context(chat_id, 'supplier_full_name', supplier_id)
-            base_handler._send_message(chat_id, base_handler._t('enter_supplier_full_name', user_id=None, name=supplier.name),
-                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter full supplier name"})
-        else:
-            base_handler._send_message(chat_id, base_handler._t('unknown_edit_field', user_id=None))
-            return {'status': 'unknown_field'}
-        
-        return {'status': 'text_input_required'}
+        return self.edit_context_manager.handle_supplier_edit(chat_id, field, supplier_id)
     
     def _handle_offer_edit(self, chat_id: int, field: str, offer_id: str) -> Dict[str, Any]:
         """Handle offer edit callbacks"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        
-        if field == 'name':
-            self._store_edit_context(chat_id, 'offer_name', offer_id)
-            base_handler._send_message(chat_id, base_handler._t('enter_new_offer_name', user_id=None, offer_id=offer_id), 
-                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter offer name"})
-        elif field == 'price':
-            self._store_edit_context(chat_id, 'offer_price', offer_id)
-            base_handler._send_message(chat_id, base_handler._t('enter_new_offer_price', user_id=None, offer_id=offer_id), 
-                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter price (e.g. 12.50)"})
-        elif field == 'description':
-            self._store_edit_context(chat_id, 'offer_description', offer_id)
-            base_handler._send_message(chat_id, base_handler._t('enter_new_offer_description', user_id=None, offer_id=offer_id), 
-                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter description"})
-        else:
-            base_handler._send_message(chat_id, base_handler._t('unknown_edit_field', user_id=None))
-            return {'status': 'unknown_field'}
-        
-        return {'status': 'text_input_required'}
+        return self.edit_context_manager.handle_offer_edit(chat_id, field, offer_id)
     
     def _handle_customer_edit(self, chat_id: int, field: str, customer_id: str) -> Dict[str, Any]:
         """Handle customer edit callbacks"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        
-        if field == 'first_name':
-            self._store_edit_context(chat_id, 'customer_first_name', customer_id)
-            base_handler._send_message(chat_id, base_handler._t('enter_new_first_name', user_id=None), 
-                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter first name"})
-        elif field == 'last_name':
-            self._store_edit_context(chat_id, 'customer_last_name', customer_id)
-            base_handler._send_message(chat_id, base_handler._t('enter_new_last_name', user_id=None), 
-                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter last name"})
-        else:
-            base_handler._send_message(chat_id, base_handler._t('unknown_edit_field', user_id=None))
-            return {'status': 'unknown_field'}
-        
-        return {'status': 'text_input_required'}
+        return self.edit_context_manager.handle_customer_edit(chat_id, field, customer_id)
     
     def _store_edit_context(self, chat_id: int, edit_type: str, entity_id: str):
         """Store edit context in DynamoDB for processing replies"""
-        from models.entities import EditContext
-        logger.info(f"Storing edit context: chat_id={chat_id}, type={edit_type}, entity_id={entity_id}")
-        
-        # Delete any existing context for this chat
-        existing = self.db.get_edit_context_by_chat_id(chat_id)
-        if existing:
-            self.db.delete_edit_context(existing.context_id)
-        
-        # Cleanup old contexts periodically
-        import random
-        if random.randint(1, 20) == 1:
-            cleaned = self.db.cleanup_old_edit_contexts()
-            if cleaned > 0:
-                logger.info(f"Cleaned up {cleaned} old edit contexts")
-        
-        # Create new context
-        context = EditContext(
-            chat_id=chat_id,
-            edit_type=edit_type,
-            entity_id=entity_id
-        )
-        self.db.create_edit_context(context)
+        self.edit_context_manager.store_edit_context(chat_id, edit_type, entity_id)
     
     def _answer_callback_query(self, query_id: str) -> bool:
         """Answer callback query to remove loading state"""
@@ -556,63 +468,19 @@ class CallbackHandler:
     
     def _start_add_supplier(self, chat_id: int) -> Dict[str, Any]:
         """Start add supplier process with text input"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        
-        # Store context for text input
-        self._store_edit_context(chat_id, 'add_supplier_name', 'new')
-        
-        base_handler._send_message(
-            chat_id, 
-            base_handler._t('enter_supplier_name'),
-            reply_markup={"force_reply": True, "input_field_placeholder": "Enter supplier name"}
-        )
-        return {'status': 'text_input_required'}
+        return self.edit_context_manager.handle_input_prompts(chat_id, 'add_supplier_name')
     
     def _start_user_orders_input(self, chat_id: int) -> Dict[str, Any]:
         """Start user orders process with text input"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        
-        # Store context for text input
-        self._store_edit_context(chat_id, 'user_orders_input', 'new')
-        
-        base_handler._send_message(
-            chat_id, 
-            base_handler._t('enter_username_for_orders'),
-            reply_markup={"force_reply": True, "input_field_placeholder": "Enter username or name"}
-        )
-        return {'status': 'text_input_required'}
+        return self.edit_context_manager.handle_input_prompts(chat_id, 'user_orders_input')
     
     def _start_cancel_order_input(self, chat_id: int) -> Dict[str, Any]:
         """Start cancel order process with text input"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        
-        # Store context for text input
-        self._store_edit_context(chat_id, 'cancel_order_input', 'new')
-        
-        base_handler._send_message(
-            chat_id, 
-            base_handler._t('enter_username_for_cancel'),
-            reply_markup={"force_reply": True, "input_field_placeholder": "Enter username or name"}
-        )
-        return {'status': 'text_input_required'}
+        return self.edit_context_manager.handle_input_prompts(chat_id, 'cancel_order_input')
     
     def _start_order_for_input(self, chat_id: int) -> Dict[str, Any]:
         """Start order_for process with text input"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        
-        # Store context for text input
-        self._store_edit_context(chat_id, 'order_for_input', 'new')
-        
-        base_handler._send_message(
-            chat_id, 
-            base_handler._t('enter_username_for_order_for'),
-            reply_markup={"force_reply": True, "input_field_placeholder": "Enter username or name"}
-        )
-        return {'status': 'text_input_required'}
+        return self.edit_context_manager.handle_input_prompts(chat_id, 'order_for_input')
     
     def _send_usage_message(self, chat_id: int, usage_key: str) -> Dict[str, Any]:
         """Send usage message for commands that require parameters"""
@@ -620,6 +488,18 @@ class CallbackHandler:
         base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         base_handler._send_message(chat_id, base_handler._t(usage_key))
         return {'status': 'usage_sent'}
+    
+    def _t(self, key: str, **params) -> str:
+        """Translation helper for EditContextManager"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        return base_handler._t(key, **params)
+    
+    def _send_message(self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False) -> dict:
+        """Send message helper for EditContextManager"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        return base_handler._send_message(chat_id, text, parse_mode, reply_markup, force_group)
     
     def _is_admin(self, user_id: int) -> bool:
         """Check if user is admin"""
