@@ -382,5 +382,8 @@
   "enter_username_for_orders": "📝 Voer gebruikersnaam of naam in om bestellingen te bekijken:",
   "enter_username_for_cancel": "📝 Voer gebruikersnaam of naam in om bestellingen te annuleren:",
   "enter_username_for_order_for": "📝 Voer gebruikersnaam of naam in om bestelling voor te plaatsen:",
-  "no_active_orders_for_user": "📋 Geen actieve bestellingen gevonden voor {name}"
+  "no_active_orders_for_user": "📋 Geen actieve bestellingen gevonden voor {name}",
+  "enter_quantity_1_to_10": "📝 Voer aantal in (1-10):",
+  "quantity_must_be_1_to_10": "❌ Aantal moet tussen 1 en 10 zijn",
+  "enter_valid_number": "❌ Voer een geldig getal in"
 }

@@ -382,5 +382,8 @@
   "enter_username_for_orders": "📝 Enter username or name to view orders:",
   "enter_username_for_cancel": "📝 Enter username or name to cancel orders:",
   "enter_username_for_order_for": "📝 Enter username or name to place order for:",
-  "no_active_orders_for_user": "📋 No active orders found for {name}"
+  "no_active_orders_for_user": "📋 No active orders found for {name}",
+  "enter_quantity_1_to_10": "📝 Please enter quantity (1-10):",
+  "quantity_must_be_1_to_10": "❌ Quantity must be between 1 and 10",
+  "enter_valid_number": "❌ Please enter a valid number"
 }

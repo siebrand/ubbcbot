@@ -276,6 +276,26 @@ class BotService:
             return self.wholesale_delivery_commands.handle_incomplete_delivery_reply(chat_id, user_id, text, entity_id)
         elif edit_type == 'order_for_input':
             return self.admin_order_commands.handle_order_for(chat_id, user_id, [text])
+        elif edit_type == 'order_for_quantity_input':
+            # Parse customer_id and offer_id from entity_id
+            parts = entity_id.split('_', 1)
+            if len(parts) == 2:
+                customer_id, offer_id = parts[0], parts[1]
+                try:
+                    quantity = int(text.strip())
+                    if 1 <= quantity <= 10:
+                        return self.admin_order_commands.handle_order_for_quantity_select(chat_id, customer_id, offer_id, str(quantity))
+                    else:
+                        from handlers.base_handler import BaseHandler
+                        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                        base_handler._send_message(chat_id, base_handler._t('quantity_must_be_1_to_10', chat_id))
+                        return {'status': 'invalid_quantity'}
+                except ValueError:
+                    from handlers.base_handler import BaseHandler
+                    base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                    base_handler._send_message(chat_id, base_handler._t('enter_valid_number', chat_id))
+                    return {'status': 'invalid_format'}
+            return {'status': 'invalid_context'}
         elif edit_type == 'payment_link_input':
             return self.delivery_overview_handler.handle_payment_link_input(chat_id, text, entity_id)
         

@@ -694,10 +694,18 @@ class AdminOrderCommands(BaseHandler):
     
     def handle_order_for_other_quantity(self, chat_id: int, customer_id: str, offer_id: str) -> Dict[str, Any]:
         """Handle 'Other' quantity selection for order_for"""
-        from services.callback_handler import CallbackHandler
         # Store context for text input
+        from models.entities import EditContext
         context_data = f"{customer_id}_{offer_id}"
-        # This would be handled by storing edit context and waiting for text input
-        # For now, send usage message
-        self._send_message(chat_id, "📝 Please enter quantity (1-10):")
+        
+        # Store edit context
+        context = EditContext(
+            chat_id=chat_id,
+            edit_type='order_for_quantity_input',
+            entity_id=context_data
+        )
+        self.db.create_edit_context(context)
+        
+        self._send_message(chat_id, self._t('enter_quantity_1_to_10', chat_id), 
+                          reply_markup={"force_reply": True, "input_field_placeholder": "Enter quantity"})
         return {'status': 'awaiting_quantity_input'}
