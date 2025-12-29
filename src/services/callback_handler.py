@@ -129,6 +129,10 @@ class CallbackHandler:
                     return self.handlers['offer'].handle_confirm_order_wholesale(chat_id, [offer_id, boxes])
                 else:
                     logger.error(f"Invalid wholesale callback format: {data}")
+                    from handlers.base_handler import BaseHandler
+                    base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                    base_handler._send_message(chat_id, base_handler._t('invalid_format'))
+                    return {'status': 'invalid_format'}
             elif data.startswith('confirm_fulfill_'):
                 parts = data.split('_')
                 if len(parts) >= 4:
