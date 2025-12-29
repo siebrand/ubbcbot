@@ -116,6 +116,9 @@ class AdminOrderCommands(BaseHandler):
                 nav_buttons.append({"text": "Next ▶️", "callback_data": f"cancel_orders_page_{customer.customer_id}_{page + 1}"})
             keyboard_buttons.append(nav_buttons)
         
+        # Add cancel option at the bottom
+        keyboard_buttons.append([{"text": self._t('cancel', user_id=None), "callback_data": "cancel_action"}])
+        
         keyboard = {"inline_keyboard": keyboard_buttons}
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
