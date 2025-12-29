@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, Any
-import requests
+from telegram import Bot
+from telegram.error import TelegramError
 
 logger = logging.getLogger()
 
@@ -12,6 +13,7 @@ class CallbackHandler:
         self.telegram_token = telegram_token
         self.handlers = handlers
         self.media_handler = media_handler
+        self.bot = Bot(token=telegram_token) if telegram_token else None
 
     def handle_callback_query(self, callback_query: Dict[str, Any]) -> Dict[str, Any]:
         """Handle inline button callbacks"""
@@ -390,27 +392,27 @@ class CallbackHandler:
     
     def _answer_callback_query(self, query_id: str) -> bool:
         """Answer callback query to remove loading state"""
+        if not self.bot:
+            return False
         try:
-            url = f"https://api.telegram.org/bot{self.telegram_token}/answerCallbackQuery"
-            data = {'callback_query_id': query_id}
-            response = requests.post(url, json=data, timeout=20)
-            return response.status_code == 200
-        except Exception as e:
+            self.bot.answer_callback_query(callback_query_id=query_id)
+            return True
+        except TelegramError as e:
             logger.error(f"Error answering callback query: {e}")
             return False
     
     def _edit_message_remove_keyboard(self, chat_id: int, message_id: int) -> bool:
         """Remove inline keyboard from a message"""
+        if not self.bot:
+            return False
         try:
-            url = f"https://api.telegram.org/bot{self.telegram_token}/editMessageReplyMarkup"
-            data = {
-                'chat_id': chat_id,
-                'message_id': message_id,
-                'reply_markup': {'inline_keyboard': []}
-            }
-            response = requests.post(url, json=data, timeout=20)
-            return response.status_code == 200
-        except Exception as e:
+            self.bot.edit_message_reply_markup(
+                chat_id=chat_id,
+                message_id=message_id,
+                reply_markup=None
+            )
+            return True
+        except TelegramError as e:
             logger.error(f"Error removing keyboard: {e}")
             return False
     
