@@ -131,6 +131,7 @@ Expected response should show:
 These commands are set up in the deployment script, throught bash script setup-commands.sh.
 
 ### Admin Commands (User ID: 15005473)
+- `/admin` - Admin panel with buttons for all admin functions
 - `/help [section]` - Show help for specific section (general, orders, suppliers, offers, users)
 - `/setup_test_data` - Setup test data (test environment only)
 - `/add_supplier <name>` - Register new supplier

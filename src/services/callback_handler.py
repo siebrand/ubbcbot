@@ -35,6 +35,8 @@ class CallbackHandler:
                 should_remove_keyboard = False
             elif data.startswith('order_'):  # Keep keyboard for order buttons so multiple people can order
                 should_remove_keyboard = False
+            elif data == 'add_supplier_start':  # Keep keyboard for add supplier flow
+                should_remove_keyboard = False
             
             if should_remove_keyboard:
                 self._edit_message_remove_keyboard(chat_id, message_id)
@@ -65,6 +67,14 @@ class CallbackHandler:
             elif data.startswith('mark_paid_'):
                 customer_id = data.split('_', 2)[2]
                 return self.handlers['delivery_overview'].handle_mark_customer_paid(chat_id, customer_id)
+            
+            # Admin panel callbacks
+            elif data.startswith('admin_'):
+                return self._handle_admin_callbacks(chat_id, user_id, data)
+            elif data.startswith('cmd_'):
+                return self._handle_command_callbacks(chat_id, user_id, data)
+            elif data == 'add_supplier_start':
+                return self._start_add_supplier(chat_id)
             
             # Order callbacks
             if data.startswith('order_'):
@@ -117,6 +127,11 @@ class CallbackHandler:
             elif data.startswith('edit_user_select_'):
                 customer_id = data.split('_')[3]
                 return self.handlers['user'].handle_edit_user_select(chat_id, customer_id)
+            elif data.startswith('edit_supplier_select_'):
+                supplier_id = data.split('_')[3]
+                return self.handlers['supplier']._show_edit_interface_by_id(chat_id, supplier_id)
+            elif data == 'back_to_supplier_list':
+                return self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active')
             elif data.startswith('user_orders_select_'):
                 customer_id = data.split('_')[3]
                 return self.handlers['admin_order'].handle_user_orders_select(chat_id, customer_id)
@@ -128,8 +143,8 @@ class CallbackHandler:
             elif data == 'cancel_action':
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, base_handler._t('action_cancelled'))
-                return {'status': 'cancelled'}
+                base_handler._send_message(chat_id, base_handler._t('done'))
+                return {'status': 'done'}
             
             # Pagination callbacks
             elif data.startswith('page_'):
@@ -201,6 +216,10 @@ class CallbackHandler:
                 elif parts[2] == 'last' and parts[3] == 'name':
                     return self._handle_customer_edit(chat_id, 'last_name', parts[4])
             
+            # Handle special case for supplier full_name editing
+            if parts[1] == 'supplier' and len(parts) == 5 and parts[2] == 'full' and parts[3] == 'name':
+                return self._handle_supplier_edit(chat_id, 'full_name', parts[4])
+            
             # Handle offer_details callback with edit mode
             if parts[1] == 'offer' and parts[2] == 'details':
                 offer_id = parts[3]
@@ -229,7 +248,7 @@ class CallbackHandler:
         if not supplier:
             from handlers.base_handler import BaseHandler
             base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            base_handler._send_message(chat_id, base_handler._t('supplier_not_found', user_id=None))
+            base_handler._send_message(chat_id, base_handler._t('supplier_not_found', user_id=chat_id, name=supplier_id))
             return {'status': 'supplier_not_found'}
         
         from handlers.base_handler import BaseHandler
@@ -252,6 +271,10 @@ class CallbackHandler:
             self._store_edit_context(chat_id, 'supplier_contact', supplier_id)
             base_handler._send_message(chat_id, base_handler._t('enter_supplier_contact', user_id=None, name=supplier.name), 
                                      reply_markup={"force_reply": True, "input_field_placeholder": "Enter email address"})
+        elif field == 'full_name':
+            self._store_edit_context(chat_id, 'supplier_full_name', supplier_id)
+            base_handler._send_message(chat_id, base_handler._t('enter_supplier_full_name', user_id=None, name=supplier.name),
+                                     reply_markup={"force_reply": True, "input_field_placeholder": "Enter full supplier name"})
         else:
             base_handler._send_message(chat_id, base_handler._t('unknown_edit_field', user_id=None))
             return {'status': 'unknown_field'}
@@ -413,6 +436,103 @@ class CallbackHandler:
         from handlers.base_handler import BaseHandler
         base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         return base_handler._send_message(chat_id, base_handler._t('unknown_callback', user_id))
+    
+    def _handle_admin_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
+        """Handle admin panel navigation callbacks"""
+        if not self._is_admin(user_id):
+            from handlers.base_handler import BaseHandler
+            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            base_handler._send_message(chat_id, base_handler._t('admin_only', user_id))
+            return {'status': 'unauthorized'}
+        
+        if data == 'admin_main':
+            return self.handlers['admin_commands'].handle_admin(chat_id, user_id)
+        elif data == 'admin_suppliers':
+            return self.handlers['admin_commands'].handle_admin_suppliers(chat_id, user_id)
+        elif data == 'admin_offers':
+            return self.handlers['admin_commands'].handle_admin_offers(chat_id, user_id)
+        elif data == 'admin_orders':
+            return self.handlers['admin_commands'].handle_admin_orders(chat_id, user_id)
+        elif data == 'admin_users':
+            return self.handlers['admin_commands'].handle_admin_users(chat_id, user_id)
+        elif data == 'admin_delivery':
+            return self.handlers['admin_commands'].handle_admin_delivery(chat_id, user_id)
+        elif data == 'admin_discounts':
+            return self.handlers['admin_commands'].handle_admin_discounts(chat_id, user_id)
+        elif data == 'admin_system':
+            return self.handlers['admin_commands'].handle_admin_system(chat_id, user_id)
+        
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        base_handler._send_message(chat_id, base_handler._t('unknown_callback', user_id))
+        return {'status': 'unknown_callback'}
+    
+    def _handle_command_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
+        """Handle command execution callbacks from admin panel"""
+        if not self._is_admin(user_id):
+            from handlers.base_handler import BaseHandler
+            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            base_handler._send_message(chat_id, base_handler._t('admin_only', user_id))
+            return {'status': 'unauthorized'}
+        
+        # Map callback data to command handlers
+        command_map = {
+            'cmd_add_supplier': lambda: self.handlers['supplier'].handle_add_supplier(chat_id, []),
+            'cmd_list_suppliers': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
+            'cmd_edit_supplier': lambda: self._send_usage_message(chat_id, 'usage_edit_supplier'),
+            'cmd_create_offer': lambda: self.handlers['offer'].handle_create_offer(chat_id, []),
+            'cmd_list_offers': lambda: self.handlers['info'].handle_list_offers(chat_id, user_id, []),
+            'cmd_box_status': lambda: self.handlers['offer'].handle_box_status(chat_id),
+            'cmd_order_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
+            'cmd_all_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
+            'cmd_user_orders': lambda: self._send_usage_message(chat_id, 'usage_user_orders'),
+            'cmd_cancel_order': lambda: self._send_usage_message(chat_id, 'usage_cancel_order'),
+            'cmd_order_for': lambda: self._send_usage_message(chat_id, 'usage_order_for'),
+            'cmd_pending_users': lambda: self.handlers['user'].handle_pending_users(chat_id),
+            'cmd_list_users': lambda: self.handlers['user'].handle_list_users(chat_id, 1, 'all'),
+            'cmd_approve_user': lambda: self._send_usage_message(chat_id, 'usage_approve_user'),
+            'cmd_user_status': lambda: self._send_usage_message(chat_id, 'usage_user_status'),
+            'cmd_wholesale_delivery': lambda: self.handlers['wholesale_delivery'].handle_wholesale_delivery(chat_id, user_id, []),
+            'cmd_labeling_completed': lambda: self.handlers['labeling'].handle_labeling_completed(chat_id, user_id, []),
+            'cmd_send_overviews': lambda: self.handlers['admin_order'].handle_send_overviews(chat_id, []),
+            'cmd_mark_paid': lambda: self.handlers['admin_order'].handle_mark_paid(chat_id, []),
+            'cmd_create_discount': lambda: self._send_usage_message(chat_id, 'usage_create_discount'),
+            'cmd_discount_status': lambda: self.handlers['discount'].handle_discount_status(chat_id),
+            'cmd_cancel_discount': lambda: self.handlers['discount'].handle_cancel_discount(chat_id),
+            'cmd_setup_test_data': lambda: self.handlers['test'].handle_setup_test_data(chat_id),
+            'cmd_failed_notifications': lambda: self.handlers['admin_order'].handle_failed_notifications(chat_id, []),
+            'add_supplier_start': lambda: self._start_add_supplier(chat_id)
+        }
+        
+        if data in command_map:
+            return command_map[data]()
+        
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        base_handler._send_message(chat_id, base_handler._t('unknown_callback', user_id))
+        return {'status': 'unknown_callback'}
+    
+    def _start_add_supplier(self, chat_id: int) -> Dict[str, Any]:
+        """Start add supplier process with text input"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        # Store context for text input
+        self._store_edit_context(chat_id, 'add_supplier_name', 'new')
+        
+        base_handler._send_message(
+            chat_id, 
+            base_handler._t('enter_supplier_name'),
+            reply_markup={"force_reply": True, "input_field_placeholder": "Enter supplier name"}
+        )
+        return {'status': 'text_input_required'}
+    
+    def _send_usage_message(self, chat_id: int, usage_key: str) -> Dict[str, Any]:
+        """Send usage message for commands that require parameters"""
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        base_handler._send_message(chat_id, base_handler._t(usage_key))
+        return {'status': 'usage_sent'}
     
     def _is_admin(self, user_id: int) -> bool:
         """Check if user is admin"""

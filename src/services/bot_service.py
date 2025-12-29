@@ -17,6 +17,7 @@ from handlers.admin.discount_commands import DiscountCommands
 from handlers.admin.wholesale_delivery_commands import WholesaleDeliveryCommands
 from handlers.admin.labeling_commands import LabelingCommands
 from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
+from handlers.admin.admin_commands import AdminCommandsHandler
 from handlers.customer.order_commands import CustomerOrderCommands
 from handlers.customer.info_commands import InfoCommands
 from handlers.customer.auth_commands import AuthCommands
@@ -63,6 +64,7 @@ class BotService:
         self.wholesale_delivery_commands = WholesaleDeliveryCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.labeling_commands = LabelingCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.delivery_overview_handler = DeliveryOverviewHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        self.admin_commands_handler = AdminCommandsHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         # Customer handlers
         self.customer_order_commands = CustomerOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -83,6 +85,7 @@ class BotService:
             'wholesale_delivery': self.wholesale_delivery_commands,
             'labeling': self.labeling_commands,
             'delivery_overview': self.delivery_overview_handler,
+            'admin_commands': self.admin_commands_handler,
             'changelog': self.changelog_commands,
             'customer_order': self.customer_order_commands,
             'info': self.info_commands,
@@ -244,6 +247,8 @@ class BotService:
             return self.supplier_commands.handle_update_supplier_name(chat_id, [entity_id, text])
         elif edit_type == 'supplier_contact':
             return self.supplier_commands.handle_update_supplier_contact(chat_id, [entity_id, text])
+        elif edit_type == 'supplier_full_name':
+            return self.supplier_commands.handle_update_supplier_full_name(chat_id, [entity_id, text])
         elif edit_type == 'offer_name':
             return self.offer_commands.handle_update_offer_name(chat_id, [entity_id, text])
         elif edit_type == 'offer_price':
@@ -261,6 +266,8 @@ class BotService:
             return self.user_commands.handle_update_user_first_name(chat_id, [entity_id, text])
         elif edit_type == 'customer_last_name':
             return self.user_commands.handle_update_user_last_name(chat_id, [entity_id, text])
+        elif edit_type == 'add_supplier_name':
+            return self.supplier_commands._create_supplier(chat_id, text)
         elif edit_type == 'incomplete_delivery':
             return self.wholesale_delivery_commands.handle_incomplete_delivery_reply(chat_id, user_id, text, entity_id)
         elif edit_type == 'payment_link_input':

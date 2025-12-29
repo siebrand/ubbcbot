@@ -53,6 +53,7 @@ class AuthorizationStatus(Enum):
 class Supplier:
     supplier_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
+    full_name: Optional[str] = None
     contact_email: Optional[str] = None
     status: str = "active"
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
