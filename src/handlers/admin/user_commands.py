@@ -2,6 +2,7 @@ from typing import Dict, Any, Optional
 from handlers.base_handler import BaseHandler
 from models.entities import AuthorizationStatus
 from utils.update_utils import UpdateUtils
+from utils.pagination import PaginationUtils
 
 class UserCommands(BaseHandler):
     def __init__(self, *args, **kwargs):
@@ -258,66 +259,7 @@ class UserCommands(BaseHandler):
 
     def _build_user_pagination_keyboard(self, current_page: int, total_pages: int, entity_type: str) -> Dict[str, Any]:
         """Build enhanced pagination keyboard for user lists"""
-        keyboard = []
-
-        if total_pages > 1:
-            nav_buttons = []
-
-            # First page button (if not on first page)
-            if current_page > 1:
-                nav_buttons.append({
-                    "text": "⏮️",
-                    "callback_data": f"page_{entity_type}_1"
-                })
-
-            # Previous page button
-            if current_page > 1:
-                nav_buttons.append({
-                    "text": "◀️",
-                    "callback_data": f"page_{entity_type}_{current_page - 1}"
-                })
-
-            # Page indicator
-            nav_buttons.append({
-                "text": f"{current_page}/{total_pages}",
-                "callback_data": "page_info"
-            })
-
-            # Next page button
-            if current_page < total_pages:
-                nav_buttons.append({
-                    "text": "▶️",
-                    "callback_data": f"page_{entity_type}_{current_page + 1}"
-                })
-
-            # Last page button (if not on last page)
-            if current_page < total_pages:
-                nav_buttons.append({
-                    "text": "⏭️",
-                    "callback_data": f"page_{entity_type}_{total_pages}"
-                })
-
-            keyboard.append(nav_buttons)
-
-            # Add jump buttons for larger lists (show ±2 pages)
-            if total_pages > 5:
-                jump_buttons = []
-
-                # Show a few page numbers around current page
-                start_page = max(1, current_page - 2)
-                end_page = min(total_pages, current_page + 2)
-
-                for p in range(start_page, end_page + 1):
-                    if p != current_page:
-                        jump_buttons.append({
-                            "text": str(p),
-                            "callback_data": f"page_{entity_type}_{p}"
-                        })
-
-                if jump_buttons:
-                    keyboard.append(jump_buttons)
-
-        return {"inline_keyboard": keyboard}
+        return PaginationUtils.build_pagination_keyboard(current_page, total_pages, entity_type, enhanced=True)
 
     def handle_edit_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         """Handle user selection from ambiguity resolution buttons"""
