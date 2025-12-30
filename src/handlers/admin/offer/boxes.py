@@ -22,8 +22,8 @@ class BoxManagementHandler(OfferBaseHandler):
             # Create new box
             box = Box(
                 offer_id=offer_id,
-                max_capacity=int(float(offer.wholesale_box_size)),
-                min_breakeven=int(float(offer.min_quantity_breakeven))
+                max_capacity=offer.wholesale_box_size,
+                min_breakeven=offer.min_quantity_breakeven
             )
             
             if self.db.create_box(box):
@@ -256,7 +256,7 @@ class BoxManagementHandler(OfferBaseHandler):
             }
         elif unordered_boxes and total_capacity > 0:
             # Fill existing boxes and create new ones (only if unordered boxes exist)
-            box_size = int(float(offer.wholesale_box_size))
+            box_size = offer.wholesale_box_size
             remaining_units = excess_units - total_capacity
             boxes_needed = (remaining_units + box_size - 1) // box_size
             
@@ -272,7 +272,7 @@ class BoxManagementHandler(OfferBaseHandler):
             }
         elif not ordered_boxes:
             # No ordered boxes exist - create new boxes instead of canceling orders
-            box_size = int(float(offer.wholesale_box_size))
+            box_size = offer.wholesale_box_size
             boxes_needed = (excess_units + box_size - 1) // box_size
             
             message = self._t('audit_propose_create_boxes', chat_id,
@@ -401,7 +401,7 @@ class BoxManagementHandler(OfferBaseHandler):
     
     def _add_box_capacity(self, chat_id: int, offer, needed_units: int) -> Dict[str, Any]:
         """Add box capacity by creating new boxes and filling them with needed units"""
-        box_size = int(float(offer.wholesale_box_size))  # Convert Decimal to int
+        box_size = offer.wholesale_box_size  # Convert Decimal to int
         boxes_needed = (needed_units + box_size - 1) // box_size  # Ceiling division
         
         created_boxes = 0
@@ -411,7 +411,7 @@ class BoxManagementHandler(OfferBaseHandler):
             box = Box(
                 offer_id=offer.offer_id,
                 max_capacity=box_size,
-                min_breakeven=int(float(offer.min_quantity_breakeven))  # Convert Decimal to int
+                min_breakeven=offer.min_quantity_breakeven  # Convert Decimal to int
             )
             created_box = self.db.create_box(box)
             if created_box:

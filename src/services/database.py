@@ -153,7 +153,13 @@ class DynamoDBService:
         try:
             response = self.offers_table.get_item(Key={'offer_id': offer_id})
             if 'Item' in response:
-                return Offer(**response['Item'])
+                item = response['Item']
+                # Convert Decimal fields to appropriate types
+                if 'wholesale_box_size' in item:
+                    item['wholesale_box_size'] = int(item['wholesale_box_size'])
+                if 'min_quantity_breakeven' in item:
+                    item['min_quantity_breakeven'] = int(item['min_quantity_breakeven'])
+                return Offer(**item)
             return None
         except Exception as e:
             print(f"Error getting offer: {e}")
@@ -162,7 +168,15 @@ class DynamoDBService:
     def list_offers(self) -> List[Offer]:
         try:
             response = self.offers_table.scan()
-            return [Offer(**item) for item in response.get('Items', [])]
+            offers = []
+            for item in response.get('Items', []):
+                # Convert Decimal fields to appropriate types
+                if 'wholesale_box_size' in item:
+                    item['wholesale_box_size'] = int(item['wholesale_box_size'])
+                if 'min_quantity_breakeven' in item:
+                    item['min_quantity_breakeven'] = int(item['min_quantity_breakeven'])
+                offers.append(Offer(**item))
+            return offers
         except Exception as e:
             print(f"Error listing offers: {e}")
             return []
@@ -258,7 +272,17 @@ class DynamoDBService:
                 IndexName='offer-index',
                 KeyConditionExpression=Key('offer_id').eq(offer_id)
             )
-            return [Box(**item) for item in response.get('Items', [])]
+            boxes = []
+            for item in response.get('Items', []):
+                # Convert Decimal fields to appropriate types
+                if 'current_quantity' in item:
+                    item['current_quantity'] = int(item['current_quantity'])
+                if 'max_capacity' in item:
+                    item['max_capacity'] = int(item['max_capacity'])
+                if 'min_breakeven' in item:
+                    item['min_breakeven'] = int(item['min_breakeven'])
+                boxes.append(Box(**item))
+            return boxes
         except Exception as e:
             print(f"Error getting boxes by offer: {e}")
             return []
@@ -387,7 +411,15 @@ class DynamoDBService:
         try:
             response = self.boxes_table.get_item(Key={'box_id': box_id})
             if 'Item' in response:
-                return Box(**response['Item'])
+                item = response['Item']
+                # Convert Decimal fields to appropriate types
+                if 'current_quantity' in item:
+                    item['current_quantity'] = int(item['current_quantity'])
+                if 'max_capacity' in item:
+                    item['max_capacity'] = int(item['max_capacity'])
+                if 'min_breakeven' in item:
+                    item['min_breakeven'] = int(item['min_breakeven'])
+                return Box(**item)
             return None
         except Exception as e:
             print(f"Error getting box: {e}")

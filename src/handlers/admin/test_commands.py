@@ -62,7 +62,7 @@ class TestCommands(BaseHandler):
                     box = Box(
                         offer_id=offer.offer_id,
                         max_capacity=offer_data["box_size"],
-                        min_breakeven=int(float(offer.min_quantity_breakeven))
+                        min_breakeven=offer.min_quantity_breakeven
                     )
                     self.db.create_box(box)
                     

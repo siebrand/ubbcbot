@@ -126,7 +126,7 @@ class CustomerOrderCommands(BaseHandler):
     def execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
         """Execute order placement"""
         try:
-            box_size = int(float(offer.wholesale_box_size))
+            box_size = offer.wholesale_box_size
             if box_size == 1:
                 logger.info(f"DEBUG: Processing order for box size 1 offer {offer_id}, quantity {quantity}, customer {customer.customer_id}")
             
@@ -153,7 +153,7 @@ class CustomerOrderCommands(BaseHandler):
                         new_box = Box(
                             offer_id=offer_id,
                             max_capacity=box_size,
-                            min_breakeven=int(float(offer.min_quantity_breakeven))
+                            min_breakeven=offer.min_quantity_breakeven
                         )
                         created_box = self.db.create_box(new_box)
                         if box_size == 1:
@@ -255,13 +255,13 @@ class CustomerOrderCommands(BaseHandler):
                     order_id=order.order_id,
                     product=offer.name,
                     quantity=quantity,
-                    total=order.total_price,
+                    total=float(order.total_price),
                     status=order.status))
             else:
                 self._send_message(chat_id, self._t('order_placed_multiple', user_id,
                     product=offer.name,
                     quantity=quantity,
-                    total=order.total_price,
+                    total=float(order.total_price),
                     boxes=len(boxes_used)))
             
             # Send notification to default channel for all successful orders (not just private chats)
@@ -322,7 +322,7 @@ class CustomerOrderCommands(BaseHandler):
         try:
             group_id = os.environ.get('DEFAULT_GROUP_ID')
             if not group_id:
-                box_size = int(float(offer.wholesale_box_size))
+                box_size = offer.wholesale_box_size
                 if box_size == 1:
                     logger.info(f"DEBUG: Box size 1 - No DEFAULT_GROUP_ID configured")
                 return False
@@ -350,7 +350,7 @@ class CustomerOrderCommands(BaseHandler):
                 # If total_available == 0 and not sold out, show nothing
             
             message = f"🍺 {customer_name} ordered {quantity}x {offer.name}{availability_text}"
-            box_size = int(float(offer.wholesale_box_size))
+            box_size = offer.wholesale_box_size
             if box_size == 1:
                 logger.info(f"DEBUG: Box size 1 - Sending group message: {message}")
             

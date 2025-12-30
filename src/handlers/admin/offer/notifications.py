@@ -10,7 +10,7 @@ class NotificationHandler(OfferBaseHandler):
     
     def _send_rich_offer_message(self, chat_id: int, offer, preview: bool = False, force_group: bool = False):
         """Send rich offer message using offer_details formatting"""
-        box_size = int(float(offer.wholesale_box_size))
+        box_size = offer.wholesale_box_size
         if box_size == 1:
             logger.info(f"DEBUG: Box size 1 - Sending rich offer message to chat {chat_id}, preview: {preview}, force_group: {force_group}")
         
@@ -96,7 +96,7 @@ class NotificationHandler(OfferBaseHandler):
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
         subscribers = [c for c in customers if getattr(c, 'subscribed_to_offers', False)]
         
-        box_size = int(float(offer.wholesale_box_size))
+        box_size = offer.wholesale_box_size
         if box_size == 1:
             logger.info(f"DEBUG: Box size 1 - Notifying {len(subscribers)} subscribers for offer {offer.offer_id}")
         
