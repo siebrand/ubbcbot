@@ -200,9 +200,9 @@ class OfferCreationHandler(OfferBaseHandler):
         if box_size == 1:
             logger.info(f"DEBUG: Box size 1 - Announcing offer {offer.offer_id} to group {default_group_id}")
         
-        # Send rich offer message to default group
+        # Send rich offer message to default group (without buttons)
         if default_group_id:
-            group_result = self._send_rich_offer_message(int(default_group_id), offer, force_group=True)
+            group_result = self._send_rich_offer_message(int(default_group_id), offer, force_group=True, include_buttons=False)
             if box_size == 1:
                 logger.info(f"DEBUG: Box size 1 - Group announcement result: {group_result}")
         

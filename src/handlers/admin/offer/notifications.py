@@ -8,7 +8,7 @@ logger = logging.getLogger()
 class NotificationHandler(OfferBaseHandler):
     """Handler for offer notifications and announcements"""
     
-    def _send_rich_offer_message(self, chat_id: int, offer, preview: bool = False, force_group: bool = False):
+    def _send_rich_offer_message(self, chat_id: int, offer, preview: bool = False, force_group: bool = False, include_buttons: bool = True):
         """Send rich offer message using offer_details formatting"""
         box_size = offer.wholesale_box_size
         if box_size == 1:
@@ -26,8 +26,8 @@ class NotificationHandler(OfferBaseHandler):
         if box_size == 1:
             logger.info(f"DEBUG: Box size 1 - Details message completed")
         
-        # Add order buttons for non-preview announcements
-        if not preview:
+        # Add order buttons for non-preview announcements (only if include_buttons is True)
+        if not preview and include_buttons:
             reply_markup = {
                 "inline_keyboard": [
                     [
@@ -110,8 +110,8 @@ class NotificationHandler(OfferBaseHandler):
             
             for customer in batch:
                 try:
-                    # Use the same rich offer message method for consistency
-                    self._send_rich_offer_message(customer.telegram_user_id, offer, preview=False, force_group=False)
+                    # Use the same rich offer message method for consistency (with buttons for subscribers)
+                    self._send_rich_offer_message(customer.telegram_user_id, offer, preview=False, force_group=False, include_buttons=True)
                     if box_size == 1:
                         logger.info(f"DEBUG: Box size 1 - Notified subscriber {customer.customer_id}")
                 except Exception as e:
