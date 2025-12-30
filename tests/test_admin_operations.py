@@ -181,39 +181,44 @@ def test_audit_orders():
     
     from datetime import datetime, UTC
     
-    # Orders with and without update_date
+    # Orders with and without update_date (simulating old orders)
     orders = [
-        Order(order_id="order1", update_date=datetime.now(UTC).isoformat()),  # Has update_date
-        Order(order_id="order2", update_date=None),  # Missing update_date
-        Order(order_id="order3", update_date=""),     # Empty update_date
-        Order(order_id="order4")                      # No update_date attribute set
+        Order(order_id="order1", update_date=datetime.now(UTC)),  # Has update_date
+        Order(order_id="order2", update_date=None),  # Missing update_date (old order)
+        Order(order_id="order3", update_date=None),  # Missing update_date (old order)
     ]
     
-    # Find orders without update_date
+    # Find orders without update_date (simulating old orders)
     orders_without_update_date = []
     for order in orders:
         if not order.update_date:
             orders_without_update_date.append(order)
     
-    assert len(orders_without_update_date) == 3  # order2, order3, order4
-    print("✅ Orders without update_date identified correctly")
+    assert len(orders_without_update_date) == 2  # order2, order3
+    print("✅ Old orders without update_date identified correctly")
     
     # Simulate audit process
-    current_time = datetime.now(UTC).isoformat()
+    current_time = datetime.now(UTC)
     updated_count = 0
     
     for order in orders_without_update_date:
         order.update_date = current_time
         updated_count += 1
     
-    assert updated_count == 3
+    assert updated_count == 2
     assert all(order.update_date == current_time for order in orders_without_update_date)
-    print("✅ Orders updated with current timestamp")
+    print("✅ Old orders updated with current timestamp")
     
     # Verify all orders now have update_date
     orders_still_missing = [order for order in orders if not order.update_date]
     assert len(orders_still_missing) == 0
     print("✅ All orders now have update_date")
+    
+    # Test new order creation (should have update_date automatically)
+    new_order = Order(order_id="new_order")
+    assert new_order.update_date is not None
+    assert new_order.created_at is not None
+    print("✅ New orders automatically get update_date")
 
 if __name__ == "__main__":
     test_fulfillment_calculations()

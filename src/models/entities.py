@@ -107,7 +107,7 @@ class Order:
     status: str = OrderStatus.PENDING.value
     placed_by_admin: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    update_date: Optional[datetime] = None
+    update_date: Optional[datetime] = field(default_factory=lambda: datetime.now(UTC))
 
 @dataclass
 class DiscountPeriod:
