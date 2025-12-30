@@ -246,12 +246,14 @@ class BaseHandler:
     
     def _send_error(self, chat_id: int, error_key: str, status: str, **kwargs):
         """Send error message and return status"""
-        self._send_message(chat_id, self._t(error_key, **kwargs))
+        user_id = kwargs.pop('user_id', None)
+        self._send_message(chat_id, self._t(error_key, user_id, **kwargs))
         return {'status': status}
     
     def _send_success(self, chat_id: int, success_key: str, status: str = 'success', **kwargs):
         """Send success message and return status"""
-        self._send_message(chat_id, self._t(success_key, **kwargs))
+        user_id = kwargs.pop('user_id', None)
+        self._send_message(chat_id, self._t(success_key, user_id, **kwargs))
         return {'status': status}
     
     def _send_photo(self, chat_id: int, photo_url: str, caption: str = None, force_group: bool = False) -> dict:

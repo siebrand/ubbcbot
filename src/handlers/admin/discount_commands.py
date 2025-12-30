@@ -16,15 +16,15 @@ class DiscountCommands(BaseHandler):
             hours = int(args[1]) if len(args) > 1 else 24  # Default 24 hours
             
             if percentage <= 0 or percentage >= 100:
-                return self._send_error(chat_id, 'discount_percentage_invalid', 'invalid_percentage', chat_id=chat_id)
+                return self._send_error(chat_id, 'discount_percentage_invalid', 'invalid_percentage', user_id=chat_id)
             
             if hours <= 0:
-                return self._send_error(chat_id, 'discount_duration_invalid', 'invalid_duration', chat_id=chat_id)
+                return self._send_error(chat_id, 'discount_duration_invalid', 'invalid_duration', user_id=chat_id)
             
             # Check for existing active discount
             existing = self.db.get_active_discount()
             if existing:
-                return self._send_error(chat_id, 'discount_already_exists', 'discount_exists', chat_id=chat_id, percentage=existing.discount_percentage)
+                return self._send_error(chat_id, 'discount_already_exists', 'discount_exists', user_id=chat_id, percentage=existing.discount_percentage)
             
             # Create discount
             end_time = datetime.now(UTC) + timedelta(hours=hours)
@@ -35,43 +35,43 @@ class DiscountCommands(BaseHandler):
             
             if self.db.create_discount(discount):
                 from utils.timezone import to_cet_string
-                self._send_message(chat_id, self._t('discount_created', 
+                self._send_message(chat_id, self._t('discount_created', chat_id,
                     percentage=percentage, 
                     end_time=to_cet_string(end_time)
                 ))
                 return {'status': 'success'}
             else:
-                return self._send_error(chat_id, 'failed_create_discount', 'error', chat_id=chat_id)
+                return self._send_error(chat_id, 'failed_create_discount', 'error', user_id=chat_id)
                 
         except ValueError:
-            return self._send_error(chat_id, 'invalid_percentage_format', 'invalid_format', chat_id=chat_id)
+            return self._send_error(chat_id, 'invalid_percentage_format', 'invalid_format', user_id=chat_id)
     
     def handle_cancel_discount(self, chat_id: int) -> Dict[str, Any]:
         """Handle /cancel_discount command"""
         discount = self.db.get_active_discount()
         if not discount:
-            return self._send_error(chat_id, 'no_active_discount', 'no_discount', chat_id=chat_id)
+            return self._send_error(chat_id, 'no_active_discount', 'no_discount', user_id=chat_id)
         
         if self.db.update_discount(discount.discount_id, {'status': DiscountStatus.CANCELLED.value}):
-            return self._send_success(chat_id, 'discount_cancelled', chat_id=chat_id, percentage=discount.discount_percentage)
+            return self._send_success(chat_id, 'discount_cancelled', user_id=chat_id, percentage=discount.discount_percentage)
         else:
-            return self._send_error(chat_id, 'failed_cancel_discount', 'error', chat_id=chat_id)
+            return self._send_error(chat_id, 'failed_cancel_discount', 'error', user_id=chat_id)
     
     def handle_discount_status(self, chat_id: int) -> Dict[str, Any]:
         """Handle /discount_status command"""
         discount = self.db.get_active_discount()
         if not discount:
-            return self._send_error(chat_id, 'no_active_discount_info', 'no_discount', chat_id=chat_id)
+            return self._send_error(chat_id, 'no_active_discount_info', 'no_discount', user_id=chat_id)
         
         from utils.timezone import to_cet_string
         if discount.end_time:
-            self._send_message(chat_id, self._t('active_discount_status',
+            self._send_message(chat_id, self._t('active_discount_status', chat_id,
                 percentage=discount.discount_percentage,
                 start_time=to_cet_string(discount.start_time),
                 end_time=to_cet_string(discount.end_time)
             ))
         else:
-            self._send_message(chat_id, self._t('active_discount_unlimited',
+            self._send_message(chat_id, self._t('active_discount_unlimited', chat_id,
                 percentage=discount.discount_percentage,
                 start_time=to_cet_string(discount.start_time)
             ))

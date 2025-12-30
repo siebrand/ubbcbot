@@ -81,16 +81,16 @@ class SupplierCommands(BaseHandler):
         # Find supplier by name
         supplier = self.db.get_supplier_by_name(supplier_name)
         if not supplier:
-            return self._send_error(chat_id, 'supplier_not_found', 'supplier_not_found', chat_id=chat_id, name=supplier_name)
+            return self._send_error(chat_id, 'supplier_not_found', 'supplier_not_found', user_id=chat_id, name=supplier_name)
         
         if supplier.status == "retired":
-            return self._send_error(chat_id, 'supplier_already_retired', 'already_retired', chat_id=chat_id, name=supplier_name)
+            return self._send_error(chat_id, 'supplier_already_retired', 'already_retired', user_id=chat_id, name=supplier_name)
         
         # Update supplier status to retired
         if self.db.update_supplier(supplier.supplier_id, {'status': 'retired'}):
-            return self._send_success(chat_id, 'supplier_retired', chat_id=chat_id, name=supplier_name)
+            return self._send_success(chat_id, 'supplier_retired', user_id=chat_id, name=supplier_name)
         else:
-            return self._send_error(chat_id, 'failed_retire_supplier', 'error', chat_id=chat_id)
+            return self._send_error(chat_id, 'failed_retire_supplier', 'error', user_id=chat_id)
 
     def handle_list_suppliers(self, chat_id: int, page: int = 1, status_filter: str = "active") -> Dict[str, Any]:
         """Handle /list_suppliers command with pagination and status filter"""
