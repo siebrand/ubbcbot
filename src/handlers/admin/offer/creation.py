@@ -154,6 +154,8 @@ class OfferCreationHandler(OfferBaseHandler):
                     
                     if not box_update_result:
                         logger.error(f"Failed to update box {created_box.box_id} for offer {offer_id}")
+                        self._send_message(chat_id, self._t('failed_publish_offer'))
+                        return {'status': 'error'}
                     
                     if box_size == 1:
                         logger.info(f"DEBUG: Box size 1 - Updated box status to {updates.get('status', 'OPEN')}, result: {box_update_result}")
