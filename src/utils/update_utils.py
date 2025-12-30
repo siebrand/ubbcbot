@@ -34,7 +34,7 @@ class UpdateUtils:
                 return {'status': 'validation_failed', 'message': validation_result['message']}
         
         # Get old value for response
-        old_value = getattr(entity, field, None) or self._t('not_set')
+        old_value = getattr(entity, field, None) or self._t('not_set', None)
         
         # Update entity
         if update_func(entity_id, {field: new_value}):
@@ -50,24 +50,24 @@ class UpdateUtils:
         """Create common field validators"""
         def validate_name(value: str, entity) -> Dict[str, Any]:
             if len(value) > 100:
-                return {'valid': False, 'message': self._t('name_too_long')}
+                return {'valid': False, 'message': self._t('name_too_long', None)}
             if '<' in value or '>' in value:
-                return {'valid': False, 'message': self._t('invalid_chars')}
+                return {'valid': False, 'message': self._t('invalid_chars', None)}
             return {'valid': True}
         
         def validate_email(value: str, entity) -> Dict[str, Any]:
             if '@' not in value or '.' not in value:
-                return {'valid': False, 'message': self._t('invalid_email')}
+                return {'valid': False, 'message': self._t('invalid_email', None)}
             return {'valid': True}
         
         def validate_price(value: str, entity) -> Dict[str, Any]:
             try:
                 price = float(value)
                 if price <= 0:
-                    return {'valid': False, 'message': self._t('price_must_positive')}
+                    return {'valid': False, 'message': self._t('price_must_positive', None)}
                 return {'valid': True}
             except ValueError:
-                return {'valid': False, 'message': self._t('invalid_price_format')}
+                return {'valid': False, 'message': self._t('invalid_price_format', None)}
         
         return {
             'name': validate_name,
@@ -79,7 +79,7 @@ class UpdateUtils:
         """Handle supplier field updates with unified pattern"""
         if len(args) < 2:
             usage_key = f'usage_update_supplier_{field}'
-            self._send_message(chat_id, self._t(usage_key))
+            self._send_message(chat_id, self._t(usage_key, chat_id))
             return {'status': 'invalid_args'}
         
         supplier_id = args[0]
@@ -90,7 +90,7 @@ class UpdateUtils:
         
         def success_callback(entity, old_value, new_value):
             success_key = f'supplier_{field}_updated'
-            self._send_message(chat_id, self._t(success_key, old_value=old_value, new_value=new_value))
+            self._send_message(chat_id, self._t(success_key, chat_id, old_name=old_value, new_name=new_value))
             # Show edit interface
             updated_supplier = self.db.get_supplier(supplier_id)
             if updated_supplier:
@@ -100,7 +100,7 @@ class UpdateUtils:
         
         if result['status'] != 'success':
             error_key = f'failed_update_supplier_{field}'
-            self._send_message(chat_id, self._t(error_key))
+            self._send_message(chat_id, self._t(error_key, chat_id))
         
         return result
     
@@ -108,7 +108,7 @@ class UpdateUtils:
         """Handle customer field updates with unified pattern"""
         if len(args) < 2:
             usage_key = f'usage_update_user_{field}'
-            self._send_message(chat_id, self._t(usage_key))
+            self._send_message(chat_id, self._t(usage_key, chat_id))
             return {'status': 'invalid_args'}
         
         customer_id = args[0]
@@ -119,7 +119,7 @@ class UpdateUtils:
         
         def success_callback(entity, old_value, new_value):
             success_key = f'{field}_updated'
-            self._send_message(chat_id, self._t(success_key, old_name=old_value, new_name=new_value))
+            self._send_message(chat_id, self._t(success_key, chat_id, old_name=old_value, new_name=new_value))
             # Return to edit interface
             updated_customer = self.db.get_customer(customer_id)
             if updated_customer:
@@ -129,7 +129,7 @@ class UpdateUtils:
         
         if result['status'] != 'success':
             error_key = f'failed_update_{field}'
-            self._send_message(chat_id, self._t(error_key))
+            self._send_message(chat_id, self._t(error_key, chat_id))
         
         return result
     
