@@ -261,12 +261,12 @@ class OfferManagementHandler(OfferBaseHandler):
     def _show_wholesale_offers_selection(self, chat_id: int) -> Dict[str, Any]:
         """Show offers with pending orders for wholesale ordering"""
         # Get all active and sold out offers
-        all_offers = self.db.get_offers_by_status(OfferStatus.ACTIVE.value)
-        all_offers.extend(self.db.get_offers_by_status(OfferStatus.SOLD_OUT.value))
+        all_offers = self.db.list_offers()
+        active_offers = [o for o in all_offers if o.status in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value]]
         
         # Filter offers that have pending orders
         offers_with_orders = []
-        for offer in all_offers:
+        for offer in active_offers:
             orders = self.db.get_orders_by_offer(offer.offer_id)
             pending_orders = [o for o in orders if o.status == 'pending']
             if pending_orders:
@@ -282,7 +282,7 @@ class OfferManagementHandler(OfferBaseHandler):
         keyboard_buttons = []
         
         for offer, order_count, total_units in offers_with_orders:
-            supplier = self.db.get_supplier(offer.supplier_id)
+            supplier = self.db.get_supplier_by_name(offer.supplier_name)
             supplier_name = supplier.name if supplier else "Unknown"
             
             box_size = int(offer.wholesale_box_size)
