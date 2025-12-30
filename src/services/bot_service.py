@@ -325,5 +325,10 @@ class BotService:
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
                 base_handler._send_message(chat_id, base_handler._t('invalid_format'))
                 return {'status': 'invalid_format'}
+        elif edit_type == 'cancel_order_reason':
+            # Handle cancellation reason input
+            order_id = entity_id
+            reason = text.strip() if text.strip() else "No reason provided"
+            return self.admin_order_commands.handle_confirm_cancel_with_reason(chat_id, order_id, reason)
         
         return {'status': 'unknown_edit_type'}

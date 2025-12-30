@@ -133,7 +133,7 @@
   "usage_confirm_order_wholesale": "Gebruik: /confirm_order_wholesale <aanbieding_id> <bestelde_dozen>",
   "boxes_must_positive": "❌ Bestelde dozen moet positief zijn",
   "order_updated_limited": "⚠️ Je bestelling is bijgewerkt vanwege beperkte beschikbaarheid:\n\n🍺 {name}\nOrigineel: {old_qty} stuks\nBijgewerkt: {new_qty} stuks\nNieuw totaal: €{total:.2f}\n\nJe bestelling is bevestigd en wordt geleverd.",
-  "order_cancelled_insufficient": "❌ Je bestelling is geannuleerd vanwege onvoldoende beschikbaarheid:\n\n🍺 {name}\nAantal: {quantity} stuks\nBedrag: €{total:.2f}\n\nOnze excuses voor het ongemak.",
+  "order_cancelled_insufficient": "❌ Je bestelling is geannuleerd vanwege onvoldoende beschikbaarheid:\n\n🍺 {name}\nAantal: {quantity} stuks\nBedrag: €{total:.2f}\nReden: Onvoldoende voorraad beschikbaar\n\nOnze excuses voor het ongemak.",
   "offer_fulfilled_summary": "✅ Aanbieding {offer_id} afgehandeld met {boxes} dozen:\n\n✅ Afgehandeld: {fulfilled_orders} bestellingen ({fulfilled_units} stuks)",
   "order_reduced": "⚠️ Verminderd: {customer}'s bestelling van {old_qty} naar {new_qty} stuks",
   "orders_cancelled": "❌ Geannuleerd: {cancelled_orders} bestellingen ({cancelled_units} stuks) - {details}",
@@ -146,7 +146,7 @@
   "offer_cancelled_no_orders": "✅ Aanbieding {offer_id} geannuleerd (geen actieve bestellingen)",
   "usage_confirm_cancel_offer": "Gebruik: /confirm_cancel_offer <aanbieding_id>",
   "offer_cancelled_summary": "✅ Aanbieding {offer_id} geannuleerd:\n\n❌ {cancelled_count} bestellingen geannuleerd\n🗑️ {deleted_boxes} dozen verwijderd\n📧 {notified_count} klanten geïnformeerd",
-  "order_cancelled_offer_cancelled": "❌ Je bestelling is geannuleerd vanwege annulering van de aanbieding:\n\n🍺 {name}\nAantal: {quantity} stuks\n\nOnze excuses voor het ongemak.",
+  "order_cancelled_offer_cancelled": "❌ Je bestelling is geannuleerd vanwege annulering van de aanbieding:\n\n🍺 {name}\nAantal: {quantity} stuks\nReden: Aanbieding werd geannuleerd\n\nOnze excuses voor het ongemak.",
   "usage_add_box": "Gebruik: /add_box [aanbieding_id]",
   "box_added_offer_active": "✅ Nieuwe colli toegevoegd voor aanbieding {offer_id} (aanbieding status bijgewerkt naar actief)",
   "box_added": "✅ Nieuwe colli toegevoegd voor aanbieding {offer_id}",
@@ -257,7 +257,7 @@
   "duplicate_order_warning": "⚠️ Je hebt al bestellingen voor {offer_name}:",
   "confirm_additional_order": "\nWeet je zeker dat je {quantity}x meer wilt bestellen?",
   "admin_order_placed": "🍺 Er is een bestelling voor je geplaatst door de beheerder\n\nProduct: {product}\nAantal: {quantity}\nTotaal: €{total:.2f}\nStatus: {status}",
-  "order_cancelled_by_admin": "❌ Je bestelling is geannuleerd door de beheerder\nProduct: {product}\nAantal: {quantity}",
+  "order_cancelled_by_admin": "❌ Je bestelling is geannuleerd door de beheerder\nProduct: {product}\nAantal: {quantity}\nReden: {reason}",
   "order_cancelled_success": "✅ Bestelling geannuleerd\nBestelling ID: {order_id}\nKlant geïnformeerd\nColli aantal bijgewerkt: {new_quantity}/{max_capacity}",
   "user_orders_title": "📋 Bestellingen voor {name}:",
   "active_orders_label": "🟢 Actieve Bestellingen:",
@@ -433,5 +433,7 @@
   "no_orders_missing_update_date": "✅ Alle bestellingen hebben update_date - geen audit nodig",
   "orders_audit_completed": "✅ Audit voltooid: {count} bestellingen bijgewerkt met huidige tijdstempel",
   "failed_audit_orders": "❌ Kon bestellingen niet auditen",
-  "audit_orders_btn": "🔍 Bestellingen Auditen"
+  "audit_orders_btn": "🔍 Bestellingen Auditen",
+  "enter_cancellation_reason": "📝 Voer reden in voor het annuleren van deze bestelling:",
+  "order_cancelled_delivery_unavailable": "❌ Je bestelling is geannuleerd vanwege leveringsproblemen:\n\n🍺 {name}\nAantal: {quantity} stuks\nBedrag: €{total:.2f}\nReden: Product niet beschikbaar bij leverancier\n\nOnze excuses voor het ongemak."
 }

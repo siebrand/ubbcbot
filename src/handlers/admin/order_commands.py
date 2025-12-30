@@ -69,7 +69,7 @@ class AdminOrderCommands(BaseHandler):
         # Add inline keyboard for confirmation
         keyboard = {
             "inline_keyboard": [[
-                {"text": self._t('confirm_cancel', user_id=None), "callback_data": f"confirm_cancel_order_{order_id}"},
+                {"text": self._t('confirm_cancel', user_id=None), "callback_data": f"request_cancel_reason_{order_id}"},
                 {"text": self._t('keep_order', user_id=None), "callback_data": "cancel_action"}
             ]]
         }
@@ -141,7 +141,20 @@ class AdminOrderCommands(BaseHandler):
             self._send_message(chat_id, self._t('box_not_found'))
             return {'status': 'box_not_found'}
 
-        return self._execute_cancel(order, box, chat_id)
+    def handle_confirm_cancel_with_reason(self, chat_id: int, order_id: str, reason: str) -> Dict[str, Any]:
+        """Handle order cancellation with reason"""
+        order = self.db.get_order(order_id)
+        
+        if not order:
+            self._send_message(chat_id, self._t('order_not_found'))
+            return {'status': 'order_not_found'}
+
+        box = self.db.get_box(order.box_id)
+        if not box:
+            self._send_message(chat_id, self._t('box_not_found'))
+            return {'status': 'box_not_found'}
+
+        return self._execute_cancel(order, box, chat_id, reason)
 
     def handle_order_for(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /order_for command - admin places order for another user"""
@@ -169,7 +182,7 @@ class AdminOrderCommands(BaseHandler):
         
         return self._show_offers_for_order_for(chat_id, customer)
 
-    def _execute_cancel(self, order, box, chat_id: int) -> Dict[str, Any]:
+    def _execute_cancel(self, order, box, chat_id: int, reason: str = "Manual cancellation") -> Dict[str, Any]:
         """Execute order cancellation"""
         from datetime import datetime, UTC
         
@@ -199,11 +212,12 @@ class AdminOrderCommands(BaseHandler):
         customer = self.db.get_customer(order.customer_id)
         offer = self.db.get_offer(order.offer_id)
         
-        # Notify customer
+        # Notify customer with reason
         if customer:
             customer_message = self._t('order_cancelled_by_admin', customer.telegram_user_id,
                                      product=offer.name if offer else 'Unknown',
-                                     quantity=order.quantity)
+                                     quantity=order.quantity,
+                                     reason=reason)
             self._send_message(customer.telegram_user_id, customer_message)
 
         # Confirm to admin

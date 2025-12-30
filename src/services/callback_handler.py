@@ -155,6 +155,9 @@ class CallbackHandler:
                     offer_id = parts[2]
                     boxes = parts[3]
                     return self.handlers['offer'].handle_confirm_fulfill(chat_id, [offer_id, boxes])
+            elif data.startswith('request_cancel_reason_'):
+                order_id = data.split('_')[3]
+                return self._request_cancellation_reason(chat_id, order_id)
             elif data.startswith('confirm_cancel_order_'):
                 order_id = data.split('_')[3]
                 return self.handlers['admin_order'].handle_confirm_cancel(chat_id, [order_id])
@@ -575,6 +578,24 @@ class CallbackHandler:
         from handlers.base_handler import BaseHandler
         base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         return base_handler._send_message(chat_id, text, parse_mode, reply_markup, force_group)
+    
+    def _request_cancellation_reason(self, chat_id: int, order_id: str) -> Dict[str, Any]:
+        """Request cancellation reason from admin"""
+        from models.entities import EditContext
+        
+        # Store edit context for cancellation reason
+        context = EditContext(
+            chat_id=chat_id,
+            edit_type='cancel_order_reason',
+            entity_id=order_id
+        )
+        self.db.create_edit_context(context)
+        
+        from handlers.base_handler import BaseHandler
+        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        base_handler._send_message(chat_id, base_handler._t('enter_cancellation_reason'), 
+                                  reply_markup={"force_reply": True, "input_field_placeholder": "Enter reason"})
+        return {'status': 'awaiting_reason_input'}
     
     def _is_admin(self, user_id: int) -> bool:
         """Check if user is admin"""
