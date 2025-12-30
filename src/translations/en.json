@@ -133,7 +133,7 @@
   "usage_confirm_order_wholesale": "Usage: /confirm_order_wholesale <offer_id> <boxes_ordered>",
   "boxes_must_positive": "❌ Boxes ordered must be positive",
   "order_updated_limited": "⚠️ Your order has been updated due to limited availability:\n\n🍺 {name}\nOriginal: {old_qty} units\nUpdated: {new_qty} units\nNew total: €{total:.2f}\n\nYour order is confirmed and will be delivered.",
-  "order_cancelled_insufficient": "❌ Your order has been cancelled due to insufficient availability:\n\n🍺 {name}\nQuantity: {quantity} units\nAmount: €{total:.2f}\nReason: Insufficient stock available\n\nWe apologize for the inconvenience.",
+  "order_cancelled_insufficient": "❌ Your order has been cancelled:\n\n🍺 {name}\nQuantity: {quantity} units\nAmount: €{total:.2f}\nReason: Insufficient stock available",
   "offer_fulfilled_summary": "✅ Offer {offer_id} fulfilled with {boxes} boxes:\n\n✅ Fulfilled: {fulfilled_orders} orders ({fulfilled_units} units)",
   "order_reduced": "⚠️ Reduced: {customer}'s order from {old_qty} to {new_qty} units",
   "orders_cancelled": "❌ Cancelled: {cancelled_orders} orders ({cancelled_units} units) - {details}",
@@ -147,7 +147,7 @@
   "offer_cancelled_no_orders": "✅ Offer {offer_id} cancelled (no active orders)",
   "usage_confirm_cancel_offer": "Usage: /confirm_cancel_offer <offer_id>",
   "offer_cancelled_summary": "✅ Offer {offer_id} cancelled:\n\n❌ Cancelled {cancelled_count} orders\n🗑️ Deleted {deleted_boxes} boxes\n📧 Notified {notified_count} customers",
-  "order_cancelled_offer_cancelled": "❌ Your order has been cancelled due to offer cancellation:\n\n🍺 {name}\nQuantity: {quantity} units\nReason: Offer was cancelled\n\nWe apologize for the inconvenience.",
+  "order_cancelled_offer_cancelled": "❌ Your order has been cancelled:\n\n🍺 {name}\nQuantity: {quantity} units\nAmount: €{total:.2f}\nReason: Offer was cancelled",
   "usage_add_box": "Usage: /add_box [offer_id]",
   "box_added_offer_active": "✅ Added new box for offer {offer_id} (offer status updated to active)",
   "box_added": "✅ Added new box for offer {offer_id}",
@@ -258,7 +258,7 @@
   "duplicate_order_warning": "⚠️ You already have orders for {offer_name}:",
   "confirm_additional_order": "\nAre you sure you want to order {quantity}x more?",
   "admin_order_placed": "🍺 An order has been placed for you by admin\n\nProduct: {product}\nQuantity: {quantity}\nTotal: €{total:.2f}\nStatus: {status}",
-  "order_cancelled_by_admin": "❌ Your order has been cancelled by admin\nProduct: {product}\nQuantity: {quantity}\nReason: {reason}",
+  "order_cancelled_by_admin": "❌ Your order has been cancelled:\n\n🍺 {name}\nQuantity: {quantity} units\nAmount: €{total:.2f}\nReason: {reason}",
   "order_cancelled_success": "✅ Order cancelled\nOrder ID: {order_id}\nCustomer notified\nBox quantity updated: {new_quantity}/{max_capacity}",
   "user_orders_title": "📋 Orders for {name}:",
   "active_orders_label": "🟢 Active Orders:",
@@ -435,5 +435,5 @@
   "failed_audit_orders": "❌ Failed to audit orders",
   "audit_orders_btn": "🔍 Audit Orders",
   "enter_cancellation_reason": "📝 Enter reason for cancelling this order:",
-  "order_cancelled_delivery_unavailable": "❌ Your order has been cancelled due to delivery issues:\n\n🍺 {name}\nQuantity: {quantity} units\nAmount: €{total:.2f}\nReason: Product unavailable from supplier\n\nWe apologize for the inconvenience."
+  "order_cancelled_delivery_unavailable": "❌ Your order has been cancelled:\n\n🍺 {name}\nQuantity: {quantity} units\nAmount: €{total:.2f}\nReason: Product unavailable from supplier"
 }
