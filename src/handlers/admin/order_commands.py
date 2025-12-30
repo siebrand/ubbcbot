@@ -913,12 +913,11 @@ class AdminOrderCommands(BaseHandler):
                 self._send_message(chat_id, self._t('no_orders_missing_update_date', chat_id))
                 return {'status': 'no_orders_to_audit'}
             
-            # Update orders with current timestamp
+            # Update orders - update_date will be set automatically by update_order
             updated_count = 0
-            current_time = datetime.now(UTC).isoformat()
             
             for order in orders_without_update_date:
-                if self.db.update_order(order.order_id, {'update_date': current_time}):
+                if self.db.update_order(order.order_id, {}):
                     updated_count += 1
             
             if updated_count > 0:

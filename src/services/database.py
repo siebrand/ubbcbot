@@ -444,6 +444,12 @@ class DynamoDBService:
 
     def update_order(self, order_id: str, updates: Dict[str, Any]) -> bool:
         try:
+            from datetime import datetime, UTC
+            
+            # Always add update_date to any order update
+            updates = updates.copy()  # Don't modify the original dict
+            updates['update_date'] = datetime.now(UTC).isoformat()
+            
             update_expression = "SET "
             expression_values = {}
             expression_names = {}
