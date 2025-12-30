@@ -278,7 +278,7 @@ class OfferManagementHandler(OfferBaseHandler):
             return {'status': 'no_offers'}
         
         # Create message with offer selection
-        message = "📦 Selecteer aanbieding voor groothandel bestelling:\n\n"
+        message = self._t('select_offer_wholesale') + "\n\n"
         keyboard_buttons = []
         
         for offer, order_count, total_units in offers_with_orders:
@@ -288,12 +288,17 @@ class OfferManagementHandler(OfferBaseHandler):
             box_size = int(offer.wholesale_box_size)
             boxes_needed = (total_units + box_size - 1) // box_size
             
-            message += f"🍺 {offer.name} (ID: {offer.offer_id})\n"
-            message += f"   📦 {order_count} bestellingen, {total_units} stuks → {boxes_needed} dozen\n"
-            message += f"   🏢 {supplier_name}\n\n"
+            message += self._t('wholesale_offer_summary',
+                name=offer.name,
+                offer_id=offer.offer_id,
+                order_count=order_count,
+                total_units=total_units,
+                boxes_needed=boxes_needed,
+                supplier=supplier_name
+            ) + "\n\n"
             
             keyboard_buttons.append([{
-                "text": f"📦 {offer.name} ({boxes_needed} dozen)",
+                "text": self._t('select_wholesale_offer', name=offer.name, boxes=boxes_needed),
                 "callback_data": f"wholesale_select_{offer.offer_id}"
             }])
         
