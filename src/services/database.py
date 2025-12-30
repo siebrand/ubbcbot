@@ -393,6 +393,14 @@ class DynamoDBService:
             print(f"Error getting box: {e}")
             return None
 
+    def delete_order(self, order_id: str) -> bool:
+        try:
+            self.orders_table.delete_item(Key={'order_id': order_id})
+            return True
+        except Exception as e:
+            print(f"Error deleting order: {e}")
+            return False
+
     def update_order(self, order_id: str, updates: Dict[str, Any]) -> bool:
         try:
             update_expression = "SET "

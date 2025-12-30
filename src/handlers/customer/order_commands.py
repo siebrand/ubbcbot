@@ -130,25 +130,19 @@ class CustomerOrderCommands(BaseHandler):
             if box_size == 1:
                 logger.info(f"DEBUG: Processing order for box size 1 offer {offer_id}, quantity {quantity}, customer {customer.customer_id}")
             
-            # Check total available capacity and create new box if needed
+            # ATOMIC CAPACITY CHECK FIRST: Get current state and validate
             boxes = self.db.get_boxes_by_offer(offer_id)
-            total_available = 0
-            for box in boxes:
-                if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
-                    # Ensure box capacity values are integers
-                    max_cap = int(box.max_capacity) if hasattr(box.max_capacity, '__int__') else box.max_capacity
-                    current_qty = int(box.current_quantity) if hasattr(box.current_quantity, '__int__') else box.current_quantity
-                    total_available += max_cap - current_qty
+            current_total_ordered = sum(box.current_quantity for box in boxes)
+            current_total_capacity = sum(box.max_capacity for box in boxes)
             
-            if box_size == 1:
-                logger.info(f"DEBUG: Box size 1 - Found {len(boxes)} boxes, total_available: {total_available}")
-            
-            # Create new boxes if insufficient capacity and offer allows it
-            if total_available < quantity:
+            # Check if order would exceed current capacity
+            if current_total_ordered + quantity > current_total_capacity:
+                # Check if we can create new boxes (no ordered boxes exist)
                 has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes) if boxes else False
+                
                 if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes:
-                    # Calculate how many new boxes needed
-                    needed_capacity = quantity - total_available
+                    # Safe to create new boxes - calculate needed capacity
+                    needed_capacity = (current_total_ordered + quantity) - current_total_capacity
                     boxes_needed = (needed_capacity + box_size - 1) // box_size  # Ceiling division
                     
                     if box_size == 1:
@@ -164,22 +158,16 @@ class CustomerOrderCommands(BaseHandler):
                         created_box = self.db.create_box(new_box)
                         if box_size == 1:
                             logger.info(f"DEBUG: Box size 1 - Created box {i+1}/{boxes_needed}, box_id: {created_box.box_id if created_box else 'FAILED'}")
-                        total_available += int(box_size)
                 else:
-                    if total_available > 0:
+                    # Cannot create boxes or insufficient capacity - reject order
+                    available_capacity = current_total_capacity - current_total_ordered
+                    if available_capacity > 0:
                         self._send_message(chat_id, self._t('insufficient_quantity', user_id, 
                                                           requested=quantity, 
-                                                          available=total_available))
+                                                          available=available_capacity))
                     else:
                         self._send_message(chat_id, self._t('sold_out', user_id))
                     return {'status': 'insufficient_capacity'}
-            
-            # Final capacity check
-            if quantity > total_available:
-                self._send_message(chat_id, self._t('insufficient_quantity', user_id, 
-                                                  requested=quantity, 
-                                                  available=total_available))
-                return {'status': 'insufficient_capacity'}
 
             # Create single order
             order = Order(
