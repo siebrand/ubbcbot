@@ -25,6 +25,7 @@ class CallbackHandler:
             data = callback_query['data']
             
             logger.info(f"Processing callback: {data}")
+            logger.info(f"Callback data starts with confirm_order_wholesale_: {data.startswith('confirm_order_wholesale_')}")
             
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
@@ -120,13 +121,22 @@ class CallbackHandler:
                 offer_id = data.split('_')[3]
                 return self.handlers['offer'].handle_confirm_cancel_offer(chat_id, [offer_id])
             elif data.startswith('confirm_order_wholesale_'):
+                logger.info(f"Matched confirm_order_wholesale_ pattern")
                 parts = data.split('_')
                 logger.info(f"Wholesale callback parts: {parts}")
+                logger.info(f"Parts length: {len(parts)}")
                 if len(parts) >= 5:
                     offer_id = parts[3]
                     boxes = parts[4]
                     logger.info(f"Calling handle_confirm_order_wholesale with offer_id={offer_id}, boxes={boxes}")
-                    return self.handlers['offer'].handle_confirm_order_wholesale(chat_id, [offer_id, boxes])
+                    try:
+                        return self.handlers['offer'].handle_confirm_order_wholesale(chat_id, [offer_id, boxes])
+                    except Exception as e:
+                        logger.error(f"Exception in handle_confirm_order_wholesale: {e}")
+                        from handlers.base_handler import BaseHandler
+                        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                        base_handler._send_message(chat_id, base_handler._t('invalid_format'))
+                        return {'status': 'exception'}
                 else:
                     logger.error(f"Invalid wholesale callback format: {data}, expected at least 5 parts, got {len(parts)}")
                     from handlers.base_handler import BaseHandler
@@ -254,6 +264,7 @@ class CallbackHandler:
             
         except Exception as e:
             logger.error(f"Error handling callback query: {e}")
+            logger.error(f"Callback data was: {callback_query.get('data', 'NO_DATA')}")
             return {'status': 'error', 'error': str(e)}
     
     def _handle_edit_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
