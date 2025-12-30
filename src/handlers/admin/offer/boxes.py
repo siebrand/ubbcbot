@@ -270,6 +270,20 @@ class BoxManagementHandler(OfferBaseHandler):
                     [{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}]
                 ]
             }
+        elif not ordered_boxes:
+            # No ordered boxes exist - create new boxes instead of canceling orders
+            box_size = int(float(offer.wholesale_box_size))
+            boxes_needed = (excess_units + box_size - 1) // box_size
+            
+            message = self._t('audit_propose_create_boxes', chat_id,
+                offer_id=offer.offer_id, excess=excess_units, boxes=boxes_needed, box_size=box_size)
+            
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": self._t('confirm_create_boxes', chat_id), "callback_data": f"audit_create_boxes_{offer.offer_id}_{excess_units}"}],
+                    [{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}]
+                ]
+            }
         else:
             # No capacity available - need to cancel orders
             sorted_orders = sorted(active_orders, key=lambda x: x.created_at, reverse=True)
