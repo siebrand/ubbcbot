@@ -11,8 +11,8 @@ class OfferManagementHandler(OfferBaseHandler):
     def handle_order_wholesale(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /order_wholesale command"""
         if not args:
-            self._send_message(chat_id, self._t('usage_order_wholesale'))
-            return {'status': 'invalid_args'}
+            # Show available offers with pending orders
+            return self._show_wholesale_offers_selection(chat_id)
 
         offer, error = self._validate_and_get_offer(args, chat_id)
         if error:
@@ -256,6 +256,51 @@ class OfferManagementHandler(OfferBaseHandler):
             summary += "\n" + self._t('cleaned_empty_boxes', count=deleted_boxes)
         
         self._send_message(chat_id, summary)
+        return {'status': 'success'}
+    
+    def _show_wholesale_offers_selection(self, chat_id: int) -> Dict[str, Any]:
+        """Show offers with pending orders for wholesale ordering"""
+        # Get all active and sold out offers
+        all_offers = self.db.get_offers_by_status(OfferStatus.ACTIVE.value)
+        all_offers.extend(self.db.get_offers_by_status(OfferStatus.SOLD_OUT.value))
+        
+        # Filter offers that have pending orders
+        offers_with_orders = []
+        for offer in all_offers:
+            orders = self.db.get_orders_by_offer(offer.offer_id)
+            pending_orders = [o for o in orders if o.status == 'pending']
+            if pending_orders:
+                total_units = sum(order.quantity for order in pending_orders)
+                offers_with_orders.append((offer, len(pending_orders), total_units))
+        
+        if not offers_with_orders:
+            self._send_message(chat_id, self._t('no_pending_orders'))
+            return {'status': 'no_offers'}
+        
+        # Create message with offer selection
+        message = "📦 Selecteer aanbieding voor groothandel bestelling:\n\n"
+        keyboard_buttons = []
+        
+        for offer, order_count, total_units in offers_with_orders:
+            supplier = self.db.get_supplier(offer.supplier_id)
+            supplier_name = supplier.name if supplier else "Unknown"
+            
+            box_size = int(offer.wholesale_box_size)
+            boxes_needed = (total_units + box_size - 1) // box_size
+            
+            message += f"🍺 {offer.name} (ID: {offer.offer_id})\n"
+            message += f"   📦 {order_count} bestellingen, {total_units} stuks → {boxes_needed} dozen\n"
+            message += f"   🏢 {supplier_name}\n\n"
+            
+            keyboard_buttons.append([{
+                "text": f"📦 {offer.name} ({boxes_needed} dozen)",
+                "callback_data": f"wholesale_select_{offer.offer_id}"
+            }])
+        
+        keyboard_buttons.append([{"text": self._t('cancel'), "callback_data": "cancel_action"}])
+        keyboard = {"inline_keyboard": keyboard_buttons}
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
     
     def handle_cancel_offer(self, chat_id: int, args: list) -> Dict[str, Any]:

@@ -104,6 +104,9 @@ class CallbackHandler:
                     offer_id = parts[1]
                     quantity = parts[2]
                     return self.handlers['customer_order'].handle_order(chat_id, user_id, [offer_id, quantity])
+            elif data.startswith('wholesale_select_'):
+                offer_id = data.split('_')[2]
+                return self.handlers['offer'].handle_order_wholesale(chat_id, [offer_id])
             elif data.startswith('confirm_order_wholesale_'):
                 logger.info(f"Matched confirm_order_wholesale_ pattern")
                 parts = data.split('_')
