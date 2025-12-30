@@ -425,5 +425,9 @@
   "audit_filled_and_created": "✅ Filled {filled} units in existing boxes and created {boxes} new boxes for {remaining} remaining units (offer {offer_id})",
   "no_cancelled_orders": "You have no cancelled orders to delete",
   "cancelled_orders_deleted": "✅ {count} cancelled orders have been removed from the register",
-  "failed_delete_cancelled_orders": "❌ Failed to delete cancelled orders"
+  "failed_delete_cancelled_orders": "❌ Failed to delete cancelled orders",
+  "no_old_cancelled_orders": "No cancelled orders older than 7 days found",
+  "old_cancelled_orders_deleted": "✅ {count} old cancelled orders (7+ days) have been deleted from the system",
+  "failed_delete_old_cancelled_orders": "❌ Failed to delete old cancelled orders",
+  "delete_cancelled_btn": "🗑️ Delete Old Cancelled"
 }

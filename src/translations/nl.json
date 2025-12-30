@@ -425,5 +425,9 @@
   "audit_filled_and_created": "✅ {filled} eenheden gevuld in bestaande colli's en {boxes} nieuwe colli's aangemaakt voor {remaining} resterende eenheden (aanbieding {offer_id})",
   "no_cancelled_orders": "Je hebt geen geannuleerde bestellingen om te verwijderen",
   "cancelled_orders_deleted": "✅ {count} geannuleerde bestellingen zijn uit het register verwijderd",
-  "failed_delete_cancelled_orders": "❌ Kon geannuleerde bestellingen niet verwijderen"
+  "failed_delete_cancelled_orders": "❌ Kon geannuleerde bestellingen niet verwijderen",
+  "no_old_cancelled_orders": "Geen geannuleerde bestellingen ouder dan 7 dagen gevonden",
+  "old_cancelled_orders_deleted": "✅ {count} oude geannuleerde bestellingen (7+ dagen) zijn uit het systeem verwijderd",
+  "failed_delete_old_cancelled_orders": "❌ Kon oude geannuleerde bestellingen niet verwijderen",
+  "delete_cancelled_btn": "🗑️ Oude Geannuleerde Verwijderen"
 }

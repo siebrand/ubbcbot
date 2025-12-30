@@ -201,6 +201,8 @@ class CommandRouter:
                 return self.handlers['admin_order'].handle_mark_paid(admin_target_chat, parts[1:])
             elif command == '/failed_notifications':
                 return self.handlers['admin_order'].handle_failed_notifications(admin_target_chat, parts[1:])
+            elif command == '/delete_old_cancelled':
+                return self.handlers['admin_order'].handle_delete_cancelled(admin_target_chat)
             elif command == '/admin':
                 return self.handlers['admin_commands'].handle_admin(admin_target_chat, user_id)
 

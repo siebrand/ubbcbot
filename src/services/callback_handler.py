@@ -516,6 +516,7 @@ class CallbackHandler:
             'cmd_cancel_discount': lambda: self.handlers['discount'].handle_cancel_discount(chat_id),
             'cmd_setup_test_data': lambda: self.handlers['test'].handle_setup_test_data(chat_id),
             'cmd_failed_notifications': lambda: self.handlers['admin_order'].handle_failed_notifications(chat_id, []),
+            'cmd_delete_old_cancelled': lambda: self.handlers['admin_order'].handle_delete_cancelled(chat_id),
             'add_supplier_start': lambda: self._start_add_supplier(chat_id)
         }
         

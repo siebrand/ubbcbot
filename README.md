@@ -172,6 +172,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/send_overviews` - Send delivery overviews to customers
 - `/mark_paid` - Mark customers as paid
 - `/failed_notifications` - View orders with failed delivery notifications
+- `/delete_old_cancelled` - Delete cancelled orders older than 7 days
 - `/cancel` - Cancel pending operation (e.g., text input prompts)
 
 ### Customer Commands
