@@ -53,7 +53,7 @@ class BoxManagementHandler(OfferBaseHandler):
         status_filter = 'active'  # default
         
         if args:
-            if args[0].lower() in ['active', 'ordered', 'completed', 'delivered', 'all']:
+            if args[0].lower() in ['active', 'ordered', 'full', 'delivered', 'all']:
                 status_filter = args[0].lower()
                 if len(args) > 1:
                     try:
@@ -74,11 +74,11 @@ class BoxManagementHandler(OfferBaseHandler):
             boxes = self.db.get_boxes_by_offer(offer.offer_id)
             for box in boxes:
                 # Filter boxes based on status
-                if status_filter == 'active' and box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.ORDERED.value]:
+                if status_filter == 'active' and box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
                     offer_boxes.append((offer, box))
                 elif status_filter == 'ordered' and box.status == BoxStatus.ORDERED.value:
                     offer_boxes.append((offer, box))
-                elif status_filter == 'completed' and box.status == BoxStatus.FULL.value:
+                elif status_filter == 'full' and box.status == BoxStatus.FULL.value:
                     offer_boxes.append((offer, box))
                 elif status_filter == 'delivered' and box.status == BoxStatus.DELIVERED.value:
                     offer_boxes.append((offer, box))
