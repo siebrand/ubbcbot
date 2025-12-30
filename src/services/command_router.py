@@ -96,6 +96,8 @@ class CommandRouter:
             return self.handlers['info'].handle_offer_details(target_chat, user_id, parts[1:])
         elif command == '/confirm_order':
             return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, parts[1:])
+        elif command == '/delete_cancelled':
+            return self.handlers['customer_order'].handle_delete_cancelled(target_chat, user_id)
         elif command == '/changelog':
             return self.handlers['changelog'].handle_changelog(target_chat, user_id, 1)
         elif command == '/cancel':

@@ -355,6 +355,15 @@ class DynamoDBService:
             print(f"Error getting orders by customer and offer: {e}")
             return []
 
+    def get_orders_by_customer_and_status(self, customer_id: str, status: str) -> List[Order]:
+        """Get orders for a specific customer with specific status"""
+        try:
+            orders = self.get_orders_by_customer(customer_id)
+            return [order for order in orders if order.status == status]
+        except Exception as e:
+            print(f"Error getting orders by customer and status: {e}")
+            return []
+
     def get_orders_by_box(self, box_id: str) -> List[Order]:
         """Get all orders for a specific box"""
         try:

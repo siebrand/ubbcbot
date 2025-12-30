@@ -365,6 +365,40 @@ class CustomerOrderCommands(BaseHandler):
         except Exception as e:
             logger.error(f"Error sending group notification: {e}")
             return False
+    def handle_delete_cancelled(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /delete_cancelled command - delete all cancelled orders for user"""
+        try:
+            # Get customer
+            customer = self.db.get_customer_by_telegram_id(user_id)
+            if not customer:
+                self._send_message(chat_id, self._t('customer_not_found', user_id))
+                return {'status': 'customer_not_found'}
+            
+            # Get all cancelled orders for the customer
+            cancelled_orders = self.db.get_orders_by_customer_and_status(customer.customer_id, 'cancelled')
+            
+            if not cancelled_orders:
+                self._send_message(chat_id, self._t('no_cancelled_orders', user_id))
+                return {'status': 'no_cancelled_orders'}
+            
+            # Delete all cancelled orders
+            deleted_count = 0
+            for order in cancelled_orders:
+                if self.db.delete_order(order.order_id):
+                    deleted_count += 1
+            
+            if deleted_count > 0:
+                self._send_message(chat_id, self._t('cancelled_orders_deleted', user_id, count=deleted_count))
+                return {'status': 'success', 'deleted_count': deleted_count}
+            else:
+                self._send_message(chat_id, self._t('failed_delete_cancelled_orders', user_id))
+                return {'status': 'error'}
+                
+        except Exception as e:
+            logger.error(f"Error in handle_delete_cancelled: {e}")
+            self._send_message(chat_id, self._t('failed_delete_cancelled_orders', user_id))
+            return {'status': 'error'}
+    
     def _delete_offer_notifications(self, offer_id: int):
         """Delete notification messages for sold out offer"""
         try:

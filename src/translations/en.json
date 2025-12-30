@@ -223,7 +223,7 @@
   "help_sections": "📚 Help Sections:\n\n📋 [/help general](https://t.me/{bot_username}?start=help_general) - Basic commands\n🛍️ [/help orders](https://t.me/{bot_username}?start=help_orders) - Order management",
   "admin_help_sections": "\n\n👑 Admin Sections:\n\n🏢 [/help suppliers](https://t.me/{bot_username}?start=help_suppliers) - Supplier management\n🍺 [/help offers](https://t.me/{bot_username}?start=help_offers) - Offer management\n👥 [/help users](https://t.me/{bot_username}?start=help_users) - User management\n📦 [/help delivery](https://t.me/{bot_username}?start=help_delivery) - Delivery management",
   "help_general": "📋 General Commands:\n\n/start - Show main help\n/help [section] - Show help for specific section\n/cancel - Cancel pending operation\n/list_offers [user] - View available offers (admin: add 'user' for customer view)\n/subscribe - Subscribe to offer notifications\n/unsubscribe - Unsubscribe from notifications",
-  "help_orders": "🛍️ Order Commands:\n\n/order <offer_id> [quantity] - Place an order\n/confirm_order <offer_id> <quantity> - Confirm duplicate order\n/my_orders [id] - View your orders",
+  "help_orders": "🛍️ Order Commands:\n\n/order <offer_id> [quantity] - Place an order\n/confirm_order <offer_id> <quantity> - Confirm duplicate order\n/my_orders [id] - View your orders\n/delete_cancelled - Delete your cancelled orders",
   "help_suppliers": "🏢 Supplier Management:\n\n/add_supplier <name> - Add supplier\n/retire_supplier <name> - Retire supplier\n/list_suppliers [active|retired|all] - List suppliers\n/edit_supplier <name> - Edit supplier details",
   "help_offers": "🍺 Offer Management:\n\n/create_offer <supplier> <name> <price> <box_size> - Create draft offer\n/offer_details <offer_id> - View and edit offer details\n/preview_offer <offer_id> - Preview offer appearance\n/publish_offer <offer_id> - Publish draft offer\n/cancel_offer <offer_id> - Cancel offer and all orders\n/add_box <offer_id> - Add box to offer\n/box_status [active|ordered|full|delivered|all] - View box status",
   "help_users": "👥 User Management:\n\n/pending_users - View users awaiting approval\n/list_users - View all customers\n/approve_user <username> - Approve user\n/reject_user <username> - Reject user\n/user_status <username> - Check user status\n/update_user <username> <first_name> [last_name] - Update name\n/order_for <username> <offer_id> [quantity] - Place order for user\n/cancel_order [username|order_id] - Cancel customer order\n/user_orders [username] - View orders for user\n/offer_orders [offer_id] - View all orders for offer\n/all_orders [status] - Download CSV of orders",
@@ -422,5 +422,8 @@
   "offer_orders_header": "📈 Orders for {offer_name} (ID: {offer_id}) - Page {page}/{total_pages}\n\n📊 Summary:\nTotal: {total_orders} orders ({total_quantity} units) - €{total_value:.2f}\nActive: {active_orders} orders ({active_quantity} units) - €{active_value:.2f}",
   "no_orders_for_offer": "❌ No orders found for offer: {offer_name}",
   "audit_boxes_filled": "✅ Filled existing boxes for offer {offer_id} with {filled} units",
-  "audit_filled_and_created": "✅ Filled {filled} units in existing boxes and created {boxes} new boxes for {remaining} remaining units (offer {offer_id})"
+  "audit_filled_and_created": "✅ Filled {filled} units in existing boxes and created {boxes} new boxes for {remaining} remaining units (offer {offer_id})",
+  "no_cancelled_orders": "You have no cancelled orders to delete",
+  "cancelled_orders_deleted": "✅ {count} cancelled orders have been removed from the register",
+  "failed_delete_cancelled_orders": "❌ Failed to delete cancelled orders"
 }
