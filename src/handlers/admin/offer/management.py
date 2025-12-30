@@ -84,10 +84,13 @@ class OfferManagementHandler(OfferBaseHandler):
             return error
             
         logger.info(f"Parsing boxes arg: {args[1]}")
-        boxes_ordered, error = self._parse_int_arg(args[1], 'invalid_format', chat_id)
-        if error:
-            logger.error(f"Boxes parsing failed: {error}")
-            return error
+        try:
+            boxes_ordered = int(args[1])
+            logger.info(f"Successfully parsed boxes_ordered: {boxes_ordered}")
+        except ValueError:
+            logger.error(f"Failed to parse boxes arg as integer: {args[1]}")
+            self._send_message(chat_id, self._t('invalid_format'))
+            return {'status': 'invalid_format'}
             
         if boxes_ordered <= 0:
             self._send_message(chat_id, self._t('boxes_must_positive'))
