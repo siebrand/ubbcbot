@@ -61,6 +61,7 @@ class AdminCommandsHandler(BaseHandler):
                 [{"text": self._t('create_offer_btn', user_id), "callback_data": "cmd_create_offer"}],
                 [{"text": self._t('list_offers_btn', user_id), "callback_data": "cmd_list_offers"}],
                 [{"text": self._t('box_status_btn', user_id), "callback_data": "cmd_box_status"}],
+                [{"text": self._t('audit_offer_btn', user_id), "callback_data": "cmd_audit_offer"}],
                 [{"text": self._t('wholesale_order_btn', user_id), "callback_data": "cmd_order_wholesale"}],
                 [{"text": self._t('back_to_admin', user_id), "callback_data": "admin_main"}]
             ]

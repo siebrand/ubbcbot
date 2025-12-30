@@ -263,6 +263,30 @@ class CallbackHandler:
                 offer_id = data.split('_')[2]
                 return self.handlers['offer'].handle_publish_offer(chat_id, [offer_id])
             
+            # Audit offer callbacks
+            elif data.startswith('audit_offers_page_'):
+                page = int(data.split('_')[3])
+                return self.handlers['offer']._show_audit_offer_selection(chat_id, page)
+            elif data.startswith('audit_fill_boxes_'):
+                parts = data.split('_')
+                offer_id, excess_units = int(parts[3]), int(parts[4])
+                return self.handlers['offer']._execute_fill_boxes(chat_id, offer_id, excess_units)
+            elif data.startswith('audit_fill_create_'):
+                parts = data.split('_')
+                offer_id, excess_units = int(parts[3]), int(parts[4])
+                return self.handlers['offer']._execute_fill_and_create(chat_id, offer_id, excess_units)
+            elif data.startswith('audit_create_boxes_'):
+                parts = data.split('_')
+                offer_id, excess_units = int(parts[3]), int(parts[4])
+                return self.handlers['offer']._execute_create_boxes(chat_id, offer_id, excess_units)
+            elif data.startswith('audit_cancel_orders_'):
+                parts = data.split('_')
+                offer_id, excess_units = int(parts[3]), int(parts[4])
+                return self.handlers['offer']._execute_cancel_orders(chat_id, offer_id, excess_units)
+            elif data.startswith('audit_offer_'):
+                offer_id = data.split('_')[2]
+                return self.handlers['offer']._execute_audit_offer(chat_id, int(offer_id))
+            
             return {'status': 'unknown_callback'}
             
         except Exception as e:
@@ -459,6 +483,7 @@ class CallbackHandler:
             'cmd_create_offer': lambda: self.handlers['offer'].handle_create_offer(chat_id, []),
             'cmd_list_offers': lambda: self.handlers['info'].handle_list_offers(chat_id, user_id, []),
             'cmd_box_status': lambda: self.handlers['offer'].handle_box_status(chat_id),
+            'cmd_audit_offer': lambda: self.handlers['offer'].handle_audit_offer(chat_id, []),
             'cmd_order_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
             'cmd_all_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
             'cmd_user_orders': lambda: self._start_user_orders_input(chat_id),
