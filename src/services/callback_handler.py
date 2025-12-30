@@ -104,22 +104,6 @@ class CallbackHandler:
                     offer_id = parts[1]
                     quantity = parts[2]
                     return self.handlers['customer_order'].handle_order(chat_id, user_id, [offer_id, quantity])
-            elif data.startswith('confirm_order_'):
-                parts = data.split('_')
-                if len(parts) >= 4:
-                    offer_id = parts[2]
-                    quantity = parts[3]
-                    return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, [offer_id, quantity])
-            elif data == 'cancel_confirmation':
-                from handlers.base_handler import BaseHandler
-                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, base_handler._t('action_cancelled'))
-                return {'status': 'cancelled'}
-            
-            # Admin confirmation callbacks
-            elif data.startswith('confirm_cancel_offer_'):
-                offer_id = data.split('_')[3]
-                return self.handlers['offer'].handle_confirm_cancel_offer(chat_id, [offer_id])
             elif data.startswith('confirm_order_wholesale_'):
                 logger.info(f"Matched confirm_order_wholesale_ pattern")
                 parts = data.split('_')
@@ -143,6 +127,22 @@ class CallbackHandler:
                     base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
                     base_handler._send_message(chat_id, base_handler._t('invalid_format'))
                     return {'status': 'invalid_format'}
+            elif data.startswith('confirm_order_'):
+                parts = data.split('_')
+                if len(parts) >= 4:
+                    offer_id = parts[2]
+                    quantity = parts[3]
+                    return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, [offer_id, quantity])
+            elif data == 'cancel_confirmation':
+                from handlers.base_handler import BaseHandler
+                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                base_handler._send_message(chat_id, base_handler._t('action_cancelled'))
+                return {'status': 'cancelled'}
+            
+            # Admin confirmation callbacks
+            elif data.startswith('confirm_cancel_offer_'):
+                offer_id = data.split('_')[3]
+                return self.handlers['offer'].handle_confirm_cancel_offer(chat_id, [offer_id])
             elif data.startswith('confirm_fulfill_'):
                 parts = data.split('_')
                 if len(parts) >= 4:
