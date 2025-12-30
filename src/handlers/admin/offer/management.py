@@ -178,10 +178,17 @@ class OfferManagementHandler(OfferBaseHandler):
                 )
                 self._send_message(customer.telegram_user_id, msg)
         
-        # Update all boxes for this offer to 'ordered' status
+        # Update only the requested number of boxes to 'ordered' status and delete excess boxes
         boxes = self.db.get_boxes_by_offer(offer.offer_id)
-        for box in boxes:
-            self.db.update_box(box.box_id, {'status': BoxStatus.ORDERED.value})
+        boxes_to_update = min(boxes_ordered, len(boxes))
+        
+        # Update requested boxes to ORDERED
+        for i in range(boxes_to_update):
+            self.db.update_box(boxes[i].box_id, {'status': BoxStatus.ORDERED.value})
+        
+        # Delete excess boxes
+        for i in range(boxes_to_update, len(boxes)):
+            self.db.delete_box(boxes[i].box_id)
         
         # Cancel remaining orders
         for order in cancelled_orders:
@@ -213,13 +220,12 @@ class OfferManagementHandler(OfferBaseHandler):
         else:
             offer_status_msg = f"Offer remains ACTIVE ({len(remaining_pending)} pending orders remaining)"
         
-        # Create additional empty boxes if needed to match ordered capacity
+        # Create additional boxes if needed to match exact boxes ordered
         current_boxes = self.db.get_boxes_by_offer(offer.offer_id)
-        current_capacity = sum(box.max_capacity for box in current_boxes)
-        ordered_capacity = boxes_ordered * box_size
+        current_box_count = len(current_boxes)
         
-        if ordered_capacity > current_capacity:
-            boxes_to_create = boxes_ordered - len(current_boxes)
+        if boxes_ordered > current_box_count:
+            boxes_to_create = boxes_ordered - current_box_count
             for _ in range(boxes_to_create):
                 from models.entities import Box
                 new_box = Box(
