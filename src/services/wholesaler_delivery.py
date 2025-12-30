@@ -147,11 +147,3 @@ class WholesalerDeliveryService:
     def notify_customer_of_cancellation(self, order_id: str):
         """Stub method for notifying customer of cancellation"""
         print(f"STUB: Notifying customer of cancellation for order {order_id}")
-    
-    async def notify_customer_of_delay_async(self, order_id: str):
-        """Async stub method for notifying customer of delay"""
-        print(f"ASYNC STUB: Notifying customer of delay for order {order_id}")
-    
-    async def notify_customer_of_cancellation_async(self, order_id: str):
-        """Async stub method for notifying customer of cancellation"""
-        print(f"ASYNC STUB: Notifying customer of cancellation for order {order_id}")

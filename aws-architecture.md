@@ -5,7 +5,7 @@
 ### 1.1 Design Principles
 - **Serverless-first**: Minimize operational overhead and costs
 - **Pay-per-use**: Scale to zero when inactive
-- **Event-driven**: Asynchronous processing for better performance
+- **Event-driven**
 - **Cost-optimized**: Target monthly costs under $15 for typical usage
 
 ### 1.2 High-Level Architecture
