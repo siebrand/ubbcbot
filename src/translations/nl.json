@@ -412,6 +412,8 @@
   "confirm_cancel_orders": "❌ Bestellingen Annuleren",
   "confirm_fill_boxes": "✅ Colli's Vullen",
   "confirm_fill_and_create": "✅ Vullen & Aanmaken",
+  "order_placed_single": "✅ Bestelling geplaatst!\nBestelling ID: {order_id}\nProduct: {product}\nAantal: {quantity}\nTotaal: €{total:.2f}\nStatus: {status}",
+  "order_placed_multiple": "✅ Bestelling geplaatst over {boxes} colli's!\nProduct: {product}\nAantal: {quantity}\nTotaal: €{total:.2f}\nStatus: wachtend",
   "audit_boxes_filled": "✅ Bestaande colli's gevuld voor aanbieding {offer_id} met {filled} eenheden",
   "audit_filled_and_created": "✅ {filled} eenheden gevuld in bestaande colli's en {boxes} nieuwe colli's aangemaakt voor {remaining} resterende eenheden (aanbieding {offer_id})"
 }

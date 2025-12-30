@@ -251,20 +251,18 @@ class CustomerOrderCommands(BaseHandler):
 
             # Send confirmation message
             if len(boxes_used) == 1:
-                self._send_message(chat_id, 
-                    f"✅ Order placed!\n"
-                    f"Order ID : {order.order_id}\n"
-                    f"Product  : {offer.name}\n"
-                    f"Quantity : {quantity}\n"
-                    f"Total    : €{order.total_price:.2f}\n"
-                    f"Status   : {order.status}")
+                self._send_message(chat_id, self._t('order_placed_single', user_id,
+                    order_id=order.order_id,
+                    product=offer.name,
+                    quantity=quantity,
+                    total=order.total_price,
+                    status=order.status))
             else:
-                self._send_message(chat_id, 
-                    f"✅ Order placed across {len(boxes_used)} boxes!\n"
-                    f"Product  : {offer.name}\n"
-                    f"Quantity : {quantity}\n"
-                    f"Total    : €{order.total_price:.2f}\n"
-                    f"Status   : pending")
+                self._send_message(chat_id, self._t('order_placed_multiple', user_id,
+                    product=offer.name,
+                    quantity=quantity,
+                    total=order.total_price,
+                    boxes=len(boxes_used)))
             
             # Send notification to default channel for all successful orders (not just private chats)
             if not placed_by_admin:  # Don't notify for admin orders

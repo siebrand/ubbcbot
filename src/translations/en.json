@@ -412,6 +412,8 @@
   "confirm_cancel_orders": "❌ Cancel Orders",
   "confirm_fill_boxes": "✅ Fill Boxes",
   "confirm_fill_and_create": "✅ Fill & Create",
+  "order_placed_single": "✅ Order placed!\nOrder ID: {order_id}\nProduct: {product}\nQuantity: {quantity}\nTotal: €{total:.2f}\nStatus: {status}",
+  "order_placed_multiple": "✅ Order placed across {boxes} boxes!\nProduct: {product}\nQuantity: {quantity}\nTotal: €{total:.2f}\nStatus: pending",
   "audit_boxes_filled": "✅ Filled existing boxes for offer {offer_id} with {filled} units",
   "audit_filled_and_created": "✅ Filled {filled} units in existing boxes and created {boxes} new boxes for {remaining} remaining units (offer {offer_id})"
 }
