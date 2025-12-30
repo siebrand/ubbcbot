@@ -175,6 +175,46 @@ def test_status_validations():
     assert not can_use_delivered
     print("✅ Ordered/delivered boxes unavailable for new orders")
 
+def test_audit_orders():
+    """Test audit orders functionality"""
+    print("\n=== Testing audit orders ===")
+    
+    from datetime import datetime, UTC
+    
+    # Orders with and without update_date
+    orders = [
+        Order(order_id="order1", update_date=datetime.now(UTC).isoformat()),  # Has update_date
+        Order(order_id="order2", update_date=None),  # Missing update_date
+        Order(order_id="order3", update_date=""),     # Empty update_date
+        Order(order_id="order4")                      # No update_date attribute set
+    ]
+    
+    # Find orders without update_date
+    orders_without_update_date = []
+    for order in orders:
+        if not order.update_date:
+            orders_without_update_date.append(order)
+    
+    assert len(orders_without_update_date) == 3  # order2, order3, order4
+    print("✅ Orders without update_date identified correctly")
+    
+    # Simulate audit process
+    current_time = datetime.now(UTC).isoformat()
+    updated_count = 0
+    
+    for order in orders_without_update_date:
+        order.update_date = current_time
+        updated_count += 1
+    
+    assert updated_count == 3
+    assert all(order.update_date == current_time for order in orders_without_update_date)
+    print("✅ Orders updated with current timestamp")
+    
+    # Verify all orders now have update_date
+    orders_still_missing = [order for order in orders if not order.update_date]
+    assert len(orders_still_missing) == 0
+    print("✅ All orders now have update_date")
+
 if __name__ == "__main__":
     test_fulfillment_calculations()
     test_offer_cancellation()
@@ -182,4 +222,5 @@ if __name__ == "__main__":
     test_notification_cleanup()
     test_box_management()
     test_status_validations()
+    test_audit_orders()
     print("\n🎉 All admin operation tests passed!")

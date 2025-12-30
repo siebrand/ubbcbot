@@ -892,3 +892,45 @@ class AdminOrderCommands(BaseHandler):
             logger.error(f"Error in admin handle_delete_cancelled: {e}")
             self._send_message(chat_id, self._t('failed_delete_old_cancelled_orders', chat_id))
             return {'status': 'error'}
+    
+    def handle_audit_orders(self, chat_id: int) -> Dict[str, Any]:
+        """Handle /audit_orders command - add update_date to orders without it"""
+        try:
+            from datetime import datetime, UTC
+            from models.entities import AuthorizationStatus
+            
+            # Get all customers
+            customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+            
+            orders_without_update_date = []
+            for customer in customers:
+                orders = self.db.get_orders_by_customer(customer.customer_id)
+                for order in orders:
+                    if not order.update_date:
+                        orders_without_update_date.append(order)
+            
+            if not orders_without_update_date:
+                self._send_message(chat_id, self._t('no_orders_missing_update_date', chat_id))
+                return {'status': 'no_orders_to_audit'}
+            
+            # Update orders with current timestamp
+            updated_count = 0
+            current_time = datetime.now(UTC).isoformat()
+            
+            for order in orders_without_update_date:
+                if self.db.update_order(order.order_id, {'update_date': current_time}):
+                    updated_count += 1
+            
+            if updated_count > 0:
+                self._send_message(chat_id, self._t('orders_audit_completed', chat_id, count=updated_count))
+                return {'status': 'success', 'updated_count': updated_count}
+            else:
+                self._send_message(chat_id, self._t('failed_audit_orders', chat_id))
+                return {'status': 'error'}
+                
+        except Exception as e:
+            import logging
+            logger = logging.getLogger()
+            logger.error(f"Error in handle_audit_orders: {e}")
+            self._send_message(chat_id, self._t('failed_audit_orders', chat_id))
+            return {'status': 'error'}

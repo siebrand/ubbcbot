@@ -78,6 +78,7 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"mark_paid\", \"description\": \"Mark customers as paid\"},
          {\"command\": \"failed_notifications\", \"description\": \"View failed delivery notifications\"},
          {\"command\": \"delete_old_cancelled\", \"description\": \"Delete old cancelled orders (7+ days)\"},
+         {\"command\": \"audit_orders\", \"description\": \"Audit orders - add update_date to orders missing it\"},
          {\"command\": \"admin\", \"description\": \"Admin panel with buttons\"},
          {\"command\": \"cancel\", \"description\": \"Cancel pending operation\"}
        ],
