@@ -103,6 +103,12 @@ class OfferCreationHandler(OfferBaseHandler):
             
             # Update offer status to active
             if self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value}):
+                # Re-fetch offer to get updated status and prevent race conditions
+                offer = self.db.get_offer(offer_id)
+                if not offer or offer.status != OfferStatus.ACTIVE.value:
+                    logger.error(f"Offer status update failed or not reflected for offer {offer_id}")
+                    self._send_message(chat_id, self._t('failed_publish_offer'))
+                    return {'status': 'error'}
                 # Create initial box
                 box = Box(
                     offer_id=offer_id,
