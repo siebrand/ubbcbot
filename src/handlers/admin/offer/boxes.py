@@ -400,18 +400,31 @@ class BoxManagementHandler(OfferBaseHandler):
         return self._cancel_excess_orders(chat_id, offer, active_orders, excess_units)
     
     def _add_box_capacity(self, chat_id: int, offer, needed_units: int) -> Dict[str, Any]:
-        """Add box capacity by creating new boxes"""
+        """Add box capacity by creating new boxes and filling them with needed units"""
         box_size = int(float(offer.wholesale_box_size))  # Convert Decimal to int
         boxes_needed = (needed_units + box_size - 1) // box_size  # Ceiling division
         
         created_boxes = 0
+        remaining_units = needed_units
+        
         for _ in range(boxes_needed):
             box = Box(
                 offer_id=offer.offer_id,
                 max_capacity=box_size,
                 min_breakeven=int(float(offer.min_quantity_breakeven))  # Convert Decimal to int
             )
-            if self.db.create_box(box):
+            created_box = self.db.create_box(box)
+            if created_box:
+                # Fill the new box with needed units
+                fill_amount = min(remaining_units, box_size)
+                if fill_amount > 0:
+                    updates = {'current_quantity': fill_amount}
+                    if fill_amount >= box_size:
+                        updates['status'] = BoxStatus.FULL.value
+                    elif fill_amount >= created_box.min_breakeven:
+                        updates['status'] = BoxStatus.MINIMUM_REACHED.value
+                    self.db.update_box(created_box.box_id, updates)
+                    remaining_units -= fill_amount
                 created_boxes += 1
         
         if created_boxes > 0:
