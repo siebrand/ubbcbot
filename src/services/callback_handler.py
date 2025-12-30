@@ -126,17 +126,7 @@ class CallbackHandler:
                     offer_id = parts[3]
                     boxes = parts[4]
                     logger.info(f"Calling handle_confirm_order_wholesale with offer_id={offer_id}, boxes={boxes}")
-                    # Validate that both parts are valid integers
-                    try:
-                        int(offer_id)
-                        int(boxes)
-                        return self.handlers['offer'].handle_confirm_order_wholesale(chat_id, [offer_id, boxes])
-                    except ValueError:
-                        logger.error(f"Invalid integer values in wholesale callback: offer_id={offer_id}, boxes={boxes}")
-                        from handlers.base_handler import BaseHandler
-                        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                        base_handler._send_message(chat_id, base_handler._t('invalid_format'))
-                        return {'status': 'invalid_format'}
+                    return self.handlers['offer'].handle_confirm_order_wholesale(chat_id, [offer_id, boxes])
                 else:
                     logger.error(f"Invalid wholesale callback format: {data}, expected at least 5 parts, got {len(parts)}")
                     from handlers.base_handler import BaseHandler
