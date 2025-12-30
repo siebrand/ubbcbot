@@ -78,6 +78,7 @@ class AdminCommandsHandler(BaseHandler):
             "inline_keyboard": [
                 [{"text": self._t('all_orders_btn', user_id), "callback_data": "cmd_all_orders"}],
                 [{"text": self._t('user_orders_btn', user_id), "callback_data": "cmd_user_orders"}],
+                [{"text": self._t('offer_orders_btn', user_id), "callback_data": "cmd_offer_orders"}],
                 [{"text": self._t('cancel_order_btn', user_id), "callback_data": "cmd_cancel_order"}],
                 [{"text": self._t('order_for_user_btn', user_id), "callback_data": "cmd_order_for"}],
                 [{"text": self._t('back_to_admin', user_id), "callback_data": "admin_main"}]

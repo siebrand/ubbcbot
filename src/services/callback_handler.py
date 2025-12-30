@@ -264,6 +264,16 @@ class CallbackHandler:
                 return self.handlers['offer'].handle_publish_offer(chat_id, [offer_id])
             
             # Audit offer callbacks
+            elif data.startswith('offer_orders_page_'):
+                page = int(data.split('_')[3])
+                return self.handlers['admin_order'].handle_offer_orders_page(chat_id, page)
+            elif data.startswith('offer_orders_detail_'):
+                parts = data.split('_')
+                offer_id, page = int(parts[3]), int(parts[4])
+                return self.handlers['admin_order'].handle_offer_orders_detail_page(chat_id, str(offer_id), page)
+            elif data.startswith('offer_orders_'):
+                offer_id = data.split('_')[2]
+                return self.handlers['admin_order'].handle_offer_orders_select(chat_id, offer_id)
             elif data.startswith('audit_offers_page_'):
                 page = int(data.split('_')[3])
                 return self.handlers['offer']._show_audit_offer_selection(chat_id, page)
@@ -487,6 +497,7 @@ class CallbackHandler:
             'cmd_order_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
             'cmd_all_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
             'cmd_user_orders': lambda: self._start_user_orders_input(chat_id),
+            'cmd_offer_orders': lambda: self.handlers['admin_order'].handle_offer_orders(chat_id, []),
             'cmd_cancel_order': lambda: self.handlers['admin_order'].handle_cancel_order(chat_id, []),
             'cmd_order_for': lambda: self.handlers['admin_order'].handle_order_for(chat_id, user_id, []),
             'cmd_pending_users': lambda: self.handlers['user'].handle_pending_users(chat_id),

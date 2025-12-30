@@ -446,6 +446,137 @@ class AdminOrderCommands(BaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'customers_shown'}
     
+    def handle_offer_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /offer_orders command"""
+        if not args:
+            # Show button-based UI to select offer
+            return self._show_offer_selection_for_orders(chat_id)
+        
+        try:
+            offer_id = int(args[0])
+            return self._show_orders_for_offer(chat_id, offer_id)
+        except ValueError:
+            self._send_message(chat_id, self._t('invalid_offer_id', chat_id))
+            return {'status': 'invalid_format'}
+    
+    def _show_offer_selection_for_orders(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
+        """Show paginated list of offers for order viewing"""
+        from models.entities import OfferStatus
+        offers = [o for o in self.db.list_offers() if o.status in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value, OfferStatus.INACTIVE.value]]
+        
+        if not offers:
+            self._send_message(chat_id, self._t('no_offers_available', chat_id))
+            return {'status': 'no_offers'}
+        
+        # Sort by offer_id descending (newest first)
+        offers.sort(key=lambda x: x.offer_id, reverse=True)
+        
+        # Paginate results
+        page_offers, total_pages = self._paginate_list(offers, page, 10)
+        
+        message = self._t('select_offer_for_orders', chat_id, page=page, total_pages=total_pages) + "\n\n"
+        keyboard_buttons = []
+        
+        for offer in page_offers:
+            supplier = self.db.get_supplier_by_name(offer.supplier_name)
+            supplier_name = supplier.name if supplier else "Unknown"
+            
+            # Get order count for this offer
+            orders = self.db.get_orders_by_offer(offer.offer_id)
+            order_count = len(orders)
+            
+            button_text = f"🍺 {offer.name} - €{offer.price_per_unit:.2f} ({supplier_name}) [{order_count} orders]"
+            keyboard_buttons.append([{"text": button_text, "callback_data": f"offer_orders_{offer.offer_id}"}])
+        
+        # Add pagination if needed
+        if total_pages > 1:
+            nav_buttons = []
+            if page > 1:
+                nav_buttons.append({"text": self._t('previous', chat_id), "callback_data": f"offer_orders_page_{page - 1}"})
+            nav_buttons.append({"text": self._t('page_indicator', chat_id, page=page, total_pages=total_pages), "callback_data": "page_info"})
+            if page < total_pages:
+                nav_buttons.append({"text": self._t('next', chat_id), "callback_data": f"offer_orders_page_{page + 1}"})
+            keyboard_buttons.append(nav_buttons)
+        
+        # Add cancel button
+        keyboard_buttons.append([{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}])
+        
+        keyboard = {"inline_keyboard": keyboard_buttons}
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
+    
+    def _show_orders_for_offer(self, chat_id: int, offer_id: int, page: int = 1) -> Dict[str, Any]:
+        """Show paginated orders for a specific offer"""
+        offer = self.db.get_offer(offer_id)
+        if not offer:
+            self._send_message(chat_id, self._t('offer_not_found', chat_id))
+            return {'status': 'offer_not_found'}
+        
+        orders = self.db.get_orders_by_offer(offer_id)
+        if not orders:
+            self._send_message(chat_id, self._t('no_orders_for_offer', chat_id, offer_name=offer.name))
+            return {'status': 'no_orders'}
+        
+        # Sort by creation date (newest first)
+        orders.sort(key=lambda x: x.created_at, reverse=True)
+        
+        # Paginate results
+        page_orders, total_pages = self._paginate_list(orders, page, 10)
+        
+        # Calculate totals
+        active_orders = [o for o in orders if o.status in ['pending', 'ordered']]
+        total_quantity = sum(o.quantity for o in orders)
+        active_quantity = sum(o.quantity for o in active_orders)
+        total_value = sum(o.total_price for o in orders)
+        active_value = sum(o.total_price for o in active_orders)
+        
+        message = self._t('offer_orders_header', chat_id,
+            offer_name=offer.name,
+            offer_id=offer_id,
+            page=page,
+            total_pages=total_pages,
+            total_orders=len(orders),
+            active_orders=len(active_orders),
+            total_quantity=total_quantity,
+            active_quantity=active_quantity,
+            total_value=total_value,
+            active_value=active_value
+        ) + "\n\n"
+        
+        for order in page_orders:
+            customer = self.db.get_customer(order.customer_id)
+            customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Unknown"
+            
+            from utils.timezone import to_cet_string
+            order_date = to_cet_string(order.created_at, '%Y-%m-%d %H:%M')
+            
+            status_emoji = {
+                'pending': '🟡',
+                'ordered': '📦',
+                'cancelled': '❌',
+                'ready_for_labeling': '🏷️',
+                'labeling_completed': '✅',
+                'awaiting_payment': '💳',
+                'completed': '✅'
+            }.get(order.status, '❓')
+            
+            message += f"{status_emoji} {customer_name} - {order.quantity}x €{order.total_price:.2f}\n"
+            message += f"   [{order_date}] {order.status} (ID: {order.order_id})\n\n"
+        
+        # Add pagination keyboard if needed
+        keyboard = None
+        if total_pages > 1:
+            nav_buttons = []
+            if page > 1:
+                nav_buttons.append({"text": self._t('previous', chat_id), "callback_data": f"offer_orders_detail_{offer_id}_{page - 1}"})
+            nav_buttons.append({"text": self._t('page_indicator', chat_id, page=page, total_pages=total_pages), "callback_data": "page_info"})
+            if page < total_pages:
+                nav_buttons.append({"text": self._t('next', chat_id), "callback_data": f"offer_orders_detail_{offer_id}_{page + 1}"})
+            keyboard = {"inline_keyboard": [nav_buttons]}
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
+    
     def handle_failed_notifications(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /failed_notifications command - show orders that couldn't be notified"""
         from models.entities import AuthorizationStatus, OrderStatus
@@ -483,6 +614,18 @@ class AdminOrderCommands(BaseHandler):
         
         self._send_message(chat_id, message)
         return {'status': 'failed_shown'}
+    
+    def handle_offer_orders_page(self, chat_id: int, page: int) -> Dict[str, Any]:
+        """Handle pagination for offer selection"""
+        return self._show_offer_selection_for_orders(chat_id, page)
+    
+    def handle_offer_orders_detail_page(self, chat_id: int, offer_id: str, page: int) -> Dict[str, Any]:
+        """Handle pagination for offer orders detail"""
+        try:
+            return self._show_orders_for_offer(chat_id, int(offer_id), page)
+        except ValueError:
+            self._send_message(chat_id, self._t('invalid_offer_id', chat_id))
+            return {'status': 'invalid_format'}
     
     def handle_export_orders_callback(self, chat_id: int, status_filter: str) -> Dict[str, Any]:
         """Handle export orders callback"""
