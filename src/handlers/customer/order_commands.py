@@ -48,6 +48,7 @@ class CustomerOrderCommands(BaseHandler):
                 return {'status': 'limit_exceeded'}
 
             # Check for existing orders for duplicate confirmation
+            existing_orders = self.db.get_orders_by_customer_and_offer(customer.customer_id, offer_id)
             if existing_orders:
                 message = self._t('duplicate_order_warning', user_id, offer_name=offer.name)
                 message += "\n\n"
