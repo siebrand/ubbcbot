@@ -389,5 +389,9 @@
   "select_wholesale_offer": "📦 {name} ({boxes} dozen)",
   "operation_cancelled": "✅ Handeling geannuleerd",
   "nothing_to_cancel": "❌ Geen lopende handeling om te annuleren",
-  "cancel_failed": "❌ Kon handeling niet annuleren"
+  "cancel_failed": "❌ Kon handeling niet annuleren",
+  "no_boxes_found": "❌ Geen {status} dozen gevonden",
+  "box_status_header": "📦 Dozen Status ({status}) - Pagina {page}/{total_pages}:",
+  "box_status_table_header": "Status  ID    ColliID   Aanbieding            Prijs   Eenheden",
+  "box_status_table_separator": "------  ----  --------  --------------------  ------  --------"
 }

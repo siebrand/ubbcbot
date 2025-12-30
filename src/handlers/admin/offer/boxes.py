@@ -16,7 +16,7 @@ class BoxManagementHandler(OfferBaseHandler):
             offer = self.db.get_offer(offer_id)
             
             if not offer:
-                self._send_message(chat_id, self._t('offer_not_found'))
+                self._send_message(chat_id, self._t('offer_not_found', chat_id))
                 return {'status': 'offer_not_found'}
             
             # Create new box
@@ -30,16 +30,16 @@ class BoxManagementHandler(OfferBaseHandler):
                 # Update offer status from sold_out to active if needed
                 if offer.status == OfferStatus.SOLD_OUT.value:
                     self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
-                    self._send_message(chat_id, self._t('box_added_offer_active', offer_id=offer_id))
+                    self._send_message(chat_id, self._t('box_added_offer_active', chat_id, offer_id=offer_id))
                 else:
-                    self._send_message(chat_id, self._t('box_added', offer_id=offer_id))
+                    self._send_message(chat_id, self._t('box_added', chat_id, offer_id=offer_id))
                 return {'status': 'success'}
             else:
-                self._send_message(chat_id, self._t('failed_create_box'))
+                self._send_message(chat_id, self._t('failed_create_box', chat_id))
                 return {'status': 'error'}
                 
         except ValueError:
-            self._send_message(chat_id, self._t('invalid_offer_id'))
+            self._send_message(chat_id, self._t('invalid_offer_id', chat_id))
             return {'status': 'invalid_format'}
 
     def handle_box_status(self, chat_id: int, args: list = None) -> Dict[str, Any]:
@@ -68,37 +68,34 @@ class BoxManagementHandler(OfferBaseHandler):
         
         offers = self.db.list_offers()
         
-        # Filter offers based on status
-        if status_filter == 'active':
-            filtered_offers = [offer for offer in offers if offer.status == OfferStatus.ACTIVE.value]
-        elif status_filter == 'ordered':
-            filtered_offers = [offer for offer in offers if offer.status == OfferStatus.ORDERED.value]
-        elif status_filter == 'completed':
-            filtered_offers = [offer for offer in offers if offer.status == OfferStatus.COMPLETED.value]
-        elif status_filter == 'delivered':
-            filtered_offers = [offer for offer in offers if offer.status == OfferStatus.DELIVERED.value]
-        else:  # all
-            filtered_offers = offers
-        
-        if not filtered_offers:
-            self._send_message(chat_id, f"❌ No {status_filter} offers found")
-            return {'status': 'no_offers'}
-        
-        # Build list of offer-box combinations for pagination
+        # Build list of offer-box combinations and filter by box status
         offer_boxes = []
-        for offer in filtered_offers:
+        for offer in offers:
             boxes = self.db.get_boxes_by_offer(offer.offer_id)
-            boxes.sort(key=lambda x: x.box_id)
             for box in boxes:
-                offer_boxes.append((offer, box))
+                # Filter boxes based on status
+                if status_filter == 'active' and box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.ORDERED.value]:
+                    offer_boxes.append((offer, box))
+                elif status_filter == 'ordered' and box.status == BoxStatus.ORDERED.value:
+                    offer_boxes.append((offer, box))
+                elif status_filter == 'completed' and box.status == BoxStatus.FULL.value:
+                    offer_boxes.append((offer, box))
+                elif status_filter == 'delivered' and box.status == BoxStatus.DELIVERED.value:
+                    offer_boxes.append((offer, box))
+                elif status_filter == 'all':
+                    offer_boxes.append((offer, box))
+        
+        if not offer_boxes:
+            self._send_message(chat_id, self._t('no_boxes_found', chat_id, status=status_filter))
+            return {'status': 'no_boxes'}
         
         # Paginate results
         page_items, total_pages = self._paginate_list(offer_boxes, page, 10)
         
-        message = f"📦 Box Status ({status_filter.title()}) - Page {page}/{total_pages}:\n\n"
+        message = self._t('box_status_header', chat_id, status=status_filter.title(), page=page, total_pages=total_pages) + "\n\n"
         message += "```\n"
-        message += "Status  ID    Box ID    Offer Name            Price   Units\n"
-        message += "------  ----  --------  --------------------  ------  -----\n"
+        message += self._t('box_status_table_header', chat_id) + "\n"
+        message += self._t('box_status_table_separator', chat_id) + "\n"
         
         for offer, box in page_items:
             status_emoji = {
@@ -130,7 +127,7 @@ class BoxManagementHandler(OfferBaseHandler):
             orders = self.db.get_orders_by_box(box.box_id)
             ready_for_labeling = any(o.status == 'ready_for_labeling' for o in orders)
             if ready_for_labeling:
-                labeling_buttons.append([{"text": f"✅ Finish Labeling Box {box.box_id[:8]}", "callback_data": f"finish_labeling_{box.box_id}"}])
+                labeling_buttons.append([{"text": self._t('finish_labeling_box', chat_id, box_id=box.box_id[:8]), "callback_data": f"finish_labeling_{box.box_id}"}])
         
         if labeling_buttons:
             if keyboard:

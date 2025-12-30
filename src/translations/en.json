@@ -389,5 +389,9 @@
   "select_wholesale_offer": "📦 {name} ({boxes} boxes)",
   "operation_cancelled": "✅ Operation cancelled",
   "nothing_to_cancel": "❌ No pending operation to cancel",
-  "cancel_failed": "❌ Failed to cancel operation"
+  "cancel_failed": "❌ Failed to cancel operation",
+  "no_boxes_found": "❌ No {status} boxes found",
+  "box_status_header": "📦 Box Status ({status}) - Page {page}/{total_pages}:",
+  "box_status_table_header": "Status  ID    Box ID    Offer Name            Price   Units",
+  "box_status_table_separator": "------  ----  --------  --------------------  ------  -----"
 }
