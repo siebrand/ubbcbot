@@ -94,7 +94,10 @@ class OfferCreationHandler(OfferBaseHandler):
                 return {'status': 'offer_not_found'}
             
             if offer.status != OfferStatus.DRAFT.value:
-                self._send_message(chat_id, self._t('offer_not_draft', status=offer.status))
+                # Translate status for error message
+                status_key = f'status_{offer.status.lower()}' if hasattr(self, '_t') else offer.status
+                translated_status = self._t(status_key) if hasattr(self, '_t') else offer.status
+                self._send_message(chat_id, self._t('offer_not_draft', status=translated_status))
                 return {'status': 'offer_not_draft'}
             
             box_size = offer.wholesale_box_size
