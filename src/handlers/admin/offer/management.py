@@ -61,12 +61,37 @@ class OfferManagementHandler(OfferBaseHandler):
         keyboard = {
             "inline_keyboard": [[
                 {"text": self._t('order_wholesale_boxes', boxes=boxes_needed), "callback_data": f"confirm_order_wholesale_{offer.offer_id}_{boxes_needed}"},
+                {"text": self._t('custom_quantity'), "callback_data": f"custom_wholesale_quantity_{offer.offer_id}"},
                 {"text": self._t('cancel'), "callback_data": "cancel_action"}
             ]]
         }
         
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
+    
+    def handle_custom_wholesale_quantity(self, chat_id: int, offer_id: str) -> Dict[str, Any]:
+        """Handle custom wholesale quantity input"""
+        try:
+            offer_id_int = int(offer_id)
+            offer = self.db.get_offer(offer_id_int)
+            
+            if not offer:
+                self._send_message(chat_id, self._t('offer_not_found'))
+                return {'status': 'offer_not_found'}
+            
+            # Store context for text input processing
+            from utils.edit_context import EditContextManager
+            edit_context_manager = EditContextManager(self.db, self._t, self._send_message)
+            edit_context_manager.store_edit_context(chat_id, 'custom_wholesale_quantity', offer_id)
+            
+            # Prompt for custom quantity
+            message = self._t('enter_custom_wholesale_quantity', offer_id=offer_id)
+            self._send_message(chat_id, message)
+            return {'status': 'awaiting_input'}
+            
+        except ValueError:
+            self._send_message(chat_id, self._t('invalid_offer_id'))
+            return {'status': 'invalid_format'}
     
     def handle_confirm_order_wholesale(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_order_wholesale command"""

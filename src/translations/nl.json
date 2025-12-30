@@ -128,6 +128,8 @@
   "no_pending_orders": "❌ Geen wachtende bestellingen voor deze aanbieding",
   "wholesale_order_summary": "📋 Groothandel Bestelling Samenvatting voor Aanbieding {offer_id}:\n\n🍺 {name} - €{price:.2f}\n📦 Aantal per colli: {box_size} stuks\n\n📈 Totaal wachtende stuks: {total_units}\n📦 Dozen nodig: {boxes_needed}\n\n📋 Wachtende Bestellingen ({order_count} bestellingen):\n\n",
   "order_wholesale_boxes": "✅ Bestel {boxes} dozen groothandel",
+  "custom_quantity": "📝 Aangepast Aantal",
+  "enter_custom_wholesale_quantity": "📝 Voer aantal te bestellen colli's in voor aanbieding {offer_id}:",
   "usage_confirm_order_wholesale": "Gebruik: /confirm_order_wholesale <aanbieding_id> <bestelde_dozen>",
   "boxes_must_positive": "❌ Bestelde dozen moet positief zijn",
   "order_updated_limited": "⚠️ Je bestelling is bijgewerkt vanwege beperkte beschikbaarheid:\n\n🍺 {name}\nOrigineel: {old_qty} stuks\nBijgewerkt: {new_qty} stuks\nNieuw totaal: €{total:.2f}\n\nJe bestelling is bevestigd en wordt geleverd.",

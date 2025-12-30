@@ -310,5 +310,20 @@ class BotService:
             return {'status': 'invalid_context'}
         elif edit_type == 'payment_link_input':
             return self.delivery_overview_handler.handle_payment_link_input(chat_id, text, entity_id)
+        elif edit_type == 'custom_wholesale_quantity':
+            try:
+                boxes = int(text.strip())
+                if boxes > 0:
+                    return self.offer_commands.handle_confirm_order_wholesale(chat_id, [entity_id, str(boxes)])
+                else:
+                    from handlers.base_handler import BaseHandler
+                    base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                    base_handler._send_message(chat_id, base_handler._t('boxes_must_positive'))
+                    return {'status': 'invalid_quantity'}
+            except ValueError:
+                from handlers.base_handler import BaseHandler
+                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                base_handler._send_message(chat_id, base_handler._t('invalid_format'))
+                return {'status': 'invalid_format'}
         
         return {'status': 'unknown_edit_type'}

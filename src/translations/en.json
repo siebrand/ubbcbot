@@ -128,6 +128,8 @@
   "no_pending_orders": "❌ No pending orders for this offer",
   "wholesale_order_summary": "📋 Wholesale Order Summary for Offer {offer_id}:\n\n🍺 {name} - €{price:.2f}\n📦 Box size: {box_size} units\n\n📈 Total pending units: {total_units}\n📦 Boxes needed: {boxes_needed}\n\n📋 Pending Orders ({order_count} orders):\n\n",
   "order_wholesale_boxes": "✅ Order {boxes} boxes wholesale",
+  "custom_quantity": "📝 Custom Quantity",
+  "enter_custom_wholesale_quantity": "📝 Enter number of boxes to order for offer {offer_id}:",
   "usage_confirm_order_wholesale": "Usage: /confirm_order_wholesale <offer_id> <boxes_ordered>",
   "boxes_must_positive": "❌ Boxes ordered must be positive",
   "order_updated_limited": "⚠️ Your order has been updated due to limited availability:\n\n🍺 {name}\nOriginal: {old_qty} units\nUpdated: {new_qty} units\nNew total: €{total:.2f}\n\nYour order is confirmed and will be delivered.",

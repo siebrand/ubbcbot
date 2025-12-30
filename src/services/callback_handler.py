@@ -130,6 +130,9 @@ class CallbackHandler:
                     base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
                     base_handler._send_message(chat_id, base_handler._t('invalid_format'))
                     return {'status': 'invalid_format'}
+            elif data.startswith('custom_wholesale_quantity_'):
+                offer_id = data.split('_')[3]
+                return self.handlers['offer'].handle_custom_wholesale_quantity(chat_id, offer_id)
             elif data.startswith('confirm_order_'):
                 parts = data.split('_')
                 if len(parts) >= 4:
