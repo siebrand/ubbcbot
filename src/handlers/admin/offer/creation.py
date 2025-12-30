@@ -97,7 +97,7 @@ class OfferCreationHandler(OfferBaseHandler):
                 self._send_message(chat_id, self._t('offer_not_draft', status=offer.status))
                 return {'status': 'offer_not_draft'}
             
-            box_size = int(offer.wholesale_box_size)
+            box_size = int(float(offer.wholesale_box_size))
             if box_size == 1:
                 logger.info(f"DEBUG: Publishing box size 1 offer {offer_id} - {offer.name}")
             
@@ -113,7 +113,7 @@ class OfferCreationHandler(OfferBaseHandler):
                 box = Box(
                     offer_id=offer_id,
                     max_capacity=box_size,
-                    min_breakeven=int(offer.min_quantity_breakeven)
+                    min_breakeven=int(float(offer.min_quantity_breakeven))
                 )
                 created_box = self.db.create_box(box)
                 
@@ -196,7 +196,7 @@ class OfferCreationHandler(OfferBaseHandler):
         """Announce new offer to default group and subscribers using rich format"""
         default_group_id = os.environ.get('DEFAULT_GROUP_ID')
         
-        box_size = int(offer.wholesale_box_size)
+        box_size = int(float(offer.wholesale_box_size))
         if box_size == 1:
             logger.info(f"DEBUG: Box size 1 - Announcing offer {offer.offer_id} to group {default_group_id}")
         

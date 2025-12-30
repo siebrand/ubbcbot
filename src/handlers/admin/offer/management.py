@@ -33,7 +33,7 @@ class OfferManagementHandler(OfferBaseHandler):
         
         # Calculate boxes needed
         total_units = sum(order.quantity for order in pending_orders)
-        box_size = int(offer.wholesale_box_size)  # Convert Decimal to int
+        box_size = int(float(offer.wholesale_box_size))  # Convert Decimal to int
         boxes_needed = (total_units + box_size - 1) // box_size  # Ceiling division
         
         # Show order summary
@@ -97,7 +97,7 @@ class OfferManagementHandler(OfferBaseHandler):
             return {'status': 'invalid_quantity'}
         
         # Get box size from offer
-        box_size = int(offer.wholesale_box_size)
+        box_size = int(float(offer.wholesale_box_size))
         
         # Get pending orders sorted by date ascending (oldest first)
         all_orders = self.db.get_orders_by_offer(offer.offer_id)
@@ -200,7 +200,7 @@ class OfferManagementHandler(OfferBaseHandler):
                 new_box = Box(
                     offer_id=offer.offer_id,
                     max_capacity=box_size,
-                    min_breakeven=int(offer.min_quantity_breakeven),
+                    min_breakeven=int(float(offer.min_quantity_breakeven)),
                     status=BoxStatus.ORDERED.value
                 )
                 self.db.create_box(new_box)
@@ -285,7 +285,7 @@ class OfferManagementHandler(OfferBaseHandler):
             supplier = self.db.get_supplier_by_name(offer.supplier_name)
             supplier_name = supplier.name if supplier else "Unknown"
             
-            box_size = int(offer.wholesale_box_size)
+            box_size = int(float(offer.wholesale_box_size))
             boxes_needed = (total_units + box_size - 1) // box_size
             
             message += self._t('wholesale_offer_summary',
