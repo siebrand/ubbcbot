@@ -98,6 +98,8 @@ class CommandRouter:
             return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, parts[1:])
         elif command == '/changelog':
             return self.handlers['changelog'].handle_changelog(target_chat, user_id, 1)
+        elif command == '/cancel':
+            return self._handle_cancel_command(target_chat, user_id)
 
         # Admin-only commands
         if self._is_admin(user_id):
@@ -197,3 +199,21 @@ class CommandRouter:
                 return self.handlers['admin_commands'].handle_admin(admin_target_chat, user_id)
 
         return {'status': 'unknown_command'}
+    
+    def _handle_cancel_command(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /cancel command to clear any pending edit contexts"""
+        try:
+            # Check if user has any pending edit contexts
+            context = self.db.get_edit_context_by_chat_id(chat_id)
+            if context:
+                # Delete the edit context
+                self.db.delete_edit_context(context.context_id)
+                
+                # Use existing info handler instead of creating new BaseHandler
+                return self.handlers['info']._send_success(chat_id, 'operation_cancelled', 'cancelled')
+            else:
+                # Use existing info handler instead of creating new BaseHandler
+                return self.handlers['info']._send_success(chat_id, 'nothing_to_cancel', 'nothing_to_cancel')
+        except Exception as e:
+            # Use existing info handler instead of creating new BaseHandler
+            return self.handlers['info']._send_error(chat_id, 'cancel_failed', 'error')

@@ -172,10 +172,12 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/send_overviews` - Send delivery overviews to customers
 - `/mark_paid` - Mark customers as paid
 - `/failed_notifications` - View orders with failed delivery notifications
+- `/cancel` - Cancel pending operation (e.g., text input prompts)
 
 ### Customer Commands
 - `/start` - Register and view help
 - `/help [section]` - Show help for specific section (general, orders)
+- `/cancel` - Cancel pending operation (e.g., text input prompts)
 - `/order <offer_id> [quantity]` - Place order
 - `/confirm_order <offer_id> <quantity>` - Confirm duplicate order
 - `/my_orders [id]` - View personal orders
