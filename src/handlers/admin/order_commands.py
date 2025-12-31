@@ -18,9 +18,14 @@ class AdminOrderCommands(BaseHandler):
             return {'status': 'awaiting_input'}
 
         # Check if it's an order ID (numeric) or username
-        if len(args) == 1 and args[0].isdigit():
-            # Legacy behavior - direct order ID
-            return self._handle_cancel_order_by_id(chat_id, args[0])
+        if len(args) == 1:
+            arg = args[0]
+            # Check if it's a full numeric order ID (legacy behavior)
+            if arg.isdigit():
+                return self._handle_cancel_order_by_id(chat_id, arg)
+            # Check if it's a partial order ID (8 characters, alphanumeric)
+            elif len(arg) == 8 and arg.isalnum():
+                return self._handle_cancel_order_by_partial_id(chat_id, arg)
         
         # Username provided - show orders for cancellation
         identifier = ' '.join(args)
@@ -30,6 +35,53 @@ class AdminOrderCommands(BaseHandler):
             return error
         
         return self._show_user_orders_for_cancel(chat_id, customer)
+    
+    def _handle_cancel_order_by_partial_id(self, chat_id: int, partial_order_id: str) -> Dict[str, Any]:
+        """Handle cancel order by partial order ID (first 8 characters)"""
+        from models.entities import AuthorizationStatus
+        
+        # Search for orders that start with the partial ID
+        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        matching_orders = []
+        
+        for customer in customers:
+            orders = self.db.get_orders_by_customer(customer.customer_id)
+            for order in orders:
+                if order.order_id.startswith(partial_order_id) and order.status != 'cancelled':
+                    matching_orders.append((order, customer))
+        
+        if not matching_orders:
+            self._send_message(chat_id, self._t('order_not_found'))
+            return {'status': 'order_not_found'}
+        
+        if len(matching_orders) > 1:
+            # Multiple matches - show disambiguation
+            message = f"Multiple orders found starting with '{partial_order_id}':\n\n"
+            keyboard_buttons = []
+            
+            for order, customer in matching_orders:
+                offer = self.db.get_offer(order.offer_id)
+                offer_name = offer.name if offer else self._t('unknown', user_id=None)
+                customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Unknown"
+                
+                from utils.timezone import to_cet_string
+                order_date = to_cet_string(order.created_at, '%Y-%m-%d')
+                
+                button_text = f"{customer_name}: [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f}"
+                keyboard_buttons.append([{
+                    "text": button_text,
+                    "callback_data": f"cancel_order_confirm_{order.order_id}"
+                }])
+            
+            keyboard_buttons.append([{"text": self._t('cancel', user_id=None), "callback_data": "cancel_action"}])
+            keyboard = {"inline_keyboard": keyboard_buttons}
+            
+            self._send_message(chat_id, message, reply_markup=keyboard)
+            return {'status': 'disambiguation_shown'}
+        
+        # Single match - proceed with cancellation
+        order, customer = matching_orders[0]
+        return self._handle_cancel_order_by_id(chat_id, order.order_id)
     
     def _handle_cancel_order_by_id(self, chat_id: int, order_id: str) -> Dict[str, Any]:
         """Handle cancel order by direct order ID (legacy behavior)"""
