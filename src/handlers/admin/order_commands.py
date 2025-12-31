@@ -5,7 +5,7 @@ from models.entities import Order, Box, BoxStatus, OfferStatus
 
 class AdminOrderCommands(BaseHandler):
     def handle_cancel_order(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /cancel_order command"""
+        """Handle /cancel_order command with enhanced detection"""
         if not args:
             # Show button-based UI to ask for username
             message = self._t('enter_username_for_cancel', chat_id)
@@ -17,15 +17,18 @@ class AdminOrderCommands(BaseHandler):
             self._send_message(chat_id, message, reply_markup=keyboard)
             return {'status': 'awaiting_input'}
 
-        # Check if it's an order ID (numeric) or username
         if len(args) == 1:
             arg = args[0]
-            # Check if it's a full numeric order ID (legacy behavior)
-            if arg.isdigit():
-                return self._handle_cancel_order_by_id(chat_id, arg)
-            # Check if it's a partial order ID (8 characters, alphanumeric)
-            elif len(arg) == 8 and arg.isalnum():
+            
+            # Enhanced detection logic:
+            # 1. If exactly 8 alphanumeric characters -> partial order ID
+            # 2. If fully numeric and longer than 8 -> full order ID
+            # 3. Otherwise -> username
+            
+            if len(arg) == 8 and arg.isalnum():
                 return self._handle_cancel_order_by_partial_id(chat_id, arg)
+            elif arg.isdigit() and len(arg) > 8:
+                return self._handle_cancel_order_by_id(chat_id, arg)
         
         # Username provided - show orders for cancellation
         identifier = ' '.join(args)
@@ -37,7 +40,7 @@ class AdminOrderCommands(BaseHandler):
         return self._show_user_orders_for_cancel(chat_id, customer)
     
     def _handle_cancel_order_by_partial_id(self, chat_id: int, partial_order_id: str) -> Dict[str, Any]:
-        """Handle cancel order by partial order ID (first 8 characters)"""
+        """Handle cancel order by partial order ID (first 8 characters) with enhanced confirmation"""
         from models.entities import AuthorizationStatus
         
         # Search for orders that start with the partial ID
@@ -51,12 +54,12 @@ class AdminOrderCommands(BaseHandler):
                     matching_orders.append((order, customer))
         
         if not matching_orders:
-            self._send_message(chat_id, self._t('order_not_found'))
+            self._send_message(chat_id, self._t('no_orders_found_partial', chat_id, partial_id=partial_order_id))
             return {'status': 'order_not_found'}
         
         if len(matching_orders) > 1:
-            # Multiple matches - show disambiguation
-            message = f"Multiple orders found starting with '{partial_order_id}':\n\n"
+            # Multiple matches - show enhanced disambiguation with full details
+            message = self._t('multiple_orders_found_partial', chat_id, partial_id=partial_order_id) + "\n\n"
             keyboard_buttons = []
             
             for order, customer in matching_orders:
@@ -67,7 +70,8 @@ class AdminOrderCommands(BaseHandler):
                 from utils.timezone import to_cet_string
                 order_date = to_cet_string(order.created_at, '%Y-%m-%d')
                 
-                button_text = f"{customer_name}: [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f}"
+                # Enhanced button text with order ID prefix
+                button_text = f"{order.order_id[:8]}: {customer_name} - {order.quantity}x {offer_name} €{order.total_price:.2f}"
                 keyboard_buttons.append([{
                     "text": button_text,
                     "callback_data": f"cancel_order_confirm_{order.order_id}"
@@ -79,54 +83,72 @@ class AdminOrderCommands(BaseHandler):
             self._send_message(chat_id, message, reply_markup=keyboard)
             return {'status': 'disambiguation_shown'}
         
-        # Single match - proceed with cancellation
+        # Single match - show enhanced confirmation with full details
         order, customer = matching_orders[0]
-        return self._handle_cancel_order_by_id(chat_id, order.order_id)
+        return self._show_enhanced_cancel_confirmation(chat_id, order, customer, f"partial ID '{partial_order_id}'")
     
     def _handle_cancel_order_by_id(self, chat_id: int, order_id: str) -> Dict[str, Any]:
-        """Handle cancel order by direct order ID (legacy behavior)"""
+        """Handle cancel order by direct order ID with enhanced confirmation"""
         order = self.db.get_order(order_id)
         
         if not order:
-            self._send_message(chat_id, self._t('order_not_found'))
+            self._send_message(chat_id, self._t('order_not_found_full_id', chat_id, order_id=order_id))
             return {'status': 'order_not_found'}
         
         if order.status == 'cancelled':
-            self._send_message(chat_id, self._t('order_already_cancelled'))
+            self._send_message(chat_id, self._t('order_already_cancelled_full_id', chat_id, order_id=order_id))
             return {'status': 'already_cancelled'}
 
-        # Get box info
-        box = self.db.get_box(order.box_id)
-        if not box:
-            self._send_message(chat_id, self._t('box_not_found'))
-            return {'status': 'box_not_found'}
-
-        # Get customer and offer info
+        # Get customer info
         customer = self.db.get_customer(order.customer_id)
+        if not customer:
+            self._send_message(chat_id, self._t('customer_not_found_for_order', chat_id, order_id=order_id))
+            return {'status': 'customer_not_found'}
+        
+        return self._show_enhanced_cancel_confirmation(chat_id, order, customer, f"full ID '{order_id}'")
+    
+    def _show_enhanced_cancel_confirmation(self, chat_id: int, order, customer, detection_method: str) -> Dict[str, Any]:
+        """Show enhanced confirmation dialog with full order details"""
+        # Get box and offer info
+        box = self.db.get_box(order.box_id)
         offer = self.db.get_offer(order.offer_id)
-        customer_name = customer.first_name if customer else self._t('unknown', user_id=None)
-        offer_name = offer.name if offer else self._t('unknown', user_id=None)
-
-        # Show confirmation details
-        message = self._t('cancel_order_confirmation', user_id=None,
-                         order_id=order_id,
-                         customer_name=customer_name,
-                         offer_name=offer_name,
-                         quantity=order.quantity,
-                         total=order.total_price)
+        
+        if not box:
+            self._send_message(chat_id, self._t('box_not_found_for_order', chat_id, order_id=order.order_id))
+            return {'status': 'box_not_found'}
+        
+        customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Unknown"
+        offer_name = offer.name if offer else "Unknown"
+        
+        from utils.timezone import to_cet_string
+        order_date = to_cet_string(order.created_at, '%Y-%m-%d %H:%M')
+        
+        # Enhanced confirmation message with all details
+        message = f"⚠️ {self._t('cancel_order_confirmation_title', chat_id)}\n\n"
+        message += f"🔍 {self._t('cancel_detection_method', chat_id, method=detection_method)}\n"
+        message += f"📋 {self._t('cancel_order_id_label', chat_id, order_id=order.order_id)}\n"
+        message += f"👤 {self._t('cancel_customer_label', chat_id, customer_name=customer_name)}\n"
+        message += f"🍺 {self._t('cancel_product_label', chat_id, offer_name=offer_name)}\n"
+        message += f"📦 {self._t('cancel_quantity_label', chat_id, quantity=order.quantity)}\n"
+        message += f"💰 {self._t('cancel_total_label', chat_id, total=order.total_price)}\n"
+        message += f"📅 {self._t('cancel_order_date_label', chat_id, order_date=order_date)}\n"
+        message += f"📊 {self._t('cancel_status_label', chat_id, status=order.status)}\n"
+        message += f"📦 {self._t('cancel_box_label', chat_id, box_id=order.box_id, current_quantity=box.current_quantity, max_capacity=box.max_capacity)}\n\n"
         
         if box.status == BoxStatus.FULL.value:
-            message += "\n" + self._t('cancel_full_box_warning', user_id=None)
+            message += f"⚠️ {self._t('cancel_full_box_warning_enhanced', chat_id)}\n\n"
+        
+        message += f"❓ {self._t('cancel_confirmation_question', chat_id)}"
         
         # Add inline keyboard for confirmation
         keyboard = {
             "inline_keyboard": [[
-                {"text": self._t('confirm_cancel', user_id=None), "callback_data": f"request_cancel_reason_{order_id}"},
-                {"text": self._t('keep_order', user_id=None), "callback_data": "cancel_action"}
+                {"text": self._t('confirm_cancel_enhanced', chat_id), "callback_data": f"request_cancel_reason_{order.order_id}"},
+                {"text": self._t('keep_order_enhanced', chat_id), "callback_data": "cancel_action"}
             ]]
         }
         
-        self._send_message(chat_id, message, reply_markup=keyboard)
+        self._send_message(chat_id, message, reply_markup=keyboard, parse_mode='HTML')
         return {'status': 'confirmation_required'}
     
     def _show_user_orders_for_cancel(self, chat_id: int, customer, page: int = 1) -> Dict[str, Any]:
