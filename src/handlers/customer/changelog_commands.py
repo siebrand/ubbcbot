@@ -6,6 +6,32 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2025-12-31",
+                "content": """<b>User-Facing Updates</b>
+• <b>Enhanced Order Display</b> - Added offer ID to each line in /my_orders for better identification
+• <b>Improved Order Management</b> - Added /delete_cancelled command to remove cancelled orders from personal register
+• <b>Better Operation Control</b> - New /cancel command to clear pending operations and text input prompts
+• <b>Cleaner Group Experience</b> - Removed order buttons from default channel offer announcements
+
+<b>Admin-Facing Updates</b>
+• <b>Enhanced Order Cancellation</b> - Improved /cancel_order with better detection logic and detailed confirmation dialogs
+• <b>Advanced Order Tracking</b> - Updated /user_orders to match /my_orders format with short order IDs for easier reference
+• <b>Partial Order ID Support</b> - /cancel_order now matches on first 8 characters of order ID for faster cancellation
+• <b>Comprehensive Order Management</b> - Added cancellation reasons to all order cancellation workflows
+• <b>System Maintenance</b> - New /delete_old_cancelled command to remove cancelled orders older than 7 days
+• <b>Data Integrity</b> - Added /audit_orders command to fix orders missing update_date timestamps
+• <b>Enhanced Offer Management</b> - New /offer_orders command with paginated button workflow to view all orders for specific offers
+• <b>Improved Box Management</b> - Better wholesale ordering precision and box status filtering with custom quantity options
+• <b>Advanced Auditing</b> - New /audit_offer command to check and fix order/box capacity discrepancies
+• <b>Better Error Handling</b> - Improved race condition prevention and capacity management
+• <b>Streamlined Workflows</b> - Enhanced button-based interfaces for /cancel_order, /user_orders, and /order_for commands
+• <b>Interactive Order Placement</b> - New button-based workflow for /order_for: username → offer selection → quantity (1/2/Other)
+• <b>Flexible Quantity Input</b> - Added "Other" quantity option with text input for /order_for command
+• <b>Enhanced User Management</b> - Improved user disambiguation and filtering for approve_user command
+• <b>Comprehensive Admin Panel</b> - Enhanced interactive workflows with supplier full name support
+• <b>System Reliability</b> - Automatic order update_date setting, better database consistency, and duplicate string removal"""
+            },
+            {
                 "title": "Up to 2025-12-29",
                 "content": """<b>User-Facing Updates</b>
 • <b>Enhanced Order Management</b> - Improved order display with better formatting and status indicators
