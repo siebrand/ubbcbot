@@ -374,7 +374,7 @@ class InfoCommands(BaseHandler):
                 # Alternate diamond icons for better readability
                 line_icon = "🔸" if line_count % 2 == 0 else "🔹"
                 
-                order_line = f"{line_icon} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
+                order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
                 
                 if show_ids:
                     ids_display = ', '.join(data['order_ids'])
@@ -412,7 +412,7 @@ class InfoCommands(BaseHandler):
                 # Alternate diamond icons for better readability
                 line_icon = "🔸" if line_count % 2 == 0 else "🔹"
                 
-                order_line = f"{line_icon} {date_display} {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
+                order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
                 
                 if show_ids:
                     ids_display = ', '.join(data['order_ids'])
