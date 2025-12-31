@@ -259,32 +259,127 @@ class AdminOrderCommands(BaseHandler):
             self._send_message(chat_id, self._t('no_orders_for_user', name=display_name))
             return {'status': 'no_orders'}
 
-        # Group orders by status
-        active_orders = [o for o in orders if o.status in ['pending', 'ordered']]
-        cancelled_orders = [o for o in orders if o.status == 'cancelled']
+        # Sort orders by offer_id ascending
+        orders.sort(key=lambda x: x.offer_id)
+        
+        # Aggregate orders by offer, price and status
+        aggregated = {}
+        for order in orders:
+            offer = self.db.get_offer(order.offer_id)
+            offer_name = offer.name if offer else self._t('unknown', user_id=None)
+            
+            key = (order.offer_id, order.unit_price, order.status)
+            if key not in aggregated:
+                aggregated[key] = {
+                    'offer_name': offer_name,
+                    'unit_price': order.unit_price,
+                    'status': order.status,
+                    'quantity': 0,
+                    'total_price': Decimal('0.0'),
+                    'dates': set(),
+                    'order_ids': []
+                }
+            
+            aggregated[key]['quantity'] += order.quantity
+            aggregated[key]['total_price'] += order.total_price
+            aggregated[key]['order_ids'].append(order.order_id)
+            
+            # Add date
+            from utils.timezone import to_cet_string
+            aggregated[key]['dates'].add(to_cet_string(order.created_at, '%Y-%m-%d'))
 
         display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or "Unknown")
         message = self._t('user_orders_title', user_id=None, name=display_name)
         message += "\n\n"
-
-        if active_orders:
-            message += self._t('active_orders_label', user_id=None) + "\n"
-            for order in active_orders:
-                offer = self.db.get_offer(order.offer_id)
-                offer_name = offer.name if offer else self._t('unknown', user_id=None)
-                from utils.timezone import to_cet_string
-                order_date = to_cet_string(order.created_at, '%Y-%m-%d')
-                message += f"• [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f} ({order.status})\n"
-                message += f"  ID: {order.order_id}\n"
         
-        if cancelled_orders:
-            message += "\n" + self._t('cancelled_orders_label', user_id=None) + "\n"
-            for order in cancelled_orders[-3:]:  # Show last 3 cancelled
-                offer = self.db.get_offer(order.offer_id)
-                offer_name = offer.name if offer else self._t('unknown', user_id=None)
-                from utils.timezone import to_cet_string
-                order_date = to_cet_string(order.created_at, '%Y-%m-%d')
-                message += f"• [{order_date}] {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
+        # Group by status for totals
+        status_groups = {}
+        for (offer_id, unit_price, status), data in aggregated.items():
+            if status not in status_groups:
+                status_groups[status] = {'total_price': Decimal('0.0'), 'items': []}
+            status_groups[status]['total_price'] += data['total_price']
+            status_groups[status]['items'].append(((offer_id, unit_price, status), data))
+        
+        # Display orders grouped by status
+        open_statuses = ['pending', 'ordered', 'confirmed']
+        open_total = Decimal('0.0')
+        
+        # First show open orders
+        for status in ['pending', 'ordered', 'confirmed', 'delivered']:
+            if status not in status_groups:
+                continue
+                
+            status_emoji = {
+                'pending': '⏳',
+                'ordered': '📦',
+                'confirmed': '✅',
+                'cancelled': '❌',
+                'delivered': '🚚'
+            }.get(status, '❓')
+            
+            # Add status header if multiple statuses present
+            if len(status_groups) > 1:
+                message += f"{status_emoji} {status.upper()}:\n"
+            
+            line_count = 0
+            for (offer_id, unit_price, order_status), data in status_groups[status]['items']:
+                # Determine date display
+                if len(data['dates']) == 1:
+                    date_display = f"[{list(data['dates'])[0]}]"
+                else:
+                    date_display = "[multiple days]"
+                
+                # Alternate diamond icons for better readability
+                line_icon = "🔸" if line_count % 2 == 0 else "🔹"
+                
+                # Get first 8 characters of first order ID
+                short_order_id = data['order_ids'][0][:8] if data['order_ids'] else "unknown"
+                
+                order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}"
+                
+                message += order_line + "\n"
+                line_count += 1
+            
+            # Add status total if multiple statuses present
+            if len(status_groups) > 1:
+                message += "\n" + self._t('subtotal_label', user_id=None, total=status_groups[status]['total_price']) + "\n\n"
+            
+            # Add to open total if applicable
+            if status in open_statuses:
+                open_total += status_groups[status]['total_price']
+        
+        # Add open orders total before cancelled orders
+        if open_total > 0 and 'cancelled' in status_groups:
+            message += "\n" + self._t('open_orders_total_label', user_id=None, total=open_total) + "\n\n"
+        
+        # Show cancelled orders last (no total needed)
+        if 'cancelled' in status_groups:
+            status_emoji = '❌'
+            if len(status_groups) > 1:
+                message += f"{status_emoji} CANCELLED:\n"
+            
+            line_count = 0
+            for (offer_id, unit_price, order_status), data in status_groups['cancelled']['items']:
+                # Determine date display
+                if len(data['dates']) == 1:
+                    date_display = f"[{list(data['dates'])[0]}]"
+                else:
+                    date_display = "[multiple days]"
+                
+                # Alternate diamond icons for better readability
+                line_icon = "🔸" if line_count % 2 == 0 else "🔹"
+                
+                # Get first 8 characters of first order ID
+                short_order_id = data['order_ids'][0][:8] if data['order_ids'] else "unknown"
+                
+                order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}"
+                
+                message += order_line + "\n"
+                line_count += 1
+        
+        # Add open orders total if no cancelled orders
+        elif open_total > 0:
+            message += "\n" + self._t('open_orders_total_label', user_id=None, total=open_total)
         
         self._send_message(chat_id, message)
         return {'status': 'success'}
