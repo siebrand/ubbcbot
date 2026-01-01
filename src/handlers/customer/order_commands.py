@@ -352,6 +352,40 @@ class CustomerOrderCommands(BaseHandler):
             self._send_message(chat_id, self._t('failed_delete_cancelled_orders', user_id))
             return {'status': 'error'}
     
+    def handle_delete_completed(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /delete_completed command - delete all completed orders for user"""
+        try:
+            # Get customer
+            customer = self.db.get_customer_by_telegram_id(user_id)
+            if not customer:
+                self._send_message(chat_id, self._t('customer_not_found', user_id))
+                return {'status': 'customer_not_found'}
+            
+            # Get all completed orders for the customer
+            completed_orders = self.db.get_orders_by_customer_and_status(customer.customer_id, 'completed')
+            
+            if not completed_orders:
+                self._send_message(chat_id, self._t('no_completed_orders', user_id))
+                return {'status': 'no_completed_orders'}
+            
+            # Delete all completed orders
+            deleted_count = 0
+            for order in completed_orders:
+                if self.db.delete_order(order.order_id):
+                    deleted_count += 1
+            
+            if deleted_count > 0:
+                self._send_message(chat_id, self._t('completed_orders_deleted', user_id, count=deleted_count))
+                return {'status': 'success', 'deleted_count': deleted_count}
+            else:
+                self._send_message(chat_id, self._t('failed_delete_completed_orders', user_id))
+                return {'status': 'error'}
+                
+        except Exception as e:
+            logger.error(f"Error in handle_delete_completed: {e}")
+            self._send_message(chat_id, self._t('failed_delete_completed_orders', user_id))
+            return {'status': 'error'}
+    
     def _delete_offer_notifications(self, offer_id: int):
         """Delete notification messages for sold out offer"""
         try:

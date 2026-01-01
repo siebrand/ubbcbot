@@ -97,6 +97,7 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {"command": "my_orders", "description": "View your orders"},
          {"command": "confirm_order", "description": "Confirm duplicate order"},
          {"command": "delete_cancelled", "description": "Delete all cancelled orders"},
+         {"command": "delete_completed", "description": "Delete all completed orders"},
          {"command": "list_offers", "description": "View available offers"},
          {"command": "offer_details", "description": "View offer details"},
          {"command": "subscribe", "description": "Subscribe to offer notifications"},

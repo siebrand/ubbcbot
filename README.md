@@ -183,6 +183,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/order <offer_id> [quantity]` - Place order
 - `/confirm_order <offer_id> <quantity>` - Confirm duplicate order
 - `/delete_cancelled` - Delete all cancelled orders from register
+- `/delete_completed` - Delete all completed orders from register
 - `/my_orders [id]` - View personal orders
 - `/list_offers` - View available offers
 - `/offer_details <offer_id>` - View detailed offer information
