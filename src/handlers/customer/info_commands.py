@@ -360,8 +360,8 @@ class InfoCommands(BaseHandler):
                 'completed': '✅'
             }.get(status, '❓')
             
-            # Add status header if multiple statuses present
-            if len(status_groups) > 1:
+            # Add status header if multiple statuses present or if this is completed status
+            if len(status_groups) > 1 or status == 'completed':
                 status_key = f"status_{status}"
                 status_label = self._t(status_key, user_id).upper()
                 message += f"{status_emoji} {status_label}:\n"

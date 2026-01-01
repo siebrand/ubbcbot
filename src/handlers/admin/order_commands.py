@@ -392,8 +392,8 @@ class AdminOrderCommands(BaseHandler):
                 'completed': '✅'
             }.get(status, '❓')
             
-            # Add status header if multiple statuses present
-            if len(status_groups) > 1:
+            # Add status header if multiple statuses present or if this is completed status
+            if len(status_groups) > 1 or status == 'completed':
                 message += f"{status_emoji} {status.upper()}:\n"
             
             line_count = 0
