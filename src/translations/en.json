@@ -476,5 +476,6 @@
   "offer_deleted": "✅ Offer {offer_id} '{name}' deleted successfully",
   "failed_delete_offer": "❌ Failed to delete offer",
   "box_not_found_for_order": "❌ Box not found for order {order_id}",
-  "notified_customers": "📧 Customers: {customers}"
+  "notified_customers": "📧 Customers: {customers}",
+  "quantity_exceeds_box_size": "❌ Cannot order {quantity} units. Maximum {box_size} units per order for this offer. You can place multiple orders."
 }

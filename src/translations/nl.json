@@ -476,5 +476,6 @@
   "offer_deleted": "✅ Aanbieding {offer_id} '{name}' succesvol verwijderd",
   "failed_delete_offer": "❌ Kon aanbieding niet verwijderen",
   "box_not_found_for_order": "❌ Colli niet gevonden voor bestelling {order_id}",
-  "notified_customers": "📧 Klanten: {customers}"
+  "notified_customers": "📧 Klanten: {customers}",
+  "quantity_exceeds_box_size": "❌ Kan geen {quantity} stuks bestellen. Maximum {box_size} stuks per bestelling voor deze aanbieding. Je kan meerdere keren bestellen."
 }

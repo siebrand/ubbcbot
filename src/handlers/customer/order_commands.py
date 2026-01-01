@@ -130,6 +130,11 @@ class CustomerOrderCommands(BaseHandler):
             if box_size == 1:
                 logger.info(f"DEBUG: Processing order for box size 1 offer {offer_id}, quantity {quantity}, customer {customer.customer_id}")
             
+            # Validate order quantity doesn't exceed box size
+            if quantity > box_size:
+                self._send_message(chat_id, self._t('quantity_exceeds_box_size', user_id, quantity=quantity, box_size=box_size))
+                return {'status': 'quantity_too_large'}
+            
             # ATOMIC CAPACITY CHECK: Find a box that can fit the entire order
             boxes = self.db.get_boxes_by_offer(offer_id)
             suitable_box = None
