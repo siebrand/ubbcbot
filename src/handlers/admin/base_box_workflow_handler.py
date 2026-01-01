@@ -42,9 +42,18 @@ class BaseBoxWorkflowHandler(BaseHandler):
         
         return {"inline_keyboard": keyboard}
 
-    def _build_box_keyboard(self, boxes: List[Box], offer_id: int, supplier_id_short: str, callback_prefix: str) -> Dict[str, Any]:
+    def _build_box_keyboard(self, boxes: List[Box], offer_id: int, supplier_id_short: str, callback_prefix: str, 
+                           add_complete_button: bool = False) -> Dict[str, Any]:
         """Build inline keyboard for box selection"""
         keyboard = []
+        
+        # Add "Complete delivery" button if requested
+        if add_complete_button and boxes:
+            keyboard.append([{
+                "text": self._t('complete_delivery_btn', user_id=None),
+                "callback_data": f"{callback_prefix}_complete:{offer_id}:{supplier_id_short}"
+            }])
+        
         for box in boxes:
             orders = self.db.get_orders_by_box(box.box_id)
             total_units = sum(order.quantity for order in orders)
@@ -89,7 +98,7 @@ class BaseBoxWorkflowHandler(BaseHandler):
         )
 
     def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id_short: str, callback_prefix: str,
-                              get_boxes_func, select_box_msg_key: str) -> Dict[str, Any]:
+                              get_boxes_func, select_box_msg_key: str, add_complete_button: bool = False) -> Dict[str, Any]:
         """Handle offer selection and show boxes"""
         offer = self.db.get_offer(offer_id)
         if not offer:
@@ -99,7 +108,7 @@ class BaseBoxWorkflowHandler(BaseHandler):
         if not boxes:
             return self._send_message(chat_id, self._t('no_boxes_with_orders', offer_name=offer.name))
 
-        keyboard = self._build_box_keyboard(boxes, offer_id, supplier_id_short, callback_prefix)
+        keyboard = self._build_box_keyboard(boxes, offer_id, supplier_id_short, callback_prefix, add_complete_button)
         return self._edit_message(
             chat_id,
             self._t(select_box_msg_key, offer_name=offer.name),
@@ -170,7 +179,8 @@ class BaseBoxWorkflowHandler(BaseHandler):
             offer_id, supplier_id_short = int(args[0]), args[1]
             offer = self.db.get_offer(offer_id)
             boxes = get_boxes_func(offer_id)
-            keyboard = self._build_box_keyboard(boxes, offer_id, supplier_id_short, callback_prefix)
+            keyboard = self._build_box_keyboard(boxes, offer_id, supplier_id_short, callback_prefix, 
+                                              add_complete_button=callback_prefix == 'wd')  # Only for wholesale delivery
             return self._edit_message(
                 chat_id,
                 self._t(select_box_msg_key, offer_name=offer.name),

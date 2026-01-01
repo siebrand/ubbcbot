@@ -418,6 +418,17 @@ class CallbackHandler:
             target = parts[1]
             args = parts[2:] if len(parts) > 2 else []
             return self.handlers['wholesale_delivery'].handle_back_navigation(chat_id, target, *args)
+        elif parts[0] == 'wd_complete':  # Complete delivery
+            offer_id, supplier_id_short = int(parts[1]), parts[2]
+            return self.handlers['wholesale_delivery'].handle_complete_delivery(chat_id, offer_id, supplier_id_short)
+        elif parts[0] == 'wd_confirm_complete':  # Confirm complete delivery
+            if len(parts) >= 3:
+                offer_id, supplier_id_short = int(parts[1]), parts[2]
+                return self.handlers['wholesale_delivery'].handle_confirm_complete_delivery(chat_id, offer_id, supplier_id_short)
+            else:
+                from handlers.base_handler import BaseHandler
+                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                return base_handler._send_message(chat_id, base_handler._t('invalid_format'))
         
         from handlers.base_handler import BaseHandler
         base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)

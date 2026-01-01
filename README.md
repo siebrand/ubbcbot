@@ -200,6 +200,12 @@ These commands are set up in the deployment script, throught bash script setup-c
 
 ## Features
 
+### Enhanced Wholesale Delivery
+- **Complete Delivery Button**: Single-click option to mark all boxes in an offer as delivered with full quantities
+- **Confirmation Dialog**: Safety confirmation before processing multiple boxes
+- **Streamlined Workflow**: Reduces repetitive clicking for common full delivery scenarios
+- **Individual Box Control**: Maintains granular control for partial deliveries and edge cases
+
 ### Enhanced Offer Management
 - **Staged Publishing**: Create draft offers, add descriptions and images, then publish when ready
 - **Rich Offer Display**: Offers include detailed descriptions and multiple images

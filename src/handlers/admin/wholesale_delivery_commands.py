@@ -44,3 +44,11 @@ class WholesaleDeliveryCommands(BaseHandler):
     def handle_back_navigation(self, chat_id: int, target: str, *args) -> Dict[str, Any]:
         """Handle back navigation"""
         return self.delivery_handler.handle_back_navigation(chat_id, target, *args)
+
+    def handle_complete_delivery(self, chat_id: int, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+        """Handle complete delivery"""
+        return self.delivery_handler.handle_complete_delivery(chat_id, offer_id, supplier_id)
+
+    def handle_confirm_complete_delivery(self, chat_id: int, offer_id: int, supplier_id: str) -> Dict[str, Any]:
+        """Handle confirm complete delivery"""
+        return self.delivery_handler.handle_confirm_complete_delivery(chat_id, offer_id, supplier_id)

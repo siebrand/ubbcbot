@@ -45,7 +45,8 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         return super().handle_offer_selection(
             chat_id, offer_id, supplier_id_short, 'wd',
             lambda oid: boxes,  # Use ordered boxes
-            'select_box_for_delivery'
+            'select_box_for_delivery',
+            add_complete_button=True  # Enable complete delivery button
         )
 
     def handle_box_selection(self, chat_id: int, box_id_short: str, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
@@ -270,8 +271,80 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
             )
             # Continue workflow by showing remaining boxes
             return self._continue_workflow_after_action(chat_id, box.box_id)
+
+    def handle_complete_delivery(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
+        """Handle complete delivery for all boxes in an offer"""
+        # Get all ordered boxes for this offer
+        all_boxes = self.db.get_boxes_by_offer(offer_id)
+        ordered_boxes = [box for box in all_boxes if box.status == 'ordered']
+        
+        if not ordered_boxes:
+            return self._send_message(chat_id, self._t('no_ordered_offers'))
+        
+        # Show confirmation
+        keyboard = [
+            [{
+                "text": self._t('confirm', user_id=None),
+                "callback_data": f"wd_confirm_complete:{offer_id}:{supplier_id_short}"
+            }],
+            [{
+                "text": self._t('cancel', user_id=None),
+                "callback_data": f"wd_back:boxes:{offer_id}:{supplier_id_short}"
+            }]
+        ]
+        
+        return self._send_message(
+            chat_id,
+            self._t('complete_delivery_confirmation', box_count=len(ordered_boxes)),
+            reply_markup={"inline_keyboard": keyboard}
+        )
+
+    def handle_confirm_complete_delivery(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
+        """Confirm and execute complete delivery for all boxes"""
+        # Get all ordered boxes for this offer
+        all_boxes = self.db.get_boxes_by_offer(offer_id)
+        ordered_boxes = [box for box in all_boxes if box.status == 'ordered']
+        
+        if not ordered_boxes:
+            return self._send_message(chat_id, self._t('no_ordered_offers'))
+        
+        # Process complete delivery for all boxes
+        processed_count = 0
+        for box in ordered_boxes:
+            orders = self.db.get_orders_by_box(box.box_id)
+            total_units = sum(order.quantity for order in orders)
+            
+            success = self.delivery_service.process_wholesaler_delivery(
+                box.box_id, 
+                total_units,  # Full delivery
+                False
+            )
+            
+            if success:
+                processed_count += 1
+        
+        if processed_count > 0:
+            self._send_message(
+                chat_id, 
+                self._t('complete_delivery_success', box_count=processed_count)
+            )
+            # Continue workflow by showing remaining boxes or go back to supplier selection
+            return self._continue_workflow_after_complete_delivery(chat_id, offer_id, supplier_id_short)
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
+
+    def _continue_workflow_after_complete_delivery(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
+        """Continue workflow after complete delivery - check if any boxes remain"""
+        # Check if there are any remaining ordered boxes for this offer
+        all_boxes = self.db.get_boxes_by_offer(offer_id)
+        remaining_boxes = [box for box in all_boxes if box.status == 'ordered']
+        
+        if remaining_boxes:
+            # Still have boxes, show them
+            return self.handle_offer_selection(chat_id, offer_id, supplier_id_short)
+        else:
+            # No more boxes for this offer, go back to main wholesale delivery menu
+            return self.handle_wholesale_delivery(chat_id, self.admin_user_id, [])
 
     def _continue_workflow_after_action(self, chat_id: int, processed_box_id: str) -> Dict[str, Any]:
         """Continue workflow by showing remaining boxes for the same offer"""

@@ -123,5 +123,60 @@ class TestWholesalerDelivery(unittest.TestCase):
             # Verify no new orders were created (since third order was completely cancelled)
             self.assertEqual(len(create_calls), 0)
 
+    def test_complete_delivery_button_in_keyboard(self):
+        """Test that complete delivery button is added to box keyboard"""
+        from handlers.admin.wholesale_delivery_handler import WholesaleDeliveryHandler
+        from models.entities import Box, Order
+        
+        # Mock handler setup
+        mock_db = Mock()
+        handler = WholesaleDeliveryHandler(mock_db, 15005473, "test", "test_token")
+        handler._t = Mock(side_effect=lambda key, **kwargs: f"TRANSLATED_{key}")
+        
+        # Create test boxes
+        boxes = [
+            Box(box_id="box1", offer_id=1, status="ordered", current_quantity=10, max_capacity=12),
+            Box(box_id="box2", offer_id=1, status="ordered", current_quantity=8, max_capacity=12)
+        ]
+        
+        # Mock orders for boxes
+        mock_db.get_orders_by_box.return_value = [
+            Order(order_id="order1", customer_id="cust1", box_id="box1", offer_id=1, quantity=5),
+            Order(order_id="order2", customer_id="cust2", box_id="box1", offer_id=1, quantity=5)
+        ]
+        
+        # Build keyboard with complete button
+        keyboard = handler._build_box_keyboard(boxes, 1, "sup123", "wd", add_complete_button=True)
+        
+        # Verify complete delivery button is first
+        self.assertEqual(len(keyboard["inline_keyboard"]), 4)  # Complete button + 2 boxes + back button
+        self.assertIn("complete", keyboard["inline_keyboard"][0][0]["callback_data"])
+
+    def test_handle_complete_delivery_confirmation(self):
+        """Test complete delivery shows confirmation dialog"""
+        from handlers.admin.wholesale_delivery_handler import WholesaleDeliveryHandler
+        from models.entities import Box
+        
+        # Mock handler setup
+        mock_db = Mock()
+        handler = WholesaleDeliveryHandler(mock_db, 15005473, "test", "test_token")
+        handler._t = Mock(side_effect=lambda key, **kwargs: f"TRANSLATED_{key}_{kwargs}")
+        handler._send_message = Mock(return_value={'status': 'sent'})
+        
+        # Mock ordered boxes
+        ordered_boxes = [
+            Box(box_id="box1", offer_id=1, status="ordered"),
+            Box(box_id="box2", offer_id=1, status="ordered")
+        ]
+        
+        mock_db.get_boxes_by_offer.return_value = ordered_boxes
+        
+        result = handler.handle_complete_delivery(123, 1, "sup123")
+        
+        # Verify confirmation message is sent
+        handler._send_message.assert_called_once()
+        call_args = handler._send_message.call_args
+        self.assertIn("reply_markup", call_args[1])
+
 if __name__ == '__main__':
     unittest.main()
