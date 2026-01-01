@@ -237,16 +237,16 @@ class InfoCommands(BaseHandler):
                     message += self._format_offer_line(offer_to_display, "🍺", total_ordered, total_capacity)
                 message += "\n"
             
-            # Show other status offers
+            # Show other status offers in correct order
             if other_offers:
-                # Group by specific status
-                status_groups = {}
-                for offer in other_offers:
-                    if offer.status not in status_groups:
-                        status_groups[offer.status] = []
-                    status_groups[offer.status].append(offer)
+                # Define the correct order
+                status_order = [OfferStatus.SOLD_OUT.value, OfferStatus.COMPLETED.value, OfferStatus.INACTIVE.value]
                 
-                for status, status_offers in status_groups.items():
+                for status in status_order:
+                    status_offers = [o for o in other_offers if o.status == status]
+                    if not status_offers:
+                        continue
+                        
                     status_emoji = {
                         OfferStatus.SOLD_OUT.value: "🚫",
                         OfferStatus.ORDERED.value: "📦",
