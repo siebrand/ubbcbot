@@ -455,5 +455,6 @@
   "order_not_found_full_id": "❌ Order not found: {order_id}",
   "order_already_cancelled_full_id": "⚠️ Order {order_id} is already cancelled",
   "customer_not_found_for_order": "❌ Customer not found for order {order_id}",
-  "box_not_found_for_order": "❌ Box not found for order {order_id}"
+  "box_not_found_for_order": "❌ Box not found for order {order_id}",
+  "notified_customers": "📧 Customers: {customers}"
 }

@@ -455,5 +455,6 @@
   "order_not_found_full_id": "❌ Bestelling niet gevonden: {order_id}",
   "order_already_cancelled_full_id": "⚠️ Bestelling {order_id} is al geannuleerd",
   "customer_not_found_for_order": "❌ Klant niet gevonden voor bestelling {order_id}",
-  "box_not_found_for_order": "❌ Colli niet gevonden voor bestelling {order_id}"
+  "box_not_found_for_order": "❌ Colli niet gevonden voor bestelling {order_id}",
+  "notified_customers": "📧 Klanten: {customers}"
 }

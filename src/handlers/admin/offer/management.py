@@ -398,9 +398,13 @@ class OfferManagementHandler(OfferBaseHandler):
         
         # Cancel all active orders and notify customers
         cancelled_count = 0
+        notified_customers = []
         for order in active_orders:
             if self.db.update_order(order.order_id, {'status': OrderStatus.CANCELLED.value}):
                 cancelled_count += 1
+                customer = self.db.get_customer(order.customer_id)
+                if customer:
+                    notified_customers.append(customer.first_name)
                 self._notify_customer_cancellation(order, offer)
         
         # Delete all boxes
@@ -419,6 +423,9 @@ class OfferManagementHandler(OfferBaseHandler):
             deleted_boxes=deleted_boxes,
             notified_count=cancelled_count
         )
+        
+        if notified_customers:
+            summary += "\n" + self._t('notified_customers', customers=", ".join(notified_customers))
         
         self._send_message(chat_id, summary)
         return {'status': 'success'}
