@@ -328,7 +328,7 @@
   "full_delivery_btn": "✅ Volledige Levering",
   "incomplete_delivery_btn": "⚠️ Onvolledig",
   "remaining_cancelled_btn": "❌ Resterende Geannuleerd",
-  "complete_labeling_btn": "✅ Labeling Voltooien",
+  "complete_labeling_btn": "✅ Alles gelabeld",
   "error_processing_payment_link": "❌ Fout bij verwerken betalingslink: {error}",
   "admin_overview_sent_success": "✅ {message}",
   "admin_overview_sent_failed": "❌ MISLUKT om te sturen naar {customer_name}: {error}\n\n{message}",
@@ -480,5 +480,7 @@
   "quantity_exceeds_box_size": "❌ Kan geen {quantity} stuks bestellen. Maximum {box_size} stuks per bestelling voor deze aanbieding. Je kan meerdere keren bestellen.",
   "complete_delivery_btn": "✅ Volledige Levering",
   "complete_delivery_confirmation": "⚠️ Volledige levering voor alle {box_count} colli's?\n\nDit zal ALLE colli's markeren als geleverd met volledige hoeveelheden.",
-  "complete_delivery_success": "✅ Volledige levering verwerkt voor {box_count} colli's\nAlle bestellingen ingesteld op KLAAR_VOOR_LABELING"
+  "complete_delivery_success": "✅ Volledige levering verwerkt voor {box_count} colli's\nAlle bestellingen ingesteld op KLAAR_VOOR_LABELING",
+  "complete_labeling_confirmation": "⚠️ Volledige labeling voor alle {box_count} colli?\n\nDit zal ALLE colli markeren als gelabeld.",
+  "complete_labeling_success": "✅ Volledige labeling verwerkt voor {box_count} colli\nAlle bestellingen ingesteld op LABELING_VOLTOOID"
 }

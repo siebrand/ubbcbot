@@ -328,7 +328,7 @@
   "full_delivery_btn": "✅ Full Delivery",
   "incomplete_delivery_btn": "⚠️ Incomplete",
   "remaining_cancelled_btn": "❌ Remaining Cancelled",
-  "complete_labeling_btn": "✅ Complete Labeling",
+  "complete_labeling_btn": "✅ All Labeled",
   "error_processing_payment_link": "❌ Error processing payment link: {error}",
   "admin_overview_sent_success": "✅ {message}",
   "admin_overview_sent_failed": "❌ FAILED to send to {customer_name}: {error}\n\n{message}",
@@ -480,5 +480,7 @@
   "quantity_exceeds_box_size": "❌ Cannot order {quantity} units. Maximum {box_size} units per order for this offer. You can place multiple orders.",
   "complete_delivery_btn": "✅ Complete Delivery",
   "complete_delivery_confirmation": "⚠️ Complete delivery for all {box_count} boxes?\n\nThis will mark ALL boxes as delivered with full quantities.",
-  "complete_delivery_success": "✅ Complete delivery processed for {box_count} boxes\nAll orders set to READY_FOR_LABELING"
+  "complete_delivery_success": "✅ Complete delivery processed for {box_count} boxes\nAll orders set to READY_FOR_LABELING",
+  "complete_labeling_confirmation": "⚠️ Complete labeling for all {box_count} boxes?\n\nThis will mark ALL boxes as labeled.",
+  "complete_labeling_success": "✅ Complete labeling processed for {box_count} boxes\nAll orders set to LABELING_COMPLETED"
 }

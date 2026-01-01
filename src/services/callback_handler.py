@@ -455,6 +455,17 @@ class CallbackHandler:
         elif parts[0] == 'lc_action':  # Labeling action
             action, box_id_short, offer_id, supplier_id_short = parts[1], parts[2], int(parts[3]), parts[4]
             return self.handlers['labeling'].handle_labeling_action(chat_id, action, box_id_short, offer_id, supplier_id_short)
+        elif parts[0] == 'lc_complete':  # Complete labeling
+            offer_id, supplier_id_short = int(parts[1]), parts[2]
+            return self.handlers['labeling'].handle_complete_labeling(chat_id, offer_id, supplier_id_short)
+        elif parts[0] == 'lc_confirm_complete':  # Confirm complete labeling
+            if len(parts) >= 3:
+                offer_id, supplier_id_short = int(parts[1]), parts[2]
+                return self.handlers['labeling'].handle_confirm_complete_labeling(chat_id, offer_id, supplier_id_short)
+            else:
+                from handlers.base_handler import BaseHandler
+                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+                return base_handler._send_message(chat_id, base_handler._t('invalid_format'))
         elif parts[0] == 'lc_back':  # Back navigation
             target = parts[1]
             args = parts[2:] if len(parts) > 2 else []

@@ -40,7 +40,8 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         return super().handle_offer_selection(
             chat_id, offer_id, supplier_id_short, 'lc',
             self.db.get_boxes_by_offer_with_ready_orders,
-            'select_box_for_labeling'
+            'select_box_for_labeling',
+            add_complete_button=True
         )
 
     def handle_box_selection(self, chat_id: int, box_id_short: str, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
@@ -118,6 +119,57 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
             return self._send_message(chat_id, self._t('labeling_completed_success', 
                                                      box_id=box.box_id[:8], 
                                                      updated_count=updated_count))
+        else:
+            return self._send_message(chat_id, self._t('delivery_processing_failed'))
+
+    def handle_complete_labeling(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
+        """Handle complete labeling for all boxes in an offer"""
+        all_boxes = self.db.get_boxes_by_offer_with_ready_orders(offer_id)
+        
+        if not all_boxes:
+            return self._send_message(chat_id, self._t('no_ready_for_labeling_offers'))
+        
+        keyboard = [
+            [{
+                "text": self._t('confirm', user_id=None),
+                "callback_data": f"lc_confirm_complete:{offer_id}:{supplier_id_short}"
+            }],
+            [{
+                "text": self._t('cancel', user_id=None),
+                "callback_data": f"lc_back:boxes:{offer_id}:{supplier_id_short}"
+            }]
+        ]
+        
+        return self._send_message(
+            chat_id,
+            self._t('complete_labeling_confirmation', box_count=len(all_boxes)),
+            reply_markup={"inline_keyboard": keyboard}
+        )
+
+    def handle_confirm_complete_labeling(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
+        """Confirm and execute complete labeling for all boxes"""
+        all_boxes = self.db.get_boxes_by_offer_with_ready_orders(offer_id)
+        
+        if not all_boxes:
+            return self._send_message(chat_id, self._t('no_ready_for_labeling_offers'))
+        
+        processed_count = 0
+        for box in all_boxes:
+            orders = self.db.get_orders_by_box(box.box_id)
+            ready_orders = [o for o in orders if o.status == OrderStatus.READY_FOR_LABELING.value]
+            
+            for order in ready_orders:
+                if self.db.update_order(order.order_id, {'status': OrderStatus.LABELING_COMPLETED.value}):
+                    processed_count += 1
+        
+        if processed_count > 0:
+            self._check_and_update_offer_status(offer_id)
+            
+            self._send_message(
+                chat_id, 
+                self._t('complete_labeling_success', box_count=len(all_boxes))
+            )
+            return self.handle_labeling_completed(chat_id, self.admin_user_id, [])
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 

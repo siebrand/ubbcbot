@@ -35,6 +35,14 @@ class LabelingCommands(BaseHandler):
         """Handle back navigation"""
         return self.completion_handler.handle_back_navigation(chat_id, target, *args)
 
+    def handle_complete_labeling(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
+        """Handle complete labeling for all boxes in an offer"""
+        return self.completion_handler.handle_complete_labeling(chat_id, offer_id, supplier_id_short)
+
+    def handle_confirm_complete_labeling(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
+        """Confirm and execute complete labeling for all boxes"""
+        return self.completion_handler.handle_confirm_complete_labeling(chat_id, offer_id, supplier_id_short)
+
     def handle_finish_labeling(self, chat_id: int, box_id: str) -> Dict[str, Any]:
         """Handle finish labeling for a box (legacy method)"""
         # Get all orders for this box that are in READY_FOR_LABELING status
