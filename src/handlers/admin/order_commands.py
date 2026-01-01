@@ -401,7 +401,7 @@ class AdminOrderCommands(BaseHandler):
                 if len(data['dates']) == 1:
                     date_display = f"[{list(data['dates'])[0]}]"
                 else:
-                    date_display = "[multiple days]"
+                    date_display = f"[{self._t('multiple_days_label')}]"
                 
                 # Alternate diamond icons for better readability
                 line_icon = "🔸" if line_count % 2 == 0 else "🔹"
@@ -438,7 +438,7 @@ class AdminOrderCommands(BaseHandler):
                 if len(data['dates']) == 1:
                     date_display = f"[{list(data['dates'])[0]}]"
                 else:
-                    date_display = "[multiple days]"
+                    date_display = f"[{self._t('multiple_days_label')}]"
                 
                 # Alternate diamond icons for better readability
                 line_icon = "🔸" if line_count % 2 == 0 else "🔹"
@@ -581,7 +581,7 @@ class AdminOrderCommands(BaseHandler):
                 customers_with_ready_orders.append((customer, labeling_completed_orders))
         
         if not customers_with_ready_orders:
-            self._send_message(chat_id, "❌ No customers with orders ready for delivery overview")
+            self._send_message(chat_id, self._t('no_customers_ready_overview', user_id=None))
             return {'status': 'no_customers'}
         
         total_customers = len(customers_with_ready_orders)
@@ -591,8 +591,8 @@ class AdminOrderCommands(BaseHandler):
         
         keyboard = {
             "inline_keyboard": [[
-                {"text": "✅ Start Sending Overviews", "callback_data": "start_send_overviews"},
-                {"text": "❌ Cancel", "callback_data": "cancel_action"}
+                {"text": self._t('start_sending_overviews', user_id=None), "callback_data": "start_send_overviews"},
+                {"text": self._t('cancel', user_id=None), "callback_data": "cancel_action"}
             ]]
         }
         
@@ -614,7 +614,7 @@ class AdminOrderCommands(BaseHandler):
                 customers_awaiting_payment.append((customer, awaiting_payment_orders))
         
         if not customers_awaiting_payment:
-            self._send_message(chat_id, "❌ No customers with orders awaiting payment")
+            self._send_message(chat_id, self._t('no_customers_awaiting_payment', user_id=None))
             return {'status': 'no_customers'}
         
         # Show customers with payment buttons
@@ -625,7 +625,7 @@ class AdminOrderCommands(BaseHandler):
             customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
             total_amount = sum(order.total_price for order in orders)
             message += f"👤 {customer_name}: €{total_amount:.2f} ({len(orders)} orders)\n"
-            keyboard_rows.append([{"text": f"✅ Mark {customer_name} Paid", "callback_data": f"mark_paid_{customer.customer_id}"}])
+            keyboard_rows.append([{"text": self._t('mark_customer_paid', user_id=None, customer_name=customer_name), "callback_data": f"mark_paid_{customer.customer_id}"}])
         
         if len(customers_awaiting_payment) > 10:
             message += f"\n... and {len(customers_awaiting_payment) - 10} more customers"
@@ -781,11 +781,11 @@ class AdminOrderCommands(BaseHandler):
                 failed_notifications.append((customer, labeling_completed_orders))
         
         if not failed_notifications:
-            self._send_message(chat_id, "✅ No failed notifications - all labeling completed orders have been processed")
+            self._send_message(chat_id, self._t('no_failed_notifications', user_id=None))
             return {'status': 'no_failed'}
         
         # Show failed notifications
-        message = "⚠️ Orders with Failed Delivery Notifications:\n\n"
+        message = self._t('failed_delivery_notifications_title', user_id=None) + "\n\n"
         
         for customer, orders in failed_notifications:
             customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"

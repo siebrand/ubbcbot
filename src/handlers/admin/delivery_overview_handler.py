@@ -106,7 +106,7 @@ class DeliveryOverviewHandler(BaseHandler):
                 return {'status': 'completed'}
                 
         except Exception as e:
-            self._send_message(chat_id, f"❌ Error processing payment link: {str(e)}")
+            self._send_message(chat_id, self._t('error_processing_payment_link', user_id=None, error=str(e)))
             return {'status': 'error'}
     
     def _send_delivery_overview(self, customer_data: Dict, payment_link: str) -> bool:
@@ -170,12 +170,12 @@ class DeliveryOverviewHandler(BaseHandler):
                     self.db.update_order(order.order_id, {'status': OrderStatus.AWAITING_PAYMENT.value})
                 
                 # Send success notification to admin
-                self._send_message(self.admin_user_id, f"✅ {admin_message}")
+                self._send_message(self.admin_user_id, self._t('admin_overview_sent_success', user_id=None, message=admin_message))
                 return True
             else:
                 # Send failure notification to admin
                 error_msg = result.get('error', 'Unknown error')
-                self._send_message(self.admin_user_id, f"❌ FAILED to send to {customer_name}: {error_msg}\n\n{admin_message}")
+                self._send_message(self.admin_user_id, self._t('admin_overview_sent_failed', user_id=None, customer_name=customer_name, error=error_msg, message=admin_message))
                 return False
                 
         except Exception as e:
@@ -186,7 +186,7 @@ class DeliveryOverviewHandler(BaseHandler):
         """Mark a customer's orders as paid"""
         customer = self.db.get_customer(customer_id)
         if not customer:
-            self._send_message(chat_id, "❌ Customer not found")
+            self._send_message(chat_id, self._t('customer_not_found', user_id=None))
             return {'status': 'customer_not_found'}
         
         # Get awaiting payment orders
@@ -194,7 +194,7 @@ class DeliveryOverviewHandler(BaseHandler):
         awaiting_payment_orders = [o for o in orders if o.status == OrderStatus.AWAITING_PAYMENT.value]
         
         if not awaiting_payment_orders:
-            self._send_message(chat_id, f"❌ No orders awaiting payment for {customer.first_name}")
+            self._send_message(chat_id, self._t('no_orders_awaiting_payment', user_id=None, customer_name=customer.first_name))
             return {'status': 'no_orders'}
         
         # Update orders to COMPLETED
@@ -207,14 +207,14 @@ class DeliveryOverviewHandler(BaseHandler):
         total_amount = sum(order.total_price for order in awaiting_payment_orders)
         
         if updated_count > 0:
-            self._send_message(chat_id, f"✅ Payment confirmed for {customer_name}\n{updated_count} orders marked as COMPLETED\nTotal: €{total_amount:.2f}")
+            self._send_message(chat_id, self._t('payment_confirmed', user_id=None, customer_name=customer_name, updated_count=updated_count, total_amount=total_amount))
             
             # Notify customer
-            self._send_message(customer.telegram_user_id, f"✅ Payment received! Your orders are now ready for pickup.\nTotal: €{total_amount:.2f}")
+            self._send_message(customer.telegram_user_id, self._t('payment_received_notification', customer.telegram_user_id, total_amount=total_amount))
             
             return {'status': 'success', 'updated_count': updated_count}
         else:
-            self._send_message(chat_id, f"❌ Failed to update orders for {customer_name}")
+            self._send_message(chat_id, self._t('failed_update_orders_customer', user_id=None, customer_name=customer_name))
             return {'status': 'error'}
     
     def _store_context(self, chat_id: int, context_type: str, data: str):

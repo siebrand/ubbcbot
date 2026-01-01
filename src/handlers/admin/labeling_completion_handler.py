@@ -71,7 +71,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         box_id_short = box_id[:8]
         keyboard = [
             [{
-                "text": "✅ Complete Labeling",
+                "text": self._t('complete_labeling_btn', user_id=None),
                 "callback_data": f"lc_action:complete:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{

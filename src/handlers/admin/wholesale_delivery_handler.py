@@ -71,7 +71,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         box_id_short = box_id[:8]
         keyboard = [
             [{
-                "text": "✅ Full Delivery",
+                "text": self._t('full_delivery_btn', user_id=None),
                 "callback_data": f"wd_action:{DeliveryAction.FULL.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{
@@ -79,11 +79,11 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
                 "callback_data": f"wd_action:{DeliveryAction.DELAYED.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{
-                "text": "❌ Cancel",
+                "text": self._t('cancel', user_id=None),
                 "callback_data": f"wd_action:{DeliveryAction.CANCEL.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{
-                "text": "⚠️ Incomplete",
+                "text": self._t('incomplete_delivery_btn', user_id=None),
                 "callback_data": f"wd_action:{DeliveryAction.INCOMPLETE.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{
@@ -211,7 +211,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
                 "callback_data": f"wd_partial:delayed:{box_id_short}:{received_units}"
             }],
             [{
-                "text": "❌ Remaining Cancelled",
+                "text": self._t('remaining_cancelled_btn', user_id=None),
                 "callback_data": f"wd_partial:cancel:{box_id_short}:{received_units}"
             }]
         ]

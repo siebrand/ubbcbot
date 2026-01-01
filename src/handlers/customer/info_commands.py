@@ -361,7 +361,9 @@ class InfoCommands(BaseHandler):
             
             # Add status header if multiple statuses present
             if len(status_groups) > 1:
-                message += f"{status_emoji} {status.upper()}:\n"
+                status_key = f"status_{status}"
+                status_label = self._t(status_key, user_id).upper()
+                message += f"{status_emoji} {status_label}:\n"
             
             line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups[status]['items']:
@@ -369,7 +371,7 @@ class InfoCommands(BaseHandler):
                 if len(data['dates']) == 1:
                     date_display = f"[{list(data['dates'])[0]}]"
                 else:
-                    date_display = "[multiple days]"
+                    date_display = f"[{self._t('multiple_days_label', user_id)}]"
                 
                 # Alternate diamond icons for better readability
                 line_icon = "🔸" if line_count % 2 == 0 else "🔹"
@@ -399,7 +401,8 @@ class InfoCommands(BaseHandler):
         if 'cancelled' in status_groups:
             status_emoji = '❌'
             if len(status_groups) > 1:
-                message += f"{status_emoji} CANCELLED:\n"
+                cancelled_label = self._t('status_cancelled', user_id).upper()
+                message += f"{status_emoji} {cancelled_label}:\n"
             
             line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups['cancelled']['items']:
@@ -407,7 +410,7 @@ class InfoCommands(BaseHandler):
                 if len(data['dates']) == 1:
                     date_display = f"[{list(data['dates'])[0]}]"
                 else:
-                    date_display = "[multiple days]"
+                    date_display = f"[{self._t('multiple_days_label', user_id)}]"
                 
                 # Alternate diamond icons for better readability
                 line_icon = "🔸" if line_count % 2 == 0 else "🔹"
@@ -453,7 +456,7 @@ class InfoCommands(BaseHandler):
                         "callback_data": f"offer_details_{offer.offer_id}"
                     }])
                 
-                keyboard["inline_keyboard"].append([{"text": "❌ Cancel", "callback_data": "cancel_action"}])
+                keyboard["inline_keyboard"].append([{"text": self._t('cancel', user_id=None), "callback_data": "cancel_action"}])
                 
                 self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success'}
