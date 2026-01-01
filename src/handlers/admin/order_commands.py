@@ -394,7 +394,9 @@ class AdminOrderCommands(BaseHandler):
             
             # Add status header if multiple statuses present or if this is completed status
             if len(status_groups) > 1 or status == 'completed':
-                message += f"{status_emoji} {status.upper()}:\n"
+                status_key = f"status_{status}"
+                status_label = self._t(status_key, user_id=None).upper()
+                message += f"{status_emoji} {status_label}:\n"
             
             line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups[status]['items']:
@@ -431,7 +433,8 @@ class AdminOrderCommands(BaseHandler):
         if 'cancelled' in status_groups:
             status_emoji = '❌'
             if len(status_groups) > 1:
-                message += f"{status_emoji} CANCELLED:\n"
+                cancelled_label = self._t('status_cancelled', user_id=None).upper()
+                message += f"{status_emoji} {cancelled_label}:\n"
             
             line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups['cancelled']['items']:
