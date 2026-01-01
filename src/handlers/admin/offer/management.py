@@ -438,7 +438,8 @@ class OfferManagementHandler(OfferBaseHandler):
         if customer:
             message = self._t('order_cancelled_offer_cancelled',
                 name=offer.name,
-                quantity=order.quantity
+                quantity=order.quantity,
+                total=float(order.total_price)
             )
             self._send_message(customer.telegram_user_id, message)
 
