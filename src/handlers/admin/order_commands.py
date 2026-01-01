@@ -942,7 +942,7 @@ class AdminOrderCommands(BaseHandler):
             if remaining_allowed > 0:
                 admin_message += self._t('admin_remaining_units_allowed', user_id=None, remaining=remaining_allowed)
             else:
-                admin_message += self._t('admin_limit_reached', user_id=None)
+                admin_message += self._t('admin_limit_reached', user_id=None, customer_name=display_name)
             
             self._send_message(chat_id, admin_message)
             return {'status': 'limit_exceeded'}
