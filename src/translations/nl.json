@@ -281,6 +281,7 @@
   "enter_new_first_name": "📝 Voer nieuwe voornaam in voor klant:",
   "enter_new_last_name": "📝 Voer nieuwe achternaam in voor klant:",
   "status_active": "actief",
+  "status_sold_out": "uitverkocht",
   "status_draft": "concept",
   "status_ordered": "BESTELD",
   "status_delivered": "GELEVERD",

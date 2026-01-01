@@ -282,6 +282,7 @@
   "enter_new_first_name": "📝 Enter new first name for customer:",
   "enter_new_last_name": "📝 Enter new last name for customer:",
   "status_active": "active",
+  "status_sold_out": "sold out",
   "status_draft": "draft",
   "status_ordered": "ORDERED",
   "status_delivered": "DELIVERED",
