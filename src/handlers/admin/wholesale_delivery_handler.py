@@ -128,7 +128,9 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         )
         
         if success:
-            return self._send_message(chat_id, self._t('full_delivery_processed', box_id=box_id[:8]))
+            self._send_message(chat_id, self._t('full_delivery_processed', box_id=box_id[:8]))
+            # Continue workflow by showing remaining boxes
+            return self._continue_workflow_after_action(chat_id, box_id)
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 
@@ -137,7 +139,9 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         success = self.delivery_service.process_wholesaler_delivery(box_id, 0, True)
         
         if success:
-            return self._send_message(chat_id, self._t('delayed_delivery_processed', box_id=box_id[:8]))
+            self._send_message(chat_id, self._t('delayed_delivery_processed', box_id=box_id[:8]))
+            # Continue workflow by showing remaining boxes
+            return self._continue_workflow_after_action(chat_id, box_id)
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 
@@ -146,7 +150,9 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         success = self.delivery_service.process_wholesaler_delivery(box_id, 0, False)
         
         if success:
-            return self._send_message(chat_id, self._t('cancelled_delivery_processed', box_id=box_id[:8]))
+            self._send_message(chat_id, self._t('cancelled_delivery_processed', box_id=box_id[:8]))
+            # Continue workflow by showing remaining boxes
+            return self._continue_workflow_after_action(chat_id, box_id)
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 
@@ -251,13 +257,51 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         
         if success:
             action_text = 'delayed' if is_delayed else 'cancelled'
-            return self._send_message(
+            self._send_message(
                 chat_id, 
                 self._t('partial_delivery_processed', 
                        box_id=box.box_id[:8], 
                        received_units=received_units,
                        action=action_text)
             )
+            # Continue workflow by showing remaining boxes
+            return self._continue_workflow_after_action(chat_id, box.box_id)
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
+
+    def _continue_workflow_after_action(self, chat_id: int, processed_box_id: str) -> Dict[str, Any]:
+        """Continue workflow by showing remaining boxes for the same offer"""
+        # Find the offer for this box
+        offer = None
+        try:
+            offers = self.db.get_all_offers()
+            for o in offers:
+                boxes = self.db.get_boxes_by_offer_with_orders(o.offer_id)
+                if any(b.box_id == processed_box_id for b in boxes):
+                    offer = o
+                    break
+        except Exception as e:
+            logger.error(f"Error finding offer for box {processed_box_id}: {e}")
+            return {'status': 'error'}
+        
+        if not offer:
+            return {'status': 'offer_not_found'}
+        
+        # Get remaining boxes with orders for this offer
+        remaining_boxes = self.db.get_boxes_by_offer_with_orders(offer.offer_id)
+        
+        if not remaining_boxes:
+            # No more boxes, go back to offer selection
+            supplier = self.db.get_supplier_by_name(offer.supplier_name)
+            if supplier:
+                supplier_id_short = supplier.supplier_id[:8]
+                return self.handle_supplier_selection(chat_id, supplier_id_short)
+            else:
+                return self.handle_wholesale_delivery(chat_id, self.admin_user_id, [])
+        
+        # Show remaining boxes
+        supplier = self.db.get_supplier_by_name(offer.supplier_name)
+        supplier_id_short = supplier.supplier_id[:8] if supplier else "unknown"
+        
+        return self.handle_offer_selection(chat_id, offer.offer_id, supplier_id_short)
 
