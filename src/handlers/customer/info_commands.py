@@ -347,7 +347,7 @@ class InfoCommands(BaseHandler):
         open_total = Decimal('0.0')
         
         # First show open orders
-        for status in ['pending', 'ordered', 'confirmed', 'delivered']:
+        for status in ['pending', 'ordered', 'confirmed', 'delivered', 'completed']:
             if status not in status_groups:
                 continue
                 
@@ -356,7 +356,8 @@ class InfoCommands(BaseHandler):
                 'ordered': '📦',
                 'confirmed': '✅',
                 'cancelled': '❌',
-                'delivered': '🚚'
+                'delivered': '🚚',
+                'completed': '✅'
             }.get(status, '❓')
             
             # Add status header if multiple statuses present
