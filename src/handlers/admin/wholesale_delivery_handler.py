@@ -235,7 +235,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         all_boxes = []
         try:
             # Get all offers and their boxes to find the matching box
-            offers = self.db.get_all_offers()
+            offers = self.db.list_offers()
             for offer in offers:
                 boxes = self.db.get_boxes_by_offer_with_orders(offer.offer_id)
                 all_boxes.extend(boxes)
@@ -274,7 +274,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         # Find the offer for this box
         offer = None
         try:
-            offers = self.db.get_all_offers()
+            offers = self.db.list_offers()
             for o in offers:
                 boxes = self.db.get_boxes_by_offer_with_orders(o.offer_id)
                 if any(b.box_id == processed_box_id for b in boxes):
