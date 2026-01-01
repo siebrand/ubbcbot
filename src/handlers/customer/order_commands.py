@@ -130,43 +130,36 @@ class CustomerOrderCommands(BaseHandler):
             if box_size == 1:
                 logger.info(f"DEBUG: Processing order for box size 1 offer {offer_id}, quantity {quantity}, customer {customer.customer_id}")
             
-            # ATOMIC CAPACITY CHECK FIRST: Get current state and validate
+            # ATOMIC CAPACITY CHECK: Find a box that can fit the entire order
             boxes = self.db.get_boxes_by_offer(offer_id)
-            current_total_ordered = sum(box.current_quantity for box in boxes)
-            current_total_capacity = sum(box.max_capacity for box in boxes)
+            suitable_box = None
             
-            # Check if order would exceed current capacity
-            if current_total_ordered + quantity > current_total_capacity:
-                # Check if we can create new boxes (no ordered boxes exist)
+            # Look for existing box that can fit the entire order
+            for box in boxes:
+                if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
+                    available_space = box.max_capacity - box.current_quantity
+                    if available_space >= quantity:
+                        suitable_box = box
+                        break
+            
+            # If no suitable box found, create a new one (if allowed)
+            if not suitable_box:
                 has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes) if boxes else False
                 
                 if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes:
-                    # Safe to create new boxes - calculate needed capacity
-                    needed_capacity = (current_total_ordered + quantity) - current_total_capacity
-                    boxes_needed = (needed_capacity + box_size - 1) // box_size  # Ceiling division
-                    
-                    if box_size == 1:
-                        logger.info(f"DEBUG: Box size 1 - Creating {boxes_needed} new boxes for needed_capacity {needed_capacity}")
-                    
-                    # Create the required number of boxes
-                    for i in range(boxes_needed):
-                        new_box = Box(
-                            offer_id=offer_id,
-                            max_capacity=box_size,
-                            min_breakeven=offer.min_quantity_breakeven
-                        )
-                        created_box = self.db.create_box(new_box)
-                        if box_size == 1:
-                            logger.info(f"DEBUG: Box size 1 - Created box {i+1}/{boxes_needed}, box_id: {created_box.box_id if created_box else 'FAILED'}")
+                    # Create new box
+                    new_box = Box(
+                        offer_id=offer_id,
+                        max_capacity=box_size,
+                        min_breakeven=offer.min_quantity_breakeven
+                    )
+                    suitable_box = self.db.create_box(new_box)
+                    if not suitable_box:
+                        self._send_message(chat_id, self._t('order_processing_failed', user_id))
+                        return {'status': 'error'}
                 else:
-                    # Cannot create boxes or insufficient capacity - reject order
-                    available_capacity = current_total_capacity - current_total_ordered
-                    if available_capacity > 0:
-                        self._send_message(chat_id, self._t('insufficient_quantity', user_id, 
-                                                          requested=quantity, 
-                                                          available=available_capacity))
-                    else:
-                        self._send_message(chat_id, self._t('sold_out', user_id))
+                    # Cannot create boxes - reject order
+                    self._send_message(chat_id, self._t('sold_out', user_id))
                     return {'status': 'insufficient_capacity'}
 
             # Create single order
@@ -188,81 +181,36 @@ class CustomerOrderCommands(BaseHandler):
             if box_size == 1:
                 logger.info(f"DEBUG: Box size 1 - Created order {created_order.order_id}, quantity {quantity}")
 
-            # Now assign order to boxes and update quantities
-            remaining_quantity = quantity
-            boxes_used = []
+            # Assign order to the suitable box
+            new_quantity = suitable_box.current_quantity + quantity
+            updates = {'current_quantity': new_quantity}
             
-            while remaining_quantity > 0:
-                # Find available box - prioritize boxes with least available space (most filled)
-                boxes = self.db.get_boxes_by_offer(offer_id)
-                available_boxes = []
-                
-                for box in boxes:
-                    if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
-                        available_space = box.max_capacity - box.current_quantity
-                        if available_space > 0:
-                            available_boxes.append((box, available_space))
-                
-                # Sort by available space (ascending) to fill boxes with least space first
-                available_boxes.sort(key=lambda x: x[1])
-                available_box = available_boxes[0][0] if available_boxes else None
+            # Update box status based on new quantity
+            if new_quantity >= suitable_box.max_capacity:
+                updates['status'] = BoxStatus.FULL.value
+            elif new_quantity >= suitable_box.min_breakeven:
+                updates['status'] = BoxStatus.MINIMUM_REACHED.value
 
-                # Should always find a box since we created one if needed
-                if not available_box:
-                    logger.error(f"No available box found for offer {offer_id} after capacity check")
-                    self._send_message(chat_id, self._t('order_processing_failed', user_id))
-                    return {'status': 'error'}
+            if not self.db.update_box(suitable_box.box_id, updates):
+                logger.error(f"Failed to update box {suitable_box.box_id}")
+                self._send_message(chat_id, self._t('failed_update_box', user_id))
+                return {'status': 'error'}
+            
+            # Update order with box_id and status
+            final_status = 'pending'
+            self.db.update_order(order.order_id, {'box_id': suitable_box.box_id, 'status': final_status})
+            order.status = final_status
 
-                # Calculate how much can fit in this box
-                available_space = available_box.max_capacity - available_box.current_quantity
-                box_quantity = min(remaining_quantity, available_space)
-                
-                # Update box quantity and status
-                new_quantity = available_box.current_quantity + box_quantity
-                updates = {'current_quantity': new_quantity}
-                
-                # Update box status based on new quantity
-                if new_quantity >= available_box.max_capacity:
-                    updates['status'] = BoxStatus.FULL.value if available_box.status != BoxStatus.ORDERED.value else BoxStatus.ORDERED.value
-                elif new_quantity >= available_box.min_breakeven:
-                    updates['status'] = BoxStatus.MINIMUM_REACHED.value if available_box.status != BoxStatus.ORDERED.value else BoxStatus.ORDERED.value
-
-                if not self.db.update_box(available_box.box_id, updates):
-                    logger.error(f"Failed to update box {available_box.box_id}")
-                    self._send_message(chat_id, self._t('failed_update_box', user_id))
-                    return {'status': 'error'}
-                
-                boxes_used.append(available_box.box_id)
-                remaining_quantity -= box_quantity
-                logger.info(f"Assigned {box_quantity} units to box, remaining: {remaining_quantity}")
-
-            # Update order with first box_id and appropriate status
-            if boxes_used:
-                # Get updated box status to determine final order status
-                updated_box = self.db.get_box(boxes_used[0])
-                final_status = 'ordered' if updated_box.status == BoxStatus.ORDERED.value else 'pending'
-                self.db.update_order(order.order_id, {'box_id': boxes_used[0], 'status': final_status})
-                
-                # Update order object for confirmation message
-                order.status = final_status
-                
-                # Check if offer should be marked as sold out
-                self._check_and_update_offer_status(offer_id)
-
-            # Send confirmation message
-            if len(boxes_used) == 1:
-                self._send_message(chat_id, self._t('order_placed_single', user_id,
-                    order_id=order.order_id,
-                    product=offer.name,
-                    quantity=quantity,
-                    total=float(order.total_price),
-                    status=order.status))
-            else:
-                self._send_message(chat_id, self._t('order_placed_multiple', user_id,
-                    product=offer.name,
-                    quantity=quantity,
-                    total=float(order.total_price),
-                    boxes=len(boxes_used)))
+            # Check if offer should be marked as sold out
+            self._check_and_update_offer_status(offer_id)
+            
+            # Send confirmation message - always single box now
+            self._send_message(chat_id, self._t('order_placed_single', user_id,
+                order_id=order.order_id,
+                product=offer.name,
+                quantity=quantity,
+                total=float(order.total_price),
+                status=order.status))
             
             # Send notification to default channel for all successful orders (not just private chats)
             if not placed_by_admin:  # Don't notify for admin orders
