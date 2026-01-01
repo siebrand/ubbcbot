@@ -377,7 +377,7 @@ class InfoCommands(BaseHandler):
                 order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
                 
                 if show_ids:
-                    ids_display = ', '.join(data['order_ids'])
+                    ids_display = ', '.join([order_id[:8] for order_id in data['order_ids']])
                     order_line += f" - {ids_display}"
                 
                 message += order_line + "\n"
@@ -415,7 +415,7 @@ class InfoCommands(BaseHandler):
                 order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
                 
                 if show_ids:
-                    ids_display = ', '.join(data['order_ids'])
+                    ids_display = ', '.join([order_id[:8] for order_id in data['order_ids']])
                     order_line += f" - {ids_display}"
                 
                 message += order_line + "\n"
