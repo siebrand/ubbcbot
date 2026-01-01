@@ -38,9 +38,13 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
 
     def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id_short: str) -> Dict[str, Any]:
         """Handle offer selection and show boxes"""
+        boxes = self.db.get_boxes_by_offer_with_orders(offer_id)
+        # Filter out delivered boxes for wholesale delivery
+        boxes = [box for box in boxes if box.status != 'delivered']
+        
         return super().handle_offer_selection(
             chat_id, offer_id, supplier_id_short, 'wd',
-            self.db.get_boxes_by_offer_with_orders,
+            lambda oid: boxes,  # Use filtered boxes
             'select_box_for_delivery'
         )
 
@@ -287,8 +291,9 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         if not offer:
             return {'status': 'offer_not_found'}
         
-        # Get remaining boxes with orders for this offer
+        # Get remaining boxes with orders for this offer (exclude delivered)
         remaining_boxes = self.db.get_boxes_by_offer_with_orders(offer.offer_id)
+        remaining_boxes = [box for box in remaining_boxes if box.status != 'delivered']
         
         if not remaining_boxes:
             # No more boxes, go back to offer selection
