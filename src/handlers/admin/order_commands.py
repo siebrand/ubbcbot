@@ -731,15 +731,15 @@ class AdminOrderCommands(BaseHandler):
             active_value=active_value
         ) + "\n\n"
         
-        for order in page_orders:
+        for i, order in enumerate(page_orders):
             customer = self.db.get_customer(order.customer_id)
             customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Unknown"
             
             from utils.timezone import to_cet_string
-            order_date = to_cet_string(order.created_at, '%Y-%m-%d %H:%M')
+            order_date = to_cet_string(order.created_at, '%Y-%m-%d')
             
             status_emoji = {
-                'pending': '🟡',
+                'pending': '⏳',
                 'ordered': '📦',
                 'cancelled': '❌',
                 'ready_for_labeling': '🏷️',
@@ -748,8 +748,10 @@ class AdminOrderCommands(BaseHandler):
                 'completed': '✅'
             }.get(order.status, '❓')
             
-            message += f"{status_emoji} {customer_name} - {order.quantity}x €{order.total_price:.2f}\n"
-            message += f"   [{order_date}] {order.status} (ID: {order.order_id})\n\n"
+            # Alternate diamond icons for better readability
+            line_icon = "🔸" if i % 2 == 0 else "🔹"
+            
+            message += f"{line_icon} [{order_date}] {customer_name} {order.quantity}x €{order.total_price:.2f} - {order.order_id[:8]}\n"
         
         # Add pagination keyboard if needed
         keyboard = None
