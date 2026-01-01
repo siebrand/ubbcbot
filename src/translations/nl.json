@@ -343,6 +343,7 @@
   "no_orders_awaiting_payment": "❌ Geen bestellingen die wachten op betaling voor {customer_name}",
   "failed_update_orders_customer": "❌ Kon bestellingen niet bijwerken voor {customer_name}",
   "no_customers_ready_overview": "❌ Geen klanten met bestellingen klaar voor leveringsoverzicht",
+  "delivery_overview_sent_to": "📋 Leveringsoverzicht verstuurd naar {customer_name}:",
   "delivery_overview_title": "📦 Leveringsoverzicht",
   "ready_for_pickup": "✅ Klaar voor Ophalen:",
   "total_to_pay": "\nTotaal te betalen: €{total:.2f}",

@@ -162,7 +162,7 @@ class DeliveryOverviewHandler(BaseHandler):
             result = self._send_message(customer.telegram_user_id, message)
             
             # Send copy to admin with customer info
-            admin_message = f"📋 Delivery Overview Sent to {customer_name}:\n\n{message}"
+            admin_message = f"{self._t('delivery_overview_sent_to', user_id=None, customer_name=customer_name)}\n\n{message}"
             
             if result.get('success'):
                 # Update orders to AWAITING_PAYMENT only if customer message was sent
