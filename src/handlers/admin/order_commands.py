@@ -921,10 +921,29 @@ class AdminOrderCommands(BaseHandler):
         # Check 10-unit admin limit for target customer
         valid, limit_message = self.validator.validate_order_limit(customer.customer_id, offer_id, quantity, 10)
         if not valid:
-            # Customize message for admin context
+            # Extract existing orders info for admin message
+            existing_orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) 
+                             if o.offer_id == offer_id and o.status in ['pending', 'ordered']]
+            total_existing = sum(order.quantity for order in existing_orders)
+            
             display_name = customer.first_name or "Unknown"
-            admin_message = self._t('admin_order_limit_exceeded', user_id=None, customer_name=display_name)
-            admin_message += "\n" + limit_message.split("\n", 1)[1]  # Skip first line, keep details
+            admin_message = self._t('admin_order_limit_exceeded', user_id=None, 
+                                  customer_name=display_name, 
+                                  total_existing=total_existing)
+            
+            # Add order details
+            admin_message += "\n\n"
+            for order in existing_orders:
+                from utils.timezone import to_cet_string
+                order_date = to_cet_string(order.created_at, '%Y-%m-%d')
+                admin_message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
+            
+            remaining_allowed = 10 - total_existing
+            if remaining_allowed > 0:
+                admin_message += self._t('admin_remaining_units_allowed', user_id=None, remaining=remaining_allowed)
+            else:
+                admin_message += self._t('admin_limit_reached', user_id=None)
+            
             self._send_message(chat_id, admin_message)
             return {'status': 'limit_exceeded'}
 
