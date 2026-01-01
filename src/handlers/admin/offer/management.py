@@ -174,7 +174,7 @@ class OfferManagementHandler(OfferBaseHandler):
                     name=offer.name,
                     old_qty=old_qty,
                     new_qty=new_qty,
-                    total=new_total_price
+                    total=float(new_total_price)
                 )
                 self._send_message(customer.telegram_user_id, msg)
         
