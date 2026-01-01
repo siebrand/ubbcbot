@@ -146,7 +146,7 @@
   "offer_cancelled_no_orders": "✅ Aanbieding {offer_id} geannuleerd (geen actieve bestellingen)",
   "usage_confirm_cancel_offer": "Gebruik: /confirm_cancel_offer <aanbieding_id>",
   "offer_cancelled_summary": "✅ Aanbieding {offer_id} geannuleerd:\n\n❌ {cancelled_count} bestellingen geannuleerd\n🗑️ {deleted_boxes} dozen verwijderd\n📧 {notified_count} klanten geïnformeerd",
-  "order_cancelled_offer_cancelled": "❌ Je bestelling is geannuleerd:\n\n🍺 {name}\nAantal: {quantity} stuks\nBedrag: €{total:.2f}\nReden: Aanbieding werd geannuleerd",
+  "order_cancelled_offer_cancelled": "❌ Je bestelling is geannuleerd:\n\n🍺 {name}\nAantal: {quantity} stuks\nBedrag: €{total:.2f}\nReden: UBBC heeft de aanbieding geannuleerd",
   "usage_add_box": "Gebruik: /add_box [aanbieding_id]",
   "box_added_offer_active": "✅ Nieuwe colli toegevoegd voor aanbieding {offer_id} (aanbieding status bijgewerkt naar actief)",
   "box_added": "✅ Nieuwe colli toegevoegd voor aanbieding {offer_id}",
