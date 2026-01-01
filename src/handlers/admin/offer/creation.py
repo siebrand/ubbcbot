@@ -65,7 +65,7 @@ class OfferCreationHandler(OfferBaseHandler):
                     "inline_keyboard": [
                         [{"text": self._t('edit_details'), "callback_data": f"offer_details_{offer.offer_id}_edit"}],
                         [{"text": self._t('view_details'), "callback_data": f"offer_details_{offer.offer_id}"}],
-                        [{"text": self._t('publish_offer'), "callback_data": f"publish_offer_{offer.offer_id}"}]
+                        [{"text": self._t('publish_offer_btn'), "callback_data": f"publish_offer_{offer.offer_id}"}]
                     ]
                 }
                 

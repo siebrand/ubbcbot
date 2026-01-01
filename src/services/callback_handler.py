@@ -463,6 +463,8 @@ class CallbackHandler:
         
         if data == 'admin_main':
             return self.handlers['admin_commands'].handle_admin(chat_id, user_id)
+        elif data == 'admin_workflow':
+            return self.handlers['admin_commands'].handle_admin_workflow(chat_id, user_id)
         elif data == 'admin_suppliers':
             return self.handlers['admin_commands'].handle_admin_suppliers(chat_id, user_id)
         elif data == 'admin_offers':
@@ -497,6 +499,7 @@ class CallbackHandler:
             'cmd_list_suppliers': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
             'cmd_edit_supplier': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
             'cmd_create_offer': lambda: self.handlers['offer'].handle_create_offer(chat_id, []),
+            'cmd_publish_offer': lambda: self._send_usage_message(chat_id, 'usage_publish_offer'),
             'cmd_list_offers': lambda: self.handlers['info'].handle_list_offers(chat_id, user_id, []),
             'cmd_box_status': lambda: self.handlers['offer'].handle_box_status(chat_id),
             'cmd_audit_offer': lambda: self.handlers['offer'].handle_audit_offer(chat_id, []),

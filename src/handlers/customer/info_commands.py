@@ -503,7 +503,7 @@ class InfoCommands(BaseHandler):
                 keyboard = {
                     "inline_keyboard": [
                         [{"text": self._t('edit_details'), "callback_data": f"offer_details_{offer_id}_edit"}],
-                        [{"text": self._t('publish_offer'), "callback_data": f"publish_offer_{offer_id}"}],
+                        [{"text": self._t('publish_offer_btn'), "callback_data": f"publish_offer_{offer_id}"}],
                         [{"text": self._t('cancel'), "callback_data": "cancel_action"}]
                     ]
                 }

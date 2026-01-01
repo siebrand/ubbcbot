@@ -11,7 +11,11 @@ class AdminCommandsHandler(BaseHandler):
         
         keyboard = {
             "inline_keyboard": [
-                # Supplier Management
+                # Core Workflow - First Priority
+                [
+                    {"text": self._t('admin_workflow', user_id), "callback_data": "admin_workflow"}
+                ],
+                # Management Categories
                 [
                     {"text": self._t('admin_suppliers', user_id), "callback_data": "admin_suppliers"},
                     {"text": self._t('admin_offers', user_id), "callback_data": "admin_offers"}
@@ -30,6 +34,26 @@ class AdminCommandsHandler(BaseHandler):
                 [
                     {"text": self._t('admin_system', user_id), "callback_data": "admin_system"}
                 ]
+            ]
+        }
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
+    
+    def handle_admin_workflow(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Show core workflow commands in sequential order"""
+        message = self._t('admin_workflow_menu', user_id)
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": self._t('create_offer_btn', user_id), "callback_data": "cmd_create_offer"}],
+                [{"text": self._t('publish_offer_btn', user_id), "callback_data": "cmd_publish_offer"}],
+                [{"text": self._t('wholesale_order_btn', user_id), "callback_data": "cmd_order_wholesale"}],
+                [{"text": self._t('wholesale_delivery_btn', user_id), "callback_data": "cmd_wholesale_delivery"}],
+                [{"text": self._t('labeling_completed_btn', user_id), "callback_data": "cmd_labeling_completed"}],
+                [{"text": self._t('send_overviews_btn', user_id), "callback_data": "cmd_send_overviews"}],
+                [{"text": self._t('mark_paid_btn', user_id), "callback_data": "cmd_mark_paid"}],
+                [{"text": self._t('back_to_admin', user_id), "callback_data": "admin_main"}]
             ]
         }
         
