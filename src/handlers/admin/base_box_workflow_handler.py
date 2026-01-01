@@ -13,8 +13,11 @@ class BaseBoxWorkflowHandler(BaseHandler):
 
     def _build_supplier_keyboard(self, suppliers: List[Supplier], callback_prefix: str) -> Dict[str, Any]:
         """Build inline keyboard for supplier selection"""
+        # Sort suppliers alphabetically by name
+        sorted_suppliers = sorted(suppliers, key=lambda s: s.name.lower())
+        
         keyboard = []
-        for supplier in suppliers:
+        for supplier in sorted_suppliers:
             keyboard.append([{
                 "text": supplier.name,
                 "callback_data": f"{callback_prefix}_sup:{supplier.supplier_id[:8]}"
