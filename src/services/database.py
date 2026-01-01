@@ -883,6 +883,14 @@ class DynamoDBService:
             print(f"Error getting boxes with {order_status} orders: {e}")
             return []
 
+    def delete_offer(self, offer_id: int) -> bool:
+        try:
+            self.offers_table.delete_item(Key={'offer_id': offer_id})
+            return True
+        except Exception as e:
+            print(f"Error deleting offer: {e}")
+            return False
+
     def delete_offer_images(self, offer_id: int) -> bool:
         """Delete all images for an offer from S3"""
         try:

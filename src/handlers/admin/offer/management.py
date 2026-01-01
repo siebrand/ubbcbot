@@ -450,6 +450,28 @@ class OfferManagementHandler(OfferBaseHandler):
             )
             self._send_message(customer.telegram_user_id, message)
 
+    def handle_delete_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /delete_offer command"""
+        if not args:
+            self._send_message(chat_id, self._t('usage_delete_offer'))
+            return {'status': 'invalid_args'}
+
+        offer, error = self._validate_and_get_offer(args, chat_id)
+        if error:
+            return error
+        
+        if offer.status not in [OfferStatus.COMPLETED.value, OfferStatus.INACTIVE.value]:
+            self._send_message(chat_id, self._t('offer_cannot_delete', status=self._t(f'status_{offer.status}')))
+            return {'status': 'invalid_status'}
+        
+        # Delete the offer
+        if self.db.delete_offer(offer.offer_id):
+            self._send_message(chat_id, self._t('offer_deleted', offer_id=offer.offer_id, name=offer.name))
+            return {'status': 'success'}
+        else:
+            self._send_message(chat_id, self._t('failed_delete_offer'))
+            return {'status': 'failed'}
+
     def _cleanup_offer_notifications(self, offer_id: int):
         """Clean up notification messages for cancelled offer"""
         try:

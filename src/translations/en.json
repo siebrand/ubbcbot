@@ -225,7 +225,7 @@
   "help_general": "📋 General Commands:\n\n/start - Show main help\n/help [section] - Show help for specific section\n/cancel - Cancel pending operation\n/list_offers [user] - View available offers (admin: add 'user' for customer view)\n/subscribe - Subscribe to offer notifications\n/unsubscribe - Unsubscribe from notifications",
   "help_orders": "🛍️ Order Commands:\n\n/order <offer_id> [quantity] - Place an order\n/confirm_order <offer_id> <quantity> - Confirm duplicate order\n/my_orders [id] - View your orders\n/delete_cancelled - Delete your cancelled orders",
   "help_suppliers": "🏢 Supplier Management:\n\n/add_supplier <name> - Add supplier\n/retire_supplier <name> - Retire supplier\n/list_suppliers [active|retired|all] - List suppliers\n/edit_supplier <name> - Edit supplier details",
-  "help_offers": "🍺 Offer Management:\n\n/create_offer <supplier> <name> <price> <box_size> - Create draft offer\n/offer_details <offer_id> - View and edit offer details\n/preview_offer <offer_id> - Preview offer appearance\n/publish_offer <offer_id> - Publish draft offer\n/cancel_offer <offer_id> - Cancel offer and all orders\n/add_box <offer_id> - Add box to offer\n/box_status [active|ordered|full|delivered|all] - View box status",
+  "help_offers": "🍺 Offer Management:\n\n/create_offer <supplier> <name> <price> <box_size> - Create draft offer\n/offer_details <offer_id> - View and edit offer details\n/preview_offer <offer_id> - Preview offer appearance\n/publish_offer <offer_id> - Publish draft offer\n/cancel_offer <offer_id> - Cancel offer and all orders\n/delete_offer <offer_id> - Delete completed or inactive offer\n/add_box <offer_id> - Add box to offer\n/box_status [active|ordered|full|delivered|all] - View box status",
   "help_users": "👥 User Management:\n\n/pending_users - View users awaiting approval\n/list_users - View all customers\n/approve_user <username> - Approve user\n/reject_user <username> - Reject user\n/user_status <username> - Check user status\n/update_user <username> <first_name> [last_name] - Update name\n/order_for <username> <offer_id> [quantity] - Place order for user\n/cancel_order [username|order_id] - Cancel customer order\n/user_orders [username] - View orders for user\n/offer_orders [offer_id] - View all orders for offer\n/all_orders [status] - Download CSV of orders\n/audit_orders - Audit orders - add update_date to orders missing it",
   "help_delivery": "📦 Delivery Management:\n\n/order_wholesale <offer_id> - Start wholesale ordering process (move full boxes to ordered status)\n/wholesale_delivery - Process wholesale deliveries\n/labeling_completed - Complete labeling process\n/send_overviews - Send delivery overviews to customers\n/mark_paid - Mark customers as paid\n/failed_notifications - View failed delivery notifications\n/create_discount <percentage> [hours] - Create discount\n/cancel_discount - Cancel active discount\n/discount_status - View discount status",
   "admin_only_section": "❌ Admin-only section",
@@ -456,6 +456,10 @@
   "order_not_found_full_id": "❌ Order not found: {order_id}",
   "order_already_cancelled_full_id": "⚠️ Order {order_id} is already cancelled",
   "customer_not_found_for_order": "❌ Customer not found for order {order_id}",
+  "usage_delete_offer": "Usage: /delete_offer <offer_id>",
+  "offer_cannot_delete": "❌ Offer cannot be deleted (status: {status}). Only COMPLETED or INACTIVE offers can be deleted.",
+  "offer_deleted": "✅ Offer {offer_id} '{name}' deleted successfully",
+  "failed_delete_offer": "❌ Failed to delete offer",
   "box_not_found_for_order": "❌ Box not found for order {order_id}",
   "notified_customers": "📧 Customers: {customers}"
 }
