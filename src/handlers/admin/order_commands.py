@@ -1049,20 +1049,23 @@ class AdminOrderCommands(BaseHandler):
                           reply_markup={"force_reply": True, "input_field_placeholder": "Enter quantity"})
         return {'status': 'awaiting_quantity_input'}
     
-    def handle_delete_cancelled(self, chat_id: int) -> Dict[str, Any]:
-        """Handle admin /delete_cancelled command - delete cancelled orders older than 7 days"""
+    def handle_delete_old(self, chat_id: int) -> Dict[str, Any]:
+        """Handle admin /delete_old command - delete cancelled and completed orders older than 7 days"""
         try:
             from datetime import datetime, UTC, timedelta
             
             # Calculate cutoff date (7 days ago)
             cutoff_date = datetime.now(UTC) - timedelta(days=7)
             
-            # Get all cancelled orders
+            # Get all customers
             from models.entities import AuthorizationStatus
             customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
             
             old_cancelled_orders = []
+            old_completed_orders = []
+            
             for customer in customers:
+                # Get cancelled orders
                 cancelled_orders = self.db.get_orders_by_customer_and_status(customer.customer_id, 'cancelled')
                 for order in cancelled_orders:
                     if order.update_date:
@@ -1073,29 +1076,50 @@ class AdminOrderCommands(BaseHandler):
                         except (ValueError, AttributeError):
                             # Skip orders with invalid cancellation dates
                             continue
+                
+                # Get completed orders
+                completed_orders = self.db.get_orders_by_customer_and_status(customer.customer_id, 'completed')
+                for order in completed_orders:
+                    if order.update_date:
+                        try:
+                            update_date = datetime.fromisoformat(order.update_date.replace('Z', '+00:00'))
+                            if update_date <= cutoff_date:
+                                old_completed_orders.append(order)
+                        except (ValueError, AttributeError):
+                            # Skip orders with invalid completion dates
+                            continue
             
-            if not old_cancelled_orders:
-                self._send_message(chat_id, self._t('no_old_cancelled_orders', chat_id))
-                return {'status': 'no_old_cancelled_orders'}
+            if not old_cancelled_orders and not old_completed_orders:
+                self._send_message(chat_id, self._t('no_old_orders', chat_id))
+                return {'status': 'no_old_orders'}
             
-            # Delete old cancelled orders
-            deleted_count = 0
+            # Delete old orders
+            deleted_cancelled_count = 0
+            deleted_completed_count = 0
+            
             for order in old_cancelled_orders:
                 if self.db.delete_order(order.order_id):
-                    deleted_count += 1
+                    deleted_cancelled_count += 1
             
-            if deleted_count > 0:
-                self._send_message(chat_id, self._t('old_cancelled_orders_deleted', chat_id, count=deleted_count))
-                return {'status': 'success', 'deleted_count': deleted_count}
+            for order in old_completed_orders:
+                if self.db.delete_order(order.order_id):
+                    deleted_completed_count += 1
+            
+            if deleted_cancelled_count > 0 or deleted_completed_count > 0:
+                message = self._t('old_orders_deleted', chat_id, 
+                                cancelled_count=deleted_cancelled_count, 
+                                completed_count=deleted_completed_count)
+                self._send_message(chat_id, message)
+                return {'status': 'success', 'deleted_cancelled_count': deleted_cancelled_count, 'deleted_completed_count': deleted_completed_count}
             else:
-                self._send_message(chat_id, self._t('failed_delete_old_cancelled_orders', chat_id))
+                self._send_message(chat_id, self._t('failed_delete_old_orders', chat_id))
                 return {'status': 'error'}
                 
         except Exception as e:
             import logging
             logger = logging.getLogger()
-            logger.error(f"Error in admin handle_delete_cancelled: {e}")
-            self._send_message(chat_id, self._t('failed_delete_old_cancelled_orders', chat_id))
+            logger.error(f"Error in admin handle_delete_old: {e}")
+            self._send_message(chat_id, self._t('failed_delete_old_orders', chat_id))
             return {'status': 'error'}
     
     def handle_audit_orders(self, chat_id: int) -> Dict[str, Any]:
