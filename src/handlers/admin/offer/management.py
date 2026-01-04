@@ -124,10 +124,10 @@ class OfferManagementHandler(OfferBaseHandler):
         # Get box size from offer
         box_size = offer.wholesale_box_size
         
-        # Get pending orders sorted by date descending (newest first)
+        # Get pending orders sorted by date ascending (oldest first)
         all_orders = self.db.get_orders_by_offer(offer.offer_id)
         pending_orders = [o for o in all_orders if o.status == 'pending']
-        pending_orders.sort(key=lambda x: x.created_at, reverse=True)
+        pending_orders.sort(key=lambda x: x.created_at)
         
         units_available = boxes_ordered * box_size
         units_allocated = 0
@@ -135,7 +135,7 @@ class OfferManagementHandler(OfferBaseHandler):
         cancelled_orders = []
         updated_orders = []
         
-        # Process orders from oldest to newest
+        # Process orders from oldest to newest (FIFO - first in, first out)
         for order in pending_orders:
             remaining_capacity = units_available - units_allocated
             
