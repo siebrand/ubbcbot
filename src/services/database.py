@@ -233,14 +233,14 @@ class DynamoDBService:
             return False
 
     # Customer operations
-    def create_customer(self, customer: Customer) -> bool:
+    def create_customer(self, customer: Customer) -> Optional[Customer]:
         try:
             item = self._prepare_item(customer.__dict__)
             self.customers_table.put_item(Item=item)
-            return True
+            return customer
         except Exception as e:
             print(f"Error creating customer: {e}")
-            return False
+            return None
 
     def get_customer_by_telegram_id(self, telegram_user_id: int) -> Optional[Customer]:
         try:

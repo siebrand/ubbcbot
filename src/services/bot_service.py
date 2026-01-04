@@ -170,12 +170,15 @@ class BotService:
                 first_name=first_name,
                 last_name=last_name
             )
-            self.db.create_customer(customer)
+            created_customer = self.db.create_customer(customer)
             
-            # Send notification to admin about new user pending authorization
-            self._notify_admin_new_user_pending(user_data)
+            if created_customer:
+                # Send notification to admin about new user pending authorization
+                self._notify_admin_new_user_pending(user_data, created_customer)
+            else:
+                logger.error(f"Failed to create customer for user_id: {telegram_user_id}")
     
-    def _notify_admin_new_user_pending(self, user_data: Dict[str, Any]):
+    def _notify_admin_new_user_pending(self, user_data: Dict[str, Any], created_customer):
         """Send notification to admin when new user registration is pending"""
         try:
             first_name = user_data.get('first_name', 'Unknown')
@@ -183,43 +186,31 @@ class BotService:
             username = user_data.get('username', 'no_username')
             user_id = user_data.get('id')
             
-            logger.info(f"Starting admin notification for user: {first_name} (@{username}) ID: {user_id}")
+            logger.debug(f"Starting admin notification for user: {first_name} (@{username}) ID: {user_id}")
             
             # Format display name
             display_name = first_name
             if last_name:
                 display_name += f" {last_name}"
-            
-            # Get customer ID for buttons
-            customer = self.db.get_customer_by_telegram_id(user_id)
-            if not customer:
-                logger.error(f"Customer not found after registration for user_id: {user_id}")
-                return
-            
-            logger.info(f"Customer found: {customer.customer_id}")
-            
+
             # Create notification message using translation system
             from handlers.base_handler import BaseHandler
             base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            
-            logger.info(f"Admin user ID: {self.admin_user_id}")
-            
+
             message = base_handler._t(
                 'new_user_pending_notification',
                 self.admin_user_id,
                 name=display_name,
                 username=username,
-                user_id=user_id
+                telegram_user_id=user_id
             )
-            
-            logger.info(f"Notification message: {message[:100]}...")
-            
+
             # Add approve/reject buttons
             keyboard = {
                 "inline_keyboard": [
                     [
-                        {"text": base_handler._t('approve_user', self.admin_user_id, name=first_name), "callback_data": f"approve_user_{customer.customer_id}"},
-                        {"text": base_handler._t('reject_user', self.admin_user_id, name=first_name), "callback_data": f"reject_user_{customer.customer_id}"}
+                        {"text": base_handler._t('approve_user', self.admin_user_id, name=first_name), "callback_data": f"approve_user_{created_customer.customer_id}"},
+                        {"text": base_handler._t('reject_user', self.admin_user_id, name=first_name), "callback_data": f"reject_user_{created_customer.customer_id}"}
                     ]
                 ]
             }

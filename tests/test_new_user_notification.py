@@ -122,7 +122,7 @@ def test_translation_keys_exist():
     en_message = en_translations['new_user_pending_notification']
     assert '{name}' in en_message
     assert '{username}' in en_message
-    assert '{user_id}' in en_message
+    assert '{telegram_user_id}' in en_message
     print("✅ Translation placeholders are correct")
 
 if __name__ == "__main__":
