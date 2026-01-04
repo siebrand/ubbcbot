@@ -495,5 +495,7 @@
   "complete_delivery_confirmation": "⚠️ Complete delivery for all {box_count} boxes?\n\nThis will mark ALL boxes as delivered with full quantities.",
   "complete_delivery_success": "✅ Complete delivery processed for {box_count} boxes\nAll orders set to READY_FOR_LABELING",
   "complete_labeling_confirmation": "⚠️ Complete labeling for all {box_count} boxes?\n\nThis will mark ALL boxes as labeled.",
-  "complete_labeling_success": "✅ Complete labeling processed for {box_count} boxes\nAll orders set to LABELING_COMPLETED"
+  "complete_labeling_success": "✅ Complete labeling processed for {box_count} boxes\nAll orders set to LABELING_COMPLETED",
+  "ordered_text": "ordered",
+  "available_text": "available"
 }

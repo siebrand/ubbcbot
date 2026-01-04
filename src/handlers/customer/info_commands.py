@@ -110,16 +110,16 @@ class InfoCommands(BaseHandler):
         if is_draft:
             return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f} (draft)\n"
         elif total_ordered is not None and total_capacity is not None:
-            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f} ({total_ordered}/{total_capacity})\n"
+            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f} ({total_ordered}/{total_capacity} ordered)\n"
         else:
             return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f}\n"
     
-    def _get_offer_capacity_info(self, offer_id: int):
+    def _get_offer_capacity_info(self, offer_id: int, user_id: int = None):
         """Get order and capacity information for an offer"""
         boxes = self.db.get_boxes_by_offer(offer_id)
         total_capacity = sum(box.max_capacity for box in boxes)
         all_orders = self.db.get_orders_by_offer(offer_id)
-        active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
+        active_orders = [o for o in all_orders if o.status in ['pending', self._t('ordered_text', user_id) if user_id else 'ordered']]
         total_ordered = sum(order.quantity for order in active_orders)
         return total_ordered, total_capacity
     
@@ -206,7 +206,7 @@ class InfoCommands(BaseHandler):
             
             message += self._t('sold_out_offers_title', user_id) + "\n\n"
             for offer in sold_out_offers:
-                total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
+                total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
                 message += self._format_offer_line(offer, "🚫", total_ordered, total_capacity)
             
             self._send_message(chat_id, message, parse_mode="HTML")
@@ -232,7 +232,7 @@ class InfoCommands(BaseHandler):
             if active_offers:
                 message += self._t('active_offers') + "\n"
                 for offer in active_offers:
-                    total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
+                    total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
                     offer_to_display = self._apply_discount_to_offer(offer, active_discount)
                     
                     # Check if offer has been ordered but is still active
@@ -274,7 +274,7 @@ class InfoCommands(BaseHandler):
                     message += f"{status_emoji} {status_label}:\n"
                     
                     for offer in status_offers:
-                        total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
+                        total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
                         message += self._format_offer_line(offer, status_emoji, total_ordered, total_capacity)
                     
                     message += "\n"
@@ -285,7 +285,7 @@ class InfoCommands(BaseHandler):
             for offer in offers:
                 if offer.status == OfferStatus.ACTIVE.value:
                     active_found = True
-                    total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
+                    total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
                     offer_to_display = self._apply_discount_to_offer(offer, active_discount)
                     message += self._format_offer_line(offer_to_display, "🍺", total_ordered, total_capacity)
             
@@ -598,10 +598,10 @@ class InfoCommands(BaseHandler):
 
         if offer.status == OfferStatus.ACTIVE.value:
             # Get availability for active offers
-            total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
+            total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
             available = total_capacity - total_ordered
             
-            message += f"<b>{offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
+            message += f"<b>{offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f} ({available}/{total_capacity} {self._t('available_text', user_id)})</b>\n\n"
         else:
             message += f"<b>{offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
         
