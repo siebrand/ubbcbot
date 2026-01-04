@@ -292,6 +292,8 @@
   "subtotal_label": "Subtotaal: €{total:.2f}",
   "sufficient_available": "voldoende beschikbaar",
   "units_available": "{count} beschikbaar",
+  "units": "stuks",
+  "unit": "stuk",
   "sold_out_offers_title": "🚫 UITVERKOCHT (Laatste 7 dagen):",
   "open_orders_total_label": "📊 Openstaande Bestellingen Totaal: €{total:.2f}",
   "new_user_pending_notification": "🔔 Nieuwe gebruiker wacht op autorisatie:\n\n👤 {name}\n📱 @{username}\n🆔 ID: {user_id}\n\nGebruik /pending_users om te beoordelen.",

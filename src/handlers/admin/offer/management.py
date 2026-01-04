@@ -47,12 +47,17 @@ class OfferManagementHandler(OfferBaseHandler):
             order_count=len(pending_orders)
         )
         
+        # Pre-calculate translation messages for efficiency
+        units_singular = self._t('unit', chat_id)
+        units_plural = self._t('units', chat_id)
+        
         for i, order in enumerate(pending_orders[:10], 1):  # Show first 10
             customer = self.db.get_customer(order.customer_id)
             customer_name = customer.first_name if customer else "Unknown"
             from utils.timezone import to_cet_string
             order_date = to_cet_string(order.created_at, '%m-%d %H:%M')
-            message += f"{i}. {customer_name}: {order.quantity} units [{order_date}]\n"
+            units_text = units_singular if order.quantity == 1 else units_plural
+            message += f"{i}. {customer_name}: {order.quantity} {units_text} [{order_date}]\n"
         
         if len(pending_orders) > 10:
             message += f"... and {len(pending_orders) - 10} more orders\n"
@@ -264,12 +269,17 @@ class OfferManagementHandler(OfferBaseHandler):
             )
         
         if cancelled_orders:
+            # Pre-calculate translation messages for efficiency
+            units_singular = self._t('unit', chat_id)
+            units_plural = self._t('units', chat_id)
+            
             cancelled_details = []
             cancelled_units = 0
             for order in cancelled_orders:
                 customer = self.db.get_customer(order.customer_id)
                 customer_name = customer.first_name if customer else "Unknown"
-                cancelled_details.append(f"{customer_name} ({order.quantity} units)")
+                units_text = units_singular if order.quantity == 1 else units_plural
+                cancelled_details.append(f"{customer_name} ({order.quantity} {units_text})")
                 cancelled_units += order.quantity
             summary += "\n" + self._t('orders_cancelled',
                 cancelled_orders=len(cancelled_orders),
