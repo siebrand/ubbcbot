@@ -535,8 +535,7 @@ class AdminOrderCommands(BaseHandler):
         """Generate pick list CSV content grouped by customer"""
         # CSV headers
         headers = [
-            'Customer_Name', 'Telegram_Username', 'Offer_Name', 
-            'Box_ID', 'Unit_Count', 'Unit_Price', 'Total_Price_to_Charge', 'Order_Status'
+            'Customer_Name', 'Offer_Name', 'Unit_Count', 'Unit_Price', 'Total_Price_to_Charge', 'Order_Status'
         ]
         
         csv_content = ','.join(headers) + '\n'
@@ -554,9 +553,8 @@ class AdminOrderCommands(BaseHandler):
             for customer, order in customer_orders[customer_name]:
                 offer = self.db.get_offer(order.offer_id)
                 offer_name = offer.name if offer else "Unknown"
-                username = customer.username or ""
                 
-                csv_content += f'"{customer_name}","{username}","{offer_name}","{order.box_id}",{order.quantity},{order.unit_price:.2f},{order.total_price:.2f},"{order.status}"\n'
+                csv_content += f'"{customer_name}","{offer_name}",{order.quantity},{order.unit_price:.2f},{order.total_price:.2f},"{order.status}"\n'
         
         return csv_content
 
