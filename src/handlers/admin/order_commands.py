@@ -289,7 +289,7 @@ class AdminOrderCommands(BaseHandler):
         # Notify customer with reason
         if customer:
             customer_message = self._t('order_cancelled_by_admin', customer.telegram_user_id,
-                                     product=offer.name if offer else 'Unknown',
+                                     name=offer.name if offer else 'Unknown',
                                      quantity=order.quantity,
                                      reason=reason)
             self._send_message(customer.telegram_user_id, customer_message)
