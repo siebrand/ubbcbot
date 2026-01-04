@@ -183,6 +183,8 @@ class BotService:
             username = user_data.get('username', 'no_username')
             user_id = user_data.get('id')
             
+            logger.info(f"Starting admin notification for user: {first_name} (@{username}) ID: {user_id}")
+            
             # Format display name
             display_name = first_name
             if last_name:
@@ -194,9 +196,13 @@ class BotService:
                 logger.error(f"Customer not found after registration for user_id: {user_id}")
                 return
             
+            logger.info(f"Customer found: {customer.customer_id}")
+            
             # Create notification message using translation system
             from handlers.base_handler import BaseHandler
             base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            
+            logger.info(f"Admin user ID: {self.admin_user_id}")
             
             message = base_handler._t(
                 'new_user_pending_notification',
@@ -205,6 +211,8 @@ class BotService:
                 username=username,
                 user_id=user_id
             )
+            
+            logger.info(f"Notification message: {message[:100]}...")
             
             # Add approve/reject buttons
             keyboard = {
@@ -216,10 +224,17 @@ class BotService:
                 ]
             }
             
-            # Send notification to admin with buttons
-            base_handler._send_message(self.admin_user_id, message, reply_markup=keyboard)
+            logger.info(f"Admin user ID from environment: {self.admin_user_id}")
             
-            logger.info(f"Sent new user notification to admin for user: {display_name} (@{username})")
+            # Send notification to admin with buttons
+            result = base_handler._send_message(self.admin_user_id, message, reply_markup=keyboard)
+            
+            logger.info(f"Send message result to admin {self.admin_user_id}: {result}")
+            
+            if result.get('success'):
+                logger.info(f"Successfully sent new user notification to admin for user: {display_name} (@{username})")
+            else:
+                logger.error(f"Failed to send new user notification to admin for user: {display_name} (@{username})")
             
         except Exception as e:
             logger.error(f"Failed to send new user notification to admin: {e}")
