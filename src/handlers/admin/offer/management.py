@@ -217,11 +217,14 @@ class OfferManagementHandler(OfferBaseHandler):
         # Check if there's remaining capacity
         remaining_capacity = units_available - units_allocated
         
+        # Pre-calculate unit translations for status messages
+        units_text = self._t('unit', chat_id) if remaining_capacity == 1 else self._t('units', chat_id)
+        
         if not remaining_pending and remaining_capacity == 0:
             self.db.update_offer(offer.offer_id, {'status': 'sold_out'})
             offer_status_msg = "Offer marked as SOLD OUT (no capacity remaining)"
         elif not remaining_pending:
-            offer_status_msg = f"Offer remains ACTIVE ({remaining_capacity} units capacity remaining)"
+            offer_status_msg = f"Offer remains ACTIVE ({remaining_capacity} {units_text} capacity remaining)"
         else:
             offer_status_msg = f"Offer remains ACTIVE ({len(remaining_pending)} pending orders remaining)"
         
