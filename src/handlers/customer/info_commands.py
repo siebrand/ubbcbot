@@ -347,7 +347,7 @@ class InfoCommands(BaseHandler):
         open_total = Decimal('0.0')
         
         # First show open orders
-        for status in ['pending', 'ordered', 'confirmed', 'delivered', 'completed']:
+        for status in ['pending', 'ordered', 'confirmed', 'ready_for_labeling', 'labeling_completed', 'awaiting_payment', 'delivered', 'completed']:
             if status not in status_groups:
                 continue
                 
@@ -355,6 +355,9 @@ class InfoCommands(BaseHandler):
                 'pending': '⏳',
                 'ordered': '📦',
                 'confirmed': '✅',
+                'ready_for_labeling': '🏷️',
+                'labeling_completed': '✅',
+                'awaiting_payment': '💳',
                 'cancelled': '❌',
                 'delivered': '🚚',
                 'completed': '✅'
