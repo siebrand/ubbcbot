@@ -234,7 +234,15 @@ class InfoCommands(BaseHandler):
                 for offer in active_offers:
                     total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
                     offer_to_display = self._apply_discount_to_offer(offer, active_discount)
-                    message += self._format_offer_line(offer_to_display, "🍺", total_ordered, total_capacity)
+                    
+                    # Check if offer has been ordered but is still active
+                    boxes = self.db.get_boxes_by_offer(offer.offer_id)
+                    has_ordered_boxes = any(box.status == 'ordered' for box in boxes)
+                    
+                    if has_ordered_boxes:
+                        message += self._format_offer_line(offer_to_display, "📦🍺", total_ordered, total_capacity)
+                    else:
+                        message += self._format_offer_line(offer_to_display, "🍺", total_ordered, total_capacity)
                 message += "\n"
             
             # Show other status offers in correct order
@@ -256,11 +264,11 @@ class InfoCommands(BaseHandler):
                     }.get(status, "❓")
                     
                     status_label = {
-                        OfferStatus.SOLD_OUT.value: self._t('status_sold_out', user_id=None),
-                        OfferStatus.ORDERED.value: self._t('status_ordered', user_id=None),
-                        OfferStatus.DELIVERED.value: self._t('status_delivered', user_id=None),
-                        OfferStatus.COMPLETED.value: self._t('status_completed', user_id=None),
-                        OfferStatus.INACTIVE.value: self._t('status_inactive', user_id=None)
+                        OfferStatus.SOLD_OUT.value: self._t('status_sold_out', user_id=None).upper(),
+                        OfferStatus.ORDERED.value: self._t('status_ordered', user_id=None).upper(),
+                        OfferStatus.DELIVERED.value: self._t('status_delivered', user_id=None).upper(),
+                        OfferStatus.COMPLETED.value: self._t('status_completed', user_id=None).upper(),
+                        OfferStatus.INACTIVE.value: self._t('status_inactive', user_id=None).upper()
                     }.get(status, status.upper())
                     
                     message += f"{status_emoji} {status_label}:\n"
