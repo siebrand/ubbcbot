@@ -6,6 +6,30 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2025-01-02",
+                "content": """<b>User-Facing Updates</b>
+• <b>Improved Order Management</b> - Added /delete_completed command to remove completed orders from personal register
+• <b>Complete Order Visibility</b> - All order statuses now display properly including completed, ready_for_labeling, labeling_completed, and awaiting_payment
+• <b>Better Status Display</b> - Improved status consistency with uppercase formatting and visual indicators (📦🍺) for ordered offers
+• <b>Improved Internationalization</b> - Fewer hardcoded strings. Status icons (✅ ⚠️ ❌), and unit pluralization now use proper translation system
+• <b>Enhanced Order Processing</b> - Orders prevented from spanning multiple boxes for simpler inventory management
+• <b>Improved Wholesale Visibility</b> - All pending orders shown in wholesale summaries without artificial limits
+
+<b>Admin-Facing Updates</b>
+• <b>Enhanced Order Display</b> - Truncated order IDs to 8 characters in /my_orders for better readability
+• <b>Enhanced Order Management</b> - Renamed /delete_old_cancelled to /delete_old to handle both cancelled and completed orders older than 7 days
+• <b>Improved CSV Exports</b> - Added order status field to /all_orders CSV with streamlined column structure (removed username and box_id)
+• <b>Better Order Cancellation</b> - Enhanced /cancel_order with customer name display, proper parameter handling, and comprehensive notifications
+• <b>Advanced Wholesale Management</b> - Added "Complete Delivery" and "Complete Labeling" buttons for streamlined bulk processing with confirmation dialogs
+• <b>Enhanced Order Processing</b> - FIFO (first-in-first-out) order processing ensures fair distribution in wholesale ordering
+• <b>Improved Delivery Workflow</b> - Better box filtering showing 'ordered' status boxes, alphabetically sorted suppliers, and proper workflow continuation
+• <b>Customer Data Enhancement</b> - Added default delivery location field to customer entity with default Venster, Utrecht (incomplete)
+• <b>System Reliability</b> - Fixed parameter handling in notifications, customer lookup errors, database method calls, and callback validation
+• <b>Better Admin Interface</b> - Enhanced admin panel with 🔄 Workflow button grouping core business process commands
+• <b>Enhanced Offer Management</b> - New /delete_offer command for removing completed/inactive offers with proper status ordering
+• <b>Improved Error Handling</b> - Fixed decimal conversion issues, missing translation keys, and parameter validation across all commands"""
+            },
+            {
                 "title": "Up to 2025-12-31",
                 "content": """<b>User-Facing Updates</b>
 • <b>Enhanced Order Display</b> - Added offer ID to each line in /my_orders for better identification
