@@ -15,7 +15,7 @@ class UserCommands(BaseHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.update_utils = UpdateUtils(self.db, self._t, self._send_message)
-        self.update_utils._show_customer_edit_interface = self._show_user_edit_interface
+        self.update_utils._show_customer_edit_interface = lambda chat_id, customer: self._show_user_edit_interface(customer, chat_id)
     def _approve_user_by_customer(self, chat_id: int, customer) -> Dict[str, Any]:
         """Shared approval logic for customer object"""
         if customer.authorization_status == AuthorizationStatus.APPROVED.value:
