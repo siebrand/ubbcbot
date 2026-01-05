@@ -127,9 +127,7 @@ class CustomerOrderCommands(BaseHandler):
         """Execute order placement"""
         try:
             box_size = offer.wholesale_box_size
-            if box_size == 1:
-                logger.info(f"DEBUG: Processing order for box size 1 offer {offer_id}, quantity {quantity}, customer {customer.customer_id}")
-            
+
             # Validate order quantity doesn't exceed box size
             if quantity > box_size:
                 self._send_message(chat_id, self._t('quantity_exceeds_box_size', user_id, quantity=quantity, box_size=box_size))
@@ -183,9 +181,6 @@ class CustomerOrderCommands(BaseHandler):
                 self._send_message(chat_id, self._t('order_failed', user_id))
                 return {'status': 'error'}
             
-            if box_size == 1:
-                logger.info(f"DEBUG: Box size 1 - Created order {created_order.order_id}, quantity {quantity}")
-
             # Assign order to the suitable box
             new_quantity = suitable_box.current_quantity + quantity
             updates = {'current_quantity': new_quantity}
@@ -219,12 +214,8 @@ class CustomerOrderCommands(BaseHandler):
             
             # Send notification to default channel for all successful orders (not just private chats)
             if not placed_by_admin:  # Don't notify for admin orders
-                if box_size == 1:
-                    logger.info(f"DEBUG: Box size 1 - Sending group notification for order {created_order.order_id}")
                 notification_result = self._notify_channel_order(customer, offer, quantity)
-                if box_size == 1:
-                    logger.info(f"DEBUG: Box size 1 - Group notification result: {notification_result}")
-            
+
             return {'status': 'success'}
             
         except Exception as e:
@@ -276,8 +267,6 @@ class CustomerOrderCommands(BaseHandler):
             group_id = os.environ.get('DEFAULT_GROUP_ID')
             if not group_id:
                 box_size = offer.wholesale_box_size
-                if box_size == 1:
-                    logger.info(f"DEBUG: Box size 1 - No DEFAULT_GROUP_ID configured")
                 return False
             
             customer_name = self._get_public_name(customer)
@@ -303,16 +292,8 @@ class CustomerOrderCommands(BaseHandler):
                 # If total_available == 0 and not sold out, show nothing
             
             message = f"🍺 {customer_name} ordered {quantity}x {offer.name}{availability_text}"
-            box_size = offer.wholesale_box_size
-            if box_size == 1:
-                logger.info(f"DEBUG: Box size 1 - Sending group message: {message}")
-            
             result = self._send_message(int(group_id), message, force_group=True)
             success = result.get('success', False)
-            
-            if box_size == 1:
-                logger.info(f"DEBUG: Box size 1 - Group message send result: {success}")
-            
             return success
             
         except Exception as e:

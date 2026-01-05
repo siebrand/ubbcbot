@@ -98,9 +98,7 @@ class OfferCreationHandler(OfferBaseHandler):
                 return {'status': 'already_published'}
             
             box_size = offer.wholesale_box_size
-            if box_size == 1:
-                logger.info(f"DEBUG: Publishing box size 1 offer {offer_id} - {offer.name}")
-            
+
             # Update offer status to active
             if self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value}):
                 # Update offer object for announcement
@@ -118,15 +116,9 @@ class OfferCreationHandler(OfferBaseHandler):
                     self._send_message(chat_id, self._t('failed_publish_offer'))
                     return {'status': 'error'}
                 
-                if box_size == 1:
-                    logger.info(f"DEBUG: Box size 1 - Created initial box {created_box.box_id}")
-
                 # Auto-order 1 unit for admin
                 admin_customer = self.db.get_customer_by_telegram_id(self.admin_user_id)
                 if admin_customer:
-                    if box_size == 1:
-                        logger.info(f"DEBUG: Box size 1 - Creating auto-order for admin {admin_customer.customer_id}")
-                    
                     admin_order = Order(
                         customer_id=admin_customer.customer_id,
                         box_id=created_box.box_id,
@@ -142,9 +134,6 @@ class OfferCreationHandler(OfferBaseHandler):
                         self._send_message(chat_id, self._t('failed_publish_offer'))
                         return {'status': 'error'}
                     
-                    if box_size == 1:
-                        logger.info(f"DEBUG: Box size 1 - Created admin order {created_admin_order.order_id}")
-                    
                     # Update box quantity
                     updates = {'current_quantity': 1}
                     if 1 >= created_box.max_capacity:
@@ -158,26 +147,13 @@ class OfferCreationHandler(OfferBaseHandler):
                         logger.error(f"Failed to update box {created_box.box_id} for offer {offer_id}")
                         self._send_message(chat_id, self._t('failed_publish_offer'))
                         return {'status': 'error'}
-                    
-                    if box_size == 1:
-                        logger.info(f"DEBUG: Box size 1 - Updated box status to {updates.get('status', 'OPEN')}, result: {box_update_result}")
                 else:
                     logger.error(f"Admin customer not found for user_id {self.admin_user_id}")
-                    if box_size == 1:
-                        logger.error(f"DEBUG: Box size 1 - Admin customer not found for user_id {self.admin_user_id}")
-
                 # Update offer object for announcement
                 offer.status = OfferStatus.ACTIVE.value
                 
-                if box_size == 1:
-                    logger.info(f"DEBUG: Box size 1 - Starting offer announcement")
-                
                 # Announce offer to default group and subscribers
                 self._announce_offer(offer)
-                
-                if box_size == 1:
-                    logger.info(f"DEBUG: Box size 1 - Completed offer announcement")
-                
                 self._send_message(chat_id, self._t('offer_published_announced', offer_id=offer_id))
                 return {'status': 'success'}
             else:
@@ -193,20 +169,10 @@ class OfferCreationHandler(OfferBaseHandler):
         default_group_id = os.environ.get('DEFAULT_GROUP_ID')
         
         box_size = offer.wholesale_box_size
-        if box_size == 1:
-            logger.info(f"DEBUG: Box size 1 - Announcing offer {offer.offer_id} to group {default_group_id}")
-        
+
         # Send rich offer message to default group (without buttons)
         if default_group_id:
             group_result = self._send_rich_offer_message(int(default_group_id), offer, force_group=True, include_buttons=False)
-            if box_size == 1:
-                logger.info(f"DEBUG: Box size 1 - Group announcement result: {group_result}")
-        
+
         # Send to subscribers in batches
-        if box_size == 1:
-            logger.info(f"DEBUG: Box size 1 - Starting subscriber notifications")
-        
         subscriber_result = self._notify_subscribers_rich(offer)
-        
-        if box_size == 1:
-            logger.info(f"DEBUG: Box size 1 - Subscriber notifications completed")
