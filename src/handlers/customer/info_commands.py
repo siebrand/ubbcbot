@@ -119,7 +119,7 @@ class InfoCommands(BaseHandler):
         boxes = self.db.get_boxes_by_offer(offer_id)
         total_capacity = sum(box.max_capacity for box in boxes)
         all_orders = self.db.get_orders_by_offer(offer_id)
-        active_orders = [o for o in all_orders if o.status in ['pending', self._t('ordered_text', user_id) if user_id else 'ordered']]
+        active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
         total_ordered = sum(order.quantity for order in active_orders)
         return total_ordered, total_capacity
     
