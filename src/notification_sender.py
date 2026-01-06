@@ -114,21 +114,13 @@ class NotificationSender(BaseHandler):
             else:
                 media_group = [{"type": "photo", "media": url} for url in presigned_images]
                 self._send_media_group(chat_id, media_group)
-        
-        # Get offer capacity info
-        boxes = self.db.get_boxes_by_offer(offer.offer_id)
-        total_capacity = sum(box.max_capacity for box in boxes)
-        all_orders = self.db.get_orders_by_offer(offer.offer_id)
-        active_orders = [o for o in all_orders if o.status in ['pending', 'ordered']]
-        total_ordered = sum(order.quantity for order in active_orders)
-        available = total_capacity - total_ordered
-        
+
         # Get bot username for linking
         bot_username = self._get_bot_username()
         
         # Combine header and offer details in single message
         message = self._t('new_offer_available', customer.telegram_user_id) + "\n\n"
-        message += f"<b><a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
+        message += f"<b><a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
         message += f"{offer.description}\n"
         
         # Add order buttons

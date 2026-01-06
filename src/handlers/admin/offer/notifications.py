@@ -31,11 +31,7 @@ class NotificationHandler(OfferBaseHandler):
             else:
                 media_group = [{"type": "photo", "media": url} for url in presigned_images]
                 self._send_media_group(chat_id, media_group, force_group=force_group)
-        
-        # Build and send offer details message
-        total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
-        available = total_capacity - total_ordered
-        
+
         # Get bot username for linking
         bot_username = self._get_bot_username()
         
@@ -44,7 +40,7 @@ class NotificationHandler(OfferBaseHandler):
         if not preview:
             message = self._t('new_offer_available') + "\n\n"
         
-        message += f"<b><a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
+        message += f"<b><a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
         message += f"{offer.description}\n"
         
         # Add order buttons for non-preview announcements
@@ -198,14 +194,11 @@ class NotificationHandler(OfferBaseHandler):
     
     def _send_simple_offer_notification(self, chat_id: int, offer):
         """Send simplified notification without images for speed"""
-        total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
-        available = total_capacity - total_ordered
-        
         # Get bot username for linking
         bot_username = self._get_bot_username()
         
         message = self._t('new_offer_available') + "\n\n"
-        message += f"<b><a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
+        message += f"<b><a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f} </b>\n\n"
         message += f"{offer.description}\n\n"
         message += self._t('order_with_command', offer_id=offer.offer_id)
         
