@@ -139,7 +139,7 @@ class CustomerOrderCommands(BaseHandler):
             
             # Look for existing box that can fit the entire order
             for box in boxes:
-                if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
+                if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
                     available_space = box.max_capacity - box.current_quantity
                     if available_space >= quantity:
                         suitable_box = box
@@ -232,18 +232,18 @@ class CustomerOrderCommands(BaseHandler):
             
             boxes = self.db.get_boxes_by_offer(offer_id)
             
-            # Only mark as sold out if there are ordered boxes and all capacity is used
-            has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes)
-            if not has_ordered_boxes:
+            # Only mark as sold out if there are ordered boxes
+            ordered_boxes = [box for box in boxes if box.status == BoxStatus.ORDERED.value]
+            if not ordered_boxes:
                 return  # Don't mark as sold out if no boxes are ordered yet
             
-            total_capacity = sum(box.max_capacity for box in boxes)
-            total_ordered = sum(box.current_quantity for box in boxes)
+            # Check if all boxes (not just ordered ones) are at full capacity
+            all_boxes_full = all(box.current_quantity >= box.max_capacity for box in boxes)
             
-            # Check if all units are ordered by customers
-            if total_ordered >= total_capacity:
+            if all_boxes_full:
                 self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
-                logger.info(f"Offer {offer_id} marked as sold out - all {total_capacity} units ordered")
+                total_capacity = sum(box.max_capacity for box in boxes)
+                logger.info(f"Offer {offer_id} marked as sold out - all {total_capacity} units filled")
                 
                 # Delete notification messages for sold out offer
                 self._delete_offer_notifications(offer_id)
@@ -282,7 +282,7 @@ class CustomerOrderCommands(BaseHandler):
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
                 total_available = 0
                 for box in boxes:
-                    if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]:
+                    if box.current_quantity < box.max_capacity:
                         total_available += box.max_capacity - box.current_quantity
                 
                 if total_available > 6:

@@ -291,6 +291,7 @@ class AdminOrderCommands(BaseHandler):
             customer_message = self._t('order_cancelled_by_admin', customer.telegram_user_id,
                                      name=offer.name if offer else 'Unknown',
                                      quantity=order.quantity,
+                                     total=float(order.total_price),
                                      reason=reason)
             self._send_message(customer.telegram_user_id, customer_message)
 
@@ -955,6 +956,8 @@ class AdminOrderCommands(BaseHandler):
         result = order_handler.execute_order(chat_id, customer.telegram_user_id, offer_id, quantity, offer, customer, placed_by_admin=True)
         
         if result['status'] == 'success':
+            order_handler._check_and_update_offer_status(offer_id)
+
             # Get the actual order to show correct status
             orders = self.db.get_orders_by_customer(customer.customer_id)
             latest_order = max(orders, key=lambda o: o.created_at) if orders else None

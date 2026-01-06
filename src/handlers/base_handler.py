@@ -119,9 +119,7 @@ class BaseHandler:
             if self.environment == 'test':
                 logger.info(f"Sending message to chat {chat_id}: {text[:50]}...")
             
-            # Debug logging for box size 1 related messages
-            if "box size 1" in text.lower() or ("ordered" in text.lower() and "🍺" in text):
-                logger.info(f"DEBUG: Box size 1 message - chat_id: {chat_id}, force_group: {force_group}, text: {text[:100]}...")
+            logger.info(f"DEBUG: message: chat_id: {chat_id}, force_group: {force_group}, text: {text[:100]}...")
             
             response = requests.post(url, json=data, timeout=20)
             if self.environment == 'test':
@@ -131,13 +129,10 @@ class BaseHandler:
                 result = response.json()
                 return {'success': True, 'message_id': result['result']['message_id']}
             else:
-                if "box size 1" in text.lower() or ("ordered" in text.lower() and "🍺" in text):
-                    logger.error(f"DEBUG: Box size 1 message failed - status: {response.status_code}, response: {response.text}")
+                logger.error(f"DEBUG: message failed - status: {response.status_code}, response: {response.text}")
                 return {'success': False}
         except Exception as e:
             logger.error(f"Error sending message: {e}")
-            if "box size 1" in text.lower() or ("ordered" in text.lower() and "🍺" in text):
-                logger.error(f"DEBUG: Box size 1 message exception: {e}")
             return {'success': False}
 
     def _delete_message(self, chat_id: int, message_id: int) -> bool:
