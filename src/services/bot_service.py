@@ -30,7 +30,16 @@ class BotService:
         self.db = DynamoDBService()
         self.admin_user_id = int(os.environ.get('ADMIN_USER_ID', '15005473'))
         self.environment = os.environ.get('ENVIRONMENT', 'test')
+        
+        # Log environment info for debugging
+        logger.info(f"Initializing BotService with environment: {self.environment}")
+        logger.info(f"Admin user ID: {self.admin_user_id}")
+        
         self.telegram_token = self._get_telegram_token()
+        
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
+            raise ValueError("Telegram token is empty")
         
         # Initialize handlers
         self._init_handlers()
@@ -42,14 +51,23 @@ class BotService:
         """Get Telegram token from Parameter Store"""
         import boto3
         ssm = boto3.client('ssm')
+        
+        parameter_name = f'/ubbc-bot/{self.environment}/telegram-bot-token'
+        logger.info(f"Attempting to retrieve parameter: {parameter_name}")
+        
         try:
             response = ssm.get_parameter(
-                Name=f'/ubbc-bot/{self.environment}/telegram-bot-token',
+                Name=parameter_name,
                 WithDecryption=True
             )
-            return response['Parameter']['Value']
+            token = response['Parameter']['Value']
+            if not token:
+                logger.error("Telegram token is empty")
+                return ""
+            logger.info("Successfully retrieved Telegram token")
+            return token
         except Exception as e:
-            logger.error(f"Error getting Telegram token: {e}")
+            logger.error(f"Error getting Telegram token from {parameter_name}: {e}")
             return ""
 
     def _init_handlers(self):
