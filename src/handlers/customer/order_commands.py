@@ -202,7 +202,7 @@ class CustomerOrderCommands(BaseHandler):
             order.status = final_status
 
             # Check if offer should be marked as sold out
-            self._check_and_update_offer_status(offer_id)
+            self._check_offer_status_after_change(offer_id)
             
             # Send confirmation message - always single box now
             self._send_message(chat_id, self._t('order_placed_single', user_id,
@@ -223,32 +223,28 @@ class CustomerOrderCommands(BaseHandler):
             self._send_message(chat_id, self._t('order_processing_failed', user_id))
             return {'status': 'error'}
     
-    def _check_and_update_offer_status(self, offer_id: int):
-        """Check if offer should be marked as sold out - only if boxes are already ordered"""
-        try:
-            offer = self.db.get_offer(offer_id)
-            if not offer or offer.status != OfferStatus.ACTIVE.value:
-                return
-            
-            boxes = self.db.get_boxes_by_offer(offer_id)
-            
-            # Only mark as sold out if there are ordered boxes
-            ordered_boxes = [box for box in boxes if box.status == BoxStatus.ORDERED.value]
-            if not ordered_boxes:
-                return  # Don't mark as sold out if no boxes are ordered yet
-            
-            # Check if all boxes (not just ordered ones) are at full capacity
-            all_boxes_full = all(box.current_quantity >= box.max_capacity for box in boxes)
-            
-            if all_boxes_full:
-                self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
-                total_capacity = sum(box.max_capacity for box in boxes)
-                logger.info(f"Offer {offer_id} marked as sold out - all {total_capacity} units filled")
-                
-                # Delete notification messages for sold out offer
-                self._delete_offer_notifications(offer_id)
-        except Exception as e:
-            logger.error(f"Error checking offer status: {e}")
+    def _check_offer_status_after_change(self, offer_id: int):
+        """Check if offer should be SOLD_OUT or ACTIVE based on box states"""
+        offer = self.db.get_offer(offer_id)
+        if not offer or offer.status not in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value]:
+            return
+        
+        boxes = self.db.get_boxes_by_offer(offer_id)
+        if not boxes:
+            return
+        
+        # Check if ALL boxes are ordered+ status AND completely filled
+        all_ordered_and_full = all(
+            box.status in ['ordered', 'delivered'] and box.current_quantity >= box.max_capacity 
+            for box in boxes
+        )
+        
+        if all_ordered_and_full:
+            self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
+            # Delete notification messages for sold out offer
+            self._delete_offer_notifications(offer_id)
+        else:
+            self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
     
     def _get_public_name(self, customer):
         """Get customer's public display name (Firstname L)"""
