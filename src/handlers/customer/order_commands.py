@@ -288,7 +288,11 @@ class CustomerOrderCommands(BaseHandler):
                     availability_text = f" ({self._t('units_available', force_group_lang=True, count=total_available)})"
                 # If total_available == 0 and not sold out, show nothing
             
-            message = f"🍺 {customer_name} ordered {quantity}x {offer.name}{availability_text}"
+            message = self._t('order_notification', force_group_lang=True, 
+                            customer_name=customer_name, 
+                            quantity=quantity, 
+                            offer_name=offer.name, 
+                            availability=availability_text)
             result = self._send_message(int(group_id), message, force_group=True)
             success = result.get('success', False)
             return success

@@ -497,5 +497,6 @@
   "complete_labeling_confirmation": "⚠️ Complete labeling for all {box_count} boxes?\n\nThis will mark ALL boxes as labeled.",
   "complete_labeling_success": "✅ Complete labeling processed for {box_count} boxes\nAll orders set to LABELING_COMPLETED",
   "ordered_text": "ordered",
-  "available_text": "available"
+  "available_text": "available",
+  "order_notification": "🍺 {customer_name} ordered {quantity}x {offer_name}{availability}"
 }

@@ -497,5 +497,6 @@
   "complete_labeling_confirmation": "⚠️ Volledige labeling voor alle {box_count} colli?\n\nDit zal ALLE colli markeren als gelabeld.",
   "complete_labeling_success": "✅ Volledige labeling verwerkt voor {box_count} colli\nAlle bestellingen ingesteld op LABELING_VOLTOOID",
   "ordered_text": "besteld",
-  "available_text": "beschikbaar"
+  "available_text": "beschikbaar",
+  "order_notification": "🍺 {customer_name} heeft {quantity}x {offer_name} besteld{availability}"
 }
