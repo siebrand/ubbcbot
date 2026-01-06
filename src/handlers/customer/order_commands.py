@@ -198,7 +198,7 @@ class CustomerOrderCommands(BaseHandler):
                 return {'status': 'error'}
             
             # Update order with box_id and status
-            final_status = 'pending'
+            final_status = 'ordered' if suitable_box.status == BoxStatus.ORDERED.value else 'pending'
             self.db.update_order(order.order_id, {'box_id': suitable_box.box_id, 'status': final_status})
             order.status = final_status
 
