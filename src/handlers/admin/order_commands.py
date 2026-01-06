@@ -711,8 +711,8 @@ class AdminOrderCommands(BaseHandler):
             self._send_message(chat_id, self._t('no_orders_for_offer', chat_id, offer_name=offer.name))
             return {'status': 'no_orders'}
         
-        # Sort by creation date (newest first)
-        orders.sort(key=lambda x: x.created_at, reverse=True)
+        # Sort by creation date (oldest first)
+        orders.sort(key=lambda x: x.created_at)
         
         # Paginate results
         page_orders, total_pages = self._paginate_list(orders, page, 10)
