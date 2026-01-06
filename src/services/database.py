@@ -151,6 +151,8 @@ class DynamoDBService:
 
     def get_offer(self, offer_id: int) -> Optional[Offer]:
         try:
+            # Ensure offer_id is an integer (handle float inputs)
+            offer_id = int(offer_id)
             response = self.offers_table.get_item(Key={'offer_id': offer_id})
             if 'Item' in response:
                 item = response['Item']

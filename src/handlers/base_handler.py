@@ -125,7 +125,7 @@ class BaseHandler:
             
             response = requests.post(url, json=data, timeout=20)
             if self.environment == 'test':
-                logger.info(f"Telegram API response: {response.status_code} - {response.text}")
+                logger.info(f"Telegram API response: {response.status_code}")
             
             if response.status_code == 200:
                 result = response.json()
@@ -283,7 +283,7 @@ class BaseHandler:
         
         try:
             if self.environment == 'test':
-                logger.info(f"Sending photo to chat {chat_id}: {photo_url}")
+                logger.info(f"Sending photo to chat {chat_id}: {photo_url[:150]}")
             response = requests.post(url, json=data, timeout=20)
             if self.environment == 'test':
                 logger.info(f"Telegram API response: {response.status_code}")

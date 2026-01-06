@@ -69,6 +69,26 @@ Resources:
         - Key: ManagedBy
           Value: sam
 
+  NotificationSenderLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/ubbc-bot-${Environment}-notification-sender'
+      RetentionInDays: 7
+      LogGroupClass: STANDARD
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: ubbc-telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
   WebhookHandler:
     Type: AWS::Serverless::Function
     DependsOn: WebhookHandlerLogGroup
@@ -76,6 +96,9 @@ Resources:
       FunctionName: !Sub 'ubbc-bot-${Environment}-webhook-handler'
       CodeUri: src/
       Handler: handlers.webhook.handler
+      Environment:
+        Variables:
+          NOTIFICATION_LAMBDA_NAME: !Ref NotificationSender
       Events:
         WebhookApi:
           Type: Api
@@ -83,6 +106,39 @@ Resources:
             RestApiId: !Ref BotApi
             Path: /webhook
             Method: post
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub 'ubbc-bot-${Environment}-*'
+        - S3CrudPolicy:
+            BucketName: !Ref ImageBucket
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/*'
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource: !GetAtt NotificationSender.Arn
+        - CloudWatchLogsFullAccess
+      Tags:
+        Project: UBBCBot
+        Environment: !Ref Environment
+        Owner: siebrand
+        CostCenter: personal
+        Application: ubbc-telegram-bot
+        ManagedBy: sam
+
+  NotificationSender:
+    Type: AWS::Serverless::Function
+    DependsOn: NotificationSenderLogGroup
+    Properties:
+      FunctionName: !Sub 'ubbc-bot-${Environment}-notification-sender'
+      CodeUri: src/
+      Handler: notification_sender.lambda_handler
+      Timeout: 300
+      MemorySize: 256
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Sub 'ubbc-bot-${Environment}-*'
