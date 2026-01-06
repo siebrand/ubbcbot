@@ -191,11 +191,15 @@ class OfferManagementHandler(OfferBaseHandler):
         # Update additional boxes to ORDERED status (up to what we need)
         boxes_to_update = min(additional_boxes_needed, len(non_ordered_boxes))
         for i in range(boxes_to_update):
+            logger.info(f"Updating box {non_ordered_boxes[i].box_id} from {non_ordered_boxes[i].status} to ORDERED")
             self.db.update_box(non_ordered_boxes[i].box_id, {'status': BoxStatus.ORDERED.value})
+            # Update the local box object to reflect the status change
+            non_ordered_boxes[i].status = BoxStatus.ORDERED.value
         
-        # Delete only non-ordered excess boxes
+        # Delete excess non-ordered boxes (but preserve existing ordered boxes)
         boxes_to_delete = non_ordered_boxes[boxes_to_update:]
         for box in boxes_to_delete:
+            logger.info(f"Deleting excess box {box.box_id} with status {box.status} and quantity {box.current_quantity}")
             self.db.delete_box(box.box_id)
         
         # Cancel remaining orders
