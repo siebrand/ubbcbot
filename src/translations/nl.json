@@ -498,5 +498,6 @@
   "complete_labeling_success": "✅ Volledige labeling verwerkt voor {box_count} colli\nAlle bestellingen ingesteld op LABELING_VOLTOOID",
   "ordered_text": "besteld",
   "available_text": "beschikbaar",
-  "order_notification": "🍺 {customer_name} heeft {quantity}x {offer_name} besteld{availability}"
+  "order_notification": "🍺 {customer_name} heeft {quantity}x {offer_name} besteld{availability}",
+  "order_too_large_for_remaining_space": "❌ Bestelling past niet in bestaande colli's. Bestellingen kunnen niet over meerdere colli's verdeeld worden."
 }

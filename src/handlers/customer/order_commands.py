@@ -147,6 +147,11 @@ class CustomerOrderCommands(BaseHandler):
             
             # If no suitable box found, create a new one (if allowed)
             if not suitable_box:
+                # Check if there are existing boxes - if so, reject order since it can't span multiple boxes
+                if boxes:
+                    self._send_message(chat_id, self._t('order_too_large_for_remaining_space', user_id))
+                    return {'status': 'insufficient_space'}
+                
                 has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes) if boxes else False
                 
                 if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes:
