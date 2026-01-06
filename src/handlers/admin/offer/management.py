@@ -180,17 +180,23 @@ class OfferManagementHandler(OfferBaseHandler):
                 )
                 self._send_message(customer.telegram_user_id, msg)
         
-        # Update only the requested number of boxes to 'ordered' status and delete excess boxes
+        # Get current boxes and separate by status
         boxes = self.db.get_boxes_by_offer(offer.offer_id)
-        boxes_to_update = min(boxes_ordered, len(boxes))
+        ordered_boxes = [box for box in boxes if box.status == BoxStatus.ORDERED.value]
+        non_ordered_boxes = [box for box in boxes if box.status != BoxStatus.ORDERED.value]
         
-        # Update requested boxes to ORDERED
+        current_ordered_count = len(ordered_boxes)
+        additional_boxes_needed = max(0, boxes_ordered - current_ordered_count)
+        
+        # Update additional boxes to ORDERED status (up to what we need)
+        boxes_to_update = min(additional_boxes_needed, len(non_ordered_boxes))
         for i in range(boxes_to_update):
-            self.db.update_box(boxes[i].box_id, {'status': BoxStatus.ORDERED.value})
+            self.db.update_box(non_ordered_boxes[i].box_id, {'status': BoxStatus.ORDERED.value})
         
-        # Delete excess boxes
-        for i in range(boxes_to_update, len(boxes)):
-            self.db.delete_box(boxes[i].box_id)
+        # Delete only non-ordered excess boxes
+        boxes_to_delete = non_ordered_boxes[boxes_to_update:]
+        for box in boxes_to_delete:
+            self.db.delete_box(box.box_id)
         
         # Cancel remaining orders
         for order in cancelled_orders:
