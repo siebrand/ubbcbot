@@ -185,11 +185,12 @@ class CustomerOrderCommands(BaseHandler):
             new_quantity = suitable_box.current_quantity + quantity
             updates = {'current_quantity': new_quantity}
             
-            # Update box status based on new quantity
-            if new_quantity >= suitable_box.max_capacity:
-                updates['status'] = BoxStatus.FULL.value
-            elif new_quantity >= suitable_box.min_breakeven:
-                updates['status'] = BoxStatus.MINIMUM_REACHED.value
+            # Update box status based on new quantity (don't change status if already ORDERED)
+            if suitable_box.status != BoxStatus.ORDERED.value:
+                if new_quantity >= suitable_box.max_capacity:
+                    updates['status'] = BoxStatus.FULL.value
+                elif new_quantity >= suitable_box.min_breakeven:
+                    updates['status'] = BoxStatus.MINIMUM_REACHED.value
 
             if not self.db.update_box(suitable_box.box_id, updates):
                 logger.error(f"Failed to update box {suitable_box.box_id}")
@@ -233,13 +234,13 @@ class CustomerOrderCommands(BaseHandler):
         if not boxes:
             return
         
-        # Check if ALL boxes are ordered+ status AND completely filled
-        all_ordered_and_full = all(
-            box.status in ['ordered', 'delivered'] and box.current_quantity >= box.max_capacity 
+        # Check if ALL boxes are full+ status (full, ordered, or delivered) AND completely filled
+        all_full_and_complete = all(
+            box.status in ['full', 'ordered', 'delivered'] and box.current_quantity >= box.max_capacity 
             for box in boxes
         )
         
-        if all_ordered_and_full:
+        if all_full_and_complete:
             self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
             # Delete notification messages for sold out offer
             self._delete_offer_notifications(offer_id)

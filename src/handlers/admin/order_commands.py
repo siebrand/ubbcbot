@@ -272,13 +272,14 @@ class AdminOrderCommands(BaseHandler):
         new_quantity = box.current_quantity - order.quantity
         updates = {'current_quantity': new_quantity}
         
-        # Recalculate box status
-        if new_quantity == 0:
-            updates['status'] = BoxStatus.OPEN.value
-        elif new_quantity < box.min_breakeven:
-            updates['status'] = BoxStatus.OPEN.value
-        elif new_quantity < box.max_capacity:
-            updates['status'] = BoxStatus.MINIMUM_REACHED.value
+        # Recalculate box status (don't change status if already ORDERED)
+        if box.status != BoxStatus.ORDERED.value:
+            if new_quantity == 0:
+                updates['status'] = BoxStatus.OPEN.value
+            elif new_quantity < box.min_breakeven:
+                updates['status'] = BoxStatus.OPEN.value
+            elif new_quantity < box.max_capacity:
+                updates['status'] = BoxStatus.MINIMUM_REACHED.value
         
         self.db.update_box(box.box_id, updates)
 
@@ -1179,13 +1180,13 @@ class AdminOrderCommands(BaseHandler):
         if not boxes:
             return
         
-        # Check if ALL boxes are ordered+ status AND completely filled
-        all_ordered_and_full = all(
-            box.status in ['ordered', 'delivered'] and box.current_quantity >= box.max_capacity 
+        # Check if ALL boxes are full+ status (full, ordered, or delivered) AND completely filled
+        all_full_and_complete = all(
+            box.status in ['full', 'ordered', 'delivered'] and box.current_quantity >= box.max_capacity 
             for box in boxes
         )
         
-        if all_ordered_and_full:
+        if all_full_and_complete:
             self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
         else:
             self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
