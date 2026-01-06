@@ -273,7 +273,7 @@ class CustomerOrderCommands(BaseHandler):
             availability_text = ""
             
             if updated_offer and updated_offer.status == OfferStatus.SOLD_OUT.value:
-                availability_text = " - SOLD OUT"
+                availability_text = f" - {self._t('status_sold_out', force_group_lang=True)}"
             else:
                 # Calculate remaining availability
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
