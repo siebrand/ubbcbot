@@ -22,9 +22,7 @@ class UserCache:
             # Also populate telegram_id cache
             for customer in customers:
                 cls._customers_by_telegram_id[customer.telegram_user_id] = customer
-        else:
-            logger.info(f"Cache hit for customers with status: {status}")
-        
+
         return cls._customers_by_status[status]
     
     @classmethod
@@ -36,9 +34,7 @@ class UserCache:
             # Also populate telegram_id cache
             for customer in cls._subscribers:
                 cls._customers_by_telegram_id[customer.telegram_user_id] = customer
-        else:
-            logger.info("Cache hit for subscribers")
-        
+
         return cls._subscribers
     
     @classmethod
@@ -53,9 +49,7 @@ class UserCache:
                           AuthorizationStatus.REJECTED.value]:
                 all_customers.extend(cls.get_customers_by_status(status, db_service))
             cls._all_customers = all_customers
-        else:
-            logger.info("Cache hit for all customers")
-        
+
         return cls._all_customers
     
     @classmethod
@@ -67,9 +61,8 @@ class UserCache:
             if customer:
                 cls._customers_by_telegram_id[telegram_user_id] = customer
             return customer
-        else:
-            logger.info(f"Cache hit for telegram_user_id: {telegram_user_id}")
-            return cls._customers_by_telegram_id[telegram_user_id]
+
+        return cls._customers_by_telegram_id[telegram_user_id]
     
     @classmethod
     def invalidate_cache(cls):
