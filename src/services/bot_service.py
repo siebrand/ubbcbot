@@ -141,7 +141,7 @@ class BotService:
             first_name = message['from'].get('first_name', 'N/A')
             
             # Log incoming command
-            if text.startswith('/') and self.environment == 'test':
+            if text.startswith('/'):
                 logger.info(f"Command: {text.split()[0]} | User: {first_name} (@{username}) | ID: {user_id}")
 
             # Register customer if not exists
