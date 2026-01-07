@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any
 from boto3.dynamodb.conditions import Key
 from models.entities import Supplier, Offer, Customer, Box, Order, DiscountPeriod, DiscountStatus
+from services.user_cache import UserCache
 
 class DynamoDBService:
     def __init__(self):
@@ -236,15 +237,25 @@ class DynamoDBService:
 
     # Customer operations
     def create_customer(self, customer: Customer) -> Optional[Customer]:
+        """Create customer and invalidate cache"""
         try:
             item = self._prepare_item(customer.__dict__)
             self.customers_table.put_item(Item=item)
+            
+            # Invalidate cache for the customer's status
+            UserCache.invalidate_status_cache(customer.authorization_status)
+
             return customer
         except Exception as e:
             print(f"Error creating customer: {e}")
             return None
 
     def get_customer_by_telegram_id(self, telegram_user_id: int) -> Optional[Customer]:
+        """Get customer by telegram ID with caching"""
+        return UserCache.get_customer_by_telegram_id(telegram_user_id, self)
+    
+    def _get_customer_by_telegram_id_uncached(self, telegram_user_id: int) -> Optional[Customer]:
+        """Internal method to get customer by telegram ID without caching"""
         try:
             response = self.customers_table.query(
                 IndexName='telegram-user-index',
@@ -475,6 +486,11 @@ class DynamoDBService:
             return False
 
     def get_customers_by_status(self, status: str) -> List[Customer]:
+        """Get customers by status with caching"""
+        return UserCache.get_customers_by_status(status, self)
+    
+    def _get_customers_by_status_uncached(self, status: str) -> List[Customer]:
+        """Internal method to get customers by status without caching"""
         try:
             response = self.customers_table.scan(
                 FilterExpression='authorization_status = :status',
@@ -514,7 +530,11 @@ class DynamoDBService:
             return None
 
     def update_customer(self, customer_id: str, updates: Dict[str, Any]) -> bool:
+        """Update customer and invalidate cache"""
         try:
+            # Get current customer to determine status changes
+            current_customer = self.get_customer(customer_id)
+            
             update_expression = "SET "
             expression_values = {}
             expression_names = {}
@@ -532,6 +552,27 @@ class DynamoDBService:
                 ExpressionAttributeNames=expression_names,
                 ExpressionAttributeValues=expression_values
             )
+            
+            # Invalidate relevant caches
+            if current_customer:
+                # Invalidate telegram_id cache
+                UserCache.invalidate_customer_cache(current_customer.telegram_user_id)
+                
+                # If authorization status changed, invalidate both old and new status caches
+                if 'authorization_status' in updates:
+                    UserCache.invalidate_status_cache(current_customer.authorization_status)
+                    UserCache.invalidate_status_cache(updates['authorization_status'])
+                else:
+                    # Otherwise just invalidate current status cache
+                    UserCache.invalidate_status_cache(current_customer.authorization_status)
+                
+                # If subscription status changed, invalidate subscriber cache
+                if 'subscribed_to_offers' in updates:
+                    UserCache.invalidate_subscriber_cache()
+            else:
+                # If we can't determine current status, invalidate all caches
+                UserCache.invalidate_cache()
+            
             return True
         except Exception as e:
             print(f"Error updating customer: {e}")
@@ -645,6 +686,11 @@ class DynamoDBService:
             return False
     
     def get_subscribers(self) -> List[Customer]:
+        """Get subscribers with caching"""
+        return UserCache.get_subscribers(self)
+    
+    def _get_subscribers_uncached(self) -> List[Customer]:
+        """Internal method to get subscribers without caching"""
         try:
             response = self.customers_table.scan(
                 FilterExpression='subscribed_to_offers = :subscribed',

@@ -2,6 +2,7 @@ from typing import Dict, Any
 from decimal import Decimal
 from handlers.base_handler import BaseHandler
 from models.entities import OfferStatus
+from services.user_cache import UserCache
 
 class InfoCommands(BaseHandler):
     def handle_start(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:

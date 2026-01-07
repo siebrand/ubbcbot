@@ -3,6 +3,7 @@ from handlers.base_handler import BaseHandler
 from models.entities import AuthorizationStatus
 from utils.update_utils import UpdateUtils
 from utils.pagination import PaginationUtils
+from services.user_cache import UserCache
 
 class UserCommands(BaseHandler):
     # Status emoji mapping - single source of truth
@@ -195,12 +196,9 @@ class UserCommands(BaseHandler):
 
     def handle_list_users(self, chat_id: int, page: int = 1, status_filter: str = "all", search_string: str = None) -> Dict[str, Any]:
         """Handle /list_users command with pagination, filtering, and optional search"""
-        # Get customers based on filter
+        # Get customers based on filter using cache
         if status_filter == "all":
-            customers = []
-            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value))
-            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
-            customers.extend(self.db.get_customers_by_status(AuthorizationStatus.REJECTED.value))
+            customers = UserCache.get_all_customers(self.db)
         else:
             customers = self.db.get_customers_by_status(status_filter)
 
