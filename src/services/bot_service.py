@@ -31,10 +31,6 @@ class BotService:
         self.admin_user_id = int(os.environ.get('ADMIN_USER_ID', '15005473'))
         self.environment = os.environ.get('ENVIRONMENT', 'test')
         
-        # Log environment info for debugging
-        logger.info(f"Initializing BotService with environment: {self.environment}")
-        logger.info(f"Admin user ID: {self.admin_user_id}")
-        
         self.telegram_token = self._get_telegram_token()
         
         if not self.telegram_token:
@@ -53,8 +49,7 @@ class BotService:
         ssm = boto3.client('ssm')
         
         parameter_name = f'/ubbc-bot/{self.environment}/telegram-bot-token'
-        logger.info(f"Attempting to retrieve parameter: {parameter_name}")
-        
+
         try:
             response = ssm.get_parameter(
                 Name=parameter_name,
