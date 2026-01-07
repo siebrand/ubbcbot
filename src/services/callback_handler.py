@@ -25,8 +25,7 @@ class CallbackHandler:
             data = callback_query['data']
             
             logger.info(f"Processing callback: {data}")
-            logger.info(f"Callback data starts with confirm_order_wholesale_: {data.startswith('confirm_order_wholesale_')}")
-            
+
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
             
