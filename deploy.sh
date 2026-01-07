@@ -28,7 +28,18 @@ if ! pip show pytest >/dev/null 2>&1; then
     pip install -r tests/requirements.txt
 fi
 
-# Run old test framework
+# Set PYTHONPATH for imports
+export PYTHONPATH="$(pwd)/src:$PYTHONPATH"
+
+# Run refactoring unit tests
+echo "Running refactoring unit tests..."
+if ! python -m unittest discover -s tests/handlers/admin -p "test_*.py" -v; then
+    echo "❌ Refactoring tests failed! Deployment aborted."
+    deactivate
+    exit 1
+fi
+
+# Run legacy tests
 echo "Running legacy tests..."
 if ! python tests/run_tests.py; then
     echo "❌ Legacy tests failed! Deployment aborted."
@@ -96,6 +107,6 @@ echo ""
 echo "✅ Setup complete! Next steps:"
 echo "1. Test with /start command in Telegram"
 echo "2. Verify webhook status: curl \"https://api.telegram.org/bot$TELEGRAM_TOKEN/getWebhookInfo\""
-echo "3. Run tests locally: python tests/run_tests.py && source test_env/bin/activate && python -m pytest tests/test_customer_orders.py -v"
+echo "3. Run tests locally: source test_env/bin/activate && export PYTHONPATH=\$(pwd)/src:\$PYTHONPATH && python -m unittest discover -s tests/handlers/admin -p 'test_*.py' -v && python tests/run_tests.py && python -m pytest tests/test_customer_orders.py -v"
 echo ""
 echo "🕐 Deployment completed at: $(date)"
