@@ -26,6 +26,9 @@ from handlers.customer.changelog_commands import ChangelogCommands
 logger = logging.getLogger()
 
 class BotService:
+    _cached_token = None
+    _cached_environment = None
+    
     def __init__(self):
         self.db = DynamoDBService()
         self.admin_user_id = int(os.environ.get('ADMIN_USER_ID', '15005473'))
@@ -44,7 +47,12 @@ class BotService:
         self._init_services()
 
     def _get_telegram_token(self) -> str:
-        """Get Telegram token from Parameter Store"""
+        """Get Telegram token from Parameter Store with caching"""
+        # Return cached token if available and environment matches
+        if (BotService._cached_token and 
+            BotService._cached_environment == self.environment):
+            return BotService._cached_token
+        
         import boto3
         ssm = boto3.client('ssm')
         
@@ -59,7 +67,12 @@ class BotService:
             if not token:
                 logger.error("Telegram token is empty")
                 return ""
-            logger.info("Successfully retrieved Telegram token")
+            
+            # Cache the token and environment
+            BotService._cached_token = token
+            BotService._cached_environment = self.environment
+            
+            logger.info("Successfully retrieved and cached Telegram token")
             return token
         except Exception as e:
             logger.error(f"Error getting Telegram token from {parameter_name}: {e}")
