@@ -204,21 +204,7 @@ class UserCommands(BaseHandler):
 
         # Apply search filter if provided
         if search_string:
-            # Extract search logic from _find_customer_with_disambiguation
-            search_lower = search_string.lower()
-            filtered_customers = []
-            for customer in customers:
-                first_name = (customer.first_name or "").lower()
-                last_name = (customer.last_name or "").lower()
-                username = (customer.username or "").lower()
-                full_name = f"{first_name} {last_name}".strip()
-
-                if (search_lower in first_name or
-                        search_lower in last_name or
-                        search_lower in username or
-                        search_lower in full_name):
-                    filtered_customers.append(customer)
-            customers = filtered_customers
+            customers = self.validator.match_customers(search_string, customers)
 
         if not customers:
             search_text = f" matching '{search_string}'" if search_string else ""

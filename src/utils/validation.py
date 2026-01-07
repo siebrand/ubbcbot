@@ -33,6 +33,21 @@ class ValidationUtils:
         
         return True, None
     
+    def match_customers(self, identifier: str, customers: list) -> list:
+        """Match customers by identifier (name or username) - shared matching logic"""
+        search_lower = identifier.lower()
+        matches = []
+        for customer in customers:
+            first_name = (customer.first_name or "").lower()
+            last_name = (customer.last_name or "").lower()
+            username = (customer.username or "").lower()
+            full_name = f"{first_name} {last_name}".strip()
+
+            if (search_lower in first_name or search_lower in last_name or 
+                search_lower in username or search_lower in full_name):
+                matches.append(customer)
+        return matches
+    
     def find_customer_with_disambiguation(self, identifier: str, chat_id: int, callback_prefix: str, status_filter: str = None) -> Tuple[Optional[Any], Optional[Dict[str, Any]]]:
         """Find customer with disambiguation UI if multiple matches"""
         if status_filter:
@@ -43,17 +58,7 @@ class ValidationUtils:
             all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
             all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.REJECTED.value))
         
-        search_lower = identifier.lower()
-        matches = []
-        for customer in all_customers:
-            first_name = (customer.first_name or "").lower()
-            last_name = (customer.last_name or "").lower()
-            username = (customer.username or "").lower()
-            full_name = f"{first_name} {last_name}".strip()
-
-            if (search_lower in first_name or search_lower in last_name or 
-                search_lower in username or search_lower in full_name):
-                matches.append(customer)
+        matches = self.match_customers(identifier, all_customers)
         
         if not matches:
             return None, {'status': 'user_not_found', 'message': self._t('user_not_found', identifier=identifier)}
