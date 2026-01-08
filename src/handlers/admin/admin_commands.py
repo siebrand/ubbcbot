@@ -124,6 +124,9 @@ class AdminCommandsHandler(BaseHandler):
                 [{"text": self._t('list_users_btn', user_id), "callback_data": "cmd_list_users"}],
                 [{"text": self._t('approve_user_btn', user_id), "callback_data": "cmd_approve_user"}],
                 [{"text": self._t('user_status_btn', user_id), "callback_data": "cmd_user_status"}],
+                [{"text": self._t('list_subscribers_btn', user_id), "callback_data": "cmd_list_subscribers"}],
+                [{"text": self._t('add_guest_btn', user_id), "callback_data": "cmd_add_guest"}],
+                [{"text": self._t('list_guests_btn', user_id), "callback_data": "cmd_list_guests"}],
                 [{"text": self._t('back_to_admin', user_id), "callback_data": "admin_main"}]
             ]
         }
