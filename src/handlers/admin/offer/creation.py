@@ -48,7 +48,6 @@ class OfferCreationHandler(OfferBaseHandler):
                 name=name,
                 price_per_unit=Decimal(str(price)),
                 wholesale_box_size=box_size,
-                min_quantity_breakeven=max(1, int(box_size * 0.8)),
                 status=OfferStatus.DRAFT.value
             )
 
@@ -106,8 +105,7 @@ class OfferCreationHandler(OfferBaseHandler):
                 # Create initial box
                 box = Box(
                     offer_id=offer_id,
-                    max_capacity=box_size,
-                    min_breakeven=offer.min_quantity_breakeven
+                    max_capacity=box_size
                 )
                 created_box = self.db.create_box(box)
                 
@@ -138,8 +136,6 @@ class OfferCreationHandler(OfferBaseHandler):
                     updates = {'current_quantity': 1}
                     if 1 >= created_box.max_capacity:
                         updates['status'] = BoxStatus.FULL.value
-                    elif 1 >= created_box.min_breakeven:
-                        updates['status'] = BoxStatus.MINIMUM_REACHED.value
                     
                     box_update_result = self.db.update_box(created_box.box_id, updates)
                     

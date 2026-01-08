@@ -167,7 +167,7 @@ def test_status_validations():
     # Box status prevents new orders
     box_ordered = Box(status=BoxStatus.ORDERED.value)
     box_delivered = Box(status=BoxStatus.DELIVERED.value)
-    available_statuses = [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value]
+    available_statuses = [BoxStatus.OPEN.value, BoxStatus.FULL.value]
     
     can_use_ordered = box_ordered.status in available_statuses
     can_use_delivered = box_delivered.status in available_statuses

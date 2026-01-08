@@ -8,15 +8,14 @@ import uuid
 class OfferStatus(Enum):
     DRAFT = "draft"
     ACTIVE = "active"
-    INACTIVE = "inactive"
     ORDERED = "ordered"
     SOLD_OUT = "sold_out"
     COMPLETED = "completed"
     DELIVERED = "delivered"
+    INACTIVE = "inactive"
 
 class BoxStatus(Enum):
     OPEN = "open"
-    MINIMUM_REACHED = "minimum_reached"
     FULL = "full"
     ORDERED = "ordered"
     DELIVERED = "delivered"
@@ -24,7 +23,6 @@ class BoxStatus(Enum):
 class OrderStatus(Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
-    CANCELLED = "cancelled"
     RECEIVED_PARTIAL_DELAYED = "received_partial_delayed"
     CANCELLED_UNAVAILABLE = "cancelled_unavailable"
     READY_FOR_LABELING = "ready_for_labeling"
@@ -32,6 +30,7 @@ class OrderStatus(Enum):
     AWAITING_PAYMENT = "awaiting_payment"
     COMPLETED = "completed"
     DELIVERED = "delivered"
+    CANCELLED = "cancelled"
 
 class DeliveryAction(Enum):
     FULL = "full"
@@ -67,7 +66,6 @@ class Offer:
     images: list = field(default_factory=list)
     price_per_unit: Decimal = Decimal('0.0')
     wholesale_box_size: int = 12
-    min_quantity_breakeven: int = 10
     max_quantity: Optional[int] = None
     status: str = OfferStatus.DRAFT.value
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -93,7 +91,6 @@ class Box:
     offer_id: int = 0
     current_quantity: int = 0
     max_capacity: int = 12
-    min_breakeven: int = 10
     status: str = BoxStatus.OPEN.value
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 

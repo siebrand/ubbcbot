@@ -31,8 +31,7 @@ def test_order_execution():
     box = Box(
         offer_id=1,
         current_quantity=8, 
-        max_capacity=12, 
-        min_breakeven=10
+        max_capacity=12
     )
     available_space = box.max_capacity - box.current_quantity
     can_fit = quantity <= available_space
@@ -93,7 +92,7 @@ def test_capacity_management():
             offer_id=1,
             current_quantity=10, 
             max_capacity=12, 
-            status=BoxStatus.MINIMUM_REACHED.value
+            status=BoxStatus.OPEN.value
         ),
         Box(
             offer_id=1,
@@ -105,7 +104,7 @@ def test_capacity_management():
     
     total_available = 0
     for box in boxes:
-        if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value]:
+        if box.status in [BoxStatus.OPEN.value]:
             total_available += box.max_capacity - box.current_quantity
     
     assert total_available == 6  # (12-8) + (12-10) + 0

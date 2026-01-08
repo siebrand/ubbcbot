@@ -60,20 +60,13 @@ def test_box_status_transitions():
     """Test box status transitions"""
     print("\n=== Testing box status transitions ===")
     
-    # Open -> minimum reached
-    box = Box(current_quantity=0, max_capacity=12, min_breakeven=10, status=BoxStatus.OPEN.value)
-    box.current_quantity = 10
-    if box.current_quantity >= box.min_breakeven:
-        box.status = BoxStatus.MINIMUM_REACHED.value
-    assert box.status == BoxStatus.MINIMUM_REACHED.value
-    print("✅ Open -> minimum reached")
-    
-    # Minimum reached -> full
+    # Open -> full
+    box = Box(current_quantity=0, max_capacity=12, status=BoxStatus.OPEN.value)
     box.current_quantity = 12
     if box.current_quantity >= box.max_capacity:
         box.status = BoxStatus.FULL.value
     assert box.status == BoxStatus.FULL.value
-    print("✅ Minimum reached -> full")
+    print("✅ Open -> full")
 
 def test_offer_status_transitions():
     """Test offer status transitions"""

@@ -51,7 +51,6 @@ class TestCommands(BaseHandler):
                     name=offer_data["name"],
                     price_per_unit=Decimal(str(offer_data["price"])),
                     wholesale_box_size=offer_data["box_size"],
-                    min_quantity_breakeven=max(1, int(offer_data["box_size"] * 0.8)),
                     status='active'
                 )
                 
@@ -61,8 +60,7 @@ class TestCommands(BaseHandler):
                     # Create initial box
                     box = Box(
                         offer_id=offer.offer_id,
-                        max_capacity=offer_data["box_size"],
-                        min_breakeven=offer.min_quantity_breakeven
+                        max_capacity=offer_data["box_size"]
                     )
                     self.db.create_box(box)
                     
@@ -83,8 +81,6 @@ class TestCommands(BaseHandler):
                         updates = {'current_quantity': 1}
                         if 1 >= box.max_capacity:
                             updates['status'] = BoxStatus.FULL.value
-                        elif 1 >= box.min_breakeven:
-                            updates['status'] = BoxStatus.MINIMUM_REACHED.value
                         self.db.update_box(box.box_id, updates)
             
             self._send_message(chat_id, self._t('test_data_success', suppliers=created_suppliers, offers=created_offers))

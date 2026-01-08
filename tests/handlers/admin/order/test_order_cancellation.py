@@ -90,7 +90,6 @@ class TestOrderCancellation(unittest.TestCase):
         mock_box = Mock()
         mock_box.box_id = 'box123'
         mock_box.current_quantity = 10
-        mock_box.min_breakeven = 5
         mock_box.max_capacity = 24
         mock_box.status = BoxStatus.FULL.value
         
@@ -154,7 +153,6 @@ class TestOrderCancellation(unittest.TestCase):
         mock_box = Mock()
         mock_box.box_id = 'box123'
         mock_box.current_quantity = 5
-        mock_box.min_breakeven = 5
         mock_box.max_capacity = 24
         mock_box.status = BoxStatus.FULL.value
         

@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from boto3.dynamodb.conditions import Key
-from models.entities import Supplier, Offer, Customer, Box, Order, DiscountPeriod, DiscountStatus
+from models.entities import Supplier, Offer, Customer, Box, Order, DiscountPeriod, DiscountStatus, BoxStatus
 from services.user_cache import UserCache
 
 class DynamoDBService:
@@ -183,8 +183,8 @@ class DynamoDBService:
                 # Convert Decimal fields to appropriate types
                 if 'wholesale_box_size' in item:
                     item['wholesale_box_size'] = int(item['wholesale_box_size'])
-                if 'min_quantity_breakeven' in item:
-                    item['min_quantity_breakeven'] = int(item['min_quantity_breakeven'])
+                # Remove deprecated fields for backward compatibility
+                item.pop('min_quantity_breakeven', None)
                 return Offer(**item)
             return None
         except Exception as e:
@@ -199,8 +199,8 @@ class DynamoDBService:
                 # Convert Decimal fields to appropriate types
                 if 'wholesale_box_size' in item:
                     item['wholesale_box_size'] = int(item['wholesale_box_size'])
-                if 'min_quantity_breakeven' in item:
-                    item['min_quantity_breakeven'] = int(item['min_quantity_breakeven'])
+                # Remove deprecated fields for backward compatibility
+                item.pop('min_quantity_breakeven', None)
                 offers.append(Offer(**item))
             return offers
         except Exception as e:
@@ -321,8 +321,11 @@ class DynamoDBService:
                     item['current_quantity'] = int(item['current_quantity'])
                 if 'max_capacity' in item:
                     item['max_capacity'] = int(item['max_capacity'])
-                if 'min_breakeven' in item:
-                    item['min_breakeven'] = int(item['min_breakeven'])
+                # Remove deprecated fields for backward compatibility
+                item.pop('min_breakeven', None)
+                # Handle deprecated status values
+                if item.get('status') == 'minimum_reached':
+                    item['status'] = BoxStatus.OPEN.value
                 boxes.append(Box(**item))
             return boxes
         except Exception as e:
@@ -474,8 +477,11 @@ class DynamoDBService:
                     item['current_quantity'] = int(item['current_quantity'])
                 if 'max_capacity' in item:
                     item['max_capacity'] = int(item['max_capacity'])
-                if 'min_breakeven' in item:
-                    item['min_breakeven'] = int(item['min_breakeven'])
+                # Remove deprecated fields for backward compatibility
+                item.pop('min_breakeven', None)
+                # Handle deprecated status values
+                if item.get('status') == 'minimum_reached':
+                    item['status'] = BoxStatus.OPEN.value
                 return Box(**item)
             return None
         except Exception as e:

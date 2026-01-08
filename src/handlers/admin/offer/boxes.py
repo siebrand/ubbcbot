@@ -22,8 +22,7 @@ class BoxManagementHandler(OfferBaseHandler):
             # Create new box
             box = Box(
                 offer_id=offer_id,
-                max_capacity=offer.wholesale_box_size,
-                min_breakeven=offer.min_quantity_breakeven
+                max_capacity=offer.wholesale_box_size
             )
             
             if self.db.create_box(box):
@@ -74,7 +73,7 @@ class BoxManagementHandler(OfferBaseHandler):
             boxes = self.db.get_boxes_by_offer(offer.offer_id)
             for box in boxes:
                 # Filter boxes based on status
-                if status_filter == 'active' and box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
+                if status_filter == 'active' and box.status in [BoxStatus.OPEN.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
                     offer_boxes.append((offer, box))
                 elif status_filter == 'ordered' and box.status == BoxStatus.ORDERED.value:
                     offer_boxes.append((offer, box))
@@ -100,7 +99,6 @@ class BoxManagementHandler(OfferBaseHandler):
         for offer, box in page_items:
             status_emoji = {
                 BoxStatus.OPEN.value: "🟢",
-                BoxStatus.MINIMUM_REACHED.value: "🟡",
                 BoxStatus.FULL.value: "🔴",
                 BoxStatus.ORDERED.value: "📦",
                 BoxStatus.DELIVERED.value: "✅"
@@ -410,8 +408,7 @@ class BoxManagementHandler(OfferBaseHandler):
         for _ in range(boxes_needed):
             box = Box(
                 offer_id=offer.offer_id,
-                max_capacity=box_size,
-                min_breakeven=offer.min_quantity_breakeven  # Convert Decimal to int
+                max_capacity=box_size
             )
             created_box = self.db.create_box(box)
             if created_box:
@@ -421,8 +418,6 @@ class BoxManagementHandler(OfferBaseHandler):
                     updates = {'current_quantity': fill_amount}
                     if fill_amount >= box_size:
                         updates['status'] = BoxStatus.FULL.value
-                    elif fill_amount >= created_box.min_breakeven:
-                        updates['status'] = BoxStatus.MINIMUM_REACHED.value
                     self.db.update_box(created_box.box_id, updates)
                     remaining_units -= fill_amount
                 created_boxes += 1

@@ -246,7 +246,6 @@ class OfferManagementHandler(OfferBaseHandler):
                 new_box = Box(
                     offer_id=offer.offer_id,
                     max_capacity=box_size,
-                    min_breakeven=offer.min_quantity_breakeven,
                     status=BoxStatus.ORDERED.value
                 )
                 self.db.create_box(new_box)

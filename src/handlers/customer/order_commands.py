@@ -103,7 +103,7 @@ class CustomerOrderCommands(BaseHandler):
             
             # Look for existing box that can fit the entire order
             for box in boxes:
-                if box.status in [BoxStatus.OPEN.value, BoxStatus.MINIMUM_REACHED.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
+                if box.status in [BoxStatus.OPEN.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
                     available_space = box.max_capacity - box.current_quantity
                     if available_space >= quantity:
                         suitable_box = box
@@ -117,8 +117,7 @@ class CustomerOrderCommands(BaseHandler):
                     # Create new box
                     new_box = Box(
                         offer_id=offer_id,
-                        max_capacity=box_size,
-                        min_breakeven=offer.min_quantity_breakeven
+                        max_capacity=box_size
                     )
                     suitable_box = self.db.create_box(new_box)
                     if not suitable_box:
@@ -153,8 +152,6 @@ class CustomerOrderCommands(BaseHandler):
             if suitable_box.status != BoxStatus.ORDERED.value:
                 if new_quantity >= suitable_box.max_capacity:
                     updates['status'] = BoxStatus.FULL.value
-                elif new_quantity >= suitable_box.min_breakeven:
-                    updates['status'] = BoxStatus.MINIMUM_REACHED.value
 
             if not self.db.update_box(suitable_box.box_id, updates):
                 logger.error(f"Failed to update box {suitable_box.box_id}")

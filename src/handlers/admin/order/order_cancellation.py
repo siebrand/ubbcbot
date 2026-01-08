@@ -248,10 +248,6 @@ class OrderCancellation(BaseOrderHandler):
         if box.status != BoxStatus.ORDERED.value:
             if new_quantity == 0:
                 updates['status'] = BoxStatus.OPEN.value
-            elif new_quantity < box.min_breakeven:
-                updates['status'] = BoxStatus.OPEN.value
-            elif new_quantity < box.max_capacity:
-                updates['status'] = BoxStatus.MINIMUM_REACHED.value
         
         self.db.update_box(box.box_id, updates)
 
