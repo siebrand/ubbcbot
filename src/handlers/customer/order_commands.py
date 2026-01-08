@@ -7,7 +7,7 @@ from models.entities import Order, Box, BoxStatus, OfferStatus
 logger = logging.getLogger()
 
 class CustomerOrderCommands(BaseHandler):
-    def handle_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
+    def handle_order(self, chat_id: int, user_id: int, args: list, skip_duplicate_check: bool = False) -> Dict[str, Any]:
         """Handle /order command"""
         if len(args) < 1:
             self._send_message(chat_id, self._t('usage_order', user_id))
@@ -48,27 +48,28 @@ class CustomerOrderCommands(BaseHandler):
                 return {'status': 'limit_exceeded'}
 
             # Check for existing orders for duplicate confirmation
-            existing_orders = self.db.get_orders_by_customer_and_offer(customer.customer_id, offer_id)
-            if existing_orders:
-                message = self._t('duplicate_order_warning', user_id, offer_name=offer.name)
-                message += "\n\n"
-                for order in existing_orders:
-                    from utils.timezone import to_cet_string
-                    order_date = to_cet_string(order.created_at, '%Y-%m-%d')
-                    message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
-                
-                message += self._t('confirm_additional_order', user_id, quantity=quantity)
-                
-                # Create inline keyboard with Confirm and Cancel buttons
-                keyboard = {
-                    "inline_keyboard": [[
-                        {"text": self._t('confirm', user_id), "callback_data": f"confirm_order_{offer_id}_{quantity}"},
-                        {"text": self._t('cancel', user_id), "callback_data": "cancel_confirmation"}
-                    ]]
-                }
-                
-                self._send_message(chat_id, message, reply_markup=keyboard)
-                return {'status': 'confirmation_required'}
+            if not skip_duplicate_check:
+                existing_orders = self.db.get_orders_by_customer_and_offer(customer.customer_id, offer_id)
+                if existing_orders:
+                    message = self._t('duplicate_order_warning', user_id, offer_name=offer.name)
+                    message += "\n\n"
+                    for order in existing_orders:
+                        from utils.timezone import to_cet_string
+                        order_date = to_cet_string(order.created_at, '%Y-%m-%d')
+                        message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
+                    
+                    message += self._t('confirm_additional_order', user_id, quantity=quantity)
+                    
+                    # Create inline keyboard with Confirm and Cancel buttons
+                    keyboard = {
+                        "inline_keyboard": [[
+                            {"text": self._t('confirm', user_id), "callback_data": f"confirm_order_{offer_id}_{quantity}"},
+                            {"text": self._t('cancel', user_id), "callback_data": "cancel_confirmation"}
+                        ]]
+                    }
+                    
+                    self._send_message(chat_id, message, reply_markup=keyboard)
+                    return {'status': 'confirmation_required'}
 
             # Execute the order
             return self.execute_order(chat_id, user_id, offer_id, quantity, offer, customer)
@@ -79,49 +80,12 @@ class CustomerOrderCommands(BaseHandler):
 
     def handle_confirm_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_order command"""
-        if len(args) < 2:
+        if len(args) < 1:
             self._send_message(chat_id, self._t('usage_confirm_order', user_id))
             return {'status': 'invalid_args'}
-
-        try:
-            offer_id = int(args[0])
-            quantity = int(args[1])
-            
-            if quantity <= 0:
-                self._send_message(chat_id, self._t('quantity_must_positive', user_id))
-                return {'status': 'invalid_quantity'}
-
-            # Get offer and customer
-            offer = self.db.get_offer(offer_id)
-            if not offer:
-                self._send_message(chat_id, self._t('offer_not_found', user_id))
-                return {'status': 'offer_not_found'}
-            
-            if offer.status == OfferStatus.SOLD_OUT.value:
-                self._send_message(chat_id, self._t('offer_sold_out_named', user_id, offer_name=offer.name))
-                return {'status': 'sold_out'}
-            
-            if offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, self._t('offer_not_found_inactive', user_id))
-                return {'status': 'offer_not_found'}
-
-            customer = self.db.get_customer_by_telegram_id(user_id)
-            if not customer:
-                self._send_message(chat_id, self._t('customer_not_found', user_id))
-                return {'status': 'customer_not_found'}
-            
-            # Check 5-unit limit for confirmed orders
-            valid, limit_message = self.validator.validate_order_limit(customer.customer_id, offer_id, quantity)
-            if not valid:
-                self._send_message(chat_id, limit_message)
-                return {'status': 'limit_exceeded'}
-            
-            # Execute the order without duplicate check
-            return self.execute_order(chat_id, user_id, offer_id, quantity, offer, customer)
-            
-        except ValueError:
-            self._send_message(chat_id, self._t('invalid_format', user_id))
-            return {'status': 'invalid_format'}
+        
+        # Reuse handle_order with skip_duplicate_check=True
+        return self.handle_order(chat_id, user_id, args, skip_duplicate_check=True)
 
     def execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
         """Execute order placement"""
