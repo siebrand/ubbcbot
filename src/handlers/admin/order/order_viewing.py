@@ -222,7 +222,12 @@ class OrderViewing(BaseOrderHandler):
         
         # Generate CSV and upload
         csv_content = self._generate_pick_list_csv(all_orders)
-        csv_filename = f"pick_list_{status_filter}_{self.environment}.csv"
+        
+        # Add CET timestamp to filename
+        from utils.timezone import to_cet_string
+        from datetime import datetime, UTC
+        timestamp = to_cet_string(datetime.now(UTC), '%Y%m%d_%H%M%S')
+        csv_filename = f"orders_{self.environment}_{status_filter}_{timestamp}.csv"
         
         # Send CSV file
         caption = self._t('pick_list_csv_caption', user_id=None, 

@@ -139,7 +139,7 @@ class TestOrderViewing(unittest.TestCase):
         # Check CSV filename format
         call_args = mock_send_doc.call_args[0]
         filename = call_args[2]
-        self.assertTrue(filename.startswith('pick_list_active_'))
+        self.assertTrue(filename.startswith('orders_test_active_'))
         self.assertTrue(filename.endswith('.csv'))
     
     def test_status_filter_logic(self):
