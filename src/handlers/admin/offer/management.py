@@ -229,11 +229,11 @@ class OfferManagementHandler(OfferBaseHandler):
         
         if not remaining_pending and remaining_capacity == 0:
             self.db.update_offer(offer.offer_id, {'status': 'sold_out'})
-            offer_status_msg = "Offer marked as SOLD OUT (no capacity remaining)"
+            offer_status_msg = self._t('offer_marked_sold_out', chat_id)
         elif not remaining_pending:
-            offer_status_msg = f"Offer remains ACTIVE ({remaining_capacity} {units_text} capacity remaining)"
+            offer_status_msg = self._t('offer_remains_active_capacity', chat_id, capacity=remaining_capacity, units=units_text)
         else:
-            offer_status_msg = f"Offer remains ACTIVE ({len(remaining_pending)} pending orders remaining)"
+            offer_status_msg = self._t('offer_remains_active_pending', chat_id, pending_count=len(remaining_pending))
         
         # Create additional boxes if needed to match exact boxes ordered
         current_boxes = self.db.get_boxes_by_offer(offer.offer_id)

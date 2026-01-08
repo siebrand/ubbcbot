@@ -499,5 +499,8 @@
   "ordered_text": "ordered",
   "available_text": "available",
   "order_notification": "🍺 {customer_name} ordered {quantity}x {offer_name}{availability}",
-  "order_too_large_for_remaining_space": "❌ Order cannot fit in existing boxes. Orders cannot span multiple boxes."
+  "order_too_large_for_remaining_space": "❌ Order cannot fit in existing boxes. Orders cannot span multiple boxes.",
+  "offer_marked_sold_out": "Offer marked as SOLD OUT (no capacity remaining)",
+  "offer_remains_active_capacity": "Offer remains ACTIVE ({capacity} {units} capacity remaining)",
+  "offer_remains_active_pending": "Offer remains ACTIVE ({pending_count} pending orders remaining)"
 }

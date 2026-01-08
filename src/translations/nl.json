@@ -499,5 +499,8 @@
   "ordered_text": "besteld",
   "available_text": "beschikbaar",
   "order_notification": "🍺 {customer_name} heeft {quantity}x {offer_name} besteld{availability}",
-  "order_too_large_for_remaining_space": "❌ Bestelling past niet in bestaande colli's. Bestellingen kunnen niet over meerdere colli's verdeeld worden."
+  "order_too_large_for_remaining_space": "❌ Bestelling past niet in bestaande colli's. Bestellingen kunnen niet over meerdere colli's verdeeld worden.",
+  "offer_marked_sold_out": "Aanbieding gemarkeerd als UITVERKOCHT (geen capaciteit meer)",
+  "offer_remains_active_capacity": "Aanbieding blijft ACTIEF ({capacity} {units} capaciteit over)",
+  "offer_remains_active_pending": "Aanbieding blijft ACTIEF ({pending_count} wachtende bestellingen over)"
 }
