@@ -201,13 +201,10 @@ class CustomerOrderCommands(BaseHandler):
         # Check if there's at least one box that has been ordered
         has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes)
         
-        # Check if there's any available space in non-ordered boxes
-        has_available_space = any(
-            box.status != BoxStatus.ORDERED.value and box.current_quantity < box.max_capacity
-            for box in boxes
-        )
+        # Check if there's any available space in ANY box (including ordered boxes)
+        has_available_space = any(box.current_quantity < box.max_capacity for box in boxes)
         
-        # Offer is sold out if at least one box is ordered AND no available space exists
+        # Offer is sold out if at least one box is ordered AND no available space exists in any box
         if has_ordered_boxes and not has_available_space:
             self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
             # Delete notification messages for sold out offer

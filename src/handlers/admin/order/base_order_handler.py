@@ -15,13 +15,14 @@ class BaseOrderHandler(BaseHandler):
         if not boxes:
             return
         
-        # Check if ALL boxes are full+ status (full, ordered, or delivered) AND completely filled
-        all_full_and_complete = all(
-            box.status in ['full', 'ordered', 'delivered'] and box.current_quantity >= box.max_capacity 
-            for box in boxes
-        )
+        # Check if there's at least one box that has been ordered
+        has_ordered_boxes = any(box.status == 'ordered' for box in boxes)
         
-        if all_full_and_complete:
+        # Check if there's any available space in ANY box (including ordered boxes)
+        has_available_space = any(box.current_quantity < box.max_capacity for box in boxes)
+        
+        # Offer is sold out if at least one box is ordered AND no available space exists in any box
+        if has_ordered_boxes and not has_available_space:
             self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
         else:
             self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
