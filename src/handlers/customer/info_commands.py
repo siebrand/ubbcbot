@@ -104,14 +104,14 @@ class InfoCommands(BaseHandler):
             return self._t('help_delivery')
         return ""
 
-    def _format_offer_line(self, offer, status_emoji, total_ordered=None, total_capacity=None, is_draft=False):
+    def _format_offer_line(self, offer, status_emoji, user_id, total_ordered=None, total_capacity=None, is_draft=False):
         """Format a single offer line with consistent markup"""
         bot_username = self._get_bot_username()
         
         if is_draft:
-            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f} (draft)\n"
+            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f}\n"
         elif total_ordered is not None and total_capacity is not None:
-            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f} ({total_ordered}/{total_capacity} ordered)\n"
+            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f} ({total_ordered}/{total_capacity} {self._t('ordered_text', user_id)})\n"
         else:
             return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f}\n"
     
@@ -208,7 +208,7 @@ class InfoCommands(BaseHandler):
             message += self._t('sold_out_offers_title', user_id) + "\n\n"
             for offer in sold_out_offers:
                 total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
-                message += self._format_offer_line(offer, "🚫", total_ordered, total_capacity)
+                message += self._format_offer_line(offer, "🚫", user_id, total_ordered, total_capacity)
             
             self._send_message(chat_id, message, parse_mode="HTML")
             return {'status': 'success'}
@@ -226,7 +226,7 @@ class InfoCommands(BaseHandler):
             if draft_offers:
                 message += self._t('draft_offers') + "\n"
                 for offer in draft_offers:
-                    message += self._format_offer_line(offer, "📝", is_draft=True)
+                    message += self._format_offer_line(offer, "📝", user_id, is_draft=True)
                 message += "\n"
             
             # Show active offers
@@ -241,9 +241,9 @@ class InfoCommands(BaseHandler):
                     has_ordered_boxes = any(box.status == 'ordered' for box in boxes)
                     
                     if has_ordered_boxes:
-                        message += self._format_offer_line(offer_to_display, "📦🍺", total_ordered, total_capacity)
+                        message += self._format_offer_line(offer_to_display, "📦🍺", user_id, total_ordered, total_capacity)
                     else:
-                        message += self._format_offer_line(offer_to_display, "🍺", total_ordered, total_capacity)
+                        message += self._format_offer_line(offer_to_display, "🍺", user_id, total_ordered, total_capacity)
                 message += "\n"
             
             # Show other status offers in correct order
@@ -276,7 +276,7 @@ class InfoCommands(BaseHandler):
                     
                     for offer in status_offers:
                         total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
-                        message += self._format_offer_line(offer, status_emoji, total_ordered, total_capacity)
+                        message += self._format_offer_line(offer, status_emoji, user_id, total_ordered, total_capacity)
                     
                     message += "\n"
         else:
@@ -288,7 +288,7 @@ class InfoCommands(BaseHandler):
                     active_found = True
                     total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
                     offer_to_display = self._apply_discount_to_offer(offer, active_discount)
-                    message += self._format_offer_line(offer_to_display, "🍺", total_ordered, total_capacity)
+                    message += self._format_offer_line(offer_to_display, "🍺", user_id, total_ordered, total_capacity)
             
             if not active_found:
                 self._send_message(chat_id, self._t('no_offers', user_id))
