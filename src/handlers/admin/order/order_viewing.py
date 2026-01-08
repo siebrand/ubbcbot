@@ -176,7 +176,8 @@ class OrderViewing(BaseOrderHandler):
                     [{"text": "Completed", "callback_data": "export_orders_completed"}],
                     [{"text": "Active", "callback_data": "export_orders_active"}],
                     [{"text": "Cancelled", "callback_data": "export_orders_cancelled"}],
-                    [{"text": "All", "callback_data": "export_orders_all"}]
+                    [{"text": "All", "callback_data": "export_orders_all"}],
+                    [{"text": "Full Export (All Fields)", "callback_data": "export_orders_full"}]
                 ]
             }
             self._send_message(chat_id, "📊 Select order status to export:", reply_markup=keyboard)
@@ -209,7 +210,7 @@ class OrderViewing(BaseOrderHandler):
                     continue
                 elif status_filter == 'completed' and order.status != OrderStatus.COMPLETED.value:
                     continue
-                elif status_filter != 'all' and status_filter not in ['active', 'cancelled', 'ordered', 'ready_for_labeling', 'labeling_completed', 'awaiting_payment', 'completed']:
+                elif status_filter not in ['all', 'full'] and status_filter not in ['active', 'cancelled', 'ordered', 'ready_for_labeling', 'labeling_completed', 'awaiting_payment', 'completed']:
                     continue
                 all_orders.append((customer, order))
         
@@ -220,8 +221,11 @@ class OrderViewing(BaseOrderHandler):
         # Sort by customer name for grouping
         all_orders.sort(key=lambda x: (x[0].first_name or '', x[0].last_name or ''))
         
-        # Generate CSV and upload
-        csv_content = self._generate_pick_list_csv(all_orders)
+        # Generate CSV based on export type
+        if status_filter == 'full':
+            csv_content = self._generate_full_export_csv(all_orders)
+        else:
+            csv_content = self._generate_pick_list_csv(all_orders)
         
         # Add CET timestamp to filename
         from utils.timezone import to_cet_string
@@ -261,6 +265,46 @@ class OrderViewing(BaseOrderHandler):
                 # Expand order quantity to individual rows
                 for _ in range(int(order.quantity)):
                     csv_content += f'"{customer_name}","{offer_name}",€{order.unit_price:.2f}\n'
+        
+        return csv_content
+    
+    def _generate_full_export_csv(self, orders_data: list) -> str:
+        """Generate full export CSV with all order fields"""
+        if not orders_data:
+            return ''
+        
+        # Get headers dynamically from Order dataclass
+        from models.entities import Order
+        headers = list(Order.__dataclass_fields__.keys())
+        
+        csv_content = ','.join(headers) + '\n'
+        
+        # Generate CSV data with all fields
+        for customer, order in orders_data:
+            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or 'unknown'
+            offer = self.db.get_offer(order.offer_id)
+            offer_name = offer.name if offer else 'unknown'
+            
+            from utils.timezone import to_cet_string
+            
+            # Build row dynamically
+            row_values = []
+            for field in headers:
+                value = getattr(order, field)
+                
+                # Format datetime fields
+                if field in ['created_at', 'update_date'] and value:
+                    value = to_cet_string(value, '%Y-%m-%d %H:%M:%S')
+                elif value is None:
+                    value = ''
+                
+                # Quote string fields
+                if isinstance(value, str):
+                    row_values.append(f'"{value}"')
+                else:
+                    row_values.append(str(value))
+            
+            csv_content += ','.join(row_values) + '\n'
         
         return csv_content
 

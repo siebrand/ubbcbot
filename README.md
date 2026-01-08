@@ -155,7 +155,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/order_for <username> <offer_id> [quantity]` - Place order for another user (10-unit admin limit)
 - `/cancel_order <order_id>` - Cancel customer order (button confirmation)
 - `/user_orders <username>` - View orders for specific user
-- `/all_orders [active|cancelled|ordered|all]` - Download CSV of all orders (default: active)
+- `/all_orders [active|cancelled|ordered|ready_for_labeling|labeling_completed|awaiting_payment|completed|all|full]` - Download CSV of all orders (default: active, full exports all fields)
 - `/pending_users` - View users awaiting approval (paginated with approve/reject buttons)
 - `/list_users` - View all customers (paginated with status filtering)
 - `/list_subscribers` - View users subscribed to offer notifications
