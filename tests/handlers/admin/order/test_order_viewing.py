@@ -77,21 +77,19 @@ class TestOrderViewing(unittest.TestCase):
         
         # Check CSV structure
         lines = csv_content.strip().split('\n')
-        self.assertEqual(len(lines), 2)  # Header + 1 data row
+        self.assertEqual(len(lines), 3)  # Header + 2 data rows (quantity=2)
         
         # Check header
         header = lines[0]
-        expected_headers = ['Customer_Name', 'Offer_Name', 'Unit_Count', 'Unit_Price', 'Total_Price_to_Charge', 'Order_Status']
+        expected_headers = ['Naam', 'Product', 'Prijs']
         self.assertEqual(header, ','.join(expected_headers))
         
-        # Check data row
-        data_row = lines[1]
-        self.assertIn('"John Doe"', data_row)
-        self.assertIn('"Test Beer"', data_row)
-        self.assertIn('2', data_row)
-        self.assertIn('10.50', data_row)
-        self.assertIn('21.00', data_row)
-        self.assertIn('"pending"', data_row)
+        # Check data rows (should be 2 identical rows for quantity=2)
+        for i in [1, 2]:
+            data_row = lines[i]
+            self.assertIn('"John Doe"', data_row)
+            self.assertIn('"Test Beer"', data_row)
+            self.assertIn('€10.50', data_row)
     
     @patch.object(OrderViewing, '_export_orders_by_status')
     def test_handle_all_orders_with_filter(self, mock_export):

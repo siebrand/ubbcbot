@@ -238,11 +238,9 @@ class OrderViewing(BaseOrderHandler):
         return {'status': 'success'}
     
     def _generate_pick_list_csv(self, orders_data: list) -> str:
-        """Generate pick list CSV content grouped by customer"""
+        """Generate pick list CSV content with normalized quantities (1 unit per row)"""
         # CSV headers
-        headers = [
-            'Customer_Name', 'Offer_Name', 'Unit_Count', 'Unit_Price', 'Total_Price_to_Charge', 'Order_Status'
-        ]
+        headers = ['Naam', 'Product', 'Prijs']
         
         csv_content = ','.join(headers) + '\n'
         
@@ -254,13 +252,15 @@ class OrderViewing(BaseOrderHandler):
                 customer_orders[customer_key] = []
             customer_orders[customer_key].append((customer, order))
         
-        # Generate CSV data grouped by customer
+        # Generate CSV data with normalized quantities
         for customer_name in sorted(customer_orders.keys()):
             for customer, order in customer_orders[customer_name]:
                 offer = self.db.get_offer(order.offer_id)
                 offer_name = offer.name if offer else self._t('unknown', user_id=None)
                 
-                csv_content += f'"{customer_name}","{offer_name}",{order.quantity},{order.unit_price:.2f},{order.total_price:.2f},"{order.status}"\n'
+                # Expand order quantity to individual rows
+                for _ in range(int(order.quantity)):
+                    csv_content += f'"{customer_name}","{offer_name}",€{order.unit_price:.2f}\n'
         
         return csv_content
 
