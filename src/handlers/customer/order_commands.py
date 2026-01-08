@@ -272,6 +272,7 @@ class CustomerOrderCommands(BaseHandler):
                 return False
             
             customer_name = self._get_public_name(customer)
+            bot_username = self._get_bot_username()
             
             # Check if offer is now sold out and calculate remaining availability
             updated_offer = self.db.get_offer(offer.offer_id)
@@ -293,12 +294,15 @@ class CustomerOrderCommands(BaseHandler):
                     availability_text = f" ({self._t('units_available', force_group_lang=True, count=total_available)})"
                 # If total_available == 0 and not sold out, show nothing
             
+            # Format offer name as link
+            offer_link = f"<a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{self._escape_html(offer.name)}</a>"
+            
             message = self._t('order_notification', force_group_lang=True, 
                             customer_name=customer_name, 
                             quantity=quantity, 
-                            offer_name=offer.name, 
+                            offer_name=offer_link, 
                             availability=availability_text)
-            result = self._send_message(int(group_id), message, force_group=True)
+            result = self._send_message(int(group_id), message, parse_mode="HTML", force_group=True)
             success = result.get('success', False)
             return success
             
