@@ -204,7 +204,6 @@ class CustomerOrderCommands(BaseHandler):
                 box_size = offer.wholesale_box_size
                 return False
             
-            customer_name = self._get_public_name(customer)
             bot_username = self._get_bot_username()
             
             # Check if offer is now sold out and calculate remaining availability
@@ -230,11 +229,15 @@ class CustomerOrderCommands(BaseHandler):
             # Format offer name as link
             offer_link = f"<a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{self._escape_html(offer.name)}</a>"
             
-            message = self._t('order_notification', force_group_lang=True, 
-                            customer_name=customer_name, 
-                            quantity=quantity, 
-                            offer_name=offer_link, 
-                            availability=availability_text)
+            # Only send notifications for non-guest orders
+            if not customer.is_guest:
+                customer_name = self._get_public_name(customer)
+                message = self._t('order_notification', force_group_lang=True, 
+                                customer_name=customer_name, 
+                                quantity=quantity, 
+                                offer_name=offer_link, 
+                                availability=availability_text)
+            
             result = self._send_message(int(group_id), message, parse_mode="HTML", force_group=True)
             success = result.get('success', False)
             return success
