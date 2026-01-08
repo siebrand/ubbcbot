@@ -198,6 +198,14 @@ class InfoCommands(BaseHandler):
         filter_arg = args[0].lower().replace('_', '') if args and len(args) > 0 else None
         show_user_view = filter_arg == 'user' and is_admin
         
+        # Handle help request
+        if filter_arg == 'help':
+            help_message = self._t('list_offers_help', user_id)
+            if is_admin:
+                help_message += "\n\n" + self._t('list_offers_help_admin', user_id)
+            self._send_message(chat_id, help_message)
+            return {'status': 'success'}
+        
         # Handle special filters
         if filter_arg == 'soldout':
             # Filter sold_out offers from the already-loaded list

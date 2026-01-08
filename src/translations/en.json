@@ -239,6 +239,8 @@
   "active_offers_only": "🍺 Active Offers:",
   "active_offers_customer": "📋 Active Offers:",
   "archived_offers": "📦 Archived Offers (Sold Out + Completed + Inactive):",
+  "list_offers_help": "📋 /list_offers Usage:\n\n/list_offers - View active offers\n/list_offers help - Show this help message",
+  "list_offers_help_admin": "👑 Admin Filters:\n\n/list_offers - Draft + Active offers (default)\n/list_offers all - All offers\n/list_offers draft - Draft offers only\n/list_offers active - Active offers only\n/list_offers sold_out - Sold out offers\n/list_offers completed - Completed offers\n/list_offers inactive - Inactive offers\n/list_offers archived - Sold out + Completed + Inactive\n/list_offers user - Customer view",
   "no_offers_available": "❌ No offers available",
   "select_offer_details": "📝 Select offer to view details:",
   "no_offer_id_provided": "❌ No offer ID provided",

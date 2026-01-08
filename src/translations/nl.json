@@ -238,6 +238,8 @@
   "active_offers_only": "🍺 Actieve Aanbiedingen:",
   "active_offers_customer": "📋 Actieve Aanbiedingen:",
   "archived_offers": "📦 Gearchiveerde Aanbiedingen (Uitverkocht + Voltooid + Inactief):",
+  "list_offers_help": "📋 /list_offers Gebruik:\n\n/list_offers - Actieve aanbiedingen bekijken\n/list_offers help - Deze hulptekst tonen",
+  "list_offers_help_admin": "👑 Admin Filters:\n\n/list_offers - Concept + Actieve aanbiedingen (standaard)\n/list_offers all - Alle aanbiedingen\n/list_offers draft - Alleen concepten\n/list_offers active - Alleen actieve aanbiedingen\n/list_offers sold_out - Uitverkochte aanbiedingen\n/list_offers completed - Voltooide aanbiedingen\n/list_offers inactive - Inactieve aanbiedingen\n/list_offers archived - Uitverkocht + Voltooid + Inactief\n/list_offers user - Klantweergave",
   "no_offers_available": "❌ Geen aanbiedingen beschikbaar",
   "select_offer_details": "📝 Selecteer aanbieding om details te bekijken:",
   "no_offer_id_provided": "❌ Geen aanbieding ID opgegeven",
