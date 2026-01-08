@@ -6,7 +6,7 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
-                "title": "Up to 2025-01-02",
+                "title": "Up to 2025-01-05",
                 "content": """<b>User-Facing Updates</b>
 • <b>Improved Order Management</b> - Added /delete_completed command to remove completed orders from personal register
 • <b>Complete Order Visibility</b> - All order statuses now display properly including completed, ready_for_labeling, labeling_completed, and awaiting_payment
