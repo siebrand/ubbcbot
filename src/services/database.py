@@ -64,6 +64,29 @@ class DynamoDBService:
             except Exception:
                 return 1
 
+    def get_next_guest_id(self) -> int:
+        """Get next auto-incrementing guest ID"""
+        try:
+            response = self.counters_table.update_item(
+                Key={'counter_name': 'guest_id'},
+                UpdateExpression='ADD #val :inc',
+                ExpressionAttributeNames={'#val': 'value'},
+                ExpressionAttributeValues={':inc': 1},
+                ReturnValues='UPDATED_NEW'
+            )
+            return int(response['Attributes']['value'])
+        except Exception as e:
+            print(f"Error getting next guest ID: {e}")
+            # Initialize counter if it doesn't exist
+            try:
+                self.counters_table.put_item(
+                    Item={'counter_name': 'guest_id', 'value': 1},
+                    ConditionExpression='attribute_not_exists(counter_name)'
+                )
+                return 1
+            except Exception:
+                return 1
+
     # Supplier operations
     def create_supplier(self, supplier: Supplier) -> bool:
         try:
@@ -263,7 +286,13 @@ class DynamoDBService:
             )
             items = response.get('Items', [])
             if items:
-                return Customer(**items[0])
+                item = items[0]
+                # Handle missing fields for backward compatibility
+                if 'is_guest' not in item:
+                    item['is_guest'] = False
+                if 'contact_info' not in item:
+                    item['contact_info'] = None
+                return Customer(**item)
             return None
         except Exception as e:
             print(f"Error getting customer by telegram ID: {e}")
@@ -423,7 +452,13 @@ class DynamoDBService:
         try:
             response = self.customers_table.get_item(Key={'customer_id': customer_id})
             if 'Item' in response:
-                return Customer(**response['Item'])
+                item = response['Item']
+                # Handle missing fields for backward compatibility
+                if 'is_guest' not in item:
+                    item['is_guest'] = False
+                if 'contact_info' not in item:
+                    item['contact_info'] = None
+                return Customer(**item)
             return None
         except Exception as e:
             print(f"Error getting customer: {e}")
@@ -496,7 +531,15 @@ class DynamoDBService:
                 FilterExpression='authorization_status = :status',
                 ExpressionAttributeValues={':status': status}
             )
-            return [Customer(**item) for item in response.get('Items', [])]
+            customers = []
+            for item in response.get('Items', []):
+                # Handle missing fields for backward compatibility
+                if 'is_guest' not in item:
+                    item['is_guest'] = False
+                if 'contact_info' not in item:
+                    item['contact_info'] = None
+                customers.append(Customer(**item))
+            return customers
         except Exception as e:
             print(f"Error getting customers by status: {e}")
             return []
@@ -696,10 +739,22 @@ class DynamoDBService:
                 FilterExpression='subscribed_to_offers = :subscribed',
                 ExpressionAttributeValues={':subscribed': True}
             )
-            return [Customer(**item) for item in response.get('Items', [])]
+            customers = []
+            for item in response.get('Items', []):
+                # Handle missing fields for backward compatibility
+                if 'is_guest' not in item:
+                    item['is_guest'] = False
+                if 'contact_info' not in item:
+                    item['contact_info'] = None
+                customers.append(Customer(**item))
+            return customers
         except Exception as e:
             print(f"Error getting subscribers: {e}")
             return []
+
+    def get_all_customers(self) -> List[Customer]:
+        """Get all customers with caching"""
+        return UserCache.get_all_customers(self)
 
     def cleanup_old_edit_contexts(self) -> int:
         """Clean up edit contexts older than 1 hour"""

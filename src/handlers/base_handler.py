@@ -2,6 +2,7 @@ from typing import Dict, Any
 import logging
 import json
 import os
+import requests
 from services.database import DynamoDBService
 from utils.validation import ValidationUtils
 from utils.pagination import PaginationUtils
@@ -60,7 +61,6 @@ class BaseHandler:
         if self._bot_username:
             return self._bot_username
             
-        import requests
         try:
             url = f"https://api.telegram.org/bot{self.telegram_token}/getMe"
             response = requests.get(url, timeout=20)
@@ -86,7 +86,11 @@ class BaseHandler:
 
     def _send_message(self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False) -> dict:
         """Send message to Telegram chat and return response with message_id"""
-        import requests
+
+        # Skip sending to guest users (they don't have Telegram)
+        if chat_id == -1:
+            logger.info(f"Skipping message to guest user")
+            return {'success': False, 'skipped_guest': True}
         
         if self.environment == 'test':
             text = f"TEST - {text}"
@@ -137,8 +141,6 @@ class BaseHandler:
 
     def _delete_message(self, chat_id: int, message_id: int) -> bool:
         """Delete message from Telegram chat"""
-        import requests
-        
         if not self.telegram_token:
             logger.error("Telegram token is empty")
             return False
@@ -163,7 +165,6 @@ class BaseHandler:
 
     def _send_document(self, chat_id: int, content: str, filename: str, caption: str = None) -> bool:
         """Send document to Telegram chat"""
-        import requests
         from io import BytesIO
         
         if self.environment == 'test' and caption:
@@ -253,7 +254,10 @@ class BaseHandler:
     
     def _send_photo(self, chat_id: int, photo_url: str, caption: str = None, force_group: bool = False) -> dict:
         """Send photo to Telegram chat"""
-        import requests
+        # Skip sending to guest users (they don't have Telegram)
+        if chat_id == -1:
+            logger.info(f"Skipping photo to guest user")
+            return {'success': False, 'skipped_guest': True}
         
         if self.environment == 'test' and caption:
             caption = f"TEST - {caption}"
@@ -293,7 +297,10 @@ class BaseHandler:
     
     def _send_media_group(self, chat_id: int, media_group: list, force_group: bool = False) -> dict:
         """Send media group to Telegram chat"""
-        import requests
+        # Skip sending to guest users (they don't have Telegram)
+        if chat_id == -1:
+            logger.info(f"Skipping media group to guest user")
+            return {'success': False, 'skipped_guest': True}
         
         if not self.telegram_token:
             logger.error("Telegram token is empty")

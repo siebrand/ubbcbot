@@ -235,6 +235,8 @@ class CallbackHandler:
                     elif entity_type.startswith('customers_'):
                         status_filter = entity_type.split('_', 1)[1]
                         return self.handlers['user'].handle_list_users(chat_id, page, status_filter)
+                    elif entity_type == 'guests':
+                        return self.handlers['user'].handle_list_guests(chat_id, page)
                     elif entity_type == 'subscribers':
                         return self.handlers['user'].handle_list_subscribers(chat_id, page)
                     elif entity_type == 'changelog':
@@ -320,6 +322,13 @@ class CallbackHandler:
                     return self._handle_customer_edit(chat_id, 'first_name', parts[4])
                 elif parts[2] == 'last' and parts[3] == 'name':
                     return self._handle_customer_edit(chat_id, 'last_name', parts[4])
+            
+            # Handle customer contact and location (4 parts: edit_customer_contact_id)
+            if parts[1] == 'customer' and len(parts) == 4:
+                if parts[2] == 'contact':
+                    return self._handle_customer_edit(chat_id, 'contact', parts[3])
+                elif parts[2] == 'location':
+                    return self._handle_customer_edit(chat_id, 'location', parts[3])
             
             # Handle special case for supplier full_name editing
             if parts[1] == 'supplier' and len(parts) == 5 and parts[2] == 'full' and parts[3] == 'name':

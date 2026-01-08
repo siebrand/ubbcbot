@@ -159,6 +159,8 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/pending_users` - View users awaiting approval (paginated with approve/reject buttons)
 - `/list_users` - View all customers (paginated with status filtering)
 - `/list_subscribers` - View users subscribed to offer notifications
+- `/add_guest <first_name> [last_name] [contact]` - Add guest user (non-Telegram)
+- `/list_guests` - View all guest users (paginated)
 - `/approve_user <name_or_username>` - Approve user
 - `/reject_user <name_or_username>` - Reject user
 - `/user_status <name_or_username>` - Check user status

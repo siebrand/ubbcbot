@@ -194,7 +194,9 @@ class BotService:
                 telegram_user_id=telegram_user_id,
                 username=username,
                 first_name=first_name,
-                last_name=last_name
+                last_name=last_name,
+                is_guest=False,
+                contact_info=None
             )
             created_customer = self.db.create_customer(customer)
             
@@ -298,6 +300,10 @@ class BotService:
             return self.user_commands.handle_update_user_first_name(chat_id, [entity_id, text])
         elif edit_type == 'customer_last_name':
             return self.user_commands.handle_update_user_last_name(chat_id, [entity_id, text])
+        elif edit_type == 'customer_contact':
+            return self.user_commands.handle_update_user_contact(chat_id, [entity_id, text])
+        elif edit_type == 'customer_location':
+            return self.user_commands.handle_update_user_location(chat_id, [entity_id, text])
         elif edit_type == 'add_supplier_name':
             return self.supplier_commands._create_supplier(chat_id, text)
         elif edit_type == 'user_orders_input':

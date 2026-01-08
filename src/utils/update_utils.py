@@ -117,9 +117,20 @@ class UpdateUtils:
         validators = self.create_field_validators()
         validator = validators.get('name')  # Both first_name and last_name use name validator
         
+        # Field display names from existing i18n keys
+        field_names = {
+            'contact_info': self._t('contact', chat_id, value='').split(':')[0].strip(),
+            'location': self._t('location', chat_id, value='').split(':')[0].strip()
+        }
+        
         def success_callback(entity, old_value, new_value):
-            success_key = f'{field}_updated'
-            self._send_message(chat_id, self._t(success_key, chat_id, old_name=old_value, new_name=new_value))
+            # Use specific keys for first_name and last_name, generic for others
+            if field in ['first_name', 'last_name']:
+                success_key = f'{field}_updated'
+                self._send_message(chat_id, self._t(success_key, chat_id, old_name=old_value, new_name=new_value))
+            else:
+                field_display = field_names.get(field, field)
+                self._send_message(chat_id, self._t('field_updated', chat_id, field=field_display, old_value=old_value, new_value=new_value))
             # Return to edit interface
             updated_customer = self.db.get_customer(customer_id)
             if updated_customer:

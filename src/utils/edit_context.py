@@ -135,6 +135,16 @@ class EditContextManager:
                 'context_type': 'customer_last_name',
                 'prompt_key': 'enter_new_last_name',
                 'placeholder': 'Enter last name'
+            },
+            'contact': {
+                'context_type': 'customer_contact',
+                'prompt_key': 'enter_new_contact',
+                'placeholder': 'Enter contact (email/phone)'
+            },
+            'location': {
+                'context_type': 'customer_location',
+                'prompt_key': 'enter_new_location',
+                'placeholder': 'Enter location'
             }
         }
         

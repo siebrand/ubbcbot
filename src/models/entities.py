@@ -75,7 +75,7 @@ class Offer:
 @dataclass
 class Customer:
     customer_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    telegram_user_id: int = 0
+    telegram_user_id: int = 0  # -1 for guest users
     username: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -83,6 +83,8 @@ class Customer:
     location: str = "Venster, Berlijnplein 520, Utrecht"
     authorization_status: str = AuthorizationStatus.UNAUTHORIZED.value
     subscribed_to_offers: bool = False
+    is_guest: bool = False
+    contact_info: Optional[str] = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 @dataclass
