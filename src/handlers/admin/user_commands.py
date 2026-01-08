@@ -345,8 +345,9 @@ class UserCommands(BaseHandler):
         subscribers.sort(key=lambda x: (x.first_name or "zzz").lower())
         
         # Paginate results
-        page_subscribers, total_pages = self._paginate_list(subscribers, page, 10)
-        
+        page_subscribers, total_pages = self._paginate_list(subscribers, page, 20)
+
+        # @todo Needs i18n
         message = f"🔔 Subscribers - Page {page}/{total_pages}:\n\n"
         
         for customer in page_subscribers:
@@ -404,6 +405,7 @@ class UserCommands(BaseHandler):
 
         if self.db.create_customer(guest):
             display_name = f"{first_name} {last_name}" if last_name else first_name
+            # @todo Needs i18n
             contact_part = f"\nContact: {contact_info}" if contact_info else ""
             self._send_message(chat_id, self._t('guest_added', chat_id, name=display_name, guest_id=guest_id, contact=contact_part))
             return {'status': 'success', 'guest_id': guest_id}
@@ -426,6 +428,7 @@ class UserCommands(BaseHandler):
         # Paginate results
         page_guests, total_pages = self._paginate_list(guests, page, 20)
 
+        # @todo Needs i18n
         message = f"🎫 Guest Users - Page {page}/{total_pages}:\n\n"
 
         for guest in page_guests:
