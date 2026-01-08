@@ -171,7 +171,7 @@ class InfoCommands(BaseHandler):
             return {'status': 'error'}
     
     def handle_list_offers(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
-        """Handle /list_offers command"""
+        """Handle /list_offers command with optional status filtering"""
         offers = self.db.list_offers()
         
         if not offers:
@@ -193,14 +193,15 @@ class InfoCommands(BaseHandler):
             message += "\n\n"
         
         is_admin = self._is_admin(user_id)
-        # Check if admin wants to see user view or sold out offers
-        show_user_view = args and len(args) > 0 and args[0].lower() == 'user' and is_admin
-        show_sold_out = args and len(args) > 0 and args[0].lower() == 'sold_out'
         
-        if show_sold_out:
-            # Show sold out offers from last 7 days for any user
-            sold_out_offers = self.db.list_sold_out_offers_recent(7)
-            
+        # Parse filter argument and normalize underscores
+        filter_arg = args[0].lower().replace('_', '') if args and len(args) > 0 else None
+        show_user_view = filter_arg == 'user' and is_admin
+        
+        # Handle special filters
+        if filter_arg == 'soldout':
+            # Filter sold_out offers from the already-loaded list
+            sold_out_offers = [o for o in offers if o.status == OfferStatus.SOLD_OUT.value]
             if not sold_out_offers:
                 self._send_message(chat_id, self._t('no_offers', user_id))
                 return {'status': 'no_offers'}
@@ -214,29 +215,51 @@ class InfoCommands(BaseHandler):
             return {'status': 'success'}
         
         if is_admin and not show_user_view:
-            # Show all offers with status indicators for admin
-            message += self._t('all_offers_admin') + "\n\n"
+            # Determine which statuses to show based on filter
+            show_all = filter_arg == 'all'
+            show_draft = filter_arg == 'draft'
+            show_active = filter_arg == 'active'
+            show_completed = filter_arg == 'completed'
+            show_inactive = filter_arg == 'inactive'
+            show_archived = filter_arg == 'archived'
+            
+            # Default: show draft + active only
+            if not filter_arg or filter_arg not in ['all', 'draft', 'active', 'completed', 'inactive', 'archived']:
+                show_draft = show_active = True
             
             # Group by status
             draft_offers = [o for o in offers if o.status == OfferStatus.DRAFT.value]
             active_offers = [o for o in offers if o.status == OfferStatus.ACTIVE.value]
             other_offers = [o for o in offers if o.status not in [OfferStatus.DRAFT.value, OfferStatus.ACTIVE.value]]
             
-            # Show draft offers first
-            if draft_offers:
-                message += self._t('draft_offers') + "\n"
+            # Build title based on filter
+            if show_all:
+                message += self._t('all_offers_admin') + "\n\n"
+            elif show_draft:
+                message += self._t('draft_offers_only', user_id) + "\n\n"
+            elif show_active:
+                message += self._t('active_offers_only', user_id) + "\n\n"
+            elif show_archived:
+                message += self._t('archived_offers', user_id) + "\n\n"
+            else:
+                message += self._t('current_offers_admin', user_id) + "\n\n"
+            
+            # Show draft offers
+            if draft_offers and (show_all or show_draft or (not filter_arg)):
+                if show_all or not filter_arg:
+                    message += self._t('draft_offers') + "\n"
                 for offer in draft_offers:
                     message += self._format_offer_line(offer, "📝", user_id, is_draft=True)
                 message += "\n"
             
             # Show active offers
-            if active_offers:
-                message += self._t('active_offers') + "\n"
+            if active_offers and (show_all or show_active or (not filter_arg)):
+                if show_all or not filter_arg:
+                    message += self._t('active_offers') + "\n"
                 for offer in active_offers:
                     total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
                     offer_to_display = self._apply_discount_to_offer(offer, active_discount)
                     
-                    # Check if offer has been ordered but is still active
                     boxes = self.db.get_boxes_by_offer(offer.offer_id)
                     has_ordered_boxes = any(box.status == 'ordered' for box in boxes)
                     
@@ -246,14 +269,21 @@ class InfoCommands(BaseHandler):
                         message += self._format_offer_line(offer_to_display, "🍺", user_id, total_ordered, total_capacity)
                 message += "\n"
             
-            # Show other status offers in correct order
-            if other_offers:
-                # Define the correct order
+            # Show other status offers
+            if other_offers and (show_all or show_completed or show_inactive or show_archived):
                 status_order = [OfferStatus.SOLD_OUT.value, OfferStatus.COMPLETED.value, OfferStatus.INACTIVE.value]
                 
                 for status in status_order:
                     status_offers = [o for o in other_offers if o.status == status]
                     if not status_offers:
+                        continue
+                    
+                    # Skip if filtering for specific status
+                    if show_completed and status != OfferStatus.COMPLETED.value:
+                        continue
+                    if show_inactive and status != OfferStatus.INACTIVE.value:
+                        continue
+                    if show_archived and status not in [OfferStatus.SOLD_OUT.value, OfferStatus.COMPLETED.value, OfferStatus.INACTIVE.value]:
                         continue
                         
                     status_emoji = {
