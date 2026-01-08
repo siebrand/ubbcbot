@@ -106,7 +106,7 @@ class OrderPlacement(BaseOrderHandler):
             return {'status': 'offer_not_found'}
         
         if offer.status == OfferStatus.SOLD_OUT.value:
-            self._send_message(chat_id, self._t('sold_out'))
+            self._send_message(chat_id, self._t('offer_sold_out_named', user_id=None, offer_name=offer.name))
             return {'status': 'sold_out'}
         
         if offer.status != OfferStatus.ACTIVE.value:
