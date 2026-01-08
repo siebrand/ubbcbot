@@ -102,7 +102,7 @@
   "usage_add_guest": "Usage: /add_guest <first_name> [last_name] [contact]",
   "guest_added": "✅ Guest user added: {name} ({guest_id}){contact}",
   "failed_add_guest": "❌ Failed to add guest user",
-  "no_guests": "No guest users found",
+  "no_guests": "No guest users found.",
   "no_customers_found": "No customers found ({status}){search}",
   "no_subscribers": "No subscribers found",
   "usage_create_discount": "Usage: /create_discount <percentage> [hours]",

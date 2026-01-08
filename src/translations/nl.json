@@ -102,7 +102,7 @@
   "usage_add_guest": "Gebruik: /add_guest <voornaam> [achternaam] [contact]",
   "guest_added": "✅ Gastgebruiker toegevoegd: {name} ({guest_id}){contact}",
   "failed_add_guest": "❌ Kon gastgebruiker niet toevoegen",
-  "no_guests": "Geen gastgebruikers gevonden",
+  "no_guests": "Geen gastgebruikers gevonden.",
   "no_customers_found": "Geen klanten gevonden ({status}){search}",
   "no_subscribers": "Geen abonnees gevonden",
   "usage_create_discount": "Gebruik: /create_discount <percentage> [uren]",
