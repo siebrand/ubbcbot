@@ -6,6 +6,36 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2025-01-08",
+                "content": """<b>User-Facing Updates</b>
+• <b>Enhanced Offer Notifications</b> - Clickable offer links in group order announcements for quick access to offer details
+• <b>Improved Order Display</b> - Chronological order listing in /offer_orders (oldest to newest) for better tracking
+• <b>Cleaner Offer Announcements</b> - Removed capacity display from notifications, simplified to show only name and price
+• <b>Improved Message Flow</b> - New offer announcements sent before images for clearer communication
+• <b>Consistent Internationalization</b> - SOLD OUT status and order notifications now properly translated in group messages
+• <b>Consistent Order Views</b> - Status headers always shown in /my_orders and /user_orders for clarity
+• <b>Better Sold Out Detection</b> - Offers correctly transition between ACTIVE and SOLD_OUT based on actual capacity
+
+<b>Admin-Facing Updates</b>
+• <b>Modular Order Management</b> - Refactored 1000+-line order_commands.py files into focused modules (cancellation, placement, viewing, status, maintenance) for better maintainability
+• <b>Comprehensive Test Coverage</b> - Added full test suite for refactored admin order handlers with test runner script
+• <b>Performance Optimization</b> - Implemented comprehensive user caching system with smart invalidation, eliminating repeated DynamoDB scans
+• <b>Reduced API Costs</b> - SSM parameter caching reduces repeated API calls across Lambda container reuse
+• <b>Async Notification System</b> - Dedicated notification sender Lambda with 5-minute timeout prevents timeouts for large subscriber lists (scales to hundreds)
+• <b>Smart Notification Routing</b> - Sync delivery for ≤10 subscribers, async for >10 with pre-generated S3 URLs
+• <b>Better Wholesale Ordering</b> - Preserves existing ordered boxes during wholesale process, only updates non-ordered boxes
+• <b>Improved Box Status Management</b> - Local box status updated after database changes for consistency
+• <b>Single-Box Order Constraint</b> - Orders validated to fit within single boxes, preventing multi-box spanning
+• <b>Enhanced Order Placement</b> - Admin orders from sold out offers now show clear sold out message with offer name
+• <b>Consolidated Order Logic</b> - Refactored handle_confirm_order to reuse handle_order, eliminating ~40 lines of duplicate code
+• <b>Better Offer Status Logic</b> - Fixed premature sold_out transitions, offers only marked sold out when boxes ordered AND no capacity
+• <b>Consistent Customer Matching</b> - Extracted shared customer matching logic to ValidationUtils for single source of truth
+• <b>Improved Internationalization</b> - Replaced hardcoded "Unknown" strings with i18n translation
+• <b>Enhanced Debugging</b> - Detailed logging for Telegram token retrieval and SSM parameter access
+• <b>Customer Management Tool</b> - New script to check customers against group members
+• <b>Better Status Consistency</b> - Orders added to wholesale-ordered boxes now correctly show 'ordered' status"""
+            },
+            {
                 "title": "Up to 2025-01-05",
                 "content": """<b>User-Facing Updates</b>
 • <b>Improved Order Management</b> - Added /delete_completed command to remove completed orders from personal register
