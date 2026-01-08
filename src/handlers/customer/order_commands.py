@@ -147,11 +147,6 @@ class CustomerOrderCommands(BaseHandler):
             
             # If no suitable box found, create a new one (if allowed)
             if not suitable_box:
-                # Check if there are existing boxes - if so, reject order since it can't span multiple boxes
-                if boxes:
-                    self._send_message(chat_id, self._t('order_too_large_for_remaining_space', user_id))
-                    return {'status': 'insufficient_space'}
-                
                 has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes) if boxes else False
                 
                 if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes:
@@ -167,8 +162,8 @@ class CustomerOrderCommands(BaseHandler):
                         return {'status': 'error'}
                 else:
                     # Cannot create boxes - reject order
-                    self._send_message(chat_id, self._t('sold_out', user_id))
-                    return {'status': 'insufficient_capacity'}
+                    self._send_message(chat_id, self._t('order_too_large_for_remaining_space', user_id))
+                    return {'status': 'insufficient_space'}
 
             # Create single order
             order = Order(
@@ -242,15 +237,14 @@ class CustomerOrderCommands(BaseHandler):
         # Check if there's at least one box that has been ordered
         has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes)
         
-        # Check if ALL boxes are full+ status (full, ordered, or delivered) AND completely filled
-        all_full_and_complete = all(
-            box.status in ['full', 'ordered', 'delivered'] and box.current_quantity >= box.max_capacity 
+        # Check if there's any available space in non-ordered boxes
+        has_available_space = any(
+            box.status != BoxStatus.ORDERED.value and box.current_quantity < box.max_capacity
             for box in boxes
         )
         
-        # Offer is sold out only if all boxes are full AND at least one has been ordered
-        # (meaning no new boxes can be created)
-        if all_full_and_complete and has_ordered_boxes:
+        # Offer is sold out if at least one box is ordered AND no available space exists
+        if has_ordered_boxes and not has_available_space:
             self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
             # Delete notification messages for sold out offer
             self._delete_offer_notifications(offer_id)
