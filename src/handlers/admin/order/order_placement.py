@@ -101,7 +101,15 @@ class OrderPlacement(BaseOrderHandler):
         """Execute order for customer with validation"""
         # Get offer
         offer = self.db.get_offer(offer_id)
-        if not offer or offer.status != OfferStatus.ACTIVE.value:
+        if not offer:
+            self._send_message(chat_id, self._t('offer_not_found_inactive'))
+            return {'status': 'offer_not_found'}
+        
+        if offer.status == OfferStatus.SOLD_OUT.value:
+            self._send_message(chat_id, self._t('sold_out'))
+            return {'status': 'sold_out'}
+        
+        if offer.status != OfferStatus.ACTIVE.value:
             self._send_message(chat_id, self._t('offer_not_found_inactive'))
             return {'status': 'offer_not_found'}
 
