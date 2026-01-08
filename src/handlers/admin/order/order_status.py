@@ -57,7 +57,7 @@ class OrderStatusManagement(BaseOrderHandler):
         keyboard_rows = []
         
         for customer, orders in customers_awaiting_payment[:10]:  # Show first 10
-            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
             total_amount = sum(order.total_price for order in orders)
             message += f"👤 {customer_name}: €{total_amount:.2f} ({len(orders)} orders)\n"
             keyboard_rows.append([{"text": self._t('mark_customer_paid', user_id=None, customer_name=customer_name), "callback_data": f"mark_paid_{customer.customer_id}"}])
@@ -90,13 +90,13 @@ class OrderStatusManagement(BaseOrderHandler):
         message = self._t('failed_delivery_notifications_title', user_id=None) + "\n\n"
         
         for customer, orders in failed_notifications:
-            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
             total_amount = sum(order.total_price for order in orders)
             message += f"👤 {customer_name} (@{customer.username or 'no_username'}):\n"
             message += f"   💰 €{total_amount:.2f} ({len(orders)} orders)\n"
             for order in orders:
                 offer = self.db.get_offer(order.offer_id)
-                offer_name = offer.name if offer else "Unknown"
+                offer_name = offer.name if offer else self._t('unknown', user_id=None)
                 message += f"   • {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
             message += "\n"
         

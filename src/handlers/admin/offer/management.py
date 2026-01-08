@@ -53,7 +53,7 @@ class OfferManagementHandler(OfferBaseHandler):
         
         for i, order in enumerate(pending_orders, 1):  # Show all orders
             customer = self.db.get_customer(order.customer_id)
-            customer_name = customer.first_name if customer else "Unknown"
+            customer_name = customer.first_name if customer else self._t('unknown', user_id=None)
             from utils.timezone import to_cet_string
             order_date = to_cet_string(order.created_at, '%m-%d %H:%M')
             units_text = units_singular if order.quantity == 1 else units_plural
@@ -271,7 +271,7 @@ class OfferManagementHandler(OfferBaseHandler):
         if updated_orders:
             order, old_qty, new_qty = updated_orders[0]
             customer = self.db.get_customer(order.customer_id)
-            customer_name = customer.first_name if customer else "Unknown"
+            customer_name = customer.first_name if customer else self._t('unknown', user_id=None)
             summary += "\n" + self._t('order_reduced',
                 customer=customer_name,
                 old_qty=old_qty,
@@ -287,7 +287,7 @@ class OfferManagementHandler(OfferBaseHandler):
             cancelled_units = 0
             for order in cancelled_orders:
                 customer = self.db.get_customer(order.customer_id)
-                customer_name = customer.first_name if customer else "Unknown"
+                customer_name = customer.first_name if customer else self._t('unknown', user_id=None)
                 units_text = units_singular if order.quantity == 1 else units_plural
                 cancelled_details.append(f"{customer_name} ({order.quantity} {units_text})")
                 cancelled_units += order.quantity
@@ -334,7 +334,7 @@ class OfferManagementHandler(OfferBaseHandler):
         
         for offer, order_count, total_units in offers_with_orders:
             supplier = self.db.get_supplier_by_name(offer.supplier_name)
-            supplier_name = supplier.name if supplier else "Unknown"
+            supplier_name = supplier.name if supplier else self._t('unknown', user_id=None)
             
             box_size = offer.wholesale_box_size
             boxes_needed = (total_units + box_size - 1) // box_size

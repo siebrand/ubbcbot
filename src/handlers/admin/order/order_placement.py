@@ -61,13 +61,13 @@ class OrderPlacement(BaseOrderHandler):
             self._send_message(chat_id, self._t('no_offers_available'))
             return {'status': 'no_offers'}
         
-        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or "Unknown")
+        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or self._t('unknown', user_id=None))
         message = f"🍺 Select offer for {display_name}:\n\n"
         
         keyboard_buttons = []
         for offer in offers[:10]:  # Limit to 10 offers
             supplier = self.db.get_supplier_by_name(offer.supplier_name)
-            supplier_name = supplier.name if supplier else "Unknown"
+            supplier_name = supplier.name if supplier else self._t('unknown', user_id=None)
             
             button_text = f"🍺 {offer.name} - €{offer.price_per_unit:.2f} ({supplier_name})"
             keyboard_buttons.append([{
@@ -83,7 +83,7 @@ class OrderPlacement(BaseOrderHandler):
     
     def _show_quantity_selection_for_order_for(self, chat_id: int, customer, offer) -> Dict[str, Any]:
         """Show quantity selection for order_for workflow"""
-        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or "Unknown")
+        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or self._t('unknown', user_id=None))
         message = f"📦 Select quantity for {display_name}:\n\n🍺 {offer.name} - €{offer.price_per_unit:.2f}"
         
         keyboard_buttons = [
@@ -113,7 +113,7 @@ class OrderPlacement(BaseOrderHandler):
                              if o.offer_id == offer_id and o.status in ['pending', 'ordered']]
             total_existing = sum(order.quantity for order in existing_orders)
             
-            display_name = customer.first_name or "Unknown"
+            display_name = customer.first_name or self._t('unknown', user_id=None)
             admin_message = self._t('admin_order_limit_exceeded', user_id=None, 
                                   customer_name=display_name, 
                                   total_existing=total_existing)
@@ -159,7 +159,7 @@ class OrderPlacement(BaseOrderHandler):
             order_handler._notify_channel_order(customer, offer, quantity)
             
             # Confirm to admin with PM status
-            display_name = customer.first_name or "Unknown"
+            display_name = customer.first_name or self._t('unknown', user_id=None)
             admin_message = self._t('order_placed_for_user', name=display_name)
             if not pm_result.get('success'):
                 admin_message += "\n" + self._t('pm_notification_failed', user_id=None, name=display_name)

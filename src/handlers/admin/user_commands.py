@@ -20,7 +20,7 @@ class UserCommands(BaseHandler):
     def _approve_user_by_customer(self, chat_id: int, customer) -> Dict[str, Any]:
         """Shared approval logic for customer object"""
         if customer.authorization_status == AuthorizationStatus.APPROVED.value:
-            display_name = customer.first_name or "Unknown"
+            display_name = customer.first_name or self._t('unknown', user_id=None)
             self._send_message(chat_id, self._t('user_already_approved', chat_id, name=display_name))
             return {'status': 'already_approved'}
 
@@ -30,7 +30,7 @@ class UserCommands(BaseHandler):
             self._send_message(customer.telegram_user_id, self._t('user_authorized', customer.telegram_user_id))
             
             # Confirm to admin
-            display_name = customer.first_name or "Unknown"
+            display_name = customer.first_name or self._t('unknown', user_id=None)
             self._send_message(chat_id, self._t('user_approved', chat_id, name=display_name))
             
             # Enter update user dialog
@@ -54,7 +54,7 @@ class UserCommands(BaseHandler):
         keyboard_buttons = []
         
         for customer in page_customers:
-            display_name = self._escape_html(customer.first_name or "Unknown")
+            display_name = self._escape_html(customer.first_name or self._t('unknown', user_id=None))
             if customer.last_name:
                 display_name += f" {self._escape_html(customer.last_name)}"
             
@@ -117,7 +117,7 @@ class UserCommands(BaseHandler):
             self._send_message(customer.telegram_user_id, self._t('access_rejected', customer.telegram_user_id))
             
             # Confirm to admin
-            display_name = customer.first_name or "Unknown"
+            display_name = customer.first_name or self._t('unknown', user_id=None)
             self._send_message(chat_id, self._t('user_rejected', chat_id, name=display_name))
             return {'status': 'success'}
         else:
@@ -136,7 +136,7 @@ class UserCommands(BaseHandler):
         if error:
             return error
 
-        display_name = self._escape_html(customer.first_name or "Unknown")
+        display_name = self._escape_html(customer.first_name or self._t('unknown', user_id=None))
         if customer.last_name:
             display_name += f" {self._escape_html(customer.last_name)}"
         
@@ -151,7 +151,7 @@ class UserCommands(BaseHandler):
 
     def _show_user_edit_interface(self, customer, chat_id: int) -> Dict[str, Any]:
         """Show edit interface for a customer"""
-        display_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+        display_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
         username_part = f" (@{customer.username})" if customer.username else ""
         
         message = self._t('edit_user', chat_id, name=display_name, username=username_part) + "\n\n"
@@ -221,7 +221,7 @@ class UserCommands(BaseHandler):
         message = f"👥 Customers ({status_filter}){search_text} - Page {page}/{total_pages}:\n\n"
 
         for customer in page_customers:
-            display_name = self._escape_html(customer.first_name or "Unknown")
+            display_name = self._escape_html(customer.first_name or self._t('unknown', user_id=None))
             if customer.last_name:
                 display_name += f" {self._escape_html(customer.last_name)}"
 
@@ -261,7 +261,7 @@ class UserCommands(BaseHandler):
             return {'status': 'user_not_found'}
         
         # Show user status (same logic as handle_user_status but for specific customer)
-        display_name = self._escape_html(customer.first_name or "Unknown")
+        display_name = self._escape_html(customer.first_name or self._t('unknown', user_id=None))
         if customer.last_name:
             display_name += f" {self._escape_html(customer.last_name)}"
         
@@ -308,7 +308,7 @@ class UserCommands(BaseHandler):
             self._send_message(customer.telegram_user_id, self._t('access_rejected', customer.telegram_user_id))
             
             # Confirm to admin
-            display_name = customer.first_name or "Unknown"
+            display_name = customer.first_name or self._t('unknown', user_id=None)
             self._send_message(chat_id, self._t('user_rejected', chat_id, name=display_name))
             return {'status': 'success'}
         else:
@@ -332,7 +332,7 @@ class UserCommands(BaseHandler):
         message = f"🔔 Subscribers - Page {page}/{total_pages}:\n\n"
         
         for customer in page_subscribers:
-            display_name = self._escape_html(customer.first_name or "Unknown")
+            display_name = self._escape_html(customer.first_name or self._t('unknown', user_id=None))
             if customer.last_name:
                 display_name += f" {self._escape_html(customer.last_name)}"
             

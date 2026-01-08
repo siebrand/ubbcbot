@@ -171,7 +171,7 @@ class BoxManagementHandler(OfferBaseHandler):
         
         for offer in page_offers:
             supplier = self.db.get_supplier_by_name(offer.supplier_name)
-            supplier_name = supplier.name if supplier else "Unknown"
+            supplier_name = supplier.name if supplier else self._t('unknown', user_id=None)
             button_text = f"🍺 {offer.name} - €{offer.price_per_unit:.2f} ({supplier_name})"
             keyboard_buttons.append([{"text": button_text, "callback_data": f"audit_offer_{offer.offer_id}"}])
         
@@ -299,7 +299,7 @@ class BoxManagementHandler(OfferBaseHandler):
             order_details = []
             for order in orders_to_cancel:
                 customer = self.db.get_customer(order.customer_id)
-                customer_name = customer.first_name if customer else "Unknown"
+                customer_name = customer.first_name if customer else self._t('unknown', user_id=None)
                 order_details.append(f"{customer_name} ({order.quantity} units)")
             
             message = self._t('audit_propose_cancel_orders', chat_id,

@@ -133,7 +133,7 @@ class DeliveryOverviewHandler(BaseHandler):
                 name_parts.append(customer.first_name)
             if customer.last_name:
                 name_parts.append(customer.last_name)
-            customer_name = " ".join(name_parts) or "Unknown"
+            customer_name = " ".join(name_parts) or self._t('unknown', user_id=None)
             
             # Add nickname if available
             if customer.username:
@@ -145,7 +145,7 @@ class DeliveryOverviewHandler(BaseHandler):
                 message += self._t('ready_for_pickup', user_id=None) + "\n"
                 for order in delivered_orders:
                     offer = self.db.get_offer(order.offer_id)
-                    offer_name = offer.name if offer else "Unknown"
+                    offer_name = offer.name if offer else self._t('unknown', user_id=None)
                     message += f"• {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
                 message += self._t('total_to_pay', user_id=None, total=delivered_total)
                 message += self._t('payment_link', user_id=None, link=payment_link) + "\n\n"
@@ -154,7 +154,7 @@ class DeliveryOverviewHandler(BaseHandler):
                 message += self._t('delayed_items_info', user_id=None) + "\n"
                 for order in delayed_orders:
                     offer = self.db.get_offer(order.offer_id)
-                    offer_name = offer.name if offer else "Unknown"
+                    offer_name = offer.name if offer else self._t('unknown', user_id=None)
                     delayed_qty = order.quantity - (order.received_quantity or 0)
                     message += f"• {delayed_qty}x {offer_name} - " + self._t('will_arrive_later', user_id=None) + "\n"
             
@@ -174,7 +174,7 @@ class DeliveryOverviewHandler(BaseHandler):
                 return True
             else:
                 # Send failure notification to admin
-                error_msg = result.get('error', 'Unknown error')
+                error_msg = result.get('error', self._t('unknown', user_id=None))
                 self._send_message(self.admin_user_id, self._t('admin_overview_sent_failed', user_id=None, customer_name=customer_name, error=error_msg, message=admin_message))
                 return False
                 
@@ -203,7 +203,7 @@ class DeliveryOverviewHandler(BaseHandler):
             if self.db.update_order(order.order_id, {'status': OrderStatus.COMPLETED.value}):
                 updated_count += 1
         
-        customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+        customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
         total_amount = sum(order.total_price for order in awaiting_payment_orders)
         
         if updated_count > 0:

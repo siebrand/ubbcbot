@@ -16,7 +16,7 @@ class ValidationUtils:
         if total_existing + quantity > limit:
             offer = self.db.get_offer(offer_id)
             message = self._t('order_limit_exceeded', 
-                            offer_name=offer.name if offer else 'Unknown', 
+                            offer_name=offer.name if offer else self._t('unknown', user_id=None), 
                             total_existing=total_existing)
             message += "\n\n"
             for order in existing_orders:

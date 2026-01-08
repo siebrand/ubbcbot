@@ -260,7 +260,7 @@ class CustomerOrderCommands(BaseHandler):
         if customer.last_name:
             name_parts.append(f"{customer.last_name[0]}")
         
-        return ' '.join(name_parts) if name_parts else customer.username or 'Unknown'
+        return ' '.join(name_parts) if name_parts else customer.username or self._t('unknown', user_id=None)
     
     def _notify_channel_order(self, customer, offer, quantity):
         """Send order notification to default group"""

@@ -65,7 +65,7 @@ class OrderCancellation(BaseOrderHandler):
             for order, customer in matching_orders:
                 offer = self.db.get_offer(order.offer_id)
                 offer_name = offer.name if offer else self._t('unknown', user_id=None)
-                customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Unknown"
+                customer_name = f"{customer.first_name} {customer.last_name}" if customer else self._t('unknown', user_id=None)
                 
                 from utils.timezone import to_cet_string
                 order_date = to_cet_string(order.created_at, '%Y-%m-%d')
@@ -117,8 +117,8 @@ class OrderCancellation(BaseOrderHandler):
             self._send_message(chat_id, self._t('box_not_found_for_order', chat_id, order_id=order.order_id))
             return {'status': 'box_not_found'}
         
-        customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Unknown"
-        offer_name = offer.name if offer else "Unknown"
+        customer_name = f"{customer.first_name} {customer.last_name}" if customer else self._t('unknown', user_id=None)
+        offer_name = offer.name if offer else self._t('unknown', user_id=None)
         
         from utils.timezone import to_cet_string
         order_date = to_cet_string(order.created_at, '%Y-%m-%d %H:%M')
@@ -157,14 +157,14 @@ class OrderCancellation(BaseOrderHandler):
                  if o.status in ['pending', 'ordered']]
         
         if not orders:
-            display_name = f"{customer.first_name} {customer.last_name}" or "Unknown"
+            display_name = f"{customer.first_name} {customer.last_name}" or self._t('unknown', user_id=None)
             self._send_message(chat_id, self._t('no_active_orders_for_user', chat_id, name=display_name))
             return {'status': 'no_orders'}
 
         # Paginate orders
         page_orders, total_pages = self._paginate_list(orders, page, 10)
         
-        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or "Unknown")
+        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or self._t('unknown', user_id=None))
         message = f"❌ Cancel Order for {display_name} (Page {page}/{total_pages}):\n\n"
         
         keyboard_buttons = []
@@ -265,7 +265,7 @@ class OrderCancellation(BaseOrderHandler):
         # Notify customer with reason
         if customer:
             customer_message = self._t('order_cancelled_by_admin', customer.telegram_user_id,
-                                     name=offer.name if offer else 'Unknown',
+                                     name=offer.name if offer else self._t('unknown', user_id=None),
                                      quantity=order.quantity,
                                      total=float(order.total_price),
                                      reason=reason)

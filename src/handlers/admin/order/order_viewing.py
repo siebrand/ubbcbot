@@ -32,7 +32,7 @@ class OrderViewing(BaseOrderHandler):
         orders = self.db.get_orders_by_customer(customer.customer_id)
         
         if not orders:
-            display_name = f"{customer.first_name} {customer.last_name}" or "Unknown"
+            display_name = f"{customer.first_name} {customer.last_name}" or self._t('unknown', user_id=None)
             self._send_message(chat_id, self._t('no_orders_for_user', name=display_name))
             return {'status': 'no_orders'}
 
@@ -65,7 +65,7 @@ class OrderViewing(BaseOrderHandler):
             from utils.timezone import to_cet_string
             aggregated[key]['dates'].add(to_cet_string(order.created_at, '%Y-%m-%d'))
 
-        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or "Unknown")
+        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or self._t('unknown', user_id=None))
         message = self._t('user_orders_title', user_id=None, name=display_name)
         message += "\n\n"
         
@@ -244,7 +244,7 @@ class OrderViewing(BaseOrderHandler):
         # Group by customer and sort
         customer_orders = {}
         for customer, order in orders_data:
-            customer_key = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or "Unknown"
+            customer_key = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
             if customer_key not in customer_orders:
                 customer_orders[customer_key] = []
             customer_orders[customer_key].append((customer, order))
@@ -253,7 +253,7 @@ class OrderViewing(BaseOrderHandler):
         for customer_name in sorted(customer_orders.keys()):
             for customer, order in customer_orders[customer_name]:
                 offer = self.db.get_offer(order.offer_id)
-                offer_name = offer.name if offer else "Unknown"
+                offer_name = offer.name if offer else self._t('unknown', user_id=None)
                 
                 csv_content += f'"{customer_name}","{offer_name}",{order.quantity},{order.unit_price:.2f},{order.total_price:.2f},"{order.status}"\n'
         
@@ -291,7 +291,7 @@ class OrderViewing(BaseOrderHandler):
         
         for offer in page_offers:
             supplier = self.db.get_supplier_by_name(offer.supplier_name)
-            supplier_name = supplier.name if supplier else "Unknown"
+            supplier_name = supplier.name if supplier else self._t('unknown', user_id=None)
             
             # Get order count for this offer
             orders = self.db.get_orders_by_offer(offer.offer_id)
@@ -357,7 +357,7 @@ class OrderViewing(BaseOrderHandler):
         
         for i, order in enumerate(page_orders):
             customer = self.db.get_customer(order.customer_id)
-            customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Unknown"
+            customer_name = f"{customer.first_name} {customer.last_name}" if customer else self._t('unknown', user_id=None)
             
             from utils.timezone import to_cet_string
             order_date = to_cet_string(order.created_at, '%Y-%m-%d')

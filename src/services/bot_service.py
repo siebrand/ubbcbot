@@ -207,7 +207,7 @@ class BotService:
     def _notify_admin_new_user_pending(self, user_data: Dict[str, Any], created_customer):
         """Send notification to admin when new user registration is pending"""
         try:
-            first_name = user_data.get('first_name', 'Unknown')
+            first_name = user_data.get('first_name', self._t('unknown', user_id=None))
             last_name = user_data.get('last_name', '')
             username = user_data.get('username', 'no_username')
             user_id = user_data.get('id')
