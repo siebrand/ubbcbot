@@ -1,9 +1,14 @@
 from typing import Dict, Any
 from models.entities import Box, BoxStatus, OfferStatus
 from .base import OfferBaseHandler
+from services.box_status_manager import BoxStatusManager
 
 class BoxManagementHandler(OfferBaseHandler):
     """Handler for box management operations"""
+    
+    def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
+        super().__init__(db, admin_user_id, environment, telegram_token)
+        self.box_status_manager = BoxStatusManager(db)
     
     def handle_add_box(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /add_box command"""
@@ -399,8 +404,8 @@ class BoxManagementHandler(OfferBaseHandler):
     
     def _add_box_capacity(self, chat_id: int, offer, needed_units: int) -> Dict[str, Any]:
         """Add box capacity by creating new boxes and filling them with needed units"""
-        box_size = offer.wholesale_box_size  # Convert Decimal to int
-        boxes_needed = (needed_units + box_size - 1) // box_size  # Ceiling division
+        box_size = offer.wholesale_box_size
+        boxes_needed = (needed_units + box_size - 1) // box_size
         
         created_boxes = 0
         remaining_units = needed_units

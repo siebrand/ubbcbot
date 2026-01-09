@@ -7,6 +7,7 @@ from services.database import DynamoDBService
 from utils.validation import ValidationUtils
 from utils.pagination import PaginationUtils
 from models.entities import OfferStatus
+from services.box_status_manager import BoxStatusManager
 
 logger = logging.getLogger()
 
@@ -19,6 +20,7 @@ class BaseHandler:
         self._bot_username = None
         self._translations = {}
         self.validator = ValidationUtils(db, self._t)
+        self.box_status_manager = BoxStatusManager(db)
 
     def _load_translations(self, lang: str) -> Dict[str, str]:
         """Load translations for given language"""
@@ -349,26 +351,9 @@ class BaseHandler:
     
     def _check_offer_status_after_change(self, offer_id: int):
         """Check if offer should be SOLD_OUT or ACTIVE based on box states"""
-        offer = self.db.get_offer(offer_id)
-        if not offer or offer.status not in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value]:
-            return
-        
-        boxes = self.db.get_boxes_by_offer(offer_id)
-        if not boxes:
-            return
-        
-        # Check if there's at least one box that has been ordered
-        has_ordered_boxes = any(box.status == 'ordered' for box in boxes)
-        
-        # Check if there's any available space in ANY box (including ordered boxes)
-        has_available_space = any(box.current_quantity < box.max_capacity for box in boxes)
-        
-        # Offer is sold out if at least one box is ordered AND no available space exists in any box
-        if has_ordered_boxes and not has_available_space:
-            self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
+        new_status = self.box_status_manager.update_offer_status_after_change(offer_id)
+        if new_status == OfferStatus.SOLD_OUT.value:
             self._delete_offer_notifications(offer_id)
-        else:
-            self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
     
     def _delete_offer_notifications(self, offer_id: int):
         """Delete notification messages for sold out offer"""

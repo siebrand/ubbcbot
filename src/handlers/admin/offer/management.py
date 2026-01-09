@@ -2,11 +2,18 @@ import logging
 from typing import Dict, Any
 from models.entities import OfferStatus, OrderStatus, BoxStatus
 from .base import OfferBaseHandler
+from services.box_status_manager import BoxStatusManager
+from services.box_deletion_service import BoxDeletionService
 
 logger = logging.getLogger()
 
 class OfferManagementHandler(OfferBaseHandler):
     """Handler for offer management operations"""
+    
+    def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
+        super().__init__(db, admin_user_id, environment, telegram_token)
+        self.box_status_manager = BoxStatusManager(db)
+        self.box_deletion_service = BoxDeletionService(db)
     
     def handle_order_wholesale(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /order_wholesale command"""
@@ -189,15 +196,13 @@ class OfferManagementHandler(OfferBaseHandler):
         additional_boxes_needed = max(0, boxes_ordered - current_ordered_count)
         
         # Update additional boxes to ORDERED status (up to what we need)
-        boxes_to_update = min(additional_boxes_needed, len(non_ordered_boxes))
-        for i in range(boxes_to_update):
-            logger.info(f"Updating box {non_ordered_boxes[i].box_id} from {non_ordered_boxes[i].status} to ORDERED")
-            self.db.update_box(non_ordered_boxes[i].box_id, {'status': BoxStatus.ORDERED.value})
-            # Update the local box object to reflect the status change
-            non_ordered_boxes[i].status = BoxStatus.ORDERED.value
+        boxes_to_update = [b.box_id for b in non_ordered_boxes[:additional_boxes_needed]]
+        if boxes_to_update:
+            self.box_status_manager.mark_boxes_as_ordered(boxes_to_update)
         
         # Delete excess non-ordered boxes (but preserve existing ordered boxes)
-        boxes_to_delete = non_ordered_boxes[boxes_to_update:]
+        # @todo The "excess box" concept is imporrant here, as it wold reuqire cancellening orders. Is deletion really necessary?
+        boxes_to_delete = non_ordered_boxes[additional_boxes_needed:]
         for box in boxes_to_delete:
             logger.info(f"Deleting excess box {box.box_id} with status {box.status} and quantity {box.current_quantity}")
             self.db.delete_box(box.box_id)
@@ -251,12 +256,7 @@ class OfferManagementHandler(OfferBaseHandler):
                 self.db.create_box(new_box)
         
         # Clean up empty boxes (delete boxes with 0 orders and not ORDERED status)
-        boxes = self.db.get_boxes_by_offer(offer.offer_id)
-        empty_boxes = [box for box in boxes if box.current_quantity == 0 and box.status != BoxStatus.ORDERED.value]
-        deleted_boxes = 0
-        for box in empty_boxes:
-            if self.db.delete_box(box.box_id):
-                deleted_boxes += 1
+        deleted_boxes = self.box_deletion_service.delete_empty_boxes(offer.offer_id)
         
         # Send summary to admin
         fulfilled_units = sum(order.quantity for order in fulfilled_orders)
@@ -451,12 +451,7 @@ class OfferManagementHandler(OfferBaseHandler):
     
     def _delete_offer_boxes(self, offer_id: int) -> int:
         """Delete all boxes for an offer and return count"""
-        boxes = self.db.get_boxes_by_offer(offer_id)
-        deleted_count = 0
-        for box in boxes:
-            if self.db.delete_box(box.box_id):
-                deleted_count += 1
-        return deleted_count
+        return self.box_deletion_service.delete_offer_boxes(offer_id)
     
     def _notify_customer_cancellation(self, order, offer):
         """Notify customer about order cancellation"""

@@ -2,9 +2,14 @@ from typing import Dict, Any
 from datetime import datetime, UTC
 from models.entities import BoxStatus, AuthorizationStatus
 from .base_order_handler import BaseOrderHandler
+from services.box_status_manager import BoxStatusManager
 
 class OrderCancellation(BaseOrderHandler):
     """Handles order cancellation functionality"""
+    
+    def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
+        super().__init__(db, admin_user_id, environment, telegram_token)
+        self.box_status_manager = BoxStatusManager(db)
     
     def handle_cancel_order(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /cancel_order command with enhanced detection"""
@@ -241,18 +246,11 @@ class OrderCancellation(BaseOrderHandler):
             return {'status': 'error'}
 
         # Update box quantity and status
-        new_quantity = box.current_quantity - order.quantity
-        updates = {'current_quantity': new_quantity}
-        
-        # Recalculate box status (don't change status if already ORDERED)
-        if box.status != BoxStatus.ORDERED.value:
-            if new_quantity == 0:
-                updates['status'] = BoxStatus.OPEN.value
-        
-        self.db.update_box(box.box_id, updates)
+        if not self.box_status_manager.update_box_after_order_cancellation(box.box_id, order.quantity):
+            logger.error(f"Failed to update box {box.box_id} after cancellation")
 
         # Check if offer status should change after cancellation
-        self._check_offer_status_after_change(order.offer_id)
+        self.box_status_manager.update_offer_status_after_change(order.offer_id)
 
         # Get customer and offer info for notifications
         customer = self.db.get_customer(order.customer_id)
@@ -268,10 +266,11 @@ class OrderCancellation(BaseOrderHandler):
             self._send_message(customer.telegram_user_id, customer_message)
 
         # Confirm to admin
+        box = self.db.get_box(order.box_id)  # Refresh box data
         admin_message = self._t('order_cancelled_success', user_id=None,
                               order_id=order.order_id,
-                              new_quantity=new_quantity,
-                              max_capacity=box.max_capacity)
+                              new_quantity=box.current_quantity if box else 0,
+                              max_capacity=box.max_capacity if box else 0)
         self._send_message(chat_id, admin_message)
         
         return {'status': 'success'}

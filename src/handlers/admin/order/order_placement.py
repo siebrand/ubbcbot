@@ -1,9 +1,14 @@
 from typing import Dict, Any
 from models.entities import OfferStatus, EditContext
 from .base_order_handler import BaseOrderHandler
+from services.box_status_manager import BoxStatusManager
 
 class OrderPlacement(BaseOrderHandler):
     """Handles order placement functionality for admin placing orders for customers"""
+    
+    def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
+        super().__init__(db, admin_user_id, environment, telegram_token)
+        self.box_status_manager = BoxStatusManager(db)
     
     def handle_order_for(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /order_for command - admin places order for another user"""
@@ -148,7 +153,7 @@ class OrderPlacement(BaseOrderHandler):
         result = order_handler.execute_order(chat_id, customer.telegram_user_id, offer_id, quantity, offer, customer, placed_by_admin=True)
         
         if result['status'] == 'success':
-            order_handler._check_offer_status_after_change(offer_id)
+            self.box_status_manager.update_offer_status_after_change(offer_id)
 
             # Get the actual order to show correct status
             orders = self.db.get_orders_by_customer(customer.customer_id)

@@ -3,10 +3,15 @@ from typing import Dict, Any
 from decimal import Decimal
 from handlers.base_handler import BaseHandler
 from models.entities import Order, Box, BoxStatus, OfferStatus
+from services.box_status_manager import BoxStatusManager
 
 logger = logging.getLogger()
 
 class CustomerOrderCommands(BaseHandler):
+    def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
+        super().__init__(db, admin_user_id, environment, telegram_token)
+        self.box_status_manager = BoxStatusManager(db)
+    
     def handle_order(self, chat_id: int, user_id: int, args: list, skip_duplicate_check: bool = False) -> Dict[str, Any]:
         """Handle /order command"""
         if len(args) < 1:
@@ -145,16 +150,9 @@ class CustomerOrderCommands(BaseHandler):
                 return {'status': 'error'}
             
             # Assign order to the suitable box
-            new_quantity = suitable_box.current_quantity + quantity
-            updates = {'current_quantity': new_quantity}
-            
-            # Update box status based on new quantity (don't change status if already ORDERED)
-            if suitable_box.status != BoxStatus.ORDERED.value:
-                if new_quantity >= suitable_box.max_capacity:
-                    updates['status'] = BoxStatus.FULL.value
-
-            if not self.db.update_box(suitable_box.box_id, updates):
+            if not self.box_status_manager.update_box_after_order_placement(suitable_box.box_id, quantity):
                 logger.error(f"Failed to update box {suitable_box.box_id}")
+                # @todo Should this error maybe (also) be sent to admin with more details?
                 self._send_message(chat_id, self._t('failed_update_box', user_id))
                 return {'status': 'error'}
             
@@ -164,7 +162,7 @@ class CustomerOrderCommands(BaseHandler):
             order.status = final_status
 
             # Check if offer should be marked as sold out
-            self._check_offer_status_after_change(offer_id)
+            self.box_status_manager.update_offer_status_after_change(offer_id)
             
             # Send confirmation message - always single box now
             self._send_message(chat_id, self._t('order_placed_single', user_id,
