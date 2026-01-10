@@ -55,6 +55,11 @@ class UpdateUtils:
                 return {'valid': False, 'message': self._t('invalid_chars', None)}
             return {'valid': True}
         
+        def validate_location(value: str, entity) -> Dict[str, Any]:
+            if len(value) > 200:
+                return {'valid': False, 'message': self._t('location_too_long', None)}
+            return {'valid': True}
+        
         def validate_email(value: str, entity) -> Dict[str, Any]:
             if '@' not in value or '.' not in value:
                 return {'valid': False, 'message': self._t('invalid_email', None)}
@@ -71,6 +76,7 @@ class UpdateUtils:
         
         return {
             'name': validate_name,
+            'location': validate_location,
             'email': validate_email,
             'price': validate_price
         }
@@ -115,7 +121,7 @@ class UpdateUtils:
         new_value = ' '.join(args[1:]).strip()
         
         validators = self.create_field_validators()
-        validator = validators.get('name')  # Both first_name and last_name use name validator
+        validator = validators.get(field) if field in ['location', 'contact_info'] else validators.get('name')
         
         # Field display names from existing i18n keys
         field_names = {

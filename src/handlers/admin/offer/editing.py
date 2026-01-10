@@ -104,7 +104,7 @@ class OfferEditingHandler(OfferBaseHandler):
             offer_id = int(args[0])
             new_description = ' '.join(args[1:]).strip()
             
-            if len(new_description) > 700:
+            if len(new_description) > 1000:
                 # Return to edit interface instead of exiting
                 self._send_message(chat_id, self._t('description_too_long'))
                 
