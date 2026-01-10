@@ -163,11 +163,13 @@ class OfferManagementHandler(OfferBaseHandler):
                 units_allocated += new_quantity
         
         # Execute the fulfillment
-        # Update fulfilled orders to 'ordered'
+        # Update fulfilled orders to 'ordered' and track which boxes need ORDERED status
+        boxes_with_fulfilled_orders = set()
         for order in fulfilled_orders:
             self.db.update_order(order.order_id, {'status': 'ordered'})
+            boxes_with_fulfilled_orders.add(order.box_id)
         
-        # Update partially fulfilled orders
+        # Update partially fulfilled orders and track boxes
         for order, old_qty, new_qty in updated_orders:
             new_total_price = new_qty * order.unit_price
             self.db.update_order(order.order_id, {
@@ -175,6 +177,7 @@ class OfferManagementHandler(OfferBaseHandler):
                 'total_price': new_total_price,
                 'status': 'ordered'
             })
+            boxes_with_fulfilled_orders.add(order.box_id)
             
             # Notify customer of quantity reduction
             customer = self.db.get_customer(order.customer_id)
@@ -187,27 +190,16 @@ class OfferManagementHandler(OfferBaseHandler):
                 )
                 self._send_message(customer.telegram_user_id, msg)
         
-        # Get current boxes and separate by status
+        # Get current boxes and mark boxes with fulfilled orders as ORDERED
         boxes = self.db.get_boxes_by_offer(offer.offer_id)
-        ordered_boxes = [box for box in boxes if box.status == BoxStatus.ORDERED.value]
-        non_ordered_boxes = [box for box in boxes if box.status != BoxStatus.ORDERED.value]
+        boxes_to_mark_ordered = [b.box_id for b in boxes if b.box_id in boxes_with_fulfilled_orders and b.status != BoxStatus.ORDERED.value]
         
-        current_ordered_count = len(ordered_boxes)
-        additional_boxes_needed = max(0, boxes_ordered - current_ordered_count)
-        
-        # Update additional boxes to ORDERED status and get updated objects
-        boxes_to_update = [b.box_id for b in non_ordered_boxes[:additional_boxes_needed]]
-        newly_ordered_boxes = []
-        if boxes_to_update:
-            newly_ordered_boxes = self.box_status_manager.mark_boxes_as_ordered(boxes_to_update)
-        
-        # Update local list with newly ordered boxes
-        newly_ordered_ids = {b.box_id for b in newly_ordered_boxes}
-        non_ordered_boxes = [b for b in non_ordered_boxes if b.box_id not in newly_ordered_ids]
+        if boxes_to_mark_ordered:
+            self.box_status_manager.mark_boxes_as_ordered(boxes_to_mark_ordered)
         
         # Delete only empty non-ordered boxes
-        for box in non_ordered_boxes:
-            if box.current_quantity == 0:
+        for box in boxes:
+            if box.current_quantity == 0 and box.status != BoxStatus.ORDERED.value and box.box_id not in boxes_with_fulfilled_orders:
                 logger.info(f"Deleting empty box {box.box_id}")
                 self.db.delete_box(box.box_id)
         
@@ -246,10 +238,10 @@ class OfferManagementHandler(OfferBaseHandler):
         
         # Create additional boxes if needed to match exact boxes ordered
         current_boxes = self.db.get_boxes_by_offer(offer.offer_id)
-        current_box_count = len(current_boxes)
+        ordered_boxes_count = len([b for b in current_boxes if b.status == BoxStatus.ORDERED.value or b.box_id in boxes_with_fulfilled_orders])
         
-        if boxes_ordered > current_box_count:
-            boxes_to_create = boxes_ordered - current_box_count
+        if boxes_ordered > ordered_boxes_count:
+            boxes_to_create = boxes_ordered - ordered_boxes_count
             for _ in range(boxes_to_create):
                 from models.entities import Box
                 new_box = Box(
