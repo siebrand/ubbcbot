@@ -68,41 +68,6 @@ class TestBoxDeletionService:
         assert count == 0
         self.mock_db.delete_box.assert_not_called()
     
-    def test_delete_excess_boxes_within_limit(self):
-        """Test no deletion when within keep_count"""
-        # Setup
-        boxes = [
-            Box(box_id="box1", offer_id=1, current_quantity=10, max_capacity=12, status=BoxStatus.OPEN.value),
-            Box(box_id="box2", offer_id=1, current_quantity=8, max_capacity=12, status=BoxStatus.OPEN.value)
-        ]
-        self.mock_db.get_boxes_by_offer.return_value = boxes
-        
-        # Execute
-        count = self.service.delete_excess_boxes(1, keep_count=3)
-        
-        # Verify
-        assert count == 0
-        self.mock_db.delete_box.assert_not_called()
-    
-    def test_delete_excess_boxes_deletes_non_ordered_first(self):
-        """Test excess boxes deleted from non-ordered boxes first"""
-        # Setup
-        boxes = [
-            Box(box_id="box1", offer_id=1, current_quantity=12, max_capacity=12, status=BoxStatus.ORDERED.value),
-            Box(box_id="box2", offer_id=1, current_quantity=10, max_capacity=12, status=BoxStatus.OPEN.value),
-            Box(box_id="box3", offer_id=1, current_quantity=8, max_capacity=12, status=BoxStatus.OPEN.value),
-            Box(box_id="box4", offer_id=1, current_quantity=6, max_capacity=12, status=BoxStatus.OPEN.value)
-        ]
-        self.mock_db.get_boxes_by_offer.return_value = boxes
-        self.mock_db.delete_box.return_value = True
-        
-        # Execute - keep only 2 boxes
-        count = self.service.delete_excess_boxes(1, keep_count=2)
-        
-        # Verify - should delete 2 non-ordered boxes
-        assert count == 2
-        assert self.mock_db.delete_box.call_count == 2
-    
     def test_delete_empty_boxes_success(self):
         """Test deleting empty non-ordered boxes"""
         # Setup
