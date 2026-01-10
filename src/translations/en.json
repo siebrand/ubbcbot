@@ -308,7 +308,7 @@
   "status_labeling_completed": "labeling completed",
   "status_awaiting_payment": "awaiting payment",
   "status_inactive": "inactive",
-  "multiple_days_label": "[multiple days]",
+  "multiple_days_label": "multiple days",
   "subtotal_label": "Subtotal: €{total:.2f}",
   "sufficient_available": "sufficient available",
   "units_available": "{count} available",

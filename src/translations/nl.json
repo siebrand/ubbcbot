@@ -307,7 +307,7 @@
   "status_labeling_completed": "labelen voltooid",
   "status_awaiting_payment": "wacht op betaling",
   "status_inactive": "inactief",
-  "multiple_days_label": "[meerdere dagen]",
+  "multiple_days_label": "meerdere dagen",
   "subtotal_label": "Subtotaal: €{total:.2f}",
   "sufficient_available": "voldoende beschikbaar",
   "units_available": "{count} beschikbaar",
