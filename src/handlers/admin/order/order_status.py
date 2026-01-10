@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from models.entities import AuthorizationStatus, OrderStatus
 from .base_order_handler import BaseOrderHandler
+from utils.pagination import PaginationUtils
 
 class OrderStatusManagement(BaseOrderHandler):
     """Handles order status management functionality"""
@@ -36,8 +37,8 @@ class OrderStatusManagement(BaseOrderHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'confirmation_shown'}
     
-    def handle_mark_paid(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /mark_paid command"""
+    def handle_mark_paid(self, chat_id: int, args: list, page: int = 1) -> Dict[str, Any]:
+        """Handle /mark_paid command with pagination"""
         # Get customers with AWAITING_PAYMENT orders
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
         customers_awaiting_payment = []
@@ -52,18 +53,23 @@ class OrderStatusManagement(BaseOrderHandler):
             self._send_message(chat_id, self._t('no_customers_awaiting_payment', user_id=None))
             return {'status': 'no_customers'}
         
+        # Paginate results
+        page_customers, total_pages = PaginationUtils.paginate_list(customers_awaiting_payment, page, 10)
+        
         # Show customers with payment buttons
-        message = "💳 Customers Awaiting Payment:\n\n"
+        message = f"💳 Customers Awaiting Payment - Page {page}/{total_pages}:\n\n"
         keyboard_rows = []
         
-        for customer, orders in customers_awaiting_payment[:10]:  # Show first 10
+        for customer, orders in page_customers:
             customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
             total_amount = sum(order.total_price for order in orders)
             message += f"👤 {customer_name}: €{total_amount:.2f} ({len(orders)} orders)\n"
             keyboard_rows.append([{"text": self._t('mark_customer_paid', user_id=None, customer_name=customer_name), "callback_data": f"mark_paid_{customer.customer_id}"}])
         
-        if len(customers_awaiting_payment) > 10:
-            message += f"\n... and {len(customers_awaiting_payment) - 10} more customers"
+        # Add pagination keyboard if needed
+        if total_pages > 1:
+            pagination_keyboard = PaginationUtils.build_pagination_keyboard(page, total_pages, "mark_paid", enhanced=True)
+            keyboard_rows.extend(pagination_keyboard["inline_keyboard"])
         
         keyboard = {"inline_keyboard": keyboard_rows}
         self._send_message(chat_id, message, reply_markup=keyboard)

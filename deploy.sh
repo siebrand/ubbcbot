@@ -49,7 +49,7 @@ fi
 
 # Run pytest tests
 echo "Running pytest tests..."
-if ! python -m pytest tests/test_customer_orders.py tests/test_box_status_manager.py tests/test_box_deletion_service.py -v; then
+if ! python -m pytest tests/test_customer_orders.py tests/test_box_status_manager.py tests/test_box_deletion_service.py tests/test_mark_paid_pagination.py -v; then
     echo "❌ Pytest tests failed! Deployment aborted."
     deactivate
     exit 1
@@ -107,6 +107,6 @@ echo ""
 echo "✅ Setup complete! Next steps:"
 echo "1. Test with /start command in Telegram"
 echo "2. Verify webhook status: curl \"https://api.telegram.org/bot$TELEGRAM_TOKEN/getWebhookInfo\""
-echo "3. Run tests locally: source test_env/bin/activate && export PYTHONPATH=\$(pwd)/src:\$PYTHONPATH && python -m unittest discover -s tests/handlers/admin -p 'test_*.py' -v && python tests/run_tests.py && python -m pytest tests/test_customer_orders.py -v"
+echo "3. Run tests locally: source test_env/bin/activate && export PYTHONPATH=\$(pwd)/src:\$PYTHONPATH && python -m unittest discover -s tests/handlers/admin -p 'test_*.py' -v && python tests/run_tests.py && python -m pytest tests/test_customer_orders.py tests/test_mark_paid_pagination.py -v"
 echo ""
 echo "🕐 Deployment completed at: $(date)"
