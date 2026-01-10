@@ -3,13 +3,15 @@ import logging
 from handlers.admin.base_box_workflow_handler import BaseBoxWorkflowHandler
 from models.entities import Supplier, Offer, Box, Order, OrderStatus, DeliveryAction
 from services.wholesaler_delivery import WholesalerDeliveryService
+from services.box_status_manager import BoxStatusManager
 
 logger = logging.getLogger()
 
 class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
-        self.delivery_service = WholesalerDeliveryService(db)
+        box_status_manager = BoxStatusManager(db)
+        self.delivery_service = WholesalerDeliveryService(db, box_status_manager)
 
     def handle_wholesale_delivery(self, chat_id: int, user_id: int, args: List[str]) -> Dict[str, Any]:
         """Start wholesale delivery drill-down interface"""

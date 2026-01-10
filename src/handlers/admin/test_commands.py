@@ -3,10 +3,15 @@ from typing import Dict, Any
 from decimal import Decimal
 from handlers.base_handler import BaseHandler
 from models.entities import Supplier, Offer, Box, Order, BoxStatus
+from services.box_status_manager import BoxStatusManager
 
 logger = logging.getLogger()
 
 class TestCommands(BaseHandler):
+    def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
+        super().__init__(db, admin_user_id, environment, telegram_token)
+        self.box_status_manager = BoxStatusManager(db)
+    
     def handle_setup_test_data(self, chat_id: int) -> Dict[str, Any]:
         """Handle /setup_test_data command - creates test suppliers and offers (test environment only)"""
         # Only allow in test environment
@@ -77,11 +82,8 @@ class TestCommands(BaseHandler):
                         )
                         self.db.create_order(admin_order)
                         
-                        # Update box quantity
-                        updates = {'current_quantity': 1}
-                        if 1 >= box.max_capacity:
-                            updates['status'] = BoxStatus.FULL.value
-                        self.db.update_box(box.box_id, updates)
+                        # Update box quantity via service
+                        self.box_status_manager.update_box_after_order_placement(box.box_id, 1)
             
             self._send_message(chat_id, self._t('test_data_success', suppliers=created_suppliers, offers=created_offers))
             return {'status': 'success'}

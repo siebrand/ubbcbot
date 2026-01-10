@@ -1,10 +1,12 @@
 from typing import List, Optional
 from models.entities import Order, Box, OrderStatus, BoxStatus
 from services.database import DynamoDBService
+from services.box_status_manager import BoxStatusManager
 
 class WholesalerDeliveryService:
-    def __init__(self, db_service: DynamoDBService):
+    def __init__(self, db_service: DynamoDBService, box_status_manager: BoxStatusManager):
         self.db = db_service
+        self.box_status_manager = box_status_manager
     
     def process_wholesaler_delivery(self, box_id: str, units_received: int, is_delayed: bool) -> bool:
         """
@@ -61,8 +63,8 @@ class WholesalerDeliveryService:
                 'status': OrderStatus.READY_FOR_LABELING.value
             })
         
-        # Update box status to DELIVERED
-        self.db.update_box(box_id, {'status': BoxStatus.DELIVERED.value})
+        # Update box status to DELIVERED via service
+        self.box_status_manager.mark_box_as_delivered(box_id)
     
     def _process_partial_delayed(self, orders: List[Order], units_received: int, missing_units: int, box_id: str):
         """Process partial delivery where missing units are delayed"""
@@ -92,8 +94,8 @@ class WholesalerDeliveryService:
                 self.notify_customer_of_delay(order.order_id)
                 remaining_to_allocate = 0
         
-        # Update box status to DELIVERED (partial delivery still means box is delivered)
-        self.db.update_box(box_id, {'status': BoxStatus.DELIVERED.value})
+        # Update box status to DELIVERED via service
+        self.box_status_manager.mark_box_as_delivered(box_id)
     
     def _process_partial_cancelled(self, orders: List[Order], units_received: int, missing_units: int, box_id: str):
         """Process partial delivery where missing units are cancelled"""
@@ -137,8 +139,8 @@ class WholesalerDeliveryService:
                 self.notify_customer_of_cancellation(cancelled_order.order_id)
                 remaining_to_allocate = 0
         
-        # Update box status to DELIVERED (partial delivery still means box is delivered)
-        self.db.update_box(box_id, {'status': BoxStatus.DELIVERED.value})
+        # Update box status to DELIVERED via service
+        self.box_status_manager.mark_box_as_delivered(box_id)
     
     def notify_customer_of_delay(self, order_id: str):
         """Stub method for notifying customer of delay"""

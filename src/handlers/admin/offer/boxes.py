@@ -340,8 +340,7 @@ class BoxManagementHandler(OfferBaseHandler):
             available = box.max_capacity - box.current_quantity
             if available > 0:
                 fill_amount = min(available, excess_units - filled_units)
-                new_quantity = box.current_quantity + fill_amount
-                self.db.update_box(box.box_id, {'current_quantity': new_quantity})
+                self.box_status_manager.update_box_after_order_placement(box.box_id, fill_amount)
                 filled_units += fill_amount
         
         # Fill ordered boxes if needed
@@ -351,8 +350,7 @@ class BoxManagementHandler(OfferBaseHandler):
             available = box.max_capacity - box.current_quantity
             if available > 0:
                 fill_amount = min(available, excess_units - filled_units)
-                new_quantity = box.current_quantity + fill_amount
-                self.db.update_box(box.box_id, {'current_quantity': new_quantity})
+                self.box_status_manager.update_box_after_order_placement(box.box_id, fill_amount)
                 filled_units += fill_amount
         
         self._send_message(chat_id, self._t('audit_boxes_filled', chat_id,
@@ -417,14 +415,9 @@ class BoxManagementHandler(OfferBaseHandler):
             )
             created_box = self.db.create_box(box)
             if created_box:
-                # Fill the new box with needed units
                 fill_amount = min(remaining_units, box_size)
-                if fill_amount > 0:
-                    updates = {'current_quantity': fill_amount}
-                    if fill_amount >= box_size:
-                        updates['status'] = BoxStatus.FULL.value
-                    self.db.update_box(created_box.box_id, updates)
-                    remaining_units -= fill_amount
+                self.box_status_manager.update_box_after_order_placement(created_box.box_id, fill_amount)
+                remaining_units -= fill_amount
                 created_boxes += 1
         
         if created_boxes > 0:

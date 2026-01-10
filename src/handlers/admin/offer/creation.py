@@ -4,11 +4,16 @@ from typing import Dict, Any
 from decimal import Decimal
 from models.entities import Offer, Box, Order, BoxStatus, OfferStatus
 from .base import OfferBaseHandler
+from services.box_status_manager import BoxStatusManager
 
 logger = logging.getLogger()
 
 class OfferCreationHandler(OfferBaseHandler):
     """Handler for offer creation and publishing"""
+    
+    def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
+        super().__init__(db, admin_user_id, environment, telegram_token)
+        self.box_status_manager = BoxStatusManager(db)
     
     def handle_create_offer(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /create_offer command - creates draft offer"""
@@ -132,14 +137,8 @@ class OfferCreationHandler(OfferBaseHandler):
                         self._send_message(chat_id, self._t('failed_publish_offer'))
                         return {'status': 'error'}
                     
-                    # Update box quantity
-                    updates = {'current_quantity': 1}
-                    if 1 >= created_box.max_capacity:
-                        updates['status'] = BoxStatus.FULL.value
-                    
-                    box_update_result = self.db.update_box(created_box.box_id, updates)
-                    
-                    if not box_update_result:
+                    # Update box quantity via service
+                    if not self.box_status_manager.update_box_after_order_placement(created_box.box_id, 1):
                         logger.error(f"Failed to update box {created_box.box_id} for offer {offer_id}")
                         self._send_message(chat_id, self._t('failed_publish_offer'))
                         return {'status': 'error'}

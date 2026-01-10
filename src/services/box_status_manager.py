@@ -54,9 +54,11 @@ class BoxStatusManager:
                     updated_boxes.append(box)
         return updated_boxes
     
-    def mark_box_as_delivered(self, box_id: str) -> bool:
-        """Mark box as DELIVERED"""
-        return self.db.update_box(box_id, {'status': BoxStatus.DELIVERED.value})
+    def mark_box_as_delivered(self, box_id: str) -> Optional['Box']:
+        """Mark box as DELIVERED, returns updated box object or None"""
+        if self.db.update_box(box_id, {'status': BoxStatus.DELIVERED.value}):
+            return self.db.get_box(box_id)
+        return None
     
     def update_offer_status_after_change(self, offer_id: int) -> Optional[str]:
         """

@@ -202,15 +202,19 @@ class TestBoxStatusManager:
         assert len(boxes) == 2
     
     def test_mark_box_as_delivered(self):
-        """Test marking box as DELIVERED"""
+        """Test marking box as DELIVERED returns box object"""
         # Setup
+        box = Box(box_id="box1", offer_id=1, current_quantity=12, max_capacity=12, status=BoxStatus.DELIVERED.value)
         self.mock_db.update_box.return_value = True
+        self.mock_db.get_box.return_value = box
         
         # Execute
         result = self.manager.mark_box_as_delivered("box1")
         
         # Verify
-        assert result is True
+        assert result is not None
+        assert result.box_id == "box1"
+        assert result.status == BoxStatus.DELIVERED.value
         self.mock_db.update_box.assert_called_once_with("box1", {
             'status': BoxStatus.DELIVERED.value
         })
