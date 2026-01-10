@@ -16,6 +16,49 @@ fi
 
 echo "🚀 Deploying UBBC Bot to $ENVIRONMENT environment..."
 
+# Run tests first
+echo "🧪 Running test suite..."
+if [ ! -d "test_env" ]; then
+    echo "Creating test virtual environment..."
+    python3 -m venv test_env
+fi
+source test_env/bin/activate
+if ! pip show pytest >/dev/null 2>&1; then
+    echo "Installing test dependencies..."
+    pip install -r tests/requirements.txt
+fi
+
+# Set PYTHONPATH for imports
+export PYTHONPATH="$(pwd)/src:$PYTHONPATH"
+
+# Run refactoring unit tests
+echo "Running refactoring unit tests..."
+if ! python -m unittest discover -s tests/handlers/admin -p "test_*.py" -v; then
+    echo "❌ Refactoring tests failed! Deployment aborted."
+    deactivate
+    exit 1
+fi
+
+# Run legacy tests
+echo "Running legacy tests..."
+if ! python tests/run_tests.py; then
+    echo "❌ Legacy tests failed! Deployment aborted."
+    deactivate
+    exit 1
+fi
+
+# Run pytest tests
+echo "Running pytest tests..."
+if ! python -m pytest tests/test_customer_orders.py tests/test_box_status_manager.py tests/test_box_deletion_service.py tests/test_mark_paid_pagination.py -v; then
+    echo "❌ Pytest tests failed! Deployment aborted."
+    deactivate
+    exit 1
+fi
+
+deactivate
+echo "✅ All tests passed!"
+echo ""
+
 # Verify token exists in Parameter Store
 echo "🔍 Checking for bot token in Parameter Store..."
 if ! aws ssm get-parameter --name "/ubbc-bot/$ENVIRONMENT/telegram-bot-token" --with-decryption >/dev/null 2>&1; then
