@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Any
 from boto3.dynamodb.conditions import Key
 from models.entities import Supplier, Offer, Customer, Box, Order, DiscountPeriod, DiscountStatus, BoxStatus
 from services.user_cache import UserCache
+from services.offer_cache import OfferCache
 
 class DynamoDBService:
     def __init__(self):
@@ -168,6 +169,10 @@ class DynamoDBService:
             
             item = self._prepare_item(offer.__dict__)
             self.offers_table.put_item(Item=item)
+            
+            # Invalidate cache
+            OfferCache.invalidate_cache()
+            
             return True
         except Exception as e:
             print(f"Error creating offer: {e}")
@@ -192,6 +197,11 @@ class DynamoDBService:
             return None
 
     def list_offers(self) -> List[Offer]:
+        """Get all offers with caching"""
+        return OfferCache.get_offers(self)
+    
+    def _list_offers_uncached(self) -> List[Offer]:
+        """Internal method to get offers without caching"""
         try:
             response = self.offers_table.scan()
             offers = []
@@ -245,6 +255,10 @@ class DynamoDBService:
                 ExpressionAttributeNames=expression_names,
                 ExpressionAttributeValues=expression_values
             )
+            
+            # Invalidate cache
+            OfferCache.invalidate_cache()
+            
             return True
         except Exception as e:
             print(f"Error updating offer: {e}")
@@ -995,6 +1009,10 @@ class DynamoDBService:
     def delete_offer(self, offer_id: int) -> bool:
         try:
             self.offers_table.delete_item(Key={'offer_id': offer_id})
+            
+            # Invalidate cache
+            OfferCache.invalidate_cache()
+            
             return True
         except Exception as e:
             print(f"Error deleting offer: {e}")

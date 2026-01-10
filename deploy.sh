@@ -49,7 +49,14 @@ fi
 
 # Run pytest tests
 echo "Running pytest tests..."
-if ! python -m pytest tests/test_customer_orders.py tests/test_box_status_manager.py tests/test_box_deletion_service.py tests/test_mark_paid_pagination.py -v; then
+PYTEST_FILES="
+    tests/test_customer_orders.py
+    tests/test_box_status_manager.py
+    tests/test_box_deletion_service.py
+    tests/test_mark_paid_pagination.py
+    tests/test_offer_cache.py
+"
+if ! python -m pytest $PYTEST_FILES -v; then
     echo "❌ Pytest tests failed! Deployment aborted."
     deactivate
     exit 1
