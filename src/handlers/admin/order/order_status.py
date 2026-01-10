@@ -76,6 +76,9 @@ class OrderStatusManagement(BaseOrderHandler):
             pagination_keyboard = PaginationUtils.build_pagination_keyboard(page, total_pages, "mark_paid", enhanced=True)
             keyboard_rows.extend(pagination_keyboard["inline_keyboard"])
         
+        # Add Done button
+        keyboard_rows.append([{"text": self._t('done_general', user_id=None), "callback_data": "cancel_action"}])
+        
         keyboard = {"inline_keyboard": keyboard_rows}
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'customers_shown'}
