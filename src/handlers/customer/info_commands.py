@@ -485,35 +485,8 @@ class InfoCommands(BaseHandler):
     def handle_offer_details(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
         """Handle offer details display and editing from deep link or command"""
         if not args:
-            # Show list of offers as buttons for admins, error for users
-            if self._is_admin(user_id):
-                offers = self.db.list_offers()
-                draft_offers = [o for o in offers if o.status == OfferStatus.DRAFT.value]
-                active_offers = [o for o in offers if o.status == OfferStatus.ACTIVE.value]
-                all_offers = draft_offers + active_offers
-                
-                if not all_offers:
-                    self._send_message(chat_id, self._t('no_offers_available'))
-                    return {'status': 'no_offers'}
-                
-                message = self._t('select_offer_details')
-                keyboard = {"inline_keyboard": []}
-                
-                for offer in all_offers:
-                    status_prefix = "[DRAFT] " if offer.status == OfferStatus.DRAFT.value else ""
-                    button_text = f"{status_prefix}[{offer.offer_id}] {offer.name} - €{offer.price_per_unit:.2f}"
-                    keyboard["inline_keyboard"].append([{
-                        "text": button_text,
-                        "callback_data": f"offer_details_{offer.offer_id}"
-                    }])
-                
-                keyboard["inline_keyboard"].append([{"text": self._t('cancel', user_id=None), "callback_data": "cancel_action"}])
-                
-                self._send_message(chat_id, message, reply_markup=keyboard)
-                return {'status': 'success'}
-            else:
-                self._send_message(chat_id, self._t('no_offer_id_provided'))
-                return {'status': 'invalid_args'}
+            # Return same as list_offers without parameters
+            return self.handle_list_offers(chat_id, user_id, [])
 
         try:
             offer_id = int(args[0])
