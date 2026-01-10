@@ -24,11 +24,15 @@ class DeliveryOverviewHandler(BaseHandler):
                 customers_data.append({
                     'customer_id': customer.customer_id,
                     'delivered_order_ids': [o.order_id for o in delivered_orders],
-                    'delayed_order_ids': [o.order_id for o in delayed_orders]
+                    'delayed_order_ids': [o.order_id for o in delayed_orders],
+                    'is_guest': customer.is_guest
                 })
         
         if not customers_data:
             return self._send_message(chat_id, self._t('no_customers_ready_overview', user_id=None))
+        
+        # Sort: regular customers first, guest users last
+        customers_data.sort(key=lambda x: x['is_guest'])
         
         # Store customers data in context for later use
         import json
@@ -158,14 +162,21 @@ class DeliveryOverviewHandler(BaseHandler):
                     delayed_qty = order.quantity - (order.received_quantity or 0)
                     message += f"• {delayed_qty}x {offer_name} - " + self._t('will_arrive_later', user_id=None) + "\n"
             
-            # Send message to customer
-            result = self._send_message(customer.telegram_user_id, message)
+            # Check if guest user
+            is_guest = customer.is_guest
+            
+            # Send message to customer only if not a guest
+            if not is_guest:
+                result = self._send_message(customer.telegram_user_id, message)
+            else:
+                # For guest users, skip sending and mark as success
+                result = {'success': True}
             
             # Send copy to admin with customer info
             admin_message = f"{self._t('delivery_overview_sent_to', user_id=None, customer_name=customer_name)}\n\n{message}"
             
             if result.get('success'):
-                # Update orders to AWAITING_PAYMENT only if customer message was sent
+                # Update orders to AWAITING_PAYMENT
                 for order in delivered_orders:
                     self.db.update_order(order.order_id, {'status': OrderStatus.AWAITING_PAYMENT.value})
                 
