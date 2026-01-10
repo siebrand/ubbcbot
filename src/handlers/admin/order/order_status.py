@@ -57,7 +57,7 @@ class OrderStatusManagement(BaseOrderHandler):
         customers_awaiting_payment.sort(key=lambda x: (x[0].last_name or '', x[0].first_name or ''))
         
         # Paginate results
-        page_customers, total_pages = PaginationUtils.paginate_list(customers_awaiting_payment, page, 5)
+        page_customers, total_pages = PaginationUtils.paginate_list(customers_awaiting_payment, page, 10)
         
         # Show customers with payment buttons
         message = f"💳 Customers Awaiting Payment - Page {page}/{total_pages}:\n\n"
