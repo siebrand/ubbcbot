@@ -404,6 +404,56 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error getting orders by offer: {e}")
             return []
+    
+    def get_all_boxes(self) -> List[Box]:
+        """Scan all boxes from DynamoDB with minimal fields for list_offers"""
+        try:
+            response = self.boxes_table.scan(
+                ProjectionExpression='box_id, offer_id, max_capacity, #status',
+                ExpressionAttributeNames={'#status': 'status'}
+            )
+            boxes = []
+            for item in response.get('Items', []):
+                item['max_capacity'] = int(item['max_capacity'])
+                if item.get('status') == 'minimum_reached':
+                    item['status'] = BoxStatus.OPEN.value
+                # Add default values for required Box fields not fetched
+                item.setdefault('current_quantity', 0)
+                boxes.append(Box(**item))
+            return boxes
+        except Exception as e:
+            print(f"Error getting all boxes: {e}")
+            return []
+    
+    def get_all_orders(self, statuses: List[str] = None) -> List[Order]:
+        """Scan all orders with minimal fields for list_offers"""
+        try:
+            if statuses:
+                filter_expr = ' OR '.join([f'#status = :status{i}' for i in range(len(statuses))])
+                expr_values = {f':status{i}': status for i, status in enumerate(statuses)}
+                response = self.orders_table.scan(
+                    ProjectionExpression='order_id, offer_id, quantity, #status',
+                    FilterExpression=filter_expr,
+                    ExpressionAttributeNames={'#status': 'status'},
+                    ExpressionAttributeValues=expr_values
+                )
+            else:
+                response = self.orders_table.scan(
+                    ProjectionExpression='order_id, offer_id, quantity, #status',
+                    ExpressionAttributeNames={'#status': 'status'}
+                )
+            # Add default values for required Order fields not fetched
+            orders = []
+            for item in response.get('Items', []):
+                item.setdefault('customer_id', '')
+                item.setdefault('box_id', '')
+                item.setdefault('unit_price', 0)
+                item.setdefault('total_price', 0)
+                orders.append(Order(**item))
+            return orders
+        except Exception as e:
+            print(f"Error getting all orders: {e}")
+            return []
 
     def get_orders_by_customer_and_offer(self, customer_id: str, offer_id: int) -> List[Order]:
         """Get orders for a specific customer and offer combination"""
