@@ -44,13 +44,15 @@ class BoxStatusManager:
         
         return self.db.update_box(box_id, updates)
     
-    def mark_boxes_as_ordered(self, box_ids: list) -> int:
-        """Mark multiple boxes as ORDERED, returns count of successful updates"""
-        success_count = 0
+    def mark_boxes_as_ordered(self, box_ids: list) -> list:
+        """Mark multiple boxes as ORDERED, returns list of updated box objects"""
+        updated_boxes = []
         for box_id in box_ids:
             if self.db.update_box(box_id, {'status': BoxStatus.ORDERED.value}):
-                success_count += 1
-        return success_count
+                box = self.db.get_box(box_id)
+                if box:
+                    updated_boxes.append(box)
+        return updated_boxes
     
     def mark_box_as_delivered(self, box_id: str) -> bool:
         """Mark box as DELIVERED"""

@@ -171,25 +171,35 @@ class TestBoxStatusManager:
     def test_mark_boxes_as_ordered(self):
         """Test marking multiple boxes as ORDERED"""
         # Setup
+        box1 = Box(box_id="box1", offer_id=1, current_quantity=12, max_capacity=12, status=BoxStatus.ORDERED.value)
+        box2 = Box(box_id="box2", offer_id=1, current_quantity=12, max_capacity=12, status=BoxStatus.ORDERED.value)
+        box3 = Box(box_id="box3", offer_id=1, current_quantity=12, max_capacity=12, status=BoxStatus.ORDERED.value)
         self.mock_db.update_box.return_value = True
+        self.mock_db.get_box.side_effect = [box1, box2, box3]
         
         # Execute
-        count = self.manager.mark_boxes_as_ordered(["box1", "box2", "box3"])
+        boxes = self.manager.mark_boxes_as_ordered(["box1", "box2", "box3"])
         
         # Verify
-        assert count == 3
+        assert len(boxes) == 3
+        assert boxes[0].box_id == "box1"
+        assert boxes[1].box_id == "box2"
+        assert boxes[2].box_id == "box3"
         assert self.mock_db.update_box.call_count == 3
     
     def test_mark_boxes_as_ordered_partial_failure(self):
         """Test marking boxes with some failures"""
         # Setup
+        box1 = Box(box_id="box1", offer_id=1, current_quantity=12, max_capacity=12, status=BoxStatus.ORDERED.value)
+        box3 = Box(box_id="box3", offer_id=1, current_quantity=12, max_capacity=12, status=BoxStatus.ORDERED.value)
         self.mock_db.update_box.side_effect = [True, False, True]
+        self.mock_db.get_box.side_effect = [box1, box3]
         
         # Execute
-        count = self.manager.mark_boxes_as_ordered(["box1", "box2", "box3"])
+        boxes = self.manager.mark_boxes_as_ordered(["box1", "box2", "box3"])
         
         # Verify
-        assert count == 2
+        assert len(boxes) == 2
     
     def test_mark_box_as_delivered(self):
         """Test marking box as DELIVERED"""

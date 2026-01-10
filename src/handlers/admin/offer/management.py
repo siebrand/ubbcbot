@@ -195,17 +195,21 @@ class OfferManagementHandler(OfferBaseHandler):
         current_ordered_count = len(ordered_boxes)
         additional_boxes_needed = max(0, boxes_ordered - current_ordered_count)
         
-        # Update additional boxes to ORDERED status (up to what we need)
+        # Update additional boxes to ORDERED status and get updated objects
         boxes_to_update = [b.box_id for b in non_ordered_boxes[:additional_boxes_needed]]
+        newly_ordered_boxes = []
         if boxes_to_update:
-            self.box_status_manager.mark_boxes_as_ordered(boxes_to_update)
+            newly_ordered_boxes = self.box_status_manager.mark_boxes_as_ordered(boxes_to_update)
         
-        # Delete excess non-ordered boxes (but preserve existing ordered boxes)
-        # @todo The "excess box" concept is imporrant here, as it wold reuqire cancellening orders. Is deletion really necessary?
-        boxes_to_delete = non_ordered_boxes[additional_boxes_needed:]
-        for box in boxes_to_delete:
-            logger.info(f"Deleting excess box {box.box_id} with status {box.status} and quantity {box.current_quantity}")
-            self.db.delete_box(box.box_id)
+        # Update local list with newly ordered boxes
+        newly_ordered_ids = {b.box_id for b in newly_ordered_boxes}
+        non_ordered_boxes = [b for b in non_ordered_boxes if b.box_id not in newly_ordered_ids]
+        
+        # Delete only empty non-ordered boxes
+        for box in non_ordered_boxes:
+            if box.current_quantity == 0:
+                logger.info(f"Deleting empty box {box.box_id}")
+                self.db.delete_box(box.box_id)
         
         # Cancel remaining orders
         for order in cancelled_orders:
