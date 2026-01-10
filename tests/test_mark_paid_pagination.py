@@ -80,21 +80,25 @@ class TestMarkPaidPagination:
         
         # Verify button text format: ✓ Last, First €amount
         buttons = reply_markup['inline_keyboard']
-        assert len(buttons) == 5
-        for i, button_row in enumerate(buttons):
-            button_text = button_row[0]['text']
+        # 5 customer buttons + 1 Done button
+        assert len(buttons) == 6
+        for i in range(5):
+            button_text = buttons[i][0]['text']
             assert button_text == f'✓ Last{i}, First{i} €20.00'
+        # Verify Done button
+        assert buttons[5][0]['callback_data'] == 'cancel_action'
     
     def test_mark_paid_multiple_pages(self, handler, mock_db):
         """Test mark_paid with customers requiring multiple pages"""
         # Create 25 customers (3 pages with 10 per page)
+        # Use zero-padded numbers to ensure proper alphabetical sorting
         customers = []
         for i in range(25):
             customer = Customer(
-                customer_id=f'cust_{i}',
+                customer_id=f'cust_{i:02d}',
                 telegram_user_id=1000 + i,
-                first_name=f'First{i}',
-                last_name=f'Last{i}',
+                first_name=f'First{i:02d}',
+                last_name=f'Last{i:02d}',
                 authorization_status=AuthorizationStatus.APPROVED.value
             )
             customers.append(customer)
@@ -123,26 +127,27 @@ class TestMarkPaidPagination:
         reply_markup = call_args[1]['reply_markup']
         
         assert 'Page 1/3' in message
-        # Should show first 10 customers
+        # Should show first 10 customers (00-09)
         for i in range(10):
-            assert f'First{i}' in message
+            assert f'First{i:02d}' in message
         # Should not show customer 10+
         assert 'First10' not in message
         
         # Verify pagination keyboard exists
         assert 'inline_keyboard' in reply_markup
-        assert len(reply_markup['inline_keyboard']) > 10  # 10 customer buttons + pagination
+        # 10 customer buttons + pagination row + Done button
+        assert len(reply_markup['inline_keyboard']) >= 11
     
     def test_mark_paid_page_2(self, handler, mock_db):
         """Test mark_paid showing page 2"""
-        # Create 25 customers
+        # Create 25 customers with zero-padded numbers
         customers = []
         for i in range(25):
             customer = Customer(
-                customer_id=f'cust_{i}',
+                customer_id=f'cust_{i:02d}',
                 telegram_user_id=1000 + i,
-                first_name=f'First{i}',
-                last_name=f'Last{i}',
+                first_name=f'First{i:02d}',
+                last_name=f'Last{i:02d}',
                 authorization_status=AuthorizationStatus.APPROVED.value
             )
             customers.append(customer)
@@ -170,9 +175,9 @@ class TestMarkPaidPagination:
         assert 'Page 2/3' in message
         # Should show customers 10-19
         for i in range(10, 20):
-            assert f'First{i}' in message
+            assert f'First{i:02d}' in message
         # Should not show customers 0-9 or 20+
-        assert 'First9' not in message
+        assert 'First09' not in message
         assert 'First20' not in message
     
     def test_mark_paid_with_multiple_orders(self, handler, mock_db):
