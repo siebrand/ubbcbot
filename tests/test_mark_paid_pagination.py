@@ -43,7 +43,8 @@ class TestMarkPaidPagination:
             customer = Customer(
                 customer_id=f'cust_{i}',
                 telegram_user_id=1000 + i,
-                first_name=f'Customer{i}',
+                first_name=f'First{i}',
+                last_name=f'Last{i}',
                 authorization_status=AuthorizationStatus.APPROVED.value
             )
             customers.append(customer)
@@ -71,9 +72,18 @@ class TestMarkPaidPagination:
         # Verify message contains all 5 customers
         call_args = handler._send_message.call_args
         message = call_args[0][1]
+        reply_markup = call_args[1]['reply_markup']
+        
         assert 'Page 1/1' in message
         for i in range(5):
-            assert f'Customer{i}' in message
+            assert f'First{i}' in message
+        
+        # Verify button text format: ✓ Last, First €amount
+        buttons = reply_markup['inline_keyboard']
+        assert len(buttons) == 5
+        for i, button_row in enumerate(buttons):
+            button_text = button_row[0]['text']
+            assert button_text == f'✓ Last{i}, First{i} €20.00'
     
     def test_mark_paid_multiple_pages(self, handler, mock_db):
         """Test mark_paid with customers requiring multiple pages"""
@@ -83,7 +93,8 @@ class TestMarkPaidPagination:
             customer = Customer(
                 customer_id=f'cust_{i}',
                 telegram_user_id=1000 + i,
-                first_name=f'Customer{i}',
+                first_name=f'First{i}',
+                last_name=f'Last{i}',
                 authorization_status=AuthorizationStatus.APPROVED.value
             )
             customers.append(customer)
@@ -114,9 +125,9 @@ class TestMarkPaidPagination:
         assert 'Page 1/3' in message
         # Should show first 10 customers
         for i in range(10):
-            assert f'Customer{i}' in message
+            assert f'First{i}' in message
         # Should not show customer 10+
-        assert 'Customer10' not in message
+        assert 'First10' not in message
         
         # Verify pagination keyboard exists
         assert 'inline_keyboard' in reply_markup
@@ -130,7 +141,8 @@ class TestMarkPaidPagination:
             customer = Customer(
                 customer_id=f'cust_{i}',
                 telegram_user_id=1000 + i,
-                first_name=f'Customer{i}',
+                first_name=f'First{i}',
+                last_name=f'Last{i}',
                 authorization_status=AuthorizationStatus.APPROVED.value
             )
             customers.append(customer)
@@ -158,17 +170,18 @@ class TestMarkPaidPagination:
         assert 'Page 2/3' in message
         # Should show customers 10-19
         for i in range(10, 20):
-            assert f'Customer{i}' in message
+            assert f'First{i}' in message
         # Should not show customers 0-9 or 20+
-        assert 'Customer9' not in message
-        assert 'Customer20' not in message
+        assert 'First9' not in message
+        assert 'First20' not in message
     
     def test_mark_paid_with_multiple_orders(self, handler, mock_db):
         """Test mark_paid calculates total correctly for multiple orders"""
         customer = Customer(
             customer_id='cust_1',
             telegram_user_id=1001,
-            first_name='TestCustomer',
+            first_name='John',
+            last_name='Doe',
             authorization_status=AuthorizationStatus.APPROVED.value
         )
         
@@ -200,7 +213,12 @@ class TestMarkPaidPagination:
         
         call_args = handler._send_message.call_args
         message = call_args[0][1]
+        reply_markup = call_args[1]['reply_markup']
         
         # Should show total of both orders
         assert '€50.00' in message
         assert '(2 orders)' in message
+        
+        # Verify button text format
+        button_text = reply_markup['inline_keyboard'][0][0]['text']
+        assert button_text == '✓ Doe, John €50.00'

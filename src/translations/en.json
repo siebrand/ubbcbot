@@ -358,7 +358,6 @@
   "batch_completed": "✅ Batch {batch_number} completed: {sent_count}/{batch_size} overviews sent\n\n",
   "all_overviews_sent": "🎉 All delivery overviews sent!\nTotal customers notified: {total_customers}",
   "customers_awaiting_payment": "💳 Customers Awaiting Payment:\n\n",
-  "mark_customer_paid": "✅ Mark {customer_name} Paid",
   "payment_confirmed": "✅ Payment confirmed for {customer_name}\n{updated_count} orders marked as COMPLETED\nTotal: €{total_amount:.2f}",
   "payment_received_notification": "✅ Payment received! Your orders are now ready for pickup.\nTotal: €{total_amount:.2f}",
   "no_customers_awaiting_payment": "❌ No customers with orders awaiting payment",

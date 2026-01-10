@@ -358,7 +358,6 @@
   "batch_completed": "✅ Batch {batch_number} voltooid: {sent_count}/{batch_size} overzichten verstuurd\n\n",
   "all_overviews_sent": "🎉 Alle leveringsoverzichten verstuurd!\nTotaal klanten geïnformeerd: {total_customers}",
   "customers_awaiting_payment": "💳 Klanten Wachtend op Betaling:\n\n",
-  "mark_customer_paid": "✅ Markeer {customer_name} Betaald",
   "payment_confirmed": "✅ Betaling bevestigd voor {customer_name}\n{updated_count} bestellingen gemarkeerd als VOLTOOID\nTotaal: €{total_amount:.2f}",
   "payment_received_notification": "✅ Betaling ontvangen! Je bestellingen zijn nu klaar voor ophalen.\nTotaal: €{total_amount:.2f}",
   "no_customers_awaiting_payment": "❌ Geen klanten met bestellingen die wachten op betaling",

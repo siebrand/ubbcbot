@@ -64,7 +64,12 @@ class OrderStatusManagement(BaseOrderHandler):
             customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
             total_amount = sum(order.total_price for order in orders)
             message += f"👤 {customer_name}: €{total_amount:.2f} ({len(orders)} orders)\n"
-            keyboard_rows.append([{"text": self._t('mark_customer_paid', user_id=None, customer_name=customer_name), "callback_data": f"mark_paid_{customer.customer_id}"}])
+            
+            # Button text: ✓ Last, First €amount
+            last_name = customer.last_name or ''
+            first_name = customer.first_name or self._t('unknown', user_id=None)
+            button_text = f"✓ {last_name}, {first_name} €{total_amount:.2f}".strip()
+            keyboard_rows.append([{"text": button_text, "callback_data": f"mark_paid_{customer.customer_id}"}])
         
         # Add pagination keyboard if needed
         if total_pages > 1:
