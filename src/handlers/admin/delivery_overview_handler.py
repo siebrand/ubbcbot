@@ -173,7 +173,10 @@ class DeliveryOverviewHandler(BaseHandler):
                 result = {'success': True}
             
             # Send copy to admin with customer info
-            admin_message = f"{self._t('delivery_overview_sent_to', user_id=None, customer_name=customer_name)}\n\n{message}"
+            if is_guest:
+                admin_message = f"{self._t('delivery_overview_for', user_id=None, customer_name=customer_name)}\n\n{message}"
+            else:
+                admin_message = f"{self._t('delivery_overview_sent_to', user_id=None, customer_name=customer_name)}\n\n{message}"
             
             if result.get('success'):
                 # Update orders to AWAITING_PAYMENT
