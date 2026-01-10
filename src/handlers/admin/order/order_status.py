@@ -53,6 +53,9 @@ class OrderStatusManagement(BaseOrderHandler):
             self._send_message(chat_id, self._t('no_customers_awaiting_payment', user_id=None))
             return {'status': 'no_customers'}
         
+        # Sort alphabetically by last name, then first name
+        customers_awaiting_payment.sort(key=lambda x: (x[0].last_name or '', x[0].first_name or ''))
+        
         # Paginate results
         page_customers, total_pages = PaginationUtils.paginate_list(customers_awaiting_payment, page, 5)
         
