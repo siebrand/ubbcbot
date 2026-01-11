@@ -198,10 +198,12 @@ class TestImportHandler(unittest.TestCase):
         
         self.db.get_offer.return_value = offer
         self.db.get_boxes_by_offer.return_value = boxes
+        self.db.list_offers.return_value = []
         
         with patch.object(self.handler, '_validate_and_get_offer') as mock_validate, \
              patch.object(self.handler, '_validate_args') as mock_args, \
-             patch.object(self.handler, '_send_success') as mock_send:
+             patch.object(self.handler, '_send_success') as mock_send, \
+             patch.object(self.handler, '_send_message') as mock_msg:
             
             mock_validate.return_value = (offer, None)
             mock_args.return_value = None
@@ -226,11 +228,13 @@ class TestImportHandler(unittest.TestCase):
         
         self.db.get_offer.return_value = offer
         self.db.get_boxes_by_offer.return_value = boxes
+        self.db.list_offers.return_value = []
         
         with patch.object(self.handler, '_validate_and_get_offer') as mock_validate, \
              patch.object(self.handler, '_validate_args') as mock_args, \
              patch.object(self.handler, '_send_success') as mock_send, \
-             patch.object(self.handler, '_announce_offer') as mock_announce:
+             patch.object(self.handler, '_announce_offer') as mock_announce, \
+             patch.object(self.handler, '_send_message') as mock_msg:
             
             mock_validate.return_value = (offer, None)
             mock_args.return_value = None

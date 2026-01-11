@@ -252,8 +252,8 @@ class ImportHandler(NotificationHandler):
         if all_full and boxes:
             # Mark as SOLD_OUT, no announcements
             self.db.update_offer(offer.offer_id, {'status': OfferStatus.SOLD_OUT.value})
-            return self._send_success(chat_id, 'finalize_import_sold_out', 'success',
-                                    offer_id=offer.offer_id, name=offer.name)
+            self._send_success(chat_id, 'finalize_import_sold_out', 'success',
+                             offer_id=offer.offer_id, name=offer.name)
         else:
             # Mark as ACTIVE and announce
             self.db.update_offer(offer.offer_id, {'status': OfferStatus.ACTIVE.value})
@@ -262,8 +262,11 @@ class ImportHandler(NotificationHandler):
             # Announce using existing logic
             self._announce_offer(offer)
             
-            return self._send_success(chat_id, 'finalize_import_active', 'success',
-                                    offer_id=offer.offer_id, name=offer.name)
+            self._send_success(chat_id, 'finalize_import_active', 'success',
+                             offer_id=offer.offer_id, name=offer.name)
+        
+        # Show import offers selection again if more exist
+        return self._show_import_offers_selection(chat_id)
     
     def _announce_offer(self, offer):
         """Announce offer to default group and subscribers"""
