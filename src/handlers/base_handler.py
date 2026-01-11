@@ -204,9 +204,9 @@ class BaseHandler:
             logger.error(f"Error sending document: {e}")
             return False
     
-    def _build_pagination_keyboard(self, current_page: int, total_pages: int, entity_type: str, filters: str = "") -> Dict[str, Any]:
+    def _build_pagination_keyboard(self, current_page: int, total_pages: int, entity_type: str, filters: str = "", enhanced: bool = False) -> Dict[str, Any]:
         """Build pagination keyboard for list commands"""
-        return PaginationUtils.build_pagination_keyboard(current_page, total_pages, entity_type, filters)
+        return PaginationUtils.build_pagination_keyboard(current_page, total_pages, entity_type, filters, enhanced)
     
     def _paginate_list(self, items: list, page: int, page_size: int = 10) -> tuple:
         """Paginate a list of items"""

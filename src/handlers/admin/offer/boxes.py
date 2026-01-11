@@ -122,7 +122,7 @@ class BoxManagementHandler(OfferBaseHandler):
         # Add pagination keyboard if needed
         keyboard = None
         if total_pages > 1:
-            keyboard = self._build_pagination_keyboard(page, total_pages, "boxes")
+            keyboard = self._build_pagination_keyboard(page, total_pages, "boxes", enhanced=True)
         
         # Add finish labeling buttons for boxes with ready orders
         labeling_buttons = []
