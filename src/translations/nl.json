@@ -462,7 +462,7 @@
   "box_status_header": "📦 Dozen Status ({status}) - Pagina {page}/{total_pages}:",
   "box_status_table_header": "Status  ID    ColliID   Aanbieding            Prijs   Eenheden",
   "box_status_table_separator": "------  ----  --------  --------------------  ------  --------",
-  "box_status_help": "📦 /box_status Gebruik:\n\n/box_status - Actieve dozen (open, vol, besteld)\n/box_status active - Actieve dozen\n/box_status ordered - Alleen bestelde dozen\n/box_status full - Alleen volle dozen\n/box_status delivered - Alleen geleverde dozen\n/box_status all - Alle dozen\n/box_status help - Deze hulptekst tonen\n\nNavigatie: Gebruik ⏮️ ◀️ ▶️ ⏭️ knoppen om te bladeren",
+  "box_status_help": "📦 /box_status Gebruik:\n\n/box_status - Actieve dozen (open, vol, besteld)\n/box_status <aanbieding_id> - Dozen voor specifieke aanbieding\n/box_status active - Actieve dozen\n/box_status ordered - Alleen bestelde dozen\n/box_status full - Alleen volle dozen\n/box_status delivered - Alleen geleverde dozen\n/box_status all - Alle dozen\n/box_status help - Deze hulptekst tonen\n\nNavigatie: Gebruik ⏮️ ◀️ ▶️ ⏭️ knoppen om te bladeren",
   "usage_audit_offer": "Gebruik: /audit_offer <aanbieding_id>",
   "audit_offer_match": "✅ Audit geslaagd: {units} eenheden in {boxes} colli komen overeen met actieve bestellingen voor aanbieding {offer_id}",
   "audit_excess_capacity": "⚠️ Audit verschil: {ordered} eenheden besteld vs {capacity} colli's capaciteit voor aanbieding {offer_id} ({excess} extra capaciteit)",

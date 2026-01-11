@@ -47,7 +47,7 @@ class BoxManagementHandler(OfferBaseHandler):
             return {'status': 'invalid_format'}
 
     def handle_box_status(self, chat_id: int, args: list = None) -> Dict[str, Any]:
-        """Handle /box_status command with pagination and optional status filter"""
+        """Handle /box_status command with pagination and optional status/offer filter"""
         # Handle None args for backward compatibility
         if args is None:
             args = []
@@ -55,6 +55,7 @@ class BoxManagementHandler(OfferBaseHandler):
         # Parse arguments
         page = 1
         status_filter = 'active'  # default
+        offer_filter = None
         
         if args:
             if args[0].lower() == 'help':
@@ -69,11 +70,28 @@ class BoxManagementHandler(OfferBaseHandler):
                         pass
             else:
                 try:
-                    page = int(args[0])
+                    # Try to parse as offer_id
+                    offer_filter = int(args[0])
+                    if len(args) > 1:
+                        try:
+                            page = int(args[1])
+                        except ValueError:
+                            pass
                 except ValueError:
-                    pass
+                    # Not an offer_id, try as page number
+                    try:
+                        page = int(args[0])
+                    except ValueError:
+                        pass
         
         offers = self.db.list_offers()
+        
+        # Filter by offer_id if specified
+        if offer_filter:
+            offers = [o for o in offers if o.offer_id == offer_filter]
+            if not offers:
+                self._send_message(chat_id, self._t('offer_not_found', chat_id))
+                return {'status': 'offer_not_found'}
         
         # Build list of offer-box combinations and filter by box status
         offer_boxes = []
@@ -129,7 +147,8 @@ class BoxManagementHandler(OfferBaseHandler):
         # Add pagination keyboard if needed
         keyboard = None
         if total_pages > 1:
-            keyboard = self._build_pagination_keyboard(page, total_pages, f"boxes_{status_filter}", enhanced=True)
+            filter_key = f"offer_{offer_filter}" if offer_filter else status_filter
+            keyboard = self._build_pagination_keyboard(page, total_pages, f"boxes_{filter_key}", enhanced=True)
         
         # Add finish labeling buttons for boxes with ready orders
         labeling_buttons = []

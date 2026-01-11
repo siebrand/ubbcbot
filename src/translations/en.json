@@ -462,7 +462,7 @@
   "box_status_header": "📦 Box Status ({status}) - Page {page}/{total_pages}:",
   "box_status_table_header": "Status  ID    Box ID    Offer Name            Price   Units",
   "box_status_table_separator": "------  ----  --------  --------------------  ------  -----",
-  "box_status_help": "📦 /box_status Usage:\n\n/box_status - Active boxes (open, full, ordered)\n/box_status active - Active boxes\n/box_status ordered - Ordered boxes only\n/box_status full - Full boxes only\n/box_status delivered - Delivered boxes only\n/box_status all - All boxes\n/box_status help - Show this help\n\nNavigation: Use ⏮️ ◀️ ▶️ ⏭️ buttons to browse pages",
+  "box_status_help": "📦 /box_status Usage:\n\n/box_status - Active boxes (open, full, ordered)\n/box_status <offer_id> - Boxes for specific offer\n/box_status active - Active boxes\n/box_status ordered - Ordered boxes only\n/box_status full - Full boxes only\n/box_status delivered - Delivered boxes only\n/box_status all - All boxes\n/box_status help - Show this help\n\nNavigation: Use ⏮️ ◀️ ▶️ ⏭️ buttons to browse pages",
   "usage_audit_offer": "Usage: /audit_offer <offer_id>",
   "audit_offer_match": "✅ Audit passed: {units} units in {boxes} boxes match active orders for offer {offer_id}",
   "audit_excess_capacity": "⚠️ Audit mismatch: {ordered} units ordered vs {capacity} box capacity for offer {offer_id} ({excess} excess capacity)",

@@ -221,8 +221,13 @@ class CallbackHandler:
                         status_filter = entity_type.split('_', 1)[1] if '_' in entity_type else 'active'
                         return self.handlers['supplier'].handle_list_suppliers(chat_id, page, status_filter)
                     elif entity_type == 'boxes' or entity_type.startswith('boxes_'):
-                        status_filter = entity_type.split('_', 1)[1] if '_' in entity_type else 'active'
-                        return self.handlers['offer'].handle_box_status(chat_id, [status_filter, str(page)])
+                        filter_part = entity_type.split('_', 1)[1] if '_' in entity_type else 'active'
+                        # Check if filter is offer_id (starts with 'offer_') or status
+                        if filter_part.startswith('offer_'):
+                            offer_id = filter_part.split('_', 1)[1]
+                            return self.handlers['offer'].handle_box_status(chat_id, [offer_id, str(page)])
+                        else:
+                            return self.handlers['offer'].handle_box_status(chat_id, [filter_part, str(page)])
                     elif entity_type == 'pending':
                         return self.handlers['user'].handle_pending_users(chat_id, page)
                     elif entity_type.startswith('customers_'):
