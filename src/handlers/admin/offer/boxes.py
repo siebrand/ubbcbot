@@ -93,6 +93,10 @@ class BoxManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('no_boxes_found', chat_id, status=status_filter))
             return {'status': 'no_boxes'}
         
+        # Sort: by offer_id, then by status priority (ordered > full > open), then by box_id
+        status_priority = {BoxStatus.ORDERED.value: 0, BoxStatus.FULL.value: 1, BoxStatus.OPEN.value: 2, BoxStatus.DELIVERED.value: 3}
+        offer_boxes.sort(key=lambda x: (x[0].offer_id, status_priority.get(x[1].status, 99), x[1].box_id))
+        
         # Paginate results
         page_items, total_pages = self._paginate_list(offer_boxes, page, 10)
         
