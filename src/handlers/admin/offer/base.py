@@ -12,9 +12,29 @@ class OfferBaseHandler(BaseHandler):
         """Validate offer name and return (is_valid, error_key)"""
         if len(name) > 100:
             return False, 'product_name_too_long'
-        if '<' in name or '>' in name:
+        return self._validate_html_content(name)
+    
+    def _validate_html_content(self, content: str) -> tuple[bool, str]:
+        """Validate HTML content to prevent parse errors. Returns (is_valid, error_key)"""
+        from html.parser import HTMLParser
+        
+        class TelegramHTMLValidator(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.valid = True
+                self.error = None
+            
+            def error(self, message):
+                self.valid = False
+                self.error = message
+        
+        validator = TelegramHTMLValidator()
+        try:
+            validator.feed(content)
+            validator.close()
+            return (True, '') if validator.valid else (False, 'product_name_invalid_chars')
+        except Exception:
             return False, 'product_name_invalid_chars'
-        return True, ''
     
     def _validate_box_size(self, box_size: int) -> bool:
         """Validate box size against allowed values"""

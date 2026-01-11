@@ -124,6 +124,12 @@ class OfferEditingHandler(OfferBaseHandler):
                 # Return to edit interface
                 return self.handlers['info'].handle_offer_details(chat_id, chat_id, [str(offer_id), 'edit'])
             
+            # Validate HTML in description
+            is_valid, error_key = self._validate_html_content(new_description)
+            if not is_valid:
+                self._send_message(chat_id, self._t(error_key))
+                return {'status': 'invalid_description'}
+            
             offer = self.db.get_offer(offer_id)
             if not offer:
                 self._send_message(chat_id, self._t('offer_not_found'))
