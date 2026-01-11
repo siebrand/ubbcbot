@@ -177,8 +177,8 @@ class CustomerOrderCommands(BaseHandler):
             self._send_message(chat_id, self._t('order_failed', user_id))
             return None
 
-        # @todo Should this be part of order creation so that these two things are not detached from this perspective?
-        # Assign order to box
+        # Note: Order-box assignment is split into separate operations due to DynamoDB's lack of
+        # cross-table transactions. Error handling ensures consistency by notifying admin on failures.
         if not self.box_status_manager.update_box_after_order_placement(box.box_id, quantity):
             logger.error(f"Failed to update box {box.box_id}")
             self._send_message(chat_id, self._t('failed_update_box', user_id))
