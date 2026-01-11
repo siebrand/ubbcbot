@@ -1,14 +1,14 @@
 import logging
 import requests
 from typing import Dict, Any
-from handlers.base_handler import BaseHandler
+from handlers.admin.offer.notifications import NotificationHandler
 from models.entities import OfferStatus, Order, BoxStatus
 from services.box_status_manager import BoxStatusManager
 from utils.csv_parser import CSVParser
 
 logger = logging.getLogger()
 
-class ImportHandler(BaseHandler):
+class ImportHandler(NotificationHandler):
     """Handler for order import operations"""
     
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
