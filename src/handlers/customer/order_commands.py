@@ -13,12 +13,22 @@ class CustomerOrderCommands(BaseHandler):
     
     def handle_order(self, chat_id: int, user_id: int, args: list, skip_duplicate_check: bool = False) -> Dict[str, Any]:
         """Handle /order command"""
-        # Validate and parse input
-        validation_result = self._validate_order_input(chat_id, user_id, args)
-        if validation_result['status'] != 'valid':
-            return validation_result
+        error = self._validate_args(args, 1, 'usage_order', chat_id)
+        if error:
+            return error
         
-        offer_id, quantity = validation_result['offer_id'], validation_result['quantity']
+        offer_id, error = self._parse_int_arg(args[0], 'invalid_format', chat_id)
+        if error:
+            return error
+        
+        quantity = 1
+        if len(args) > 1:
+            quantity, error = self._parse_int_arg(args[1], 'invalid_format', chat_id)
+            if error:
+                return error
+        
+        if quantity <= 0:
+            return self._send_error(chat_id, 'quantity_must_positive', 'invalid_quantity', user_id=user_id)
         
         # Get and validate offer and customer
         offer, customer = self._get_offer_and_customer(chat_id, user_id, offer_id)
@@ -37,11 +47,10 @@ class CustomerOrderCommands(BaseHandler):
 
     def handle_confirm_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_order command"""
-        if len(args) < 1:
-            self._send_message(chat_id, self._t('usage_confirm_order', user_id))
-            return {'status': 'invalid_args'}
+        error = self._validate_args(args, 1, 'usage_confirm_order', chat_id)
+        if error:
+            return error
         
-        # Reuse handle_order with skip_duplicate_check=True
         return self.handle_order(chat_id, user_id, args, skip_duplicate_check=True)
 
     def execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
@@ -72,25 +81,6 @@ class CustomerOrderCommands(BaseHandler):
             logger.error(f"Error in execute_order: {e}")
             self._send_message(chat_id, self._t('order_processing_failed', user_id))
             return {'status': 'error'}
-    
-    def _validate_order_input(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
-        """Validate order command input"""
-        if len(args) < 1:
-            self._send_message(chat_id, self._t('usage_order', user_id))
-            return {'status': 'invalid_args'}
-        
-        try:
-            offer_id = int(args[0])
-            quantity = int(args[1]) if len(args) > 1 else 1
-            
-            if quantity <= 0:
-                self._send_message(chat_id, self._t('quantity_must_positive', user_id))
-                return {'status': 'invalid_quantity'}
-            
-            return {'status': 'valid', 'offer_id': offer_id, 'quantity': quantity}
-        except ValueError:
-            self._send_message(chat_id, self._t('invalid_format', user_id))
-            return {'status': 'invalid_format'}
     
     def _get_offer_and_customer(self, chat_id: int, user_id: int, offer_id: int) -> tuple:
         """Get and validate offer and customer"""
@@ -186,7 +176,8 @@ class CustomerOrderCommands(BaseHandler):
         if not created_order:
             self._send_message(chat_id, self._t('order_failed', user_id))
             return None
-        
+
+        # @todo Should this be part of order creation so that these two things are not detached from this perspective?
         # Assign order to box
         if not self.box_status_manager.update_box_after_order_placement(box.box_id, quantity):
             logger.error(f"Failed to update box {box.box_id}")
