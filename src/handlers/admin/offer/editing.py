@@ -26,22 +26,16 @@ class OfferEditingHandler(OfferBaseHandler):
                 return {'status': 'offer_not_found'}
             
             if self.db.update_offer(offer_id, {'name': new_name}):
-                # Send confirmation and return to edit menu
+                # Send confirmation and return to edit interface
                 message = self._t('offer_name_updated',
                     old_name=offer.name,
                     new_name=new_name
                 )
+                self._send_message(chat_id, message)
                 
-                keyboard = {
-                    "inline_keyboard": [
-                        [{"text": self._t('continue_editing'), "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": self._t('view_details'), "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": self._t('done_editing'), "callback_data": "done_editing"}]
-                    ]
-                }
-                
-                self._send_message(chat_id, message, reply_markup=keyboard)
-                return {'status': 'success'}
+                # Return to edit interface
+                updated_offer = self.db.get_offer(offer_id)
+                return self.handlers['info'].handle_offer_details(chat_id, chat_id, [str(offer_id), 'edit'])
             else:
                 self._send_message(chat_id, self._t('failed_update_offer_name'))
                 return {'status': 'error'}
@@ -70,22 +64,15 @@ class OfferEditingHandler(OfferBaseHandler):
                 return {'status': 'offer_not_found'}
             
             if self.db.update_offer(offer_id, {'price_per_unit': Decimal(str(new_price))}):
-                # Send confirmation and return to edit menu
+                # Send confirmation and return to edit interface
                 message = self._t('offer_price_updated',
                     old_price=offer.price_per_unit,
                     new_price=new_price
                 )
+                self._send_message(chat_id, message)
                 
-                keyboard = {
-                    "inline_keyboard": [
-                        [{"text": self._t('continue_editing'), "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": self._t('view_details'), "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": self._t('done_editing'), "callback_data": "done_editing"}]
-                    ]
-                }
-                
-                self._send_message(chat_id, message, reply_markup=keyboard)
-                return {'status': 'success'}
+                # Return to edit interface
+                return self.handlers['info'].handle_offer_details(chat_id, chat_id, [str(offer_id), 'edit'])
             else:
                 self._send_message(chat_id, self._t('failed_update_offer_price'))
                 return {'status': 'error'}
@@ -105,18 +92,9 @@ class OfferEditingHandler(OfferBaseHandler):
             new_description = ' '.join(args[1:]).strip()
             
             if len(new_description) > 1000:
-                # Return to edit interface instead of exiting
                 self._send_message(chat_id, self._t('description_too_long'))
-                
-                # Show edit interface again
-                keyboard = {
-                    "inline_keyboard": [
-                        [{"text": self._t('continue_editing'), "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": self._t('done_editing'), "callback_data": "done_editing"}]
-                    ]
-                }
-                self._send_message(chat_id, self._t('select_edit', chat_id), reply_markup=keyboard)
-                return {'status': 'invalid_description'}
+                # Return to edit interface
+                return self.handlers['info'].handle_offer_details(chat_id, chat_id, [str(offer_id), 'edit'])
             
             offer = self.db.get_offer(offer_id)
             if not offer:
@@ -126,22 +104,15 @@ class OfferEditingHandler(OfferBaseHandler):
             if self.db.update_offer(offer_id, {'description': new_description}):
                 old_desc = offer.description or self._t('not_set')
                 
-                # Send confirmation with button to continue editing
+                # Send confirmation and return to edit interface
                 message = self._t('offer_description_updated',
                     old_desc=old_desc,
                     new_desc=new_description
                 )
+                self._send_message(chat_id, message)
                 
-                keyboard = {
-                    "inline_keyboard": [
-                        [{"text": self._t('continue_editing'), "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": self._t('view_details'), "callback_data": f"offer_details_{offer_id}"}],
-                        [{"text": self._t('done_editing'), "callback_data": "done_editing"}]
-                    ]
-                }
-                
-                self._send_message(chat_id, message, reply_markup=keyboard)
-                return {'status': 'success'}
+                # Return to edit interface
+                return self.handlers['info'].handle_offer_details(chat_id, chat_id, [str(offer_id), 'edit'])
             else:
                 self._send_message(chat_id, self._t('failed_update_offer_description'))
                 return {'status': 'error'}

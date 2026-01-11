@@ -93,6 +93,7 @@ class EditContextManager:
     
     def handle_offer_edit(self, chat_id: int, field: str, offer_id: str) -> Dict[str, Any]:
         """Handle offer edit callbacks with unified pattern"""
+        # @todo All hard coded placeholders need i18n!
         field_config = {
             'name': {
                 'context_type': 'offer_name',

@@ -14,8 +14,11 @@ class MediaHandler:
 
     def handle_media_group_image(self, chat_id: int, offer_id: str, message: Dict[str, Any]) -> Dict[str, Any]:
         """Handle image from media group (multiple images)"""
-        # For now, process each image immediately
-        return self.handle_offer_image_upload(chat_id, offer_id, message['photo'])
+        # Process image but suppress return_to_edit for media groups
+        result = self.handle_offer_image_upload(chat_id, offer_id, message['photo'])
+        result['return_to_edit'] = False  # Don't return to edit after each image in group
+        result['media_group'] = True  # Flag to indicate this is part of a group
+        return result
     
     def handle_offer_image_upload(self, chat_id: int, offer_id: str, photos: list) -> Dict[str, Any]:
         """Handle image upload for offer"""
@@ -53,19 +56,11 @@ class MediaHandler:
             current_images.append(image_url)
             
             if self.db.update_offer(offer_id_int, {'images': current_images}):
-                # Send confirmation with button to continue editing
+                # Send confirmation
                 message = base_handler._t('image_uploaded', count=len(current_images))
+                base_handler._send_message(chat_id, message)
                 
-                keyboard = {
-                    "inline_keyboard": [
-                        [{"text": base_handler._t('continue_editing'), "callback_data": f"offer_details_{offer_id_int}_edit"}],
-                        [{"text": base_handler._t('view_details'), "callback_data": f"offer_details_{offer_id_int}"}],
-                        [{"text": base_handler._t('done_editing'), "callback_data": "done_editing"}]
-                    ]
-                }
-                
-                base_handler._send_message(chat_id, message, reply_markup=keyboard)
-                return {'status': 'success'}
+                return {'status': 'success', 'return_to_edit': True, 'offer_id': offer_id_int}
             else:
                 base_handler._send_message(chat_id, base_handler._t('update_failed'))
                 return {'status': 'update_failed'}
@@ -101,7 +96,8 @@ class MediaHandler:
             # Update offer to remove images
             if self.db.update_offer(offer_id_int, {'images': []}):
                 base_handler._send_message(chat_id, base_handler._t('images_cleared', count=len(offer.images), offer_id=offer_id))
-                return {'status': 'success'}
+                # Return to edit interface
+                return {'status': 'success', 'return_to_edit': True, 'offer_id': offer_id_int}
             else:
                 base_handler._send_message(chat_id, base_handler._t('update_failed'))
                 return {'status': 'update_failed'}

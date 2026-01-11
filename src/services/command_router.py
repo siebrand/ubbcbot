@@ -224,8 +224,16 @@ class CommandRouter:
             # Check if user has any pending edit contexts
             context = self.db.get_edit_context_by_chat_id(chat_id)
             if context:
+                # Store context info before deleting
+                edit_type = context.edit_type
+                entity_id = context.entity_id
+                
                 # Delete the edit context
                 self.db.delete_edit_context(context.context_id)
+                
+                # If canceling image upload, return to edit interface
+                if edit_type == 'offer_image_upload':
+                    return self.handlers['info'].handle_offer_details(chat_id, user_id, [entity_id, 'edit'])
                 
                 # Use existing info handler instead of creating new BaseHandler
                 return self.handlers['info']._send_success(chat_id, 'operation_cancelled', 'cancelled')

@@ -203,11 +203,6 @@ class CallbackHandler:
                 customer_id = data.replace('user_status_select_', '')
                 return self.handlers['user'].handle_user_status_select(chat_id, customer_id)
 
-            elif data == 'done_editing':
-                from handlers.base_handler import BaseHandler
-                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, base_handler._t('done'))
-                return {'status': 'done'}
             elif data == 'cancel_action':
                 from handlers.base_handler import BaseHandler
                 base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -272,7 +267,11 @@ class CallbackHandler:
                 return {'status': 'awaiting_image'}
             elif data.startswith('clear_offer_images_'):
                 offer_id = data.split('_')[3]
-                return self.media_handler.handle_clear_offer_images(chat_id, offer_id)
+                result = self.media_handler.handle_clear_offer_images(chat_id, offer_id)
+                # Return to edit interface after clearing images
+                if result.get('return_to_edit'):
+                    return self.handlers['info'].handle_offer_details(chat_id, user_id, [str(result['offer_id']), 'edit'])
+                return result
             elif data.startswith('publish_offer_'):
                 offer_id = data.split('_')[2]
                 return self.handlers['offer'].handle_publish_offer(chat_id, [offer_id])

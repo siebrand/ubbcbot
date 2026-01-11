@@ -118,6 +118,9 @@ class BotService:
             'auth': self.auth_commands
         }
         
+        # Inject handlers into offer_commands for cross-handler calls
+        self.offer_commands.handlers = handlers
+        
         # Initialize services
         self.command_router = CommandRouter(self.db, self.admin_user_id, self.environment, handlers)
         self.media_handler = MediaHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -159,6 +162,7 @@ class BotService:
                 if context.edit_type == 'offer_image_upload' and 'photo' in message:
                     media_group_id = message.get('media_group_id')
                     if media_group_id:
+                        # Process media group images without returning to edit mode
                         return self.media_handler.handle_media_group_image(chat_id, context.entity_id, message)
                     else:
                         return self._handle_edit_reply(chat_id, user_id, text, message)
@@ -264,9 +268,6 @@ class BotService:
         if not context:
             return {'status': 'no_context'}
         
-        # Delete the context after use
-        self.db.delete_edit_context(context.context_id)
-        
         edit_type = context.edit_type
         entity_id = context.entity_id
         
@@ -275,7 +276,18 @@ class BotService:
         
         # Handle image upload for offers
         if edit_type == 'offer_image_upload' and message and 'photo' in message:
-            return self.media_handler.handle_offer_image_upload(chat_id, entity_id, message['photo'])
+            result = self.media_handler.handle_offer_image_upload(chat_id, entity_id, message['photo'])
+            logger.info(f"Image upload result: {result}")
+            # Return to edit interface after image upload and delete context
+            if result.get('return_to_edit'):
+                self.db.delete_edit_context(context.context_id)
+                logger.info(f"Returning to edit interface for offer {result['offer_id']}")
+                return self.info_commands.handle_offer_details(chat_id, user_id, [str(result['offer_id']), 'edit'])
+            # For media groups, keep context alive
+            return result
+        
+        # Delete the context after use for non-image uploads
+        self.db.delete_edit_context(context.context_id)
         
         if edit_type == 'supplier_name':
             return self.supplier_commands.handle_update_supplier_name(chat_id, [entity_id, text])
