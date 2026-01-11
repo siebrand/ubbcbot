@@ -99,6 +99,7 @@
   "order_processing_failed": "❌ Bestelling verwerking mislukt",
   "no_available_capacity": "❌ Geen beschikbare capaciteit - aanbieding is uitverkocht",
   "failed_update_box": "❌ Kon colli niet bijwerken",
+  "admin_box_update_failed": "⚠️ KRITIEK: Colli bijwerken mislukt\n\nColli ID: {box_id}\nKlant: {customer}\nAanbieding: {offer_name}\nAantal: {quantity}\n\nHandmatige interventie vereist.",
   "usage_update_user_first_name": "Gebruik: /update_user_first_name <klant_id> <nieuwe_voornaam>",
   "usage_update_user_last_name": "Gebruik: /update_user_last_name <klant_id> <nieuwe_achternaam>",
   "usage_add_guest": "Gebruik: /add_guest <voornaam> [achternaam] [contact]",

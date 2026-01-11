@@ -152,8 +152,14 @@ class CustomerOrderCommands(BaseHandler):
             # Assign order to the suitable box
             if not self.box_status_manager.update_box_after_order_placement(suitable_box.box_id, quantity):
                 logger.error(f"Failed to update box {suitable_box.box_id}")
-                # @todo Should this error maybe (also) be sent to admin with more details?
                 self._send_message(chat_id, self._t('failed_update_box', user_id))
+                # Notify admin of critical box update failure
+                self._send_message(self.admin_user_id, self._t('admin_box_update_failed', 
+                    box_id=suitable_box.box_id, 
+                    customer=f"{customer.first_name} {customer.last_name or ''}".strip(),
+                    offer_name=offer.name,
+                    quantity=quantity
+                ))
                 return {'status': 'error'}
             
             # Update order with box_id and status

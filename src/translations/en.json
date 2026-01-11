@@ -99,6 +99,7 @@
   "order_processing_failed": "❌ Order processing failed",
   "no_available_capacity": "❌ No available capacity - offer is sold out",
   "failed_update_box": "❌ Failed to update box",
+  "admin_box_update_failed": "⚠️ CRITICAL: Box update failed\n\nBox ID: {box_id}\nCustomer: {customer}\nOffer: {offer_name}\nQuantity: {quantity}\n\nManual intervention required.",
   "usage_update_user_first_name": "Usage: /update_user_first_name <customer_id> <new_first_name>",
   "usage_update_user_last_name": "Usage: /update_user_last_name <customer_id> <new_last_name>",
   "usage_add_guest": "Usage: /add_guest <first_name> [last_name] [contact]",
