@@ -6,7 +6,7 @@ logger = logging.getLogger()
 class OfferBaseHandler(BaseHandler):
     """Base class for offer-related handlers with common utilities"""
     
-    VALID_BOX_SIZES = [1, 2, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24]
+    VALID_BOX_SIZES = [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24]
     
     def _validate_offer_name(self, name: str) -> tuple[bool, str]:
         """Validate offer name and return (is_valid, error_key)"""
