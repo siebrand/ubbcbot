@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from models.entities import BoxStatus, OfferStatus
+from models.entities import Box, BoxStatus, OfferStatus
 
 logger = logging.getLogger()
 
@@ -54,7 +54,7 @@ class BoxStatusManager:
                     updated_boxes.append(box)
         return updated_boxes
     
-    def mark_box_as_delivered(self, box_id: str) -> Optional['Box']:
+    def mark_box_as_delivered(self, box_id: str) -> Optional[Box]:
         """Mark box as DELIVERED, returns updated box object or None"""
         if self.db.update_box(box_id, {'status': BoxStatus.DELIVERED.value}):
             return self.db.get_box(box_id)

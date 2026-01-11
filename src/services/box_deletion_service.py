@@ -1,6 +1,4 @@
 import logging
-from typing import List
-from models.entities import Box
 
 logger = logging.getLogger()
 
