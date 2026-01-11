@@ -240,8 +240,13 @@ class ImportHandler(BaseHandler):
             return self._send_error(chat_id, 'finalize_import_wrong_status', 'wrong_status',
                                   status=offer.status)
         
-        # Check if sold out
+        # Mark all boxes as ORDERED
         boxes = self.db.get_boxes_by_offer(offer.offer_id)
+        if boxes:
+            box_ids = [b.box_id for b in boxes]
+            self.box_status_manager.mark_boxes_as_ordered(box_ids)
+        
+        # Check if sold out
         all_full = all(b.status == BoxStatus.FULL.value for b in boxes) if boxes else False
         
         if all_full and boxes:
