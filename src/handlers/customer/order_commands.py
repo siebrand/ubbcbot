@@ -1,6 +1,5 @@
 import logging
 from typing import Dict, Any
-from decimal import Decimal
 from handlers.base_handler import BaseHandler
 from models.entities import Order, Box, BoxStatus, OfferStatus
 from services.box_status_manager import BoxStatusManager
@@ -205,7 +204,6 @@ class CustomerOrderCommands(BaseHandler):
         try:
             group_id = os.environ.get('DEFAULT_GROUP_ID')
             if not group_id:
-                box_size = offer.wholesale_box_size
                 return False
             
             bot_username = self._get_bot_username()
