@@ -13,74 +13,27 @@ class CustomerOrderCommands(BaseHandler):
     
     def handle_order(self, chat_id: int, user_id: int, args: list, skip_duplicate_check: bool = False) -> Dict[str, Any]:
         """Handle /order command"""
-        if len(args) < 1:
-            self._send_message(chat_id, self._t('usage_order', user_id))
-            return {'status': 'invalid_args'}
-
-        try:
-            offer_id = int(args[0])
-            quantity = int(args[1]) if len(args) > 1 else 1
-
-            if quantity <= 0:
-                self._send_message(chat_id, self._t('quantity_must_positive', user_id))
-                return {'status': 'invalid_quantity'}
-
-            # Get offer
-            offer = self.db.get_offer(offer_id)
-            if not offer:
-                self._send_message(chat_id, self._t('offer_not_found', user_id))
-                return {'status': 'offer_not_found'}
-            
-            if offer.status == OfferStatus.SOLD_OUT.value:
-                self._send_message(chat_id, self._t('offer_sold_out_named', user_id, offer_name=offer.name))
-                return {'status': 'sold_out'}
-            
-            if offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, self._t('offer_not_found', user_id))
-                return {'status': 'offer_not_found'}
-
-            # Get customer
-            customer = self.db.get_customer_by_telegram_id(user_id)
-            if not customer:
-                self._send_message(chat_id, self._t('customer_not_found', user_id))
-                return {'status': 'customer_not_found'}
-
-            # Check for existing orders and enforce 5-unit limit BEFORE creating boxes
-            valid, limit_message = self.validator.validate_order_limit(customer.customer_id, offer_id, quantity)
-            if not valid:
-                self._send_message(chat_id, limit_message)
-                return {'status': 'limit_exceeded'}
-
-            # Check for existing orders for duplicate confirmation
-            if not skip_duplicate_check:
-                existing_orders = self.db.get_orders_by_customer_and_offer(customer.customer_id, offer_id)
-                if existing_orders:
-                    message = self._t('duplicate_order_warning', user_id, offer_name=offer.name)
-                    message += "\n\n"
-                    for order in existing_orders:
-                        from utils.timezone import to_cet_string
-                        order_date = to_cet_string(order.created_at, '%Y-%m-%d')
-                        message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
-                    
-                    message += self._t('confirm_additional_order', user_id, quantity=quantity)
-                    
-                    # Create inline keyboard with Confirm and Cancel buttons
-                    keyboard = {
-                        "inline_keyboard": [[
-                            {"text": self._t('confirm', user_id), "callback_data": f"confirm_order_{offer_id}_{quantity}"},
-                            {"text": self._t('cancel', user_id), "callback_data": "cancel_confirmation"}
-                        ]]
-                    }
-                    
-                    self._send_message(chat_id, message, reply_markup=keyboard)
-                    return {'status': 'confirmation_required'}
-
-            # Execute the order
-            return self.execute_order(chat_id, user_id, offer_id, quantity, offer, customer)
-
-        except ValueError:
-            self._send_message(chat_id, self._t('invalid_format', user_id))
-            return {'status': 'invalid_format'}
+        # Validate and parse input
+        validation_result = self._validate_order_input(chat_id, user_id, args)
+        if validation_result['status'] != 'valid':
+            return validation_result
+        
+        offer_id, quantity = validation_result['offer_id'], validation_result['quantity']
+        
+        # Get and validate offer and customer
+        offer, customer = self._get_offer_and_customer(chat_id, user_id, offer_id)
+        if not offer or not customer:
+            return {'status': 'validation_failed'}
+        
+        # Check order limits
+        if not self._check_order_limits(chat_id, customer.customer_id, offer_id, quantity):
+            return {'status': 'limit_exceeded'}
+        
+        # Check for duplicates
+        if not skip_duplicate_check and self._has_duplicate_orders(chat_id, user_id, customer.customer_id, offer_id, quantity, offer.name):
+            return {'status': 'confirmation_required'}
+        
+        return self.execute_order(chat_id, user_id, offer_id, quantity, offer, customer)
 
     def handle_confirm_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_order command"""
@@ -94,99 +47,176 @@ class CustomerOrderCommands(BaseHandler):
     def execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
         """Execute order placement"""
         try:
-            box_size = offer.wholesale_box_size
-
-            # Validate order quantity doesn't exceed box size
-            if quantity > box_size:
-                self._send_message(chat_id, self._t('quantity_exceeds_box_size', user_id, quantity=quantity, box_size=box_size))
+            # Validate quantity
+            if quantity > offer.wholesale_box_size:
+                self._send_message(chat_id, self._t('quantity_exceeds_box_size', user_id, quantity=quantity, box_size=offer.wholesale_box_size))
                 return {'status': 'quantity_too_large'}
             
-            # ATOMIC CAPACITY CHECK: Find a box that can fit the entire order
-            boxes = self.db.get_boxes_by_offer(offer_id)
-            suitable_box = None
-            
-            # Look for existing box that can fit the entire order
-            for box in boxes:
-                if box.status in [BoxStatus.OPEN.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
-                    available_space = box.max_capacity - box.current_quantity
-                    if available_space >= quantity:
-                        suitable_box = box
-                        break
-            
-            # If no suitable box found, create a new one (if allowed)
+            # Find or create suitable box
+            suitable_box = self._find_or_create_box(chat_id, user_id, offer_id, quantity, offer)
             if not suitable_box:
-                has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes) if boxes else False
-                
-                if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes:
-                    # Create new box
-                    new_box = Box(
-                        offer_id=offer_id,
-                        max_capacity=box_size
-                    )
-                    suitable_box = self.db.create_box(new_box)
-                    if not suitable_box:
-                        self._send_message(chat_id, self._t('order_processing_failed', user_id))
-                        return {'status': 'error'}
-                else:
-                    # Cannot create boxes - reject order
-                    self._send_message(chat_id, self._t('order_too_large_for_remaining_space', user_id))
-                    return {'status': 'insufficient_space'}
-
-            # Create single order
-            order = Order(
-                customer_id=customer.customer_id,
-                box_id="",  # Will be set when assigning to boxes
-                offer_id=offer_id,
-                quantity=quantity,
-                unit_price=offer.price_per_unit,
-                total_price=offer.price_per_unit * quantity,
-                placed_by_admin=placed_by_admin
-            )
-
-            created_order = self.db.create_order(order)
-            if not created_order:
-                self._send_message(chat_id, self._t('order_failed', user_id))
+                return {'status': 'insufficient_space'}
+            
+            # Create and assign order
+            order = self._create_and_assign_order(chat_id, user_id, customer, offer, suitable_box, quantity, placed_by_admin)
+            if not order:
                 return {'status': 'error'}
             
-            # Assign order to the suitable box
-            if not self.box_status_manager.update_box_after_order_placement(suitable_box.box_id, quantity):
-                logger.error(f"Failed to update box {suitable_box.box_id}")
-                self._send_message(chat_id, self._t('failed_update_box', user_id))
-                # Notify admin of critical box update failure
-                self._send_message(self.admin_user_id, self._t('admin_box_update_failed', 
-                    box_id=suitable_box.box_id, 
-                    customer=f"{customer.first_name} {customer.last_name or ''}".strip(),
-                    offer_name=offer.name,
-                    quantity=quantity
-                ))
-                return {'status': 'error'}
-            
-            # Update order with box_id and status
-            final_status = 'ordered' if suitable_box.status == BoxStatus.ORDERED.value else 'pending'
-            self.db.update_order(order.order_id, {'box_id': suitable_box.box_id, 'status': final_status})
-            order.status = final_status
-
-            # Check if offer should be marked as sold out
+            # Update offer status and send notifications
             self.box_status_manager.update_offer_status_after_change(offer_id)
+            self._send_order_confirmation(chat_id, user_id, order, offer, quantity, placed_by_admin, customer)
             
-            # Send confirmation message - always single box now
-            self._send_message(chat_id, self._t('order_placed_single', user_id,
-                order_id=order.order_id,
-                product=offer.name,
-                quantity=quantity,
-                total=float(order.total_price),
-                status=order.status))
-            
-            # Send notification to default channel for all successful orders (not just private chats)
-            if not placed_by_admin:  # Don't notify for admin orders
-                notification_result = self._notify_channel_order(customer, offer, quantity)
-
             return {'status': 'success'}
             
         except Exception as e:
             logger.error(f"Error in execute_order: {e}")
             self._send_message(chat_id, self._t('order_processing_failed', user_id))
             return {'status': 'error'}
+    
+    def _validate_order_input(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
+        """Validate order command input"""
+        if len(args) < 1:
+            self._send_message(chat_id, self._t('usage_order', user_id))
+            return {'status': 'invalid_args'}
+        
+        try:
+            offer_id = int(args[0])
+            quantity = int(args[1]) if len(args) > 1 else 1
+            
+            if quantity <= 0:
+                self._send_message(chat_id, self._t('quantity_must_positive', user_id))
+                return {'status': 'invalid_quantity'}
+            
+            return {'status': 'valid', 'offer_id': offer_id, 'quantity': quantity}
+        except ValueError:
+            self._send_message(chat_id, self._t('invalid_format', user_id))
+            return {'status': 'invalid_format'}
+    
+    def _get_offer_and_customer(self, chat_id: int, user_id: int, offer_id: int) -> tuple:
+        """Get and validate offer and customer"""
+        offer = self.db.get_offer(offer_id)
+        if not offer:
+            self._send_message(chat_id, self._t('offer_not_found', user_id))
+            return None, None
+        
+        if offer.status == OfferStatus.SOLD_OUT.value:
+            self._send_message(chat_id, self._t('offer_sold_out_named', user_id, offer_name=offer.name))
+            return None, None
+        
+        if offer.status != OfferStatus.ACTIVE.value:
+            self._send_message(chat_id, self._t('offer_not_found', user_id))
+            return None, None
+        
+        customer = self.db.get_customer_by_telegram_id(user_id)
+        if not customer:
+            self._send_message(chat_id, self._t('customer_not_found', user_id))
+            return None, None
+        
+        return offer, customer
+    
+    def _check_order_limits(self, chat_id: int, customer_id: str, offer_id: int, quantity: int) -> bool:
+        """Check if order is within limits"""
+        valid, limit_message = self.validator.validate_order_limit(customer_id, offer_id, quantity)
+        if not valid:
+            self._send_message(chat_id, limit_message)
+        return valid
+    
+    def _has_duplicate_orders(self, chat_id: int, user_id: int, customer_id: str, offer_id: int, quantity: int, offer_name: str) -> bool:
+        """Check for duplicate orders and prompt confirmation"""
+        existing_orders = self.db.get_orders_by_customer_and_offer(customer_id, offer_id)
+        if not existing_orders:
+            return False
+        
+        from utils.timezone import to_cet_string
+        message = self._t('duplicate_order_warning', user_id, offer_name=offer_name)
+        message += "\n\n"
+        for order in existing_orders:
+            order_date = to_cet_string(order.created_at, '%Y-%m-%d')
+            message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
+        
+        message += self._t('confirm_additional_order', user_id, quantity=quantity)
+        
+        keyboard = {
+            "inline_keyboard": [[
+                {"text": self._t('confirm', user_id), "callback_data": f"confirm_order_{offer_id}_{quantity}"},
+                {"text": self._t('cancel', user_id), "callback_data": "cancel_confirmation"}
+            ]]
+        }
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return True
+    
+    def _find_or_create_box(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer) -> Box:
+        """Find existing box with space or create new one"""
+        boxes = self.db.get_boxes_by_offer(offer_id)
+        
+        # Try to find existing box
+        for box in boxes:
+            if box.status in [BoxStatus.OPEN.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
+                available_space = box.max_capacity - box.current_quantity
+                if available_space >= quantity:
+                    return box
+        
+        # Create new box if allowed
+        has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes) if boxes else False
+        
+        if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes:
+            new_box = Box(offer_id=offer_id, max_capacity=offer.wholesale_box_size)
+            suitable_box = self.db.create_box(new_box)
+            if not suitable_box:
+                self._send_message(chat_id, self._t('order_processing_failed', user_id))
+            return suitable_box
+        else:
+            self._send_message(chat_id, self._t('order_too_large_for_remaining_space', user_id))
+            return None
+    
+    def _create_and_assign_order(self, chat_id: int, user_id: int, customer, offer, box, quantity: int, placed_by_admin: bool) -> Order:
+        """Create order and assign to box"""
+        order = Order(
+            customer_id=customer.customer_id,
+            box_id="",
+            offer_id=offer.offer_id,
+            quantity=quantity,
+            unit_price=offer.price_per_unit,
+            total_price=offer.price_per_unit * quantity,
+            placed_by_admin=placed_by_admin
+        )
+        
+        created_order = self.db.create_order(order)
+        if not created_order:
+            self._send_message(chat_id, self._t('order_failed', user_id))
+            return None
+        
+        # Assign order to box
+        if not self.box_status_manager.update_box_after_order_placement(box.box_id, quantity):
+            logger.error(f"Failed to update box {box.box_id}")
+            self._send_message(chat_id, self._t('failed_update_box', user_id))
+            self._send_message(self.admin_user_id, self._t('admin_box_update_failed', 
+                box_id=box.box_id, 
+                customer=f"{customer.first_name} {customer.last_name or ''}".strip(),
+                offer_name=offer.name,
+                quantity=quantity
+            ))
+            return None
+        
+        # Update order with box_id and status
+        final_status = 'ordered' if box.status == BoxStatus.ORDERED.value else 'pending'
+        self.db.update_order(created_order.order_id, {'box_id': box.box_id, 'status': final_status})
+        created_order.status = final_status
+        
+        return created_order
+    
+    def _send_order_confirmation(self, chat_id: int, user_id: int, order, offer, quantity: int, placed_by_admin: bool, customer):
+        """Send order confirmation and notifications"""
+        self._send_message(chat_id, self._t('order_placed_single', user_id,
+            order_id=order.order_id,
+            product=offer.name,
+            quantity=quantity,
+            total=float(order.total_price),
+            status=order.status))
+        
+        if not placed_by_admin:
+            self._notify_channel_order(customer, offer, quantity)
     
     def _get_public_name(self, customer):
         """Get customer's public display name (Firstname L)"""
