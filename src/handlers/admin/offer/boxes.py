@@ -57,7 +57,10 @@ class BoxManagementHandler(OfferBaseHandler):
         status_filter = 'active'  # default
         
         if args:
-            if args[0].lower() in ['active', 'ordered', 'full', 'delivered', 'all']:
+            if args[0].lower() == 'help':
+                self._send_message(chat_id, self._t('box_status_help', chat_id))
+                return {'status': 'success'}
+            elif args[0].lower() in ['active', 'ordered', 'full', 'delivered', 'all']:
                 status_filter = args[0].lower()
                 if len(args) > 1:
                     try:
@@ -126,7 +129,7 @@ class BoxManagementHandler(OfferBaseHandler):
         # Add pagination keyboard if needed
         keyboard = None
         if total_pages > 1:
-            keyboard = self._build_pagination_keyboard(page, total_pages, "boxes", enhanced=True)
+            keyboard = self._build_pagination_keyboard(page, total_pages, f"boxes_{status_filter}", enhanced=True)
         
         # Add finish labeling buttons for boxes with ready orders
         labeling_buttons = []
