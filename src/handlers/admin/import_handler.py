@@ -289,6 +289,9 @@ class ImportHandler(NotificationHandler):
             self._send_message(chat_id, self._t('no_import_offers'))
             return {'status': 'no_offers'}
         
+        # Sort by offer_id
+        import_offers.sort(key=lambda x: x.offer_id)
+        
         message = self._t('select_offer_finalize_import') + "\n\n"
         keyboard_buttons = []
         
