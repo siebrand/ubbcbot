@@ -223,6 +223,10 @@ class ImportHandler(BaseHandler):
     
     def handle_finalize_import(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /finalize_import command"""
+        # If no args, show list of IMPORT offers
+        if not args:
+            return self._show_import_offers_selection(chat_id)
+        
         error = self._validate_args(args, 1, 'usage_finalize_import', chat_id)
         if error:
             return error
@@ -267,3 +271,32 @@ class ImportHandler(BaseHandler):
         
         # Send to subscribers
         self._notify_subscribers_rich(offer)
+    
+    def _show_import_offers_selection(self, chat_id: int) -> Dict[str, Any]:
+        """Show offers with IMPORT status for finalization"""
+        offers = self.db.list_offers()
+        import_offers = [o for o in offers if o.status == OfferStatus.IMPORT.value]
+        
+        if not import_offers:
+            self._send_message(chat_id, self._t('no_import_offers'))
+            return {'status': 'no_offers'}
+        
+        message = self._t('select_offer_finalize_import') + "\n\n"
+        keyboard_buttons = []
+        
+        for offer in import_offers:
+            # Get order count
+            orders = self.db.get_orders_by_offer(offer.offer_id)
+            order_count = len([o for o in orders if o.status == 'pending'])
+            
+            message += f"🍺 {offer.offer_id}. {offer.name} ({order_count} orders)\n"
+            keyboard_buttons.append([{
+                "text": f"{offer.offer_id}. {offer.name}",
+                "callback_data": f"finalize_import_{offer.offer_id}"
+            }])
+        
+        keyboard_buttons.append([{"text": self._t('cancel'), "callback_data": "cancel_action"}])
+        keyboard = {"inline_keyboard": keyboard_buttons}
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}

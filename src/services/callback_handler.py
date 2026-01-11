@@ -267,6 +267,9 @@ class CallbackHandler:
                 return self.handlers['offer'].handle_publish_offer(chat_id, [offer_id])
             
             # Audit offer callbacks
+            elif data.startswith('finalize_import_'):
+                offer_id = data.split('_')[2]
+                return self.handlers['import'].handle_finalize_import(chat_id, [offer_id])
             elif data.startswith('offer_orders_page_'):
                 page = int(data.split('_')[3])
                 return self.handlers['admin_order'].handle_offer_orders_page(chat_id, page)
@@ -536,7 +539,7 @@ class CallbackHandler:
             'cmd_delete_old_cancelled': lambda: self.handlers['admin_order'].handle_delete_cancelled(chat_id),
             'cmd_audit_orders': lambda: self.handlers['admin_order'].handle_audit_orders(chat_id),
             'cmd_import_orders': lambda: self.handlers['import'].handle_import_orders(chat_id, user_id),
-            'cmd_finalize_import': lambda: self._send_usage_message(chat_id, 'usage_finalize_import'),
+            'cmd_finalize_import': lambda: self.handlers['import'].handle_finalize_import(chat_id, []),
             'add_supplier_start': lambda: self._start_add_supplier(chat_id)
         }
         

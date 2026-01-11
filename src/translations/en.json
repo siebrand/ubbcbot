@@ -575,5 +575,7 @@
   "usage_finalize_import": "Usage: /finalize_import <offer_id>",
   "finalize_import_wrong_status": "❌ Offer must have IMPORT status (current: {status})",
   "finalize_import_sold_out": "✅ Offer {offer_id} '{name}' finalized as SOLD OUT (no announcements)",
-  "finalize_import_active": "✅ Offer {offer_id} '{name}' finalized as ACTIVE and announced"
+  "finalize_import_active": "✅ Offer {offer_id} '{name}' finalized as ACTIVE and announced",
+  "no_import_offers": "❌ No offers with IMPORT status found",
+  "select_offer_finalize_import": "📥 Select offer to finalize import:"
 }

@@ -575,5 +575,7 @@
   "usage_finalize_import": "Gebruik: /finalize_import <aanbieding_id>",
   "finalize_import_wrong_status": "❌ Aanbieding moet IMPORT status hebben (huidige: {status})",
   "finalize_import_sold_out": "✅ Aanbieding {offer_id} '{name}' afgerond als UITVERKOCHT (geen aankondigingen)",
-  "finalize_import_active": "✅ Aanbieding {offer_id} '{name}' afgerond als ACTIEF en aangekondigd"
+  "finalize_import_active": "✅ Aanbieding {offer_id} '{name}' afgerond als ACTIEF en aangekondigd",
+  "no_import_offers": "❌ Geen aanbiedingen met IMPORT status gevonden",
+  "select_offer_finalize_import": "📥 Selecteer aanbieding om import af te ronden:"
 }

@@ -28,6 +28,7 @@ class TestImportHandler(unittest.TestCase):
         user_id = self.admin_user_id
         
         self.db.get_edit_context_by_chat_id.return_value = None
+        self.db.cleanup_old_edit_contexts.return_value = 0
         
         with patch.object(self.handler, '_send_message') as mock_send:
             result = self.handler.handle_import_orders(chat_id, user_id)
