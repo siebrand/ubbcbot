@@ -144,6 +144,12 @@ class CommandRouter:
                 return self.handlers['offer'].handle_update_offer_price(admin_target_chat, parts[1:])
             elif command == '/update_offer_description':
                 return self.handlers['offer'].handle_update_offer_description(admin_target_chat, parts[1:])
+            elif command == '/offer_status':
+                return self.handlers['offer'].handle_offer_status(admin_target_chat, parts[1:])
+            elif command == '/import_orders':
+                return self.handlers['import'].handle_import_orders(admin_target_chat, user_id)
+            elif command == '/finalize_import':
+                return self.handlers['import'].handle_finalize_import(admin_target_chat, parts[1:])
             elif command == '/publish_offer':
                 return self.handlers['offer'].handle_publish_offer(admin_target_chat, parts[1:])
             elif command == '/preview_offer':

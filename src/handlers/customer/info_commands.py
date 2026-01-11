@@ -257,15 +257,20 @@ class InfoCommands(BaseHandler):
             show_completed = filter_arg == 'completed'
             show_inactive = filter_arg == 'inactive'
             show_archived = filter_arg == 'archived'
+            show_import = filter_arg == 'import'
             
-            # Default: show draft + active only
-            if not filter_arg or filter_arg not in ['all', 'draft', 'active', 'completed', 'inactive', 'archived']:
-                show_draft = show_active = True
+            # Default: show draft + import + active only
+            if not filter_arg or filter_arg not in ['all', 'draft', 'active', 'completed', 'inactive', 'archived', 'import']:
+                show_draft = show_import = show_active = True
             
             # Group by status
-            draft_offers = [o for o in offers if o.status == OfferStatus.DRAFT.value]
-            active_offers = [o for o in offers if o.status == OfferStatus.ACTIVE.value]
-            other_offers = [o for o in offers if o.status not in [OfferStatus.DRAFT.value, OfferStatus.ACTIVE.value]]
+            offers_by_status = {}
+            for offer in offers:
+                offers_by_status.setdefault(offer.status, []).append(offer)
+            
+            draft_offers = offers_by_status.get(OfferStatus.DRAFT.value, [])
+            active_offers = offers_by_status.get(OfferStatus.ACTIVE.value, [])
+            import_offers = offers_by_status.get(OfferStatus.IMPORT.value, [])
             
             # Build title based on filter
             if show_all:
@@ -274,6 +279,8 @@ class InfoCommands(BaseHandler):
                 message += self._t('draft_offers_only', user_id) + "\n\n"
             elif show_active:
                 message += self._t('active_offers_only', user_id) + "\n\n"
+            elif show_import:
+                message += self._t('import_offers_only', user_id) + "\n\n"
             elif show_archived:
                 message += self._t('archived_offers', user_id) + "\n\n"
             else:
@@ -285,6 +292,15 @@ class InfoCommands(BaseHandler):
                     message += self._t('draft_offers') + "\n"
                 for offer in draft_offers:
                     message += self._format_offer_line(offer, "📝", user_id, is_draft=True)
+                message += "\n"
+            
+            # Show import offers
+            if import_offers and (show_all or show_import or (not filter_arg)):
+                if show_all or not filter_arg:
+                    message += self._t('import_offers') + "\n"
+                for offer in import_offers:
+                    total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id, boxes_by_offer, orders_by_offer)
+                    message += self._format_offer_line(offer, "📥", user_id, total_ordered, total_capacity)
                 message += "\n"
             
             # Show active offers
@@ -305,11 +321,11 @@ class InfoCommands(BaseHandler):
                 message += "\n"
             
             # Show other status offers
-            if other_offers and (show_all or show_completed or show_inactive or show_archived):
+            if show_all or show_completed or show_inactive or show_archived:
                 status_order = [OfferStatus.SOLD_OUT.value, OfferStatus.COMPLETED.value, OfferStatus.INACTIVE.value]
                 
                 for status in status_order:
-                    status_offers = [o for o in other_offers if o.status == status]
+                    status_offers = offers_by_status.get(status, [])
                     if not status_offers:
                         continue
                     

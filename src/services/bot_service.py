@@ -18,6 +18,7 @@ from handlers.admin.wholesale_delivery_commands import WholesaleDeliveryCommands
 from handlers.admin.labeling_commands import LabelingCommands
 from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
 from handlers.admin.admin_commands import AdminCommandsHandler
+from handlers.admin.import_handler import ImportHandler
 from handlers.customer.order_commands import CustomerOrderCommands
 from handlers.customer.info_commands import InfoCommands
 from handlers.customer.auth_commands import AuthCommands
@@ -91,6 +92,7 @@ class BotService:
         self.labeling_commands = LabelingCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.delivery_overview_handler = DeliveryOverviewHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.admin_commands_handler = AdminCommandsHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        self.import_handler = ImportHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         # Customer handlers
         self.customer_order_commands = CustomerOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
@@ -112,6 +114,7 @@ class BotService:
             'labeling': self.labeling_commands,
             'delivery_overview': self.delivery_overview_handler,
             'admin_commands': self.admin_commands_handler,
+            'import': self.import_handler,
             'changelog': self.changelog_commands,
             'customer_order': self.customer_order_commands,
             'info': self.info_commands,
@@ -149,6 +152,15 @@ class BotService:
 
             # Register customer if not exists
             self._register_customer_if_needed(message['from'])
+            
+            # Handle document uploads for import
+            if 'document' in message and user_id == self.admin_user_id:
+                logger.info(f"Document upload detected: file_id={message['document']['file_id']}, file_name={message['document'].get('file_name', 'unknown')}")
+                file_id = message['document']['file_id']
+                file_name = message['document'].get('file_name', 'unknown')
+                result = self.import_handler.handle_document_upload(chat_id, user_id, file_id, file_name)
+                logger.info(f"Document upload result: {result}")
+                return result
 
             # Handle commands
             if text.startswith('/'):

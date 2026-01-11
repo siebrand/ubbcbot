@@ -7,6 +7,7 @@ import uuid
 
 class OfferStatus(Enum):
     DRAFT = "draft"
+    IMPORT = "import"
     ACTIVE = "active"
     ORDERED = "ordered"
     SOLD_OUT = "sold_out"

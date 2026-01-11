@@ -487,6 +487,8 @@ class CallbackHandler:
             return self.handlers['admin_commands'].handle_admin_delivery(chat_id, user_id)
         elif data == 'admin_discounts':
             return self.handlers['admin_commands'].handle_admin_discounts(chat_id, user_id)
+        elif data == 'admin_import':
+            return self.handlers['admin_commands'].handle_admin_import(chat_id, user_id)
         elif data == 'admin_system':
             return self.handlers['admin_commands'].handle_admin_system(chat_id, user_id)
         
@@ -533,6 +535,8 @@ class CallbackHandler:
             'cmd_failed_notifications': lambda: self.handlers['admin_order'].handle_failed_notifications(chat_id, []),
             'cmd_delete_old_cancelled': lambda: self.handlers['admin_order'].handle_delete_cancelled(chat_id),
             'cmd_audit_orders': lambda: self.handlers['admin_order'].handle_audit_orders(chat_id),
+            'cmd_import_orders': lambda: self.handlers['import'].handle_import_orders(chat_id, user_id),
+            'cmd_finalize_import': lambda: self._send_usage_message(chat_id, 'usage_finalize_import'),
             'add_supplier_start': lambda: self._start_add_supplier(chat_id)
         }
         

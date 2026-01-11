@@ -1,9 +1,37 @@
 from typing import Dict, Any
 from decimal import Decimal
+from models.entities import OfferStatus
 from .base import OfferBaseHandler
 
 class OfferEditingHandler(OfferBaseHandler):
     """Handler for offer editing operations"""
+    
+    def handle_offer_status(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /offer_status command - change offer status to IMPORT"""
+        if len(args) < 2:
+            self._send_message(chat_id, self._t('usage_offer_status'))
+            return {'status': 'invalid_args'}
+        
+        offer, error = self._validate_and_get_offer(args, chat_id)
+        if error:
+            return error
+        
+        new_status = args[1].lower()
+        
+        # Only allow DRAFT -> IMPORT transition
+        if new_status == 'import':
+            if offer.status != OfferStatus.DRAFT.value:
+                return self._send_error(chat_id, 'offer_status_must_be_draft', 'wrong_status',
+                                      current_status=offer.status)
+            
+            if self.db.update_offer(offer.offer_id, {'status': OfferStatus.IMPORT.value}):
+                return self._send_success(chat_id, 'offer_status_changed_import', 'success',
+                                        offer_id=offer.offer_id, name=offer.name)
+            else:
+                return self._send_error(chat_id, 'failed_update_offer_status', 'error')
+        else:
+            return self._send_error(chat_id, 'invalid_offer_status', 'invalid_status',
+                                  status=new_status)
     
     def handle_update_offer_name(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /update_offer_name command"""

@@ -30,6 +30,10 @@ class AdminCommandsHandler(BaseHandler):
                     {"text": self._t('admin_delivery', user_id), "callback_data": "admin_delivery"},
                     {"text": self._t('admin_discounts', user_id), "callback_data": "admin_discounts"}
                 ],
+                # Import Management
+                [
+                    {"text": self._t('admin_import', user_id), "callback_data": "admin_import"}
+                ],
                 # System
                 [
                     {"text": self._t('admin_system', user_id), "callback_data": "admin_system"}
@@ -175,6 +179,21 @@ class AdminCommandsHandler(BaseHandler):
             "inline_keyboard": [
                 [{"text": self._t('setup_test_data_btn', user_id), "callback_data": "cmd_setup_test_data"}],
                 [{"text": self._t('failed_notifications_btn', user_id), "callback_data": "cmd_failed_notifications"}],
+                [{"text": self._t('back_to_admin', user_id), "callback_data": "admin_main"}]
+            ]
+        }
+        
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'success'}
+    
+    def handle_admin_import(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Show import management options"""
+        message = self._t('admin_import_menu', user_id)
+        
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": self._t('import_orders_btn', user_id), "callback_data": "cmd_import_orders"}],
+                [{"text": self._t('finalize_import_btn', user_id), "callback_data": "cmd_finalize_import"}],
                 [{"text": self._t('back_to_admin', user_id), "callback_data": "admin_main"}]
             ]
         }
