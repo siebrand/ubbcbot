@@ -232,7 +232,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 
 - Wholesale box sizes: 1,2,6,8,10,12,15,16,18,20,24 units
 - Auto-create new boxes when capacity reached
-- Box status: open → minimum_reached → full → ordered → delivered
+- Box status: open → full → ordered → delivered
 - Admin restricted to user ID 15005473
 
 ## Environment Management

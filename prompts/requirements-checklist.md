@@ -60,7 +60,6 @@ Use this checklist to track implementation progress across all stages.
 - [x] BR-005: Offers require valid active supplier
 - [x] BR-006: Valid wholesale box sizes
 - [x] BR-007: New box creation logic
-- [x] BR-008: Box minimum reached status
 - [x] BR-009: Box full status
 - [x] BR-010: Manual box ordering
 

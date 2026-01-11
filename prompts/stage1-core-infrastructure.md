@@ -15,7 +15,7 @@ The Telegram beer ordering bot with AWS serverless architecture has been success
 ## ✅ IMPLEMENTED BUSINESS RULES:
 - Wholesale box sizes: 1,2,6,8,10,12,15,16,18,20,24 units
 - Auto-create new boxes when capacity reached
-- Track box status: open → minimum_reached → full → ordered → delivered
+- Track box status: open→ full → ordered → delivered
 - Order validation against available capacity
 - 5-unit customer limit, 10-unit admin limit
 - Duplicate order handling with confirmation

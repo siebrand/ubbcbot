@@ -67,7 +67,6 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
   - Minimum breakeven quantity is met
 - **FR-010**: System tracks box status:
   - Open (accepting orders)
-  - Minimum reached (profitable)
   - Full (no more orders accepted)
   - Ordered (from wholesaler)
   - Delivered
@@ -426,7 +425,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - current_quantity (Integer)
 - max_capacity (Integer)
 - min_breakeven (Integer)
-- status (Enum: open, minimum_reached, full, ordered, delivered)
+- status (Enum: open, full, ordered, delivered)
 - created_at (DateTime)
 ```
 
@@ -509,7 +508,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-001**: Orders cannot exceed remaining box capacity
 - **BR-002**: Orders cannot be placed on inactive offers
 - **BR-003**: Customers can place multiple orders for same offer/option with confirmation
-- **BR-046**: Orders can only be cancelled by customers if box status is "open" or "minimum_reached"
+- **BR-046**: Orders can only be cancelled by customers if box status is "open"
 - **BR-047**: Admin can cancel any order regardless of box status with confirmation required for full boxes
 - **BR-048**: Cancelled orders automatically reduce box quantity and recalculate box status
 - **BR-049**: Customer notification required for all admin-cancelled orders
@@ -519,7 +518,6 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 
 ### 7.2 Box Management
 - **BR-007**: New box created when current box reaches capacity
-- **BR-008**: Box marked as "minimum_reached" when breakeven quantity met
 - **BR-009**: Box marked as "full" when max capacity reached
 - **BR-010**: Admin must manually mark box as "ordered" after wholesale purchase
 

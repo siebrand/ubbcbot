@@ -355,11 +355,6 @@ class DynamoDBService:
                     item['current_quantity'] = int(item['current_quantity'])
                 if 'max_capacity' in item:
                     item['max_capacity'] = int(item['max_capacity'])
-                # Remove deprecated fields for backward compatibility
-                item.pop('min_breakeven', None)
-                # Handle deprecated status values
-                if item.get('status') == 'minimum_reached':
-                    item['status'] = BoxStatus.OPEN.value
                 boxes.append(Box(**item))
             return boxes
         except Exception as e:
@@ -435,8 +430,6 @@ class DynamoDBService:
             boxes = []
             for item in response.get('Items', []):
                 item['max_capacity'] = int(item['max_capacity'])
-                if item.get('status') == 'minimum_reached':
-                    item['status'] = BoxStatus.OPEN.value
                 # Add default values for required Box fields not fetched
                 item.setdefault('current_quantity', 0)
                 boxes.append(Box(**item))
@@ -561,11 +554,6 @@ class DynamoDBService:
                     item['current_quantity'] = int(item['current_quantity'])
                 if 'max_capacity' in item:
                     item['max_capacity'] = int(item['max_capacity'])
-                # Remove deprecated fields for backward compatibility
-                item.pop('min_breakeven', None)
-                # Handle deprecated status values
-                if item.get('status') == 'minimum_reached':
-                    item['status'] = BoxStatus.OPEN.value
                 return Box(**item)
             return None
         except Exception as e:
