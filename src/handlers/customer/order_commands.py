@@ -43,7 +43,7 @@ class CustomerOrderCommands(BaseHandler):
         if not skip_duplicate_check and self._has_duplicate_orders(chat_id, user_id, customer.customer_id, offer_id, quantity, offer.name):
             return {'status': 'confirmation_required'}
         
-        return self.execute_order(chat_id, user_id, offer_id, quantity, offer, customer)
+        return self.execute_order(chat_id, user_id, quantity, offer, customer)
 
     def handle_confirm_order(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_order command"""
@@ -53,7 +53,7 @@ class CustomerOrderCommands(BaseHandler):
         
         return self.handle_order(chat_id, user_id, args, skip_duplicate_check=True)
 
-    def execute_order(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
+    def execute_order(self, chat_id: int, user_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
         """Execute order placement"""
         try:
             # Validate quantity
@@ -62,7 +62,7 @@ class CustomerOrderCommands(BaseHandler):
                 return {'status': 'quantity_too_large'}
             
             # Find or create suitable box
-            suitable_box = self._find_or_create_box(chat_id, user_id, offer_id, quantity, offer)
+            suitable_box = self._find_or_create_box(chat_id, user_id, offer.offer_id, quantity, offer)
             if not suitable_box:
                 return {'status': 'insufficient_space'}
             
@@ -72,7 +72,7 @@ class CustomerOrderCommands(BaseHandler):
                 return {'status': 'error'}
             
             # Update offer status and send notifications
-            self.box_status_manager.update_offer_status_after_change(offer_id)
+            self.box_status_manager.update_offer_status_after_change(offer.offer_id)
             self._send_order_confirmation(chat_id, user_id, order, offer, quantity, placed_by_admin, customer)
             
             return {'status': 'success'}
