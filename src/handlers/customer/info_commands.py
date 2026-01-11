@@ -276,11 +276,11 @@ class InfoCommands(BaseHandler):
             if show_all:
                 message += self._t('all_offers_admin') + "\n\n"
             elif show_draft:
-                message += self._t('draft_offers_only', user_id) + "\n\n"
+                message += self._t('draft_offers', user_id) + "\n\n"
             elif show_active:
-                message += self._t('active_offers_only', user_id) + "\n\n"
+                message += self._t('active_offers', user_id) + "\n\n"
             elif show_import:
-                message += self._t('import_offers_only', user_id) + "\n\n"
+                message += self._t('import_offers', user_id) + "\n\n"
             elif show_archived:
                 message += self._t('archived_offers', user_id) + "\n\n"
             else:
@@ -288,16 +288,14 @@ class InfoCommands(BaseHandler):
             
             # Show draft offers
             if draft_offers and (show_all or show_draft or (not filter_arg)):
-                if show_all or not filter_arg:
-                    message += self._t('draft_offers') + "\n"
+                message += self._t('draft_offers') + "\n"
                 for offer in draft_offers:
                     message += self._format_offer_line(offer, "📝", user_id, is_draft=True)
                 message += "\n"
             
             # Show import offers
             if import_offers and (show_all or show_import or (not filter_arg)):
-                if show_all or not filter_arg:
-                    message += self._t('import_offers') + "\n"
+                message += self._t('import_offers') + "\n"
                 for offer in import_offers:
                     total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id, boxes_by_offer, orders_by_offer)
                     message += self._format_offer_line(offer, "📥", user_id, total_ordered, total_capacity)
@@ -305,8 +303,7 @@ class InfoCommands(BaseHandler):
             
             # Show active offers
             if active_offers and (show_all or show_active or (not filter_arg)):
-                if show_all or not filter_arg:
-                    message += self._t('active_offers') + "\n"
+                message += self._t('active_offers') + "\n"
                 for offer in active_offers:
                     total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id, boxes_by_offer, orders_by_offer)
                     offer_to_display = self._apply_discount_to_offer(offer, active_discount)
