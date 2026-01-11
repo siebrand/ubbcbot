@@ -144,7 +144,7 @@ class UserCommands(BaseHandler):
         status_emoji = self.STATUS_EMOJIS.get(customer.authorization_status, "❓")
         
         message = f"{status_emoji} {display_name}{username_part}\n"
-        message += f"Status: {customer.authorization_status}"
+        message += self._t('user_status_label', status=customer.authorization_status)
         
         self._send_message(chat_id, message)
         return {'status': 'success'}
@@ -233,8 +233,8 @@ class UserCommands(BaseHandler):
         # Paginate results
         page_customers, total_pages = self._paginate_list(customers, page, 20)
 
-        search_text = f" matching '{search_string}'" if search_string else ""
-        message = f"👥 Customers ({status_filter}){search_text} - Page {page}/{total_pages}:\n\n"
+        search_text = f" {self._t('matching_search', search=search_string)}" if search_string else ""
+        message = self._t('customers_page_header', status=status_filter, search=search_text, page=page, total_pages=total_pages) + "\n\n"
 
         for customer in page_customers:
             display_name = self._escape_html(customer.first_name or self._t('unknown', user_id=None))
@@ -347,8 +347,7 @@ class UserCommands(BaseHandler):
         # Paginate results
         page_subscribers, total_pages = self._paginate_list(subscribers, page, 20)
 
-        # @todo Needs i18n
-        message = f"🔔 Subscribers - Page {page}/{total_pages}:\n\n"
+        message = self._t('subscribers_page_header', page=page, total_pages=total_pages) + "\n\n"
         
         for customer in page_subscribers:
             display_name = self._escape_html(customer.first_name or self._t('unknown', user_id=None))
@@ -405,9 +404,8 @@ class UserCommands(BaseHandler):
 
         if self.db.create_customer(guest):
             display_name = f"{first_name} {last_name}" if last_name else first_name
-            # @todo Needs i18n
-            contact_part = f"\nContact: {contact_info}" if contact_info else ""
-            self._send_message(chat_id, self._t('guest_added', chat_id, name=display_name, guest_id=guest_id, contact=contact_part))
+            contact_display = f"\n{self._t('contact_label', chat_id)}: {contact_info}" if contact_info else ""
+            self._send_message(chat_id, self._t('guest_added', chat_id, name=display_name, guest_id=guest_id, contact=contact_display))
             return {'status': 'success', 'guest_id': guest_id}
         else:
             self._send_message(chat_id, self._t('failed_add_guest', chat_id))
@@ -428,8 +426,7 @@ class UserCommands(BaseHandler):
         # Paginate results
         page_guests, total_pages = self._paginate_list(guests, page, 20)
 
-        # @todo Needs i18n
-        message = f"🎫 Guest Users - Page {page}/{total_pages}:\n\n"
+        message = self._t('guests_page_header', page=page, total_pages=total_pages) + "\n\n"
 
         for guest in page_guests:
             display_name = self._escape_html(guest.first_name or self._t('unknown', user_id=None))

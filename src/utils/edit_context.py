@@ -65,19 +65,19 @@ class EditContextManager:
             'name': {
                 'context_type': 'supplier_name',
                 'prompt_key': 'enter_new_supplier_name',
-                'placeholder': 'Enter supplier name',
+                'placeholder': self._t('placeholder_supplier_name'),
                 'prompt_args': {'name': supplier.name}
             },
             'contact': {
                 'context_type': 'supplier_contact',
                 'prompt_key': 'enter_supplier_contact',
-                'placeholder': 'Enter email address',
+                'placeholder': self._t('placeholder_supplier_contact'),
                 'prompt_args': {'name': supplier.name}
             },
             'full_name': {
                 'context_type': 'supplier_full_name',
                 'prompt_key': 'enter_supplier_full_name',
-                'placeholder': 'Enter full supplier name',
+                'placeholder': self._t('placeholder_supplier_full_name'),
                 'prompt_args': {'name': supplier.name}
             }
         }
@@ -93,24 +93,23 @@ class EditContextManager:
     
     def handle_offer_edit(self, chat_id: int, field: str, offer_id: str) -> Dict[str, Any]:
         """Handle offer edit callbacks with unified pattern"""
-        # @todo All hard coded placeholders need i18n!
         field_config = {
             'name': {
                 'context_type': 'offer_name',
                 'prompt_key': 'enter_new_offer_name',
-                'placeholder': 'Enter offer name',
+                'placeholder': self._t('placeholder_offer_name'),
                 'prompt_args': {'offer_id': offer_id}
             },
             'price': {
                 'context_type': 'offer_price',
                 'prompt_key': 'enter_new_offer_price',
-                'placeholder': 'Enter price (e.g. 12.50)',
+                'placeholder': self._t('placeholder_offer_price'),
                 'prompt_args': {'offer_id': offer_id}
             },
             'description': {
                 'context_type': 'offer_description',
                 'prompt_key': 'enter_new_offer_description',
-                'placeholder': 'Enter description',
+                'placeholder': self._t('placeholder_offer_description'),
                 'prompt_args': {'offer_id': offer_id}
             }
         }
@@ -130,22 +129,22 @@ class EditContextManager:
             'first_name': {
                 'context_type': 'customer_first_name',
                 'prompt_key': 'enter_new_first_name',
-                'placeholder': 'Enter first name'
+                'placeholder': self._t('placeholder_first_name')
             },
             'last_name': {
                 'context_type': 'customer_last_name',
                 'prompt_key': 'enter_new_last_name',
-                'placeholder': 'Enter last name'
+                'placeholder': self._t('placeholder_last_name')
             },
             'contact': {
                 'context_type': 'customer_contact',
                 'prompt_key': 'enter_new_contact',
-                'placeholder': 'Enter contact (email/phone)'
+                'placeholder': self._t('placeholder_contact')
             },
             'location': {
                 'context_type': 'customer_location',
                 'prompt_key': 'enter_new_location',
-                'placeholder': 'Enter location'
+                'placeholder': self._t('placeholder_location')
             }
         }
         
@@ -164,37 +163,37 @@ class EditContextManager:
             'add_supplier_name': {
                 'context_type': 'add_supplier_name',
                 'prompt_key': 'enter_supplier_name',
-                'placeholder': 'Enter supplier name'
+                'placeholder': self._t('placeholder_supplier_name')
             },
             'user_orders_input': {
                 'context_type': 'user_orders_input',
                 'prompt_key': 'enter_username_for_orders',
-                'placeholder': 'Enter username or name'
+                'placeholder': self._t('placeholder_username')
             },
             'cancel_order_input': {
                 'context_type': 'cancel_order_input',
                 'prompt_key': 'enter_username_for_cancel',
-                'placeholder': 'Enter username or name'
+                'placeholder': self._t('placeholder_username')
             },
             'order_for_input': {
                 'context_type': 'order_for_input',
                 'prompt_key': 'enter_username_for_order_for',
-                'placeholder': 'Enter username or name'
+                'placeholder': self._t('placeholder_username')
             },
             'edit_supplier_input': {
                 'context_type': 'edit_supplier_input',
                 'prompt_key': 'enter_supplier_name_to_edit',
-                'placeholder': 'Enter supplier name'
+                'placeholder': self._t('placeholder_supplier_name')
             },
             'approve_user_input': {
                 'context_type': 'approve_user_input',
                 'prompt_key': 'enter_username_to_approve',
-                'placeholder': 'Enter username or name'
+                'placeholder': self._t('placeholder_username')
             },
             'user_status_input': {
                 'context_type': 'user_status_input',
                 'prompt_key': 'enter_username_for_status',
-                'placeholder': 'Enter username or name'
+                'placeholder': self._t('placeholder_username')
             }
         }
         
