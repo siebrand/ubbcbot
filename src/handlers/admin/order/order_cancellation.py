@@ -35,7 +35,7 @@ class OrderCancellation(BaseOrderHandler):
             if len(arg) == 8 and arg.isalnum():
                 return self._handle_cancel_order_by_partial_id(chat_id, arg)
             elif arg.isdigit() and len(arg) > 8:
-                return self._handle_cancel_order_by_id(chat_id, arg)
+                return self.handle_cancel_order_by_id(chat_id, arg)
         
         # Username provided - show orders for cancellation
         identifier = ' '.join(args)
@@ -92,7 +92,7 @@ class OrderCancellation(BaseOrderHandler):
         order, customer = matching_orders[0]
         return self._show_enhanced_cancel_confirmation(chat_id, order, customer, f"partial ID '{partial_order_id}'")
     
-    def _handle_cancel_order_by_id(self, chat_id: int, order_id: str) -> Dict[str, Any]:
+    def handle_cancel_order_by_id(self, chat_id: int, order_id: str) -> Dict[str, Any]:
         """Handle cancel order by direct order ID with enhanced confirmation"""
         order = self.db.get_order(order_id)
         

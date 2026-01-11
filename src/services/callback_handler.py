@@ -119,15 +119,11 @@ class CallbackHandler:
                         return self.handlers['offer'].handle_confirm_order_wholesale(chat_id, [offer_id, boxes])
                     except Exception as e:
                         logger.error(f"Exception in handle_confirm_order_wholesale: {e}")
-                        from handlers.base_handler import BaseHandler
-                        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                        base_handler._send_message(chat_id, base_handler._t('invalid_format'))
+                        self._send_message(chat_id, self._t('invalid_format'))
                         return {'status': 'exception'}
                 else:
                     logger.error(f"Invalid wholesale callback format: {data}, expected at least 5 parts, got {len(parts)}")
-                    from handlers.base_handler import BaseHandler
-                    base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                    base_handler._send_message(chat_id, base_handler._t('invalid_format'))
+                    self._send_message(chat_id, self._t('invalid_format'))
                     return {'status': 'invalid_format'}
             elif data.startswith('custom_wholesale_quantity_'):
                 offer_id = data.split('_')[3]
@@ -139,9 +135,7 @@ class CallbackHandler:
                     quantity = parts[3]
                     return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, [offer_id, quantity])
             elif data == 'cancel_confirmation':
-                from handlers.base_handler import BaseHandler
-                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, base_handler._t('action_cancelled'))
+                self._send_message(chat_id, self._t('action_cancelled'))
                 return {'status': 'cancelled'}
             
             # Admin confirmation callbacks
@@ -171,7 +165,7 @@ class CallbackHandler:
                 return self.handlers['user'].handle_edit_user_select(chat_id, customer_id)
             elif data.startswith('edit_supplier_select_'):
                 supplier_id = data.split('_')[3]
-                return self.handlers['supplier']._show_edit_interface_by_id(chat_id, supplier_id)
+                return self.handlers['supplier'].show_edit_interface_by_id(chat_id, supplier_id)
             elif data == 'back_to_supplier_list':
                 return self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active')
             elif data.startswith('user_orders_select_'):
@@ -182,7 +176,7 @@ class CallbackHandler:
                 return self.handlers['admin_order'].handle_cancel_order_user_select(chat_id, customer_id)
             elif data.startswith('cancel_order_confirm_'):
                 order_id = data.split('_')[3]
-                return self.handlers['admin_order']._handle_cancel_order_by_id(chat_id, order_id)
+                return self.handlers['admin_order'].handle_cancel_order_by_id(chat_id, order_id)
             elif data.startswith('cancel_orders_page_'):
                 parts = data.split('_')
                 customer_id, page = parts[3], int(parts[4])
@@ -204,9 +198,7 @@ class CallbackHandler:
                 return self.handlers['user'].handle_user_status_select(chat_id, customer_id)
 
             elif data == 'cancel_action':
-                from handlers.base_handler import BaseHandler
-                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, base_handler._t('done'))
+                self._send_message(chat_id, self._t('done'))
                 return {'status': 'done'}
             
             # Pagination callbacks
@@ -260,9 +252,7 @@ class CallbackHandler:
                     return self.handlers['info'].handle_offer_details(chat_id, user_id, args)
             elif data.startswith('upload_offer_image_'):
                 offer_id = data.split('_')[3]
-                from handlers.base_handler import BaseHandler
-                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, base_handler._t('awaiting_image', offer_id=offer_id))
+                self._send_message(chat_id, self._t('awaiting_image', offer_id=offer_id))
                 self._store_edit_context(chat_id, 'offer_image_upload', offer_id)
                 return {'status': 'awaiting_image'}
             elif data.startswith('clear_offer_images_'):
@@ -357,9 +347,7 @@ class CallbackHandler:
             elif entity_type == 'offer':
                 return self._handle_offer_edit(chat_id, field, entity_id)
         
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        base_handler._send_message(chat_id, base_handler._t('unknown_edit'))
+        self._send_message(chat_id, self._t('unknown_edit'))
         return {'status': 'unknown_edit'}
     
     def _handle_supplier_edit(self, chat_id: int, field: str, supplier_id: str) -> Dict[str, Any]:
@@ -407,9 +395,7 @@ class CallbackHandler:
     def _handle_wholesale_delivery_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
         """Handle wholesale delivery callbacks"""
         if not self._is_admin(user_id):
-            from handlers.base_handler import BaseHandler
-            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            return base_handler._send_message(chat_id, base_handler._t('admin_only', user_id))
+            return self._send_message(chat_id, self._t('admin_only', user_id))
         
         parts = data.split(':')
         
@@ -440,20 +426,14 @@ class CallbackHandler:
                 offer_id, supplier_id_short = int(parts[1]), parts[2]
                 return self.handlers['wholesale_delivery'].handle_confirm_complete_delivery(chat_id, offer_id, supplier_id_short)
             else:
-                from handlers.base_handler import BaseHandler
-                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                return base_handler._send_message(chat_id, base_handler._t('invalid_format'))
+                return self._send_message(chat_id, self._t('invalid_format'))
         
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        return base_handler._send_message(chat_id, base_handler._t('unknown_callback', user_id))
+        return self._send_message(chat_id, self._t('unknown_callback', user_id))
     
     def _handle_labeling_completion_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
         """Handle labeling completion callbacks"""
         if not self._is_admin(user_id):
-            from handlers.base_handler import BaseHandler
-            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            return base_handler._send_message(chat_id, base_handler._t('admin_only', user_id))
+            return self._send_message(chat_id, self._t('admin_only', user_id))
         
         parts = data.split(':')
         
@@ -477,24 +457,18 @@ class CallbackHandler:
                 offer_id, supplier_id_short = int(parts[1]), parts[2]
                 return self.handlers['labeling'].handle_confirm_complete_labeling(chat_id, offer_id, supplier_id_short)
             else:
-                from handlers.base_handler import BaseHandler
-                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                return base_handler._send_message(chat_id, base_handler._t('invalid_format'))
+                return self._send_message(chat_id, self._t('invalid_format'))
         elif parts[0] == 'lc_back':  # Back navigation
             target = parts[1]
             args = parts[2:] if len(parts) > 2 else []
             return self.handlers['labeling'].handle_back_navigation(chat_id, target, *args)
         
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        return base_handler._send_message(chat_id, base_handler._t('unknown_callback', user_id))
+        return self._send_message(chat_id, self._t('unknown_callback', user_id))
     
     def _handle_admin_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
         """Handle admin panel navigation callbacks"""
         if not self._is_admin(user_id):
-            from handlers.base_handler import BaseHandler
-            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            base_handler._send_message(chat_id, base_handler._t('admin_only', user_id))
+            self._send_message(chat_id, self._t('admin_only', user_id))
             return {'status': 'unauthorized'}
         
         if data == 'admin_main':
@@ -516,17 +490,13 @@ class CallbackHandler:
         elif data == 'admin_system':
             return self.handlers['admin_commands'].handle_admin_system(chat_id, user_id)
         
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        base_handler._send_message(chat_id, base_handler._t('unknown_callback', user_id))
+        self._send_message(chat_id, self._t('unknown_callback', user_id))
         return {'status': 'unknown_callback'}
     
     def _handle_command_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
         """Handle command execution callbacks from admin panel"""
         if not self._is_admin(user_id):
-            from handlers.base_handler import BaseHandler
-            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            base_handler._send_message(chat_id, base_handler._t('admin_only', user_id))
+            self._send_message(chat_id, self._t('admin_only', user_id))
             return {'status': 'unauthorized'}
         
         # Map callback data to command handlers
@@ -569,9 +539,7 @@ class CallbackHandler:
         if data in command_map:
             return command_map[data]()
         
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        base_handler._send_message(chat_id, base_handler._t('unknown_callback', user_id))
+        self._send_message(chat_id, self._t('unknown_callback', user_id))
         return {'status': 'unknown_callback'}
     
     def _start_add_supplier(self, chat_id: int) -> Dict[str, Any]:
@@ -604,9 +572,7 @@ class CallbackHandler:
     
     def _send_usage_message(self, chat_id: int, usage_key: str) -> Dict[str, Any]:
         """Send usage message for commands that require parameters"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        base_handler._send_message(chat_id, base_handler._t(usage_key))
+        self._send_message(chat_id, self._t(usage_key))
         return {'status': 'usage_sent'}
     
     def _t(self, key: str, **params) -> str:
@@ -633,9 +599,7 @@ class CallbackHandler:
         )
         self.db.create_edit_context(context)
         
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        base_handler._send_message(chat_id, base_handler._t('enter_cancellation_reason'), 
+        self._send_message(chat_id, self._t('enter_cancellation_reason'), 
                                   reply_markup={"force_reply": True, "input_field_placeholder": "Enter reason"})
         return {'status': 'awaiting_reason_input'}
     

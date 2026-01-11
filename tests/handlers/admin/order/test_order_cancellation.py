@@ -51,7 +51,7 @@ class TestOrderCancellation(unittest.TestCase):
         mock_partial.assert_called_once_with(123, 'abc12345')
         self.assertEqual(result['status'], 'success')
     
-    @patch.object(OrderCancellation, '_handle_cancel_order_by_id')
+    @patch.object(OrderCancellation, 'handle_cancel_order_by_id')
     def test_handle_cancel_order_full_id(self, mock_full):
         """Test cancel order with full numeric ID"""
         mock_full.return_value = {'status': 'success'}

@@ -142,7 +142,7 @@ class SupplierCommands(BaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
     
-    def _show_edit_interface_by_id(self, chat_id: int, supplier_id: str) -> Dict[str, Any]:
+    def show_edit_interface_by_id(self, chat_id: int, supplier_id: str) -> Dict[str, Any]:
         """Show edit interface for supplier by ID"""
         supplier = self.db.get_supplier(supplier_id)
         if not supplier:
