@@ -263,6 +263,26 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error updating offer: {e}")
             return False
+    
+    def append_offer_image(self, offer_id: int, image_url: str) -> bool:
+        """Atomically append an image to offer's images list"""
+        try:
+            self.offers_table.update_item(
+                Key={'offer_id': offer_id},
+                UpdateExpression='SET images = list_append(if_not_exists(images, :empty_list), :new_image)',
+                ExpressionAttributeValues={
+                    ':new_image': [image_url],
+                    ':empty_list': []
+                }
+            )
+            
+            # Invalidate cache
+            OfferCache.invalidate_cache()
+            
+            return True
+        except Exception as e:
+            print(f"Error appending image to offer: {e}")
+            return False
 
     def delete_box(self, box_id: str) -> bool:
         try:

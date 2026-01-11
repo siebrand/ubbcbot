@@ -51,13 +51,16 @@ class MediaHandler:
                 base_handler._send_message(chat_id, base_handler._t('upload_failed'))
                 return {'status': 'upload_failed'}
             
-            # Update offer with new image
-            current_images = offer.images or []
-            current_images.append(image_url)
+            # Atomically append image to offer's images list
+            success = self.db.append_offer_image(offer_id_int, image_url)
             
-            if self.db.update_offer(offer_id_int, {'images': current_images}):
+            if success:
+                # Fetch updated offer to get current image count
+                updated_offer = self.db.get_offer(offer_id_int)
+                image_count = len(updated_offer.images) if updated_offer and updated_offer.images else 1
+                
                 # Send confirmation
-                message = base_handler._t('image_uploaded', count=len(current_images))
+                message = base_handler._t('image_uploaded', count=image_count)
                 base_handler._send_message(chat_id, message)
                 
                 return {'status': 'success', 'return_to_edit': True, 'offer_id': offer_id_int}
