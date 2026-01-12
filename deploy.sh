@@ -88,7 +88,6 @@ sam build
 echo "🚀 Deploying to $ENVIRONMENT..."
 sam deploy \
     --config-env $ENVIRONMENT \
-    --parameter-overrides "Environment=$ENVIRONMENT" \
     --resolve-s3 \
     --capabilities CAPABILITY_IAM \
     --no-confirm-changeset
