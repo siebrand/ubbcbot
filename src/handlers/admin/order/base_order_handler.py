@@ -79,6 +79,10 @@ class BaseOrderHandler(BaseHandler):
             message += f" - Page {page}/{total_pages}"
         message += "\n\n"
         
+        # Calculate grand total once (excluding cancelled and completed)
+        non_cancelled_statuses = [s for s in status_groups.keys() if s not in ['cancelled', 'completed']]
+        grand_total = sum(status_groups[s]['total_price'] for s in non_cancelled_statuses) if len(non_cancelled_statuses) > 1 else None
+        
         # Display paginated items
         current_status = None
         item_index = 0
@@ -89,7 +93,10 @@ class BaseOrderHandler(BaseHandler):
                 # Show subtotal for previous section (except cancelled)
                 if current_status is not None and current_status != 'cancelled':
                     status_label = self._t(f"status_{current_status}", user_id=None)
-                    message += f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}\n"
+                    subtotal_line = f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}"
+                    if grand_total is not None:
+                        subtotal_line += f" ({self._t('grand_total', user_id=None)}: €{grand_total:.2f})"
+                    message += subtotal_line + "\n"
                 
                 if current_status is not None:
                     message += "\n"
@@ -123,14 +130,10 @@ class BaseOrderHandler(BaseHandler):
         # Show subtotal for last section (except cancelled)
         if current_status is not None and current_status != 'cancelled':
             status_label = self._t(f"status_{current_status}", user_id=None)
-            message += f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}\n"
-        
-        # Show grand total excluding cancelled and completed
-        non_cancelled_statuses = [s for s in status_groups.keys() if s not in ['cancelled', 'completed']]
-        if len(non_cancelled_statuses) > 1:
-            grand_total = sum(status_groups[s]['total_price'] for s in non_cancelled_statuses)
-            message += f"\n━━━━━━━━━━━━━━━━━━━━\n"
-            message += f"{self._t('grand_total', user_id=None)}: €{grand_total:.2f}\n"
+            subtotal_line = f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}"
+            if grand_total is not None:
+                subtotal_line += f" ({self._t('grand_total', user_id=None)}: €{grand_total:.2f})"
+            message += subtotal_line + "\n"
         
         # Add pagination keyboard
         keyboard_buttons = []
