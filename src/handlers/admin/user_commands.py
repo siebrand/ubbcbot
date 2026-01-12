@@ -367,8 +367,8 @@ class UserCommands(BaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
 
-    def handle_add_guest(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /add_guest command"""
+    def handle_create_guest(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /create_guest command"""
         if not args:
             self._send_message(chat_id, self._t('usage_create_guest', chat_id))
             return {'status': 'invalid_args'}
