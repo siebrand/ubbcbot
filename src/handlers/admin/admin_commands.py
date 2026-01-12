@@ -47,11 +47,11 @@ class AdminCommandsHandler(BaseHandler):
             "inline_keyboard": [
                 [{"text": self._t('create_offer_btn', user_id), "callback_data": "cmd:create_offer"}],
                 [{"text": self._t('publish_offer_btn', user_id), "callback_data": "cmd:publish_offer"}],
-                [{"text": self._t('wholesale_order_btn', user_id), "callback_data": "cmd:order_wholesale"}],
-                [{"text": self._t('wholesale_delivery_btn', user_id), "callback_data": "cmd:wholesale_delivery"}],
-                [{"text": self._t('labeling_completed_btn', user_id), "callback_data": "cmd:labeling_completed"}],
-                [{"text": self._t('send_overviews_btn', user_id), "callback_data": "cmd:send_overviews"}],
-                [{"text": self._t('mark_paid_btn', user_id), "callback_data": "cmd:mark_paid"}],
+                [{"text": self._t('wholesale_order_btn', user_id), "callback_data": "cmd:process_wholesale"}],
+                [{"text": self._t('wholesale_delivery_btn', user_id), "callback_data": "cmd:process_delivery"}],
+                [{"text": self._t('labeling_completed_btn', user_id), "callback_data": "cmd:process_labeling"}],
+                [{"text": self._t('send_overviews_btn', user_id), "callback_data": "cmd:send_delivery_overviews"}],
+                [{"text": self._t('mark_paid_btn', user_id), "callback_data": "cmd:process_payment"}],
                 [{"text": self._t('back_to_admin', user_id), "callback_data": "admin:main"}]
             ]
         }
@@ -65,9 +65,9 @@ class AdminCommandsHandler(BaseHandler):
         
         keyboard = {
             "inline_keyboard": [
-                [{"text": self._t('add_supplier_btn', user_id), "callback_data": "cmd:add_supplier"}],
+                [{"text": self._t('add_supplier_btn', user_id), "callback_data": "cmd:create_supplier"}],
                 [{"text": self._t('list_suppliers_btn', user_id), "callback_data": "cmd:list_suppliers"}],
-                [{"text": self._t('edit_supplier_btn', user_id), "callback_data": "cmd:edit_supplier"}],
+                [{"text": self._t('edit_supplier_btn', user_id), "callback_data": "cmd:update_supplier"}],
                 [{"text": self._t('back_to_admin', user_id), "callback_data": "admin:main"}]
             ]
         }
@@ -85,11 +85,11 @@ class AdminCommandsHandler(BaseHandler):
                 [{"text": self._t('list_offers_btn', user_id), "callback_data": "cmd:list_offers"}],
                 [
                     {"text": self._t('publish_offer_btn', user_id), "callback_data": "cmd:publish_offer"},
-                    {"text": self._t('box_status_btn', user_id), "callback_data": "cmd:box_status"}
+                    {"text": self._t('box_status_btn', user_id), "callback_data": "cmd:list_boxes"}
                 ],
                 [
                     {"text": self._t('audit_offer_btn', user_id), "callback_data": "cmd:audit_offer"},
-                    {"text": self._t('wholesale_order_btn', user_id), "callback_data": "cmd:order_wholesale"}
+                    {"text": self._t('wholesale_order_btn', user_id), "callback_data": "cmd:process_wholesale"}
                 ],
                 # Import section
                 [{"text": self._t('import_orders_btn', user_id), "callback_data": "cmd:import_orders"}],
@@ -107,13 +107,13 @@ class AdminCommandsHandler(BaseHandler):
         
         keyboard = {
             "inline_keyboard": [
-                [{"text": self._t('all_orders_btn', user_id), "callback_data": "cmd:all_orders"}],
+                [{"text": self._t('all_orders_btn', user_id), "callback_data": "cmd:export_orders"}],
                 [
-                    {"text": self._t('user_orders_btn', user_id), "callback_data": "cmd:user_orders"},
-                    {"text": self._t('offer_orders_btn', user_id), "callback_data": "cmd:offer_orders"}
+                    {"text": self._t('user_orders_btn', user_id), "callback_data": "cmd:list_user_orders"},
+                    {"text": self._t('offer_orders_btn', user_id), "callback_data": "cmd:list_offer_orders"}
                 ],
                 [
-                    {"text": self._t('order_for_user_btn', user_id), "callback_data": "cmd:order_for"},
+                    {"text": self._t('order_for_user_btn', user_id), "callback_data": "cmd:create_order_for"},
                     {"text": self._t('cancel_order_btn', user_id), "callback_data": "cmd:cancel_order"}
                 ],
                 [{"text": self._t('failed_notifications_btn', user_id), "callback_data": "cmd:failed_notifications"}],
@@ -130,13 +130,13 @@ class AdminCommandsHandler(BaseHandler):
         
         keyboard = {
             "inline_keyboard": [
-                [{"text": self._t('pending_users_btn', user_id), "callback_data": "cmd:pending_users"}],
+                [{"text": self._t('pending_users_btn', user_id), "callback_data": "cmd:list_pending"}],
                 [
                     {"text": self._t('list_users_btn', user_id), "callback_data": "cmd:list_users"},
                     {"text": self._t('list_subscribers_btn', user_id), "callback_data": "cmd:list_subscribers"}
                 ],
                 [
-                    {"text": self._t('add_guest_btn', user_id), "callback_data": "cmd:add_guest"},
+                    {"text": self._t('add_guest_btn', user_id), "callback_data": "cmd:create_guest"},
                     {"text": self._t('list_guests_btn', user_id), "callback_data": "cmd:list_guests"}
                 ],
                 [
@@ -158,7 +158,7 @@ class AdminCommandsHandler(BaseHandler):
         keyboard = {
             "inline_keyboard": [
                 [{"text": self._t('create_discount_btn', user_id), "callback_data": "cmd:create_discount"}],
-                [{"text": self._t('discount_status_btn', user_id), "callback_data": "cmd:discount_status"}],
+                [{"text": self._t('discount_status_btn', user_id), "callback_data": "cmd:view_discount"}],
                 [{"text": self._t('cancel_discount_btn', user_id), "callback_data": "cmd:cancel_discount"}],
                 [{"text": self._t('back_to_admin', user_id), "callback_data": "admin:main"}]
             ]
@@ -173,7 +173,7 @@ class AdminCommandsHandler(BaseHandler):
         
         keyboard = {
             "inline_keyboard": [
-                [{"text": self._t('delete_cancelled_btn', user_id), "callback_data": "cmd:delete_old"}],
+                [{"text": self._t('delete_cancelled_btn', user_id), "callback_data": "cmd:delete_old_orders"}],
                 [{"text": self._t('audit_orders_btn', user_id), "callback_data": "cmd:audit_orders"}],
                 [{"text": self._t('failed_notifications_btn', user_id), "callback_data": "cmd:failed_notifications"}]
             ]
