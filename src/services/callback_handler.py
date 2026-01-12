@@ -245,7 +245,7 @@ class CallbackHandler:
                         customer_id = entity_type.split('_', 2)[2]
                         customer = self.db.get_customer(customer_id)
                         if customer:
-                            return self.handlers['admin_order']._show_user_orders(chat_id, customer, page)
+                            return self.handlers['admin_order'].viewing._show_user_orders(chat_id, customer, page)
                         return {'status': 'customer_not_found'}
                     elif entity_type == 'changelog':
                         return self.handlers['changelog'].handle_changelog(chat_id, user_id, page)
