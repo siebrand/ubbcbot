@@ -215,17 +215,30 @@ class CallbackHandler:
                             page = int(parts[3])
                         args = [filter_arg] if filter_arg else None
                         return self.handlers['info'].handle_list_offers(chat_id, user_id, args, page)
-                    # Handle multi-word entity types like mark_paid, user_orders, and my_orders
-                    elif len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'user', 'my']:
+                    # Handle multi-word entity types like process_payment, list_user_orders, and list_my_orders
+                    elif len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'process', 'list', 'user', 'my']:
                         if parts[1] == 'mark' and parts[2] == 'paid':
+                            # Legacy: page_mark_paid_{page}
                             entity_type = 'mark_paid'
                             page = int(parts[3])
+                        elif parts[1] == 'process' and parts[2] == 'payment':
+                            # New: page_process_payment_{page}
+                            entity_type = 'process_payment'
+                            page = int(parts[3])
+                        elif parts[1] == 'list' and parts[2] == 'user' and parts[3] == 'orders':
+                            # New: page_list_user_orders_{customer_id}_{page}
+                            entity_type = f"list_user_orders_{parts[4]}"
+                            page = int(parts[5])
+                        elif parts[1] == 'list' and parts[2] == 'my' and parts[3] == 'orders':
+                            # New: page_list_my_orders_{user_id}_{page}
+                            entity_type = f"list_my_orders_{parts[4]}"
+                            page = int(parts[5])
                         elif parts[1] == 'user' and parts[2] == 'orders':
-                            # Format: page_user_orders_{customer_id}_{page}
+                            # Legacy: page_user_orders_{customer_id}_{page}
                             entity_type = f"user_orders_{parts[3]}"
                             page = int(parts[4])
                         elif parts[1] == 'my' and parts[2] == 'orders':
-                            # Format: page_my_orders_{user_id}_{page}
+                            # Legacy: page_my_orders_{user_id}_{page}
                             entity_type = f"my_orders_{parts[3]}"
                             page = int(parts[4])
                         else:
@@ -255,18 +268,27 @@ class CallbackHandler:
                         return self.handlers['user'].handle_list_guests(chat_id, page)
                     elif entity_type == 'subscribers':
                         return self.handlers['user'].handle_list_subscribers(chat_id, page)
-                    elif entity_type.startswith('user_orders_'):
-                        customer_id = entity_type.split('_', 2)[2]
+                    elif entity_type.startswith('user_orders_') or entity_type.startswith('list_user_orders_'):
+                        # Handle both legacy (user_orders_) and new (list_user_orders_) formats
+                        if entity_type.startswith('list_user_orders_'):
+                            customer_id = entity_type.split('_', 3)[3]
+                        else:
+                            customer_id = entity_type.split('_', 2)[2]
                         customer = self.db.get_customer(customer_id)
                         if customer:
                             return self.handlers['admin_order'].viewing._show_user_orders(chat_id, customer, page)
                         return {'status': 'customer_not_found'}
                     elif entity_type == 'changelog':
                         return self.handlers['changelog'].handle_changelog(chat_id, user_id, page)
-                    elif entity_type == 'mark_paid':
+                    elif entity_type == 'mark_paid' or entity_type == 'process_payment':
+                        # Handle both legacy (mark_paid) and new (process_payment) formats
                         return self.handlers['admin_order'].handle_mark_paid(chat_id, [], page)
-                    elif entity_type.startswith('my_orders_'):
-                        target_user_id = int(entity_type.split('_', 2)[2])
+                    elif entity_type.startswith('my_orders_') or entity_type.startswith('list_my_orders_'):
+                        # Handle both legacy (my_orders_) and new (list_my_orders_) formats
+                        if entity_type.startswith('list_my_orders_'):
+                            target_user_id = int(entity_type.split('_', 3)[3])
+                        else:
+                            target_user_id = int(entity_type.split('_', 2)[2])
                         if user_id == target_user_id:
                             return self.handlers['info'].handle_my_orders(chat_id, user_id, None, page)
                         return {'status': 'unauthorized'}
@@ -558,37 +580,37 @@ class CallbackHandler:
         
         # Map callback data to command handlers
         command_map = {
-            'add_supplier': lambda: self.handlers['supplier'].handle_add_supplier(chat_id, []),
+            'create_supplier': lambda: self.handlers['supplier'].handle_add_supplier(chat_id, []),
             'list_suppliers': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
-            'edit_supplier': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
+            'update_supplier': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
             'create_offer': lambda: self.handlers['offer'].handle_create_offer(chat_id, []),
             'publish_offer': lambda: self._send_usage_message(chat_id, 'usage_publish_offer'),
             'list_offers': lambda: self.handlers['info'].handle_list_offers(chat_id, user_id, []),
-            'box_status': lambda: self.handlers['offer'].handle_box_status(chat_id),
+            'list_boxes': lambda: self.handlers['offer'].handle_box_status(chat_id),
             'audit_offer': lambda: self.handlers['offer'].handle_audit_offer(chat_id, []),
-            'order_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
-            'all_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
-            'user_orders': lambda: self._start_user_orders_input(chat_id),
-            'offer_orders': lambda: self.handlers['admin_order'].handle_offer_orders(chat_id, []),
+            'process_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
+            'export_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
+            'list_user_orders': lambda: self._start_user_orders_input(chat_id),
+            'list_offer_orders': lambda: self.handlers['admin_order'].handle_offer_orders(chat_id, []),
             'cancel_order': lambda: self.handlers['admin_order'].handle_cancel_order(chat_id, []),
-            'order_for': lambda: self.handlers['admin_order'].handle_order_for(chat_id, user_id, []),
-            'pending_users': lambda: self.handlers['user'].handle_pending_users(chat_id),
+            'create_order_for': lambda: self.handlers['admin_order'].handle_order_for(chat_id, user_id, []),
+            'list_pending_users': lambda: self.handlers['user'].handle_pending_users(chat_id),
             'list_users': lambda: self.handlers['user'].handle_list_users(chat_id, 1, 'all'),
             'list_subscribers': lambda: self.handlers['user'].handle_list_subscribers(chat_id),
-            'add_guest': lambda: self._send_usage_message(chat_id, 'usage_add_guest'),
+            'create_guest': lambda: self._send_usage_message(chat_id, 'usage_add_guest'),
             'list_guests': lambda: self.handlers['user'].handle_list_guests(chat_id),
             'approve_user': lambda: self._start_approve_user_input(chat_id),
             'user_status': lambda: self._start_user_status_input(chat_id),
-            'wholesale_delivery': lambda: self.handlers['wholesale_delivery'].handle_wholesale_delivery(chat_id, user_id, []),
-            'labeling_completed': lambda: self.handlers['labeling'].handle_labeling_completed(chat_id, user_id, []),
-            'send_overviews': lambda: self.handlers['admin_order'].handle_send_overviews(chat_id, []),
-            'mark_paid': lambda: self.handlers['admin_order'].handle_mark_paid(chat_id, []),
+            'process_delivery': lambda: self.handlers['wholesale_delivery'].handle_wholesale_delivery(chat_id, user_id, []),
+            'process_labeling': lambda: self.handlers['labeling'].handle_labeling_completed(chat_id, user_id, []),
+            'send_delivery_overviews': lambda: self.handlers['admin_order'].handle_send_overviews(chat_id, []),
+            'process_payment': lambda: self.handlers['admin_order'].handle_mark_paid(chat_id, []),
             'create_discount': lambda: self._send_usage_message(chat_id, 'usage_create_discount'),
-            'discount_status': lambda: self.handlers['discount'].handle_discount_status(chat_id),
+            'view_discount': lambda: self.handlers['discount'].handle_discount_status(chat_id),
             'cancel_discount': lambda: self.handlers['discount'].handle_cancel_discount(chat_id),
             'setup_test_data': lambda: self.handlers['test'].handle_setup_test_data(chat_id),
             'failed_notifications': lambda: self.handlers['admin_order'].handle_failed_notifications(chat_id, []),
-            'delete_old': lambda: self.handlers['admin_order'].handle_delete_old(chat_id),
+            'delete_old_orders': lambda: self.handlers['admin_order'].handle_delete_old(chat_id),
             'audit_orders': lambda: self.handlers['admin_order'].handle_audit_orders(chat_id),
             'import_orders': lambda: self.handlers['import'].handle_import_orders(chat_id, user_id),
             'finalize_import': lambda: self.handlers['import'].handle_finalize_import(chat_id, [])

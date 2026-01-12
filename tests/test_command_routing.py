@@ -85,13 +85,13 @@ class TestCommandRouting:
         """Test that admin can access commands without customer record"""
         mock_db.get_customer_by_telegram_id.return_value = None
         
-        router.route_command(12345, 15005473, '/add_supplier Test')
+        router.route_command(12345, 15005473, '/create_supplier Test')
         mock_handlers['supplier'].handle_add_supplier.assert_called_once()
     
     # Test 5: Authorization - Non-Admin Blocked from Admin Commands
     def test_non_admin_blocked_from_admin_commands(self, router):
         """Test that regular users cannot access admin commands"""
-        result = router.route_command(12345, 12345, '/add_supplier Test')
+        result = router.route_command(12345, 12345, '/create_supplier Test')
         assert result['status'] == 'unknown_command'
     
     # Test 6: Unknown Command Handling
@@ -103,7 +103,7 @@ class TestCommandRouting:
     # Test 7: Deep Link - Order Deep Link
     def test_deep_link_order(self, router, mock_handlers):
         """Test /start with order deep link routes to order handler"""
-        router.route_command(12345, 12345, '/start order_123_2')
+        router.route_command(12345, 12345, '/start create_order_123_2')
         mock_handlers['customer_order'].handle_order.assert_called_once()
         call_args = mock_handlers['customer_order'].handle_order.call_args[0]
         assert '123' in call_args[2]
@@ -124,8 +124,8 @@ class TestCommandRouting:
     
     # Test 10: Deep Link - Offer Details Deep Link  
     def test_deep_link_offer_details(self, router, mock_handlers):
-        """Test /start with offer_details deep link"""
-        router.route_command(12345, 12345, '/start offer_details_123')
+        """Test /start with view_offer deep link"""
+        router.route_command(12345, 12345, '/start view_offer_123')
         call_args = mock_handlers['info'].handle_offer_details.call_args[0]
         assert '123' in call_args[2]
     
@@ -183,15 +183,17 @@ class TestCommandRouting:
     @pytest.mark.parametrize("command,handler,method", [
         ('/start', 'info', 'handle_start'),
         ('/help', 'info', 'handle_help'),
-        ('/order 1 2', 'customer_order', 'handle_order'),
-        ('/my_orders', 'info', 'handle_my_orders'),
+        ('/create_order 1 2', 'customer_order', 'handle_order'),
+        ('/order 1 2', 'customer_order', 'handle_order'),  # Permanent alias
+        ('/list_my_orders', 'info', 'handle_my_orders'),
+        ('/my_orders', 'info', 'handle_my_orders'),  # Permanent alias
         ('/list_offers', 'info', 'handle_list_offers'),
         ('/subscribe', 'info', 'handle_subscribe'),
         ('/unsubscribe', 'info', 'handle_unsubscribe'),
-        ('/offer_details 1', 'info', 'handle_offer_details'),
+        ('/view_offer 1', 'info', 'handle_offer_details'),
         ('/confirm_order 1 2', 'customer_order', 'handle_confirm_order'),
-        ('/delete_cancelled', 'customer_order', 'handle_delete_cancelled'),
-        ('/delete_completed', 'customer_order', 'handle_delete_completed'),
+        ('/delete_cancelled_orders', 'customer_order', 'handle_delete_cancelled'),
+        ('/delete_completed_orders', 'customer_order', 'handle_delete_completed'),
         ('/changelog', 'changelog', 'handle_changelog'),
     ])
     def test_customer_command_routing(self, router, mock_handlers, command, handler, method):
@@ -201,38 +203,39 @@ class TestCommandRouting:
     
     # Test 19: All Admin Commands Route Correctly
     @pytest.mark.parametrize("command,handler,method", [
-        ('/add_supplier Test', 'supplier', 'handle_add_supplier'),
-        ('/retire_supplier Test', 'supplier', 'handle_retire_supplier'),
+        ('/create_supplier Test', 'supplier', 'handle_add_supplier'),
+        ('/archive_supplier Test', 'supplier', 'handle_retire_supplier'),
         ('/list_suppliers', 'supplier', 'handle_list_suppliers'),
-        ('/edit_supplier Test', 'supplier', 'handle_edit_supplier'),
+        ('/update_supplier Test', 'supplier', 'handle_edit_supplier'),
         ('/create_offer S B 10 12', 'offer', 'handle_create_offer'),
         ('/publish_offer 1', 'offer', 'handle_publish_offer'),
         ('/cancel_offer 1', 'offer', 'handle_cancel_offer'),
         ('/delete_offer 1', 'offer', 'handle_delete_offer'),
-        ('/add_box 1', 'offer', 'handle_add_box'),
-        ('/box_status', 'offer', 'handle_box_status'),
+        ('/create_box 1', 'offer', 'handle_add_box'),
+        ('/list_boxes', 'offer', 'handle_box_status'),
         ('/audit_offer 1', 'offer', 'handle_audit_offer'),
-        ('/order_wholesale 1', 'offer', 'handle_order_wholesale'),
-        ('/order_for user 1 2', 'admin_order', 'handle_order_for'),
+        ('/process_wholesale 1', 'offer', 'handle_order_wholesale'),
+        ('/create_order_for user 1 2', 'admin_order', 'handle_order_for'),
+        ('/order_for user 1 2', 'admin_order', 'handle_order_for'),  # Permanent alias
         ('/cancel_order 1', 'admin_order', 'handle_cancel_order'),
-        ('/user_orders user', 'admin_order', 'handle_user_orders'),
-        ('/offer_orders 1', 'admin_order', 'handle_offer_orders'),
-        ('/all_orders', 'admin_order', 'handle_all_orders'),
-        ('/pending_users', 'user', 'handle_pending_users'),
+        ('/list_user_orders user', 'admin_order', 'handle_user_orders'),
+        ('/list_offer_orders 1', 'admin_order', 'handle_offer_orders'),
+        ('/export_orders', 'admin_order', 'handle_all_orders'),
+        ('/list_pending_users', 'user', 'handle_pending_users'),
         ('/list_users', 'user', 'handle_list_users'),
         ('/approve_user test', 'user', 'handle_approve_user'),
         ('/reject_user test', 'user', 'handle_reject_user'),
-        ('/add_guest John', 'user', 'handle_add_guest'),
+        ('/create_guest John', 'user', 'handle_add_guest'),
         ('/create_discount 10', 'discount', 'handle_create_discount'),
         ('/cancel_discount', 'discount', 'handle_cancel_discount'),
-        ('/discount_status', 'discount', 'handle_discount_status'),
-        ('/wholesale_delivery', 'wholesale_delivery', 'handle_wholesale_delivery'),
-        ('/labeling_completed', 'labeling', 'handle_labeling_completed'),
-        ('/send_overviews', 'admin_order', 'handle_send_overviews'),
-        ('/mark_paid', 'admin_order', 'handle_mark_paid'),
+        ('/view_discount', 'discount', 'handle_discount_status'),
+        ('/process_delivery', 'wholesale_delivery', 'handle_wholesale_delivery'),
+        ('/process_labeling', 'labeling', 'handle_labeling_completed'),
+        ('/send_delivery_overviews', 'admin_order', 'handle_send_overviews'),
+        ('/process_payment', 'admin_order', 'handle_mark_paid'),
         ('/import_orders', 'import', 'handle_import_orders'),
         ('/finalize_import 1', 'import', 'handle_finalize_import'),
-        ('/delete_old', 'admin_order', 'handle_delete_old'),
+        ('/delete_old_orders', 'admin_order', 'handle_delete_old'),
         ('/audit_orders', 'admin_order', 'handle_audit_orders'),
         ('/admin', 'admin_commands', 'handle_admin'),
     ])
@@ -240,6 +243,45 @@ class TestCommandRouting:
         """Test that admin commands route to correct handlers"""
         router.route_command(12345, 15005473, command)
         getattr(mock_handlers[handler], method).assert_called_once()
+    
+    # Test 20: Permanent Aliases Route Correctly
+    @pytest.mark.parametrize("alias,canonical,handler,method,user_id", [
+        ('/order 1 2', '/create_order', 'customer_order', 'handle_order', 12345),
+        ('/my_orders', '/list_my_orders', 'info', 'handle_my_orders', 12345),
+        ('/order_for user 1 2', '/create_order_for', 'admin_order', 'handle_order_for', 15005473),
+    ])
+    def test_permanent_aliases(self, router, mock_handlers, alias, canonical, handler, method, user_id):
+        """Test that permanent aliases route to same handlers as canonical commands"""
+        router.route_command(12345, user_id, alias)
+        getattr(mock_handlers[handler], method).assert_called_once()
+    
+    # Test 21: Old Commands Return Unknown
+    @pytest.mark.parametrize("old_command", [
+        '/add_supplier Test',
+        '/retire_supplier Test',
+        '/edit_supplier Test',
+        '/offer_details 1',
+        '/add_box 1',
+        '/box_status',
+        '/order_wholesale 1',
+        '/user_orders user',
+        '/offer_orders 1',
+        '/all_orders',
+        '/pending_users',
+        '/add_guest John',
+        '/discount_status',
+        '/wholesale_delivery',
+        '/labeling_completed',
+        '/send_overviews',
+        '/mark_paid',
+        '/delete_old',
+        '/delete_cancelled',
+        '/delete_completed',
+    ])
+    def test_old_commands_rejected(self, router, old_command):
+        """Test that old command names are rejected and return unknown_command"""
+        result = router.route_command(12345, 15005473, old_command)
+        assert result['status'] == 'unknown_command'
 
 
 if __name__ == '__main__':

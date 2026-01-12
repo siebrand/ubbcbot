@@ -261,6 +261,38 @@ These handlers are for button callbacks and should not be renamed as they're not
 
 ---
 
+## Work Items Discovered (Outside Phase 1 Scope)
+
+During Phase 1 implementation, the following work items were identified:
+
+### ✅ RESOLVED: Callback Handler Updates
+Initially discovered that callback handlers needed updating, but this was fixed in Phase 1 to prevent broken functionality. Updated 15 callback keys in `src/services/callback_handler.py` command_map.
+
+### Phase 2 Requirements
+1. **Admin Panel Callbacks**: Update callback handlers in admin panel that reference old command names
+2. **Handler References**: Search codebase for hardcoded command strings in handlers (e.g., help text generation)
+3. **Deep Link Generation**: Update any code that generates deep links with old command names
+4. **Error Messages**: Update error messages that reference specific commands
+5. **Logging**: Update log messages that reference command names
+
+### Translation Keys to Update
+The following translation keys will need updates in Phase 2:
+- Command descriptions in help text
+- Usage examples
+- Error messages referencing commands
+- Admin panel button labels
+- Command aliases documentation
+
+### Files to Review in Phase 2
+- `src/translations/en.json`
+- `src/translations/nl.json`
+- `setup-commands.sh`
+- `src/handlers/admin_commands_handler.py` (admin panel callbacks)
+- `src/handlers/info_handler.py` (help text generation)
+- Any handlers that generate deep links
+
+---
+
 ## Implementation Plan
 
 ### Phase 0: Test Current System ✅ COMPLETE
@@ -275,7 +307,7 @@ These handlers are for button callbacks and should not be renamed as they're not
 - [x] Document current behavior as baseline
 
 **Implementation Details:**
-- Created `tests/test_command_routing.py` with 63 test cases
+- Created `tests/test_command_routing.py` with 89 test cases (expanded from 63)
 - Tests verify ACTUAL CommandRouter code logic (not just mocked handlers)
 - Tests command parsing: bot mention stripping, parameter extraction
 - Tests authorization logic: admin vs customer, approved vs unauthorized
@@ -283,6 +315,8 @@ These handlers are for button callbacks and should not be renamed as they're not
 - Tests deep link handling: /start with order/confirm/help parameters
 - Tests filter parsing: status filters and search strings
 - Tests environment behavior: test vs production group handling
+- Tests permanent aliases: order, my_orders, order_for
+- Tests old command rejection: ensures deprecated commands return unknown_command
 - Uses pytest with parametrized tests for efficiency
 - Handlers mocked to isolate router logic being tested
 
@@ -293,6 +327,8 @@ These handlers are for button callbacks and should not be renamed as they're not
 - Deep links (/start with parameters)
 - Filter parsing (list_suppliers, list_users)
 - Unknown command handling
+- Permanent alias routing
+- Old command rejection
 
 **Rationale**: These tests serve as:
 1. **Regression prevention** - Catch any breaking changes during refactoring
@@ -300,26 +336,122 @@ These handlers are for button callbacks and should not be renamed as they're not
 3. **Confidence** - Safe refactoring with immediate feedback
 4. **Baseline** - Clear understanding of current system before changes
 
-### Phase 1: Refactoring (Week 2)
-- [ ] Update command router with new command names
-- [ ] Implement permanent aliases (order, my_orders, order_for)
-- [ ] Update tests to reflect new command names
-- [ ] Verify all tests still pass
-- [ ] Document all affected translation keys
+### Phase 1: Refactoring ✅ COMPLETE
+- [x] Update command router with new command names
+- [x] Implement permanent aliases (order, my_orders, order_for)
+- [x] Update callback handler command_map keys
+- [x] Update pagination parsing for multi-word commands
+- [x] Update tests to reflect new command names
+- [x] Add tests for permanent alias routing
+- [x] Add tests for old command rejection
+- [x] Add comprehensive callback routing tests (62 tests)
+- [x] Integrate callback routing tests into deploy.sh
+- [x] Verify all tests pass (212/212 passing)
+- [x] Document all affected translation keys
 
-### Phase 2: Implementation (Week 3)
-- [ ] Update help text and documentation
-- [ ] Update translation files (en.json, nl.json)
-- [ ] Update setup-commands.sh script
-- [ ] Send admin notification about changes
+**Implementation Summary:**
+- Updated `src/services/command_router.py` with new command names
+- Updated `src/services/callback_handler.py` command_map with 15 new callback keys
+- Fixed pagination parsing for multi-word commands (process_payment, list_user_orders, list_my_orders)
+- Maintained backward compatibility for existing pagination callbacks
+- Added PERMANENT_ALIASES dictionary for high-frequency commands
+- Implemented alias resolution in route_command method
+- Updated deep link handling for new command names
+- Created `tests/test_callback_routing.py` with 62 comprehensive tests
+- All 212 tests passing including:
+  - 89 command routing tests (updated for new names)
+  - 62 callback routing tests (NEW)
+  - 3 permanent alias tests
+  - 20 old command rejection tests
+  - 61 integration tests
+
+**Commands Renamed:**
+- `/add_supplier` → `/create_supplier`
+- `/retire_supplier` → `/archive_supplier`
+- `/edit_supplier` → `/update_supplier`
+- `/offer_details` → `/view_offer`
+- `/add_box` → `/create_box`
+- `/box_status` → `/list_boxes`
+- `/order_wholesale` → `/process_wholesale`
+- `/order_for` → `/create_order_for` (alias: `/order_for`)
+- `/user_orders` → `/list_user_orders`
+- `/offer_orders` → `/list_offer_orders`
+- `/all_orders` → `/export_orders`
+- `/pending_users` → `/list_pending_users`
+- `/add_guest` → `/create_guest`
+- `/discount_status` → `/view_discount`
+- `/wholesale_delivery` → `/process_delivery`
+- `/labeling_completed` → `/process_labeling`
+- `/send_overviews` → `/send_delivery_overviews`
+- `/mark_paid` → `/process_payment`
+- `/delete_old` → `/delete_old_orders`
+- `/delete_cancelled` → `/delete_cancelled_orders`
+- `/delete_completed` → `/delete_completed_orders`
+- `/order` → `/create_order` (alias: `/order`)
+- `/my_orders` → `/list_my_orders` (alias: `/my_orders`)
+
+**Permanent Aliases (for UX):**
+- `/order` → `/create_order`
+- `/my_orders` → `/list_my_orders`
+- `/order_for` → `/create_order_for`
+
+### Phase 2: User-Facing Updates (NEXT - Estimated 1-2 weeks)
+
+**Goal:** Update all user-facing elements to reflect new command names
+
+**High Priority:**
+- [ ] Update translation files (en.json, nl.json) with new command names
+- [ ] Update setup-commands.sh script with new Telegram command list
+- [ ] Update help text generation in info_handler.py
+- [ ] Search codebase for hardcoded command references
+- [ ] Update error messages that reference commands
+- [ ] Test in test environment thoroughly
+
+**Medium Priority:**
+- [ ] Update deep link generation in handlers
+- [ ] Update logging statements with command names
+- [ ] Update README.md with new command names
+- [ ] Send admin notification about command changes
 - [ ] Update Telegram command list via BotFather
 
-### Phase 3: Testing & Verification (Week 4)
-- [ ] Run full test suite
-- [ ] Manual testing of critical workflows
-- [ ] Verify permanent aliases work
+**Deliverables:**
+- Updated translation files with ~150 key changes
+- Updated setup-commands.sh with new command names
+- Updated help text for all commands
+- Admin notification message prepared
+- Test environment verification complete
+
+### Phase 3: Production Deployment & Verification (Estimated 1 week)
+
+**Goal:** Deploy to production and verify all functionality
+
+**Pre-Deployment:**
+- [ ] Run full test suite (all 212 tests must pass)
+- [ ] Manual testing of critical workflows in test environment
+- [ ] Verify permanent aliases work correctly
 - [ ] Comprehensive integration testing
+- [ ] Admin notification sent about upcoming changes
+
+**Deployment:**
+- [ ] Deploy to production environment
+- [ ] Update Telegram command list via BotFather
+- [ ] Monitor logs for errors
+- [ ] Verify webhook functionality
+
+**Post-Deployment:**
+- [ ] Test all renamed commands in production
+- [ ] Test permanent aliases (order, my_orders, order_for)
+- [ ] Verify old commands return unknown_command
+- [ ] Test admin panel buttons
+- [ ] Test pagination for multi-word commands
+- [ ] Verify help text displays correctly
 - [ ] Update user-facing documentation
+- [ ] Monitor for user feedback
+
+**Rollback Plan:**
+- Keep previous deployment artifacts
+- Document rollback procedure
+- Test rollback in test environment first
 
 ---
 
@@ -433,11 +565,12 @@ def test_old_command_rejected():
 
 ## Estimated Impact
 
-- **Commands Renamed**: 25 (28% of user-facing commands)
-- **Commands Kept**: 65 (72% already follow good conventions)
+- **Commands Renamed**: 23 (implemented in Phase 1)
+- **Commands Kept**: 67 (already follow good conventions)
 - **Permanent Aliases**: 3 (order, my_orders, order_for)
-- **Translation Keys Updated**: ~150
-- **Code Files Modified**: ~30
-- **Tests to Write**: 63 CommandRouter logic tests (COMPLETE)
-- **Estimated Effort**: 3-4 weeks (Phase 0 complete, 3 weeks remaining for Phases 1-3)
-- **User Impact**: High - requires immediate adaptation to new commands
+- **Translation Keys to Update**: ~150 (Phase 2)
+- **Code Files Modified**: 8 (Phase 1 complete)
+- **Tests Written**: 151 routing tests (Phase 1 complete)
+- **Total Tests**: 212 (all passing)
+- **Estimated Remaining Effort**: 2-3 weeks (Phases 2-3)
+- **User Impact**: High - requires immediate adaptation to new commands (except permanent aliases)

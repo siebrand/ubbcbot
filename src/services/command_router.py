@@ -6,6 +6,13 @@ from models.entities import AuthorizationStatus
 logger = logging.getLogger()
 
 class CommandRouter:
+    # Permanent aliases for high-frequency commands
+    PERMANENT_ALIASES = {
+        'order': 'create_order',
+        'my_orders': 'list_my_orders',
+        'order_for': 'create_order_for',
+    }
+    
     def __init__(self, db, admin_user_id: int, environment: str, handlers: Dict[str, Any]):
         self.db = db
         self.admin_user_id = admin_user_id
@@ -24,6 +31,13 @@ class CommandRouter:
         # Remove bot mention from command if present
         if '@' in command:
             command = command.split('@')[0]
+        
+        # Remove leading slash for alias lookup
+        command_name = command[1:] if command.startswith('/') else command
+        
+        # Apply permanent aliases
+        if command_name in self.PERMANENT_ALIASES:
+            command = '/' + self.PERMANENT_ALIASES[command_name]
         
         # In production, redirect group commands to PM (except group-specific ones)
         is_group_chat = chat_id < 0
@@ -51,9 +65,9 @@ class CommandRouter:
 
         # Handle deep link start parameters
         if command == '/start' and len(parts) > 1:
-            if parts[1].startswith('order_'):
+            if parts[1].startswith('create_order_'):
                 try:
-                    _, offer_id_str, quantity_str = parts[1].split('_')
+                    _, _, offer_id_str, quantity_str = parts[1].split('_')
                     return self.handlers['customer_order'].handle_order(chat_id, user_id, [offer_id_str, quantity_str])
                 except ValueError:
                     pass
@@ -67,9 +81,9 @@ class CommandRouter:
                 section = parts[1][5:]
                 target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
                 return self.handlers['info'].handle_help(target_chat, user_id, [section])
-            elif parts[1].startswith('offer_details_'):
+            elif parts[1].startswith('view_offer_'):
                 try:
-                    offer_id_str = parts[1][14:]
+                    offer_id_str = parts[1][11:]
                     target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
                     return self.handlers['info'].handle_offer_details(target_chat, user_id, [offer_id_str])
                 except ValueError:
@@ -82,9 +96,9 @@ class CommandRouter:
             return self.handlers['info'].handle_start(target_chat, user_id, parts[1:])
         elif command == '/help':
             return self.handlers['info'].handle_help(target_chat, user_id, parts[1:])
-        elif command == '/order':
+        elif command == '/create_order':
             return self.handlers['customer_order'].handle_order(chat_id, user_id, parts[1:])
-        elif command == '/my_orders':
+        elif command == '/list_my_orders':
             return self.handlers['info'].handle_my_orders(target_chat, user_id, parts[1:])
         elif command == '/list_offers':
             return self.handlers['info'].handle_list_offers(target_chat, user_id, parts[1:])
@@ -92,13 +106,13 @@ class CommandRouter:
             return self.handlers['info'].handle_subscribe(target_chat, user_id)
         elif command == '/unsubscribe':
             return self.handlers['info'].handle_unsubscribe(target_chat, user_id)
-        elif command == '/offer_details':
+        elif command == '/view_offer':
             return self.handlers['info'].handle_offer_details(target_chat, user_id, parts[1:])
         elif command == '/confirm_order':
             return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, parts[1:])
-        elif command == '/delete_cancelled':
+        elif command == '/delete_cancelled_orders':
             return self.handlers['customer_order'].handle_delete_cancelled(target_chat, user_id)
-        elif command == '/delete_completed':
+        elif command == '/delete_completed_orders':
             return self.handlers['customer_order'].handle_delete_completed(target_chat, user_id)
         elif command == '/changelog':
             return self.handlers['changelog'].handle_changelog(target_chat, user_id, 1)
@@ -111,14 +125,14 @@ class CommandRouter:
             
             if command == '/setup_test_data':
                 return self.handlers['test'].handle_setup_test_data(admin_target_chat)
-            elif command == '/add_supplier':
+            elif command == '/create_supplier':
                 return self.handlers['supplier'].handle_add_supplier(admin_target_chat, parts[1:])
-            elif command == '/retire_supplier':
+            elif command == '/archive_supplier':
                 return self.handlers['supplier'].handle_retire_supplier(admin_target_chat, parts[1:])
             elif command == '/list_suppliers':
                 status_filter = parts[1] if len(parts) > 1 and parts[1] in ['active', 'retired', 'all'] else 'active'
                 return self.handlers['supplier'].handle_list_suppliers(admin_target_chat, 1, status_filter)
-            elif command == '/edit_supplier':
+            elif command == '/update_supplier':
                 return self.handlers['supplier'].handle_edit_supplier(admin_target_chat, parts[1:])
             elif command == '/update_supplier_name':
                 return self.handlers['supplier'].handle_update_supplier_name(admin_target_chat, parts[1:])
@@ -128,13 +142,13 @@ class CommandRouter:
                 return self.handlers['offer'].handle_create_offer(admin_target_chat, parts[1:])
             elif command == '/cancel_offer':
                 return self.handlers['offer'].handle_cancel_offer(admin_target_chat, parts[1:])
-            elif command == '/add_box':
+            elif command == '/create_box':
                 return self.handlers['offer'].handle_add_box(admin_target_chat, parts[1:])
-            elif command == '/box_status':
+            elif command == '/list_boxes':
                 return self.handlers['offer'].handle_box_status(admin_target_chat, parts[1:])
             elif command == '/audit_offer':
                 return self.handlers['offer'].handle_audit_offer(admin_target_chat, parts[1:])
-            elif command == '/order_wholesale':
+            elif command == '/process_wholesale':
                 return self.handlers['offer'].handle_order_wholesale(admin_target_chat, parts[1:])
             elif command == '/confirm_order_wholesale':
                 return self.handlers['offer'].handle_confirm_order_wholesale(admin_target_chat, parts[1:])
@@ -156,17 +170,17 @@ class CommandRouter:
                 return self.handlers['info'].handle_offer_details(admin_target_chat, user_id, parts[1:] + ['user'])
             elif command == '/delete_offer':
                 return self.handlers['offer'].handle_delete_offer(admin_target_chat, parts[1:])
-            elif command == '/order_for':
+            elif command == '/create_order_for':
                 return self.handlers['admin_order'].handle_order_for(admin_target_chat, user_id, parts[1:])
             elif command == '/cancel_order':
                 return self.handlers['admin_order'].handle_cancel_order(admin_target_chat, parts[1:])
-            elif command == '/user_orders':
+            elif command == '/list_user_orders':
                 return self.handlers['admin_order'].handle_user_orders(admin_target_chat, parts[1:])
-            elif command == '/offer_orders':
+            elif command == '/list_offer_orders':
                 return self.handlers['admin_order'].handle_offer_orders(admin_target_chat, parts[1:])
-            elif command == '/all_orders':
+            elif command == '/export_orders':
                 return self.handlers['admin_order'].handle_all_orders(admin_target_chat, parts[1:])
-            elif command == '/pending_users':
+            elif command == '/list_pending_users':
                 return self.handlers['user'].handle_pending_users(admin_target_chat)
             elif command == '/approve_user':
                 return self.handlers['user'].handle_approve_user(admin_target_chat, parts[1:])
@@ -195,7 +209,7 @@ class CommandRouter:
                 return self.handlers['user'].handle_list_users(admin_target_chat, 1, status_filter, search_string)
             elif command == '/list_subscribers':
                 return self.handlers['user'].handle_list_subscribers(admin_target_chat)
-            elif command == '/add_guest':
+            elif command == '/create_guest':
                 return self.handlers['user'].handle_add_guest(admin_target_chat, parts[1:])
             elif command == '/list_guests':
                 return self.handlers['user'].handle_list_guests(admin_target_chat)
@@ -203,19 +217,19 @@ class CommandRouter:
                 return self.handlers['discount'].handle_create_discount(admin_target_chat, parts[1:])
             elif command == '/cancel_discount':
                 return self.handlers['discount'].handle_cancel_discount(admin_target_chat)
-            elif command == '/discount_status':
+            elif command == '/view_discount':
                 return self.handlers['discount'].handle_discount_status(admin_target_chat)
-            elif command == '/wholesale_delivery':
+            elif command == '/process_delivery':
                 return self.handlers['wholesale_delivery'].handle_wholesale_delivery(admin_target_chat, user_id, parts[1:])
-            elif command == '/labeling_completed':
+            elif command == '/process_labeling':
                 return self.handlers['labeling'].handle_labeling_completed(admin_target_chat, user_id, parts[1:])
-            elif command == '/send_overviews':
+            elif command == '/send_delivery_overviews':
                 return self.handlers['admin_order'].handle_send_overviews(admin_target_chat, parts[1:])
-            elif command == '/mark_paid':
+            elif command == '/process_payment':
                 return self.handlers['admin_order'].handle_mark_paid(admin_target_chat, parts[1:])
             elif command == '/failed_notifications':
                 return self.handlers['admin_order'].handle_failed_notifications(admin_target_chat, parts[1:])
-            elif command == '/delete_old':
+            elif command == '/delete_old_orders':
                 return self.handlers['admin_order'].handle_delete_old(admin_target_chat)
             elif command == '/audit_orders':
                 return self.handlers['admin_order'].handle_audit_orders(admin_target_chat)
