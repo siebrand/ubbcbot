@@ -86,21 +86,36 @@ class BoxStatusManager:
         if not boxes:
             return None
         
-        # Check if there's at least one box that has been ordered
-        has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes)
+        # Check if there are delivered boxes
+        delivered_boxes = self.get_delivered_boxes(boxes)
         
-        # Check if there's any available space in ANY box
-        has_available_space = any(box.current_quantity < box.max_capacity for box in boxes)
-        
-        # Offer is sold out if at least one box is ordered AND no available space exists
         new_status = None
-        if has_ordered_boxes and not has_available_space:
-            if offer.status != OfferStatus.SOLD_OUT.value:
-                self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
-                new_status = OfferStatus.SOLD_OUT.value
+        if delivered_boxes:
+            # Use delivered box logic: check capacity in delivered boxes
+            capacity = self.get_available_capacity_in_delivered(boxes)
+            
+            if capacity == 0:
+                # All delivered boxes full -> SOLD_OUT
+                if offer.status != OfferStatus.SOLD_OUT.value:
+                    self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
+                    new_status = OfferStatus.SOLD_OUT.value
+            else:
+                # Delivered boxes have space -> ACTIVE
+                if offer.status != OfferStatus.ACTIVE.value:
+                    self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
+                    new_status = OfferStatus.ACTIVE.value
         else:
-            if offer.status != OfferStatus.ACTIVE.value:
-                self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
-                new_status = OfferStatus.ACTIVE.value
+            # No delivered boxes: fall back to existing logic
+            has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes)
+            has_available_space = any(box.current_quantity < box.max_capacity for box in boxes)
+            
+            if has_ordered_boxes and not has_available_space:
+                if offer.status != OfferStatus.SOLD_OUT.value:
+                    self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
+                    new_status = OfferStatus.SOLD_OUT.value
+            else:
+                if offer.status != OfferStatus.ACTIVE.value:
+                    self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
+                    new_status = OfferStatus.ACTIVE.value
         
         return new_status

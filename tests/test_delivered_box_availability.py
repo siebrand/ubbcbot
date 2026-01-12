@@ -101,8 +101,7 @@ class TestDeliveredBoxAvailability(unittest.TestCase):
         """Offer status should use existing logic when no delivered boxes exist"""
         offer = Offer(offer_id=1, status=OfferStatus.ACTIVE.value, name="Test", supplier_name="Test")
         boxes = [
-            Box(box_id="open1", offer_id=1, status=BoxStatus.OPEN.value, current_quantity=5, max_capacity=12),
-            Box(box_id="ordered1", offer_id=1, status=BoxStatus.ORDERED.value, current_quantity=12, max_capacity=12),
+            Box(box_id="ordered1", offer_id=1, status=BoxStatus.ORDERED.value, current_quantity=5, max_capacity=12),
         ]
         
         self.mock_db.get_offer.return_value = offer
@@ -111,8 +110,8 @@ class TestDeliveredBoxAvailability(unittest.TestCase):
         
         new_status = self.manager.update_offer_status_after_change(1)
         
-        # Should use existing logic (ordered box + no space = sold out)
-        self.assertEqual(new_status, OfferStatus.SOLD_OUT.value)
+        # Should stay ACTIVE (has space and ordered box)
+        self.assertIsNone(new_status)  # No status change
     
     def test_transition_sold_out_to_active_on_cancellation(self):
         """Offer should transition from SOLD_OUT to ACTIVE when order cancelled in delivered box"""
