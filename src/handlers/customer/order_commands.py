@@ -238,10 +238,11 @@ class CustomerOrderCommands(BaseHandler):
             else:
                 # Calculate remaining availability
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
-                total_available = 0
-                for box in boxes:
-                    if box.current_quantity < box.max_capacity:
-                        total_available += box.max_capacity - box.current_quantity
+                total_available = sum(
+                    box.max_capacity - box.current_quantity 
+                    for box in boxes 
+                    if box.current_quantity < box.max_capacity
+                )
                 
                 if total_available > 6:
                     availability_text = f" ({self._t('sufficient_available', force_group_lang=True)})"

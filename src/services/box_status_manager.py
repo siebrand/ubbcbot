@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 from models.entities import Box, BoxStatus, OfferStatus
 
 logger = logging.getLogger()
@@ -9,6 +9,19 @@ class BoxStatusManager:
     
     def __init__(self, db):
         self.db = db
+    
+    def get_delivered_boxes(self, boxes: List[Box]) -> List[Box]:
+        """Filter boxes to only delivered status"""
+        return [box for box in boxes if box.status == BoxStatus.DELIVERED.value]
+    
+    def get_available_capacity_in_delivered(self, boxes: List[Box]) -> int:
+        """Calculate total available capacity in delivered boxes"""
+        delivered_boxes = self.get_delivered_boxes(boxes)
+        return sum(
+            box.max_capacity - box.current_quantity 
+            for box in delivered_boxes 
+            if box.current_quantity < box.max_capacity
+        )
     
     def update_box_after_order_placement(self, box_id: str, quantity_added: int) -> bool:
         """Update box status after adding an order"""
