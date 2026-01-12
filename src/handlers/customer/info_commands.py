@@ -421,6 +421,9 @@ class InfoCommands(BaseHandler):
                 self._send_message(chat_id, self._t('no_offers', user_id))
                 return {'status': 'no_offers'}
             
+            # Sort active offers by offer_id descending (highest first)
+            active_offers.sort(key=lambda x: x.offer_id, reverse=True)
+            
             # Paginate active offers
             page_offers, total_pages = PaginationUtils.paginate_list(active_offers, page, 20)
             
