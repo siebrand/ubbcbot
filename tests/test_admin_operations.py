@@ -60,7 +60,7 @@ def test_offer_cancellation():
     offer = Offer(offer_id=1, status=OfferStatus.ACTIVE.value)
     active_orders = [
         Order(status=OrderStatus.PENDING.value),
-        Order(status=OrderStatus.CONFIRMED.value)
+        Order(status=OrderStatus.ORDERED.value)
     ]
     
     has_active_orders = len([o for o in active_orders if o.status in ['pending', 'ordered']]) > 0
@@ -70,7 +70,7 @@ def test_offer_cancellation():
     # Cancel all orders
     cancelled_count = 0
     for order in active_orders:
-        if order.status in ['pending', 'confirmed']:  # Use actual status values
+        if order.status in ['pending', 'ordered']:
             order.status = OrderStatus.CANCELLED.value
             cancelled_count += 1
     

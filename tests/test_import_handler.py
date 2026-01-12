@@ -198,20 +198,24 @@ class TestImportHandler(unittest.TestCase):
         
         self.db.get_offer.return_value = offer
         self.db.get_boxes_by_offer.return_value = boxes
+        self.db.get_orders_by_box.return_value = []
         self.db.list_offers.return_value = []
         
         with patch.object(self.handler, '_validate_and_get_offer') as mock_validate, \
              patch.object(self.handler, '_validate_args') as mock_args, \
              patch.object(self.handler, '_send_success') as mock_send, \
-             patch.object(self.handler, '_send_message') as mock_msg:
+             patch.object(self.handler, '_send_message') as mock_msg, \
+             patch.object(self.handler.box_status_manager, 'mark_boxes_as_ordered') as mock_mark, \
+             patch.object(self.handler.box_status_manager, 'update_offer_status_after_change') as mock_update_status:
             
             mock_validate.return_value = (offer, None)
             mock_args.return_value = None
             mock_send.return_value = {'status': 'success'}
+            mock_update_status.return_value = OfferStatus.SOLD_OUT.value
             
             result = self.handler.handle_finalize_import(123, ['1'])
             
-            self.db.update_offer.assert_called_once_with(1, {'status': OfferStatus.SOLD_OUT.value})
+            mock_update_status.assert_called_once_with(1)
             mock_send.assert_called_once()
     
     def test_finalize_import_active(self):
@@ -228,21 +232,25 @@ class TestImportHandler(unittest.TestCase):
         
         self.db.get_offer.return_value = offer
         self.db.get_boxes_by_offer.return_value = boxes
+        self.db.get_orders_by_box.return_value = []
         self.db.list_offers.return_value = []
         
         with patch.object(self.handler, '_validate_and_get_offer') as mock_validate, \
              patch.object(self.handler, '_validate_args') as mock_args, \
              patch.object(self.handler, '_send_success') as mock_send, \
              patch.object(self.handler, '_announce_offer') as mock_announce, \
-             patch.object(self.handler, '_send_message') as mock_msg:
+             patch.object(self.handler, '_send_message') as mock_msg, \
+             patch.object(self.handler.box_status_manager, 'mark_boxes_as_ordered') as mock_mark, \
+             patch.object(self.handler.box_status_manager, 'update_offer_status_after_change') as mock_update_status:
             
             mock_validate.return_value = (offer, None)
             mock_args.return_value = None
             mock_send.return_value = {'status': 'success'}
+            mock_update_status.return_value = OfferStatus.ACTIVE.value
             
             result = self.handler.handle_finalize_import(123, ['1'])
             
-            self.db.update_offer.assert_called_once_with(1, {'status': OfferStatus.ACTIVE.value})
+            mock_update_status.assert_called_once_with(1)
             mock_announce.assert_called_once()
             mock_send.assert_called_once()
     

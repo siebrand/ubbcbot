@@ -67,7 +67,7 @@ def test_duplicate_order_handling():
             quantity=1, 
             unit_price=Decimal('5.00'),
             total_price=Decimal('5.00'),
-            status=OrderStatus.CONFIRMED.value
+            status=OrderStatus.ORDERED.value
         )
     ]
     has_existing = len(existing_orders) > 0
@@ -129,8 +129,8 @@ def test_order_status_updates():
         status=OrderStatus.PENDING.value
     )
     box_status = BoxStatus.ORDERED.value
-    final_status = OrderStatus.CONFIRMED.value if box_status == BoxStatus.ORDERED.value else OrderStatus.PENDING.value
-    assert final_status == OrderStatus.CONFIRMED.value
+    final_status = OrderStatus.ORDERED.value if box_status == BoxStatus.ORDERED.value else OrderStatus.PENDING.value
+    assert final_status == OrderStatus.ORDERED.value
     
     # Pending -> Cancelled
     order_to_cancel = Order(
