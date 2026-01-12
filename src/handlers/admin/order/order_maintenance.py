@@ -44,7 +44,8 @@ class OrderMaintenance(BaseOrderHandler):
                             continue
             
             if not old_cancelled_orders and not old_completed_orders:
-                self._send_message(chat_id, self._t('no_old_orders', chat_id))
+                keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+                self._send_message(chat_id, self._t('no_old_orders', chat_id), reply_markup=keyboard)
                 return {'status': 'no_old_orders'}
             
             # Delete old orders
@@ -63,10 +64,12 @@ class OrderMaintenance(BaseOrderHandler):
                 message = self._t('old_orders_deleted', chat_id, 
                                 cancelled_count=deleted_cancelled_count, 
                                 completed_count=deleted_completed_count)
-                self._send_message(chat_id, message)
+                keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+                self._send_message(chat_id, message, reply_markup=keyboard)
                 return {'status': 'success', 'deleted_cancelled_count': deleted_cancelled_count, 'deleted_completed_count': deleted_completed_count}
             else:
-                self._send_message(chat_id, self._t('failed_delete_old_orders', chat_id))
+                keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+                self._send_message(chat_id, self._t('failed_delete_old_orders', chat_id), reply_markup=keyboard)
                 return {'status': 'error'}
                 
         except Exception as e:
@@ -90,7 +93,8 @@ class OrderMaintenance(BaseOrderHandler):
                         orders_without_update_date.append(order)
             
             if not orders_without_update_date:
-                self._send_message(chat_id, self._t('no_orders_missing_update_date', chat_id))
+                keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+                self._send_message(chat_id, self._t('no_orders_missing_update_date', chat_id), reply_markup=keyboard)
                 return {'status': 'no_orders_to_audit'}
             
             # Update orders - update_date will be set automatically by update_order
@@ -101,10 +105,12 @@ class OrderMaintenance(BaseOrderHandler):
                     updated_count += 1
             
             if updated_count > 0:
-                self._send_message(chat_id, self._t('orders_audit_completed', chat_id, count=updated_count))
+                keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+                self._send_message(chat_id, self._t('orders_audit_completed', chat_id, count=updated_count), reply_markup=keyboard)
                 return {'status': 'success', 'updated_count': updated_count}
             else:
-                self._send_message(chat_id, self._t('failed_audit_orders', chat_id))
+                keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+                self._send_message(chat_id, self._t('failed_audit_orders', chat_id), reply_markup=keyboard)
                 return {'status': 'error'}
                 
         except Exception as e:

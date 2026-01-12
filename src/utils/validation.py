@@ -61,7 +61,8 @@ class ValidationUtils:
         matches = self.match_customers(identifier, all_customers)
         
         if not matches:
-            return None, {'status': 'user_not_found', 'message': self._t('user_not_found', identifier=identifier)}
+            keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+            return None, {'status': 'user_not_found', 'message': self._t('user_not_found', identifier=identifier), 'keyboard': keyboard}
         
         if len(matches) == 1:
             return matches[0], None

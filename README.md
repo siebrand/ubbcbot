@@ -132,7 +132,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 
 ### Admin Commands (User ID: 15005473)
 - `/admin` - Admin panel with buttons for all admin functions
-- `/help [section]` - Show help for specific section (general, orders, suppliers, offers, users)
+- `/help [section]` - Show help for specific section (general, orders, suppliers, offers, users, delivery, discounts, import, system)
 - `/setup_test_data` - Setup test data (test environment only)
 - `/add_supplier <name>` - Register new supplier
 - `/retire_supplier <name>` - Retire supplier (no longer available for new offers)
@@ -140,6 +140,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/edit_supplier <name>` - Edit supplier details with inline keyboard
 - `/update_supplier_name <supplier_id> <new_name>` - Update supplier name
 - `/update_supplier_contact <supplier_id> <email>` - Update supplier contact email
+- `/update_supplier_full_name <supplier_id> <new_name>` - Update supplier full name
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create draft beer offer
 - `/offer_details <offer_id>` - View and edit offer details
 - `/update_offer_name <offer_id> <new_name>` - Update offer name
@@ -151,10 +152,12 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/delete_offer <offer_id>` - Delete completed or inactive offer from database
 - `/add_box <offer_id>` - Add single box to offer (updates sold out offers to active)
 - `/box_status [<offer_id>|active|ordered|full|delivered|all|help]` - View box status and capacity (paginated with enhanced navigation)
+- `/audit_offer <offer_id>` - Audit offer capacity vs orders
 - `/order_wholesale <offer_id>` - Start wholesale ordering process (button confirmation)
 - `/order_for <username> <offer_id> [quantity]` - Place order for another user (10-unit admin limit)
 - `/cancel_order <order_id>` - Cancel customer order (button confirmation)
 - `/user_orders <username>` - View orders for specific user
+- `/offer_orders <offer_id>` - View all orders for specific offer
 - `/all_orders [active|cancelled|ordered|ready_for_labeling|labeling_completed|awaiting_payment|completed|all|full]` - Download CSV of all orders (default: active, full exports all fields)
 - `/pending_users` - View users awaiting approval (paginated with approve/reject buttons)
 - `/list_users` - View all customers (paginated with status filtering)
@@ -175,7 +178,11 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/send_overviews` - Send delivery overviews to customers
 - `/mark_paid` - Mark customers as paid
 - `/failed_notifications` - View orders with failed delivery notifications
+- `/offer_status <offer_id> import` - Change offer status to import (for import workflow)
+- `/import_orders` - Import orders from CSV file
+- `/finalize_import <offer_id>` - Finalize imported offer
 - `/delete_old` - Delete cancelled and completed orders older than 7 days
+- `/audit_orders` - Audit orders - add update_date to orders missing it
 - `/cancel` - Cancel pending operation (e.g., text input prompts)
 
 ### Customer Commands
@@ -191,6 +198,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/offer_details <offer_id>` - View detailed offer information
 - `/subscribe` - Subscribe to new offer notifications
 - `/unsubscribe` - Unsubscribe from offer notifications
+- `/changelog` - View bot updates and feature changes
 - `/changelog` - View bot updates and feature changes
 
 ## Architecture

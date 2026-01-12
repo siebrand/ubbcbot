@@ -71,9 +71,9 @@ class CallbackHandler:
                 return self.handlers['delivery_overview'].handle_mark_customer_paid(chat_id, customer_id)
             
             # Admin panel callbacks
-            elif data.startswith('admin_'):
+            elif data.startswith('admin'):
                 return self._handle_admin_callbacks(chat_id, user_id, data)
-            elif data.startswith('cmd_'):
+            elif data.startswith('cmd'):
                 return self._handle_command_callbacks(chat_id, user_id, data)
             elif data == 'add_supplier_start':
                 return self._start_add_supplier(chat_id)
@@ -198,8 +198,8 @@ class CallbackHandler:
                 return self.handlers['user'].handle_user_status_select(chat_id, customer_id)
 
             elif data == 'cancel_action':
-                self._send_message(chat_id, self._t('done'))
-                return {'status': 'done'}
+                # Return to admin panel instead of just saying "done"
+                return self.handlers['admin_commands'].handle_admin(chat_id, user_id)
             
             # Pagination callbacks
             elif data.startswith('page_'):
@@ -505,26 +505,37 @@ class CallbackHandler:
             self._send_message(chat_id, self._t('admin_only', user_id))
             return {'status': 'unauthorized'}
         
-        if data == 'admin_main':
+        # Support both old format (admin_main) and new format (admin:main)
+        if ':' in data:
+            parts = data.split(':')
+            action = parts[1] if len(parts) > 1 else 'main'
+        else:
+            action = data.replace('admin_', '')
+        
+        if action == 'main':
             return self.handlers['admin_commands'].handle_admin(chat_id, user_id)
-        elif data == 'admin_workflow':
+        elif action == 'close':
+            self._send_message(chat_id, self._t('close_panel', user_id))
+            return {'status': 'closed'}
+        elif action == 'workflow':
             return self.handlers['admin_commands'].handle_admin_workflow(chat_id, user_id)
-        elif data == 'admin_suppliers':
+        elif action == 'suppliers':
             return self.handlers['admin_commands'].handle_admin_suppliers(chat_id, user_id)
-        elif data == 'admin_offers':
+        elif action == 'offers':
             return self.handlers['admin_commands'].handle_admin_offers(chat_id, user_id)
-        elif data == 'admin_orders':
+        elif action == 'orders':
             return self.handlers['admin_commands'].handle_admin_orders(chat_id, user_id)
-        elif data == 'admin_users':
+        elif action == 'users':
             return self.handlers['admin_commands'].handle_admin_users(chat_id, user_id)
-        elif data == 'admin_delivery':
-            return self.handlers['admin_commands'].handle_admin_delivery(chat_id, user_id)
-        elif data == 'admin_discounts':
+        elif action == 'discounts':
             return self.handlers['admin_commands'].handle_admin_discounts(chat_id, user_id)
-        elif data == 'admin_import':
-            return self.handlers['admin_commands'].handle_admin_import(chat_id, user_id)
-        elif data == 'admin_system':
+        elif action == 'system':
             return self.handlers['admin_commands'].handle_admin_system(chat_id, user_id)
+        # Legacy support
+        elif action == 'delivery':
+            return self.handlers['admin_commands'].handle_admin_workflow(chat_id, user_id)
+        elif action == 'import':
+            return self.handlers['admin_commands'].handle_admin_offers(chat_id, user_id)
         
         self._send_message(chat_id, self._t('unknown_callback', user_id))
         return {'status': 'unknown_callback'}
@@ -535,47 +546,52 @@ class CallbackHandler:
             self._send_message(chat_id, self._t('admin_only', user_id))
             return {'status': 'unauthorized'}
         
+        # Support both old format (cmd_action) and new format (cmd:action)
+        if ':' in data:
+            action = data.split(':', 1)[1]
+        else:
+            action = data.replace('cmd_', '')
+        
         # Map callback data to command handlers
         command_map = {
-            'cmd_add_supplier': lambda: self.handlers['supplier'].handle_add_supplier(chat_id, []),
-            'cmd_list_suppliers': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
-            'cmd_edit_supplier': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
-            'cmd_create_offer': lambda: self.handlers['offer'].handle_create_offer(chat_id, []),
-            'cmd_publish_offer': lambda: self._send_usage_message(chat_id, 'usage_publish_offer'),
-            'cmd_list_offers': lambda: self.handlers['info'].handle_list_offers(chat_id, user_id, []),
-            'cmd_box_status': lambda: self.handlers['offer'].handle_box_status(chat_id),
-            'cmd_audit_offer': lambda: self.handlers['offer'].handle_audit_offer(chat_id, []),
-            'cmd_order_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
-            'cmd_all_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
-            'cmd_user_orders': lambda: self._start_user_orders_input(chat_id),
-            'cmd_offer_orders': lambda: self.handlers['admin_order'].handle_offer_orders(chat_id, []),
-            'cmd_cancel_order': lambda: self.handlers['admin_order'].handle_cancel_order(chat_id, []),
-            'cmd_order_for': lambda: self.handlers['admin_order'].handle_order_for(chat_id, user_id, []),
-            'cmd_pending_users': lambda: self.handlers['user'].handle_pending_users(chat_id),
-            'cmd_list_users': lambda: self.handlers['user'].handle_list_users(chat_id, 1, 'all'),
-            'cmd_list_subscribers': lambda: self.handlers['user'].handle_list_subscribers(chat_id),
-            'cmd_add_guest': lambda: self._send_usage_message(chat_id, 'usage_add_guest'),
-            'cmd_list_guests': lambda: self.handlers['user'].handle_list_guests(chat_id),
-            'cmd_approve_user': lambda: self._start_approve_user_input(chat_id),
-            'cmd_user_status': lambda: self._start_user_status_input(chat_id),
-            'cmd_wholesale_delivery': lambda: self.handlers['wholesale_delivery'].handle_wholesale_delivery(chat_id, user_id, []),
-            'cmd_labeling_completed': lambda: self.handlers['labeling'].handle_labeling_completed(chat_id, user_id, []),
-            'cmd_send_overviews': lambda: self.handlers['admin_order'].handle_send_overviews(chat_id, []),
-            'cmd_mark_paid': lambda: self.handlers['admin_order'].handle_mark_paid(chat_id, []),
-            'cmd_create_discount': lambda: self._send_usage_message(chat_id, 'usage_create_discount'),
-            'cmd_discount_status': lambda: self.handlers['discount'].handle_discount_status(chat_id),
-            'cmd_cancel_discount': lambda: self.handlers['discount'].handle_cancel_discount(chat_id),
-            'cmd_setup_test_data': lambda: self.handlers['test'].handle_setup_test_data(chat_id),
-            'cmd_failed_notifications': lambda: self.handlers['admin_order'].handle_failed_notifications(chat_id, []),
-            'cmd_delete_old_cancelled': lambda: self.handlers['admin_order'].handle_delete_cancelled(chat_id),
-            'cmd_audit_orders': lambda: self.handlers['admin_order'].handle_audit_orders(chat_id),
-            'cmd_import_orders': lambda: self.handlers['import'].handle_import_orders(chat_id, user_id),
-            'cmd_finalize_import': lambda: self.handlers['import'].handle_finalize_import(chat_id, []),
-            'add_supplier_start': lambda: self._start_add_supplier(chat_id)
+            'add_supplier': lambda: self.handlers['supplier'].handle_add_supplier(chat_id, []),
+            'list_suppliers': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
+            'edit_supplier': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
+            'create_offer': lambda: self.handlers['offer'].handle_create_offer(chat_id, []),
+            'publish_offer': lambda: self._send_usage_message(chat_id, 'usage_publish_offer'),
+            'list_offers': lambda: self.handlers['info'].handle_list_offers(chat_id, user_id, []),
+            'box_status': lambda: self.handlers['offer'].handle_box_status(chat_id),
+            'audit_offer': lambda: self.handlers['offer'].handle_audit_offer(chat_id, []),
+            'order_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
+            'all_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
+            'user_orders': lambda: self._start_user_orders_input(chat_id),
+            'offer_orders': lambda: self.handlers['admin_order'].handle_offer_orders(chat_id, []),
+            'cancel_order': lambda: self.handlers['admin_order'].handle_cancel_order(chat_id, []),
+            'order_for': lambda: self.handlers['admin_order'].handle_order_for(chat_id, user_id, []),
+            'pending_users': lambda: self.handlers['user'].handle_pending_users(chat_id),
+            'list_users': lambda: self.handlers['user'].handle_list_users(chat_id, 1, 'all'),
+            'list_subscribers': lambda: self.handlers['user'].handle_list_subscribers(chat_id),
+            'add_guest': lambda: self._send_usage_message(chat_id, 'usage_add_guest'),
+            'list_guests': lambda: self.handlers['user'].handle_list_guests(chat_id),
+            'approve_user': lambda: self._start_approve_user_input(chat_id),
+            'user_status': lambda: self._start_user_status_input(chat_id),
+            'wholesale_delivery': lambda: self.handlers['wholesale_delivery'].handle_wholesale_delivery(chat_id, user_id, []),
+            'labeling_completed': lambda: self.handlers['labeling'].handle_labeling_completed(chat_id, user_id, []),
+            'send_overviews': lambda: self.handlers['admin_order'].handle_send_overviews(chat_id, []),
+            'mark_paid': lambda: self.handlers['admin_order'].handle_mark_paid(chat_id, []),
+            'create_discount': lambda: self._send_usage_message(chat_id, 'usage_create_discount'),
+            'discount_status': lambda: self.handlers['discount'].handle_discount_status(chat_id),
+            'cancel_discount': lambda: self.handlers['discount'].handle_cancel_discount(chat_id),
+            'setup_test_data': lambda: self.handlers['test'].handle_setup_test_data(chat_id),
+            'failed_notifications': lambda: self.handlers['admin_order'].handle_failed_notifications(chat_id, []),
+            'delete_old': lambda: self.handlers['admin_order'].handle_delete_old(chat_id),
+            'audit_orders': lambda: self.handlers['admin_order'].handle_audit_orders(chat_id),
+            'import_orders': lambda: self.handlers['import'].handle_import_orders(chat_id, user_id),
+            'finalize_import': lambda: self.handlers['import'].handle_finalize_import(chat_id, [])
         }
-        
-        if data in command_map:
-            return command_map[data]()
+
+        if action in command_map:
+            return command_map[action]()
         
         self._send_message(chat_id, self._t('unknown_callback', user_id))
         return {'status': 'unknown_callback'}

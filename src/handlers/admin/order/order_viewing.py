@@ -33,7 +33,8 @@ class OrderViewing(BaseOrderHandler):
         
         if not orders:
             display_name = f"{customer.first_name} {customer.last_name}" or self._t('unknown', user_id=None)
-            self._send_message(chat_id, self._t('no_orders_for_user', name=display_name))
+            keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+            self._send_message(chat_id, self._t('no_orders_for_user', name=display_name), reply_markup=keyboard)
             return {'status': 'no_orders'}
 
         # Sort orders by offer_id ascending
@@ -112,9 +113,19 @@ class OrderViewing(BaseOrderHandler):
             message += f"🔸 {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}\n"
         
         # Add pagination keyboard
-        keyboard = None
+        keyboard_buttons = []
         if total_pages > 1:
-            keyboard = self._build_pagination_keyboard(page, total_pages, f"user_orders_{customer.customer_id}", enhanced=True)
+            nav_buttons = []
+            if page > 1:
+                nav_buttons.append({"text": self._t('previous', user_id=None), "callback_data": f"page_user_orders_{customer.customer_id}_{page - 1}"})
+            nav_buttons.append({"text": self._t('page_indicator', user_id=None, page=page, total_pages=total_pages), "callback_data": "page_info"})
+            if page < total_pages:
+                nav_buttons.append({"text": self._t('next', user_id=None), "callback_data": f"page_user_orders_{customer.customer_id}_{page + 1}"})
+            keyboard_buttons.append(nav_buttons)
+        
+        # Add back to admin button
+        keyboard_buttons.append([{"text": self._t('back_to_admin'), "callback_data": "admin:main"}])
+        keyboard = {"inline_keyboard": keyboard_buttons} if keyboard_buttons else None
         
         self._send_message(chat_id, message, reply_markup=keyboard, parse_mode="HTML")
         return {'status': 'success'}
@@ -132,7 +143,8 @@ class OrderViewing(BaseOrderHandler):
                     [{"text": "Active", "callback_data": "export_orders_active"}],
                     [{"text": "Cancelled", "callback_data": "export_orders_cancelled"}],
                     [{"text": "All", "callback_data": "export_orders_all"}],
-                    [{"text": "Full Export (All Fields)", "callback_data": "export_orders_full"}]
+                    [{"text": "Full Export (All Fields)", "callback_data": "export_orders_full"}],
+                    [{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]
                 ]
             }
             self._send_message(chat_id, "📊 Select order status to export:", reply_markup=keyboard)
@@ -170,7 +182,8 @@ class OrderViewing(BaseOrderHandler):
                 all_orders.append((customer, order))
         
         if not all_orders:
-            self._send_message(chat_id, self._t('no_orders_status', status=status_filter))
+            keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+            self._send_message(chat_id, self._t('no_orders_status', status=status_filter), reply_markup=keyboard)
             return {'status': 'no_orders'}
         
         # Sort by customer name for grouping
@@ -281,7 +294,8 @@ class OrderViewing(BaseOrderHandler):
         offers = [o for o in self.db.list_offers() if o.status in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value, OfferStatus.INACTIVE.value]]
         
         if not offers:
-            self._send_message(chat_id, self._t('no_offers_available', chat_id))
+            keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+            self._send_message(chat_id, self._t('no_offers_available', chat_id), reply_markup=keyboard)
             return {'status': 'no_offers'}
         
         # Sort by offer_id descending (newest first)
@@ -314,8 +328,8 @@ class OrderViewing(BaseOrderHandler):
                 nav_buttons.append({"text": self._t('next', chat_id), "callback_data": f"offer_orders_page_{page + 1}"})
             keyboard_buttons.append(nav_buttons)
         
-        # Add cancel button
-        keyboard_buttons.append([{"text": self._t('cancel', chat_id), "callback_data": "cancel_action"}])
+        # Add back to admin button
+        keyboard_buttons.append([{"text": self._t('back_to_admin'), "callback_data": "admin:main"}])
         
         keyboard = {"inline_keyboard": keyboard_buttons}
         self._send_message(chat_id, message, reply_markup=keyboard)
@@ -330,7 +344,8 @@ class OrderViewing(BaseOrderHandler):
         
         orders = self.db.get_orders_by_offer(offer_id)
         if not orders:
-            self._send_message(chat_id, self._t('no_orders_for_offer', chat_id, offer_name=offer.name))
+            keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+            self._send_message(chat_id, self._t('no_orders_for_offer', chat_id, offer_name=offer.name), reply_markup=keyboard)
             return {'status': 'no_orders'}
         
         # Sort by creation date (oldest first)
@@ -382,7 +397,7 @@ class OrderViewing(BaseOrderHandler):
             message += f"{line_icon} [{order_date}] {customer_name} {order.quantity}x €{order.total_price:.2f} - {order.order_id[:8]}\n"
         
         # Add pagination keyboard if needed
-        keyboard = None
+        keyboard_buttons = []
         if total_pages > 1:
             nav_buttons = []
             if page > 1:
@@ -390,7 +405,11 @@ class OrderViewing(BaseOrderHandler):
             nav_buttons.append({"text": self._t('page_indicator', chat_id, page=page, total_pages=total_pages), "callback_data": "page_info"})
             if page < total_pages:
                 nav_buttons.append({"text": self._t('next', chat_id), "callback_data": f"offer_orders_detail_{offer_id}_{page + 1}"})
-            keyboard = {"inline_keyboard": [nav_buttons]}
+            keyboard_buttons.append(nav_buttons)
+        
+        # Add back to admin button
+        keyboard_buttons.append([{"text": self._t('back_to_admin'), "callback_data": "admin:main"}])
+        keyboard = {"inline_keyboard": keyboard_buttons} if keyboard_buttons else None
         
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}

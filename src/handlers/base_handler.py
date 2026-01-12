@@ -341,7 +341,8 @@ class BaseHandler:
         
         if error:
             if error['status'] == 'user_not_found':
-                self._send_message(chat_id, error['message'])
+                keyboard = error.get('keyboard')
+                self._send_message(chat_id, error['message'], reply_markup=keyboard)
                 return None, error
             elif error['status'] == 'disambiguation_shown':
                 self._send_message(chat_id, error['message'], reply_markup=error['keyboard'])

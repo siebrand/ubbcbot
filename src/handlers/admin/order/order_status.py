@@ -100,7 +100,8 @@ class OrderStatusManagement(BaseOrderHandler):
                 failed_notifications.append((customer, labeling_completed_orders))
         
         if not failed_notifications:
-            self._send_message(chat_id, self._t('no_failed_notifications', user_id=None))
+            keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+            self._send_message(chat_id, self._t('no_failed_notifications', user_id=None), reply_markup=keyboard)
             return {'status': 'no_failed'}
         
         # Show failed notifications
@@ -119,5 +120,6 @@ class OrderStatusManagement(BaseOrderHandler):
         
         message += "\n💡 These customers need to be contacted manually or retry delivery overview sending."
         
-        self._send_message(chat_id, message)
+        keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
+        self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'failed_shown'}

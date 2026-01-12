@@ -301,7 +301,14 @@ class OfferManagementHandler(OfferBaseHandler):
         if deleted_boxes > 0:
             summary += "\n" + self._t('cleaned_empty_boxes', count=deleted_boxes)
         
-        self._send_message(chat_id, summary)
+        # Add back to admin panel button
+        keyboard = {
+            "inline_keyboard": [[
+                {"text": self._t('back_to_admin'), "callback_data": "admin:main"}
+            ]]
+        }
+        
+        self._send_message(chat_id, summary, reply_markup=keyboard)
         return {'status': 'success'}
     
     def _show_wholesale_offers_selection(self, chat_id: int) -> Dict[str, Any]:
