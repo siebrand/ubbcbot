@@ -15,7 +15,7 @@ class OfferManagementHandler(OfferBaseHandler):
         self.box_status_manager = BoxStatusManager(db)
         self.box_deletion_service = BoxDeletionService(db)
     
-    def handle_order_wholesale(self, chat_id: int, args: list) -> Dict[str, Any]:
+    def handle_process_wholesale(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /order_wholesale command"""
         if not args:
             # Show available offers with pending orders
@@ -69,7 +69,7 @@ class OfferManagementHandler(OfferBaseHandler):
         # Add inline keyboard for confirmation
         keyboard = {
             "inline_keyboard": [[
-                {"text": self._t('order_wholesale_boxes', boxes=boxes_needed), "callback_data": f"confirm_order_wholesale_{offer.offer_id}_{boxes_needed}"},
+                {"text": self._t('order_wholesale_boxes', boxes=boxes_needed), "callback_data": f"confirm_process_wholesale_{offer.offer_id}_{boxes_needed}"},
                 {"text": self._t('custom_quantity'), "callback_data": f"custom_wholesale_quantity_{offer.offer_id}"},
                 {"text": self._t('cancel'), "callback_data": "cancel_action"}
             ]]
@@ -102,9 +102,9 @@ class OfferManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('invalid_offer_id'))
             return {'status': 'invalid_format'}
     
-    def handle_confirm_order_wholesale(self, chat_id: int, args: list) -> Dict[str, Any]:
+    def handle_confirm_process_wholesale(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /confirm_order_wholesale command"""
-        logger.info(f"Starting handle_confirm_order_wholesale with args: {args}")
+        logger.info(f"Starting handle_confirm_process_wholesale with args: {args}")
         
         if len(args) < 2:
             logger.error(f"Invalid args length: {len(args)}")

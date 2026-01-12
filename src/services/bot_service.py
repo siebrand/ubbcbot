@@ -377,7 +377,7 @@ class BotService:
             try:
                 boxes = int(text.strip())
                 if boxes > 0:
-                    return self.offer_commands.handle_confirm_order_wholesale(chat_id, [entity_id, str(boxes)])
+                    return self.offer_commands.handle_confirm_process_wholesale(chat_id, [entity_id, str(boxes)])
                 else:
                     from handlers.base_handler import BaseHandler
                     base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)

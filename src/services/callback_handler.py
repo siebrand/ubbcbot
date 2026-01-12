@@ -105,20 +105,20 @@ class CallbackHandler:
                     return self.handlers['customer_order'].handle_order(chat_id, user_id, [offer_id, quantity])
             elif data.startswith('wholesale_select_'):
                 offer_id = data.split('_')[2]
-                return self.handlers['offer'].handle_order_wholesale(chat_id, [offer_id])
-            elif data.startswith('confirm_order_wholesale_'):
-                logger.info(f"Matched confirm_order_wholesale_ pattern")
+                return self.handlers['offer'].handle_process_wholesale(chat_id, [offer_id])
+            elif data.startswith('confirm_process_wholesale_'):
+                logger.info(f"Matched confirm_process_wholesale_ pattern")
                 parts = data.split('_')
                 logger.info(f"Wholesale callback parts: {parts}")
                 logger.info(f"Parts length: {len(parts)}")
                 if len(parts) >= 5:
                     offer_id = parts[3]
                     boxes = parts[4]
-                    logger.info(f"Calling handle_confirm_order_wholesale with offer_id={offer_id}, boxes={boxes}")
+                    logger.info(f"Calling handle_confirm_process_wholesale with offer_id={offer_id}, boxes={boxes}")
                     try:
-                        return self.handlers['offer'].handle_confirm_order_wholesale(chat_id, [offer_id, boxes])
+                        return self.handlers['offer'].handle_confirm_process_wholesale(chat_id, [offer_id, boxes])
                     except Exception as e:
-                        logger.error(f"Exception in handle_confirm_order_wholesale: {e}")
+                        logger.error(f"Exception in handle_confirm_process_wholesale: {e}")
                         self._send_message(chat_id, self._t('invalid_format'))
                         return {'status': 'exception'}
                 else:
@@ -588,7 +588,7 @@ class CallbackHandler:
             'list_offers': lambda: self.handlers['info'].handle_list_offers(chat_id, user_id, []),
             'list_boxes': lambda: self.handlers['offer'].handle_list_boxes(chat_id),
             'audit_offer': lambda: self.handlers['offer'].handle_audit_offer(chat_id, []),
-            'process_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
+            'process_wholesale': lambda: self.handlers['offer'].handle_process_wholesale(chat_id, []),
             'export_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
             'list_user_orders': lambda: self._start_user_orders_input(chat_id),
             'list_offer_orders': lambda: self.handlers['admin_order'].handle_offer_orders(chat_id, []),
