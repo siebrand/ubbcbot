@@ -57,8 +57,8 @@ class DiscountCommands(BaseHandler):
         else:
             return self._send_error(chat_id, 'failed_cancel_discount', 'error', user_id=chat_id)
     
-    def handle_discount_status(self, chat_id: int) -> Dict[str, Any]:
-        """Handle /discount_status command"""
+    def handle_view_discount(self, chat_id: int) -> Dict[str, Any]:
+        """Handle /view_discount command"""
         discount = self.db.get_active_discount()
         if not discount:
             return self._send_error(chat_id, 'no_active_discount_info', 'no_discount', user_id=chat_id)

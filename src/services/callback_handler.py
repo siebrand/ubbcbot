@@ -606,7 +606,7 @@ class CallbackHandler:
             'send_delivery_overviews': lambda: self.handlers['admin_order'].handle_send_overviews(chat_id, []),
             'process_payment': lambda: self.handlers['admin_order'].handle_mark_paid(chat_id, []),
             'create_discount': lambda: self._send_usage_message(chat_id, 'usage_create_discount'),
-            'view_discount': lambda: self.handlers['discount'].handle_discount_status(chat_id),
+            'view_discount': lambda: self.handlers['discount'].handle_view_discount(chat_id),
             'cancel_discount': lambda: self.handlers['discount'].handle_cancel_discount(chat_id),
             'setup_test_data': lambda: self.handlers['test'].handle_setup_test_data(chat_id),
             'failed_notifications': lambda: self.handlers['admin_order'].handle_failed_notifications(chat_id, []),

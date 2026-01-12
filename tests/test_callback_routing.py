@@ -90,7 +90,7 @@ class TestCallbackRouting:
         ('cmd:create_order_for', 'admin_order', 'handle_create_order_for'),
         ('cmd:list_pending', 'user', 'handle_list_pending'),
         ('cmd:create_guest', 'admin_commands', '_send_usage_message'),
-        ('cmd:view_discount', 'discount', 'handle_discount_status'),
+        ('cmd:view_discount', 'discount', 'handle_view_discount'),
         ('cmd:process_delivery', 'wholesale_delivery', 'handle_wholesale_delivery'),
         ('cmd:process_labeling', 'labeling', 'handle_labeling_completed'),
         ('cmd:send_delivery_overviews', 'admin_order', 'handle_send_overviews'),

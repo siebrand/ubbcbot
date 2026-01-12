@@ -216,7 +216,7 @@ class CommandRouter:
             elif command == '/cancel_discount':
                 return self.handlers['discount'].handle_cancel_discount(admin_target_chat)
             elif command == '/view_discount':
-                return self.handlers['discount'].handle_discount_status(admin_target_chat)
+                return self.handlers['discount'].handle_view_discount(admin_target_chat)
             elif command == '/process_delivery':
                 return self.handlers['wholesale_delivery'].handle_wholesale_delivery(admin_target_chat, user_id, parts[1:])
             elif command == '/process_labeling':
