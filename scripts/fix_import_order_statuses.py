@@ -2,18 +2,38 @@
 """
 Fix order statuses for imported orders where boxes are ORDERED but orders are still PENDING.
 This corrects data inconsistency from the import bug.
+
+USAGE:
+    # Activate existing virtual environment and install dependencies
+    source test_env/bin/activate
+    pip install "botocore[crt]"
+    
+    # Run the script (defaults to test environment)
+    python3 scripts/fix_import_order_statuses.py
+    
+    # Or specify environment
+    python3 scripts/fix_import_order_statuses.py test
+    python3 scripts/fix_import_order_statuses.py prod
+
+The script will:
+1. Run a dry-run to identify inconsistent orders
+2. Show detailed report of what needs fixing
+3. Ask for confirmation before applying changes
+4. Update order statuses from 'pending' to 'ordered'
+
+NOTE: Requires AWS credentials configured for DynamoDB access.
 """
 
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from services.database import Database
+from services.database import DynamoDBService
 from models.entities import BoxStatus
 
 def fix_import_order_statuses(dry_run=True):
     """Update pending orders to ordered when their box is ordered"""
-    db = Database()
+    db = DynamoDBService()
     
     # Get all ORDERED boxes
     all_boxes = db.get_all_boxes()
@@ -63,8 +83,20 @@ def fix_import_order_statuses(dry_run=True):
     return fixed_count, issues
 
 if __name__ == '__main__':
+    # Parse environment argument
+    environment = sys.argv[1] if len(sys.argv) > 1 else 'test'
+    
+    if environment not in ['test', 'prod']:
+        print("Error: Environment must be 'test' or 'prod'")
+        sys.exit(1)
+    
+    # Set environment variables for DynamoDBService
+    os.environ['ENVIRONMENT'] = environment
+    os.environ['DYNAMODB_TABLE_PREFIX'] = f'ubbc-bot-{environment}'
+    
     print("=" * 60)
-    print("Fix Import Order Statuses Script")
+    print(f"Fix Import Order Statuses Script - {environment.upper()} Environment")
+    print(f"Table Prefix: ubbc-bot-{environment}")
     print("=" * 60)
     print("\nThis script will update orders from 'pending' to 'ordered'")
     print("when their box status is already 'ordered'.\n")
