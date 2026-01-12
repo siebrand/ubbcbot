@@ -330,9 +330,13 @@ class InfoCommands(BaseHandler):
             
             # Group paginated offers by status for display
             current_status = None
+            first_section = True
             for status_type, offer in page_offers:
                 if status_type != current_status:
                     current_status = status_type
+                    if not first_section:
+                        message += "\n"
+                    first_section = False
                     if status_type == 'draft':
                         message += self._t('draft_offers') + "\n"
                     elif status_type == 'import':
