@@ -40,9 +40,9 @@ class TestOrderViewing(unittest.TestCase):
         self.assertIn('reply_markup', call_args[1])
     
     @patch.object(OrderViewing, '_send_message')
-    def test_handle_all_orders_no_args(self, mock_send):
+    def test_handle_export_orders_no_args(self, mock_send):
         """Test all orders with no arguments shows status selection"""
-        result = self.handler.handle_all_orders(123, [])
+        result = self.handler.handle_export_orders(123, [])
         
         self.assertEqual(result['status'], 'selection_shown')
         mock_send.assert_called_once()
@@ -92,11 +92,11 @@ class TestOrderViewing(unittest.TestCase):
             self.assertIn('€10.50', data_row)
     
     @patch.object(OrderViewing, '_export_orders_by_status')
-    def test_handle_all_orders_with_filter(self, mock_export):
+    def test_handle_export_orders_with_filter(self, mock_export):
         """Test all orders with status filter"""
         mock_export.return_value = {'status': 'success'}
         
-        result = self.handler.handle_all_orders(123, ['active'])
+        result = self.handler.handle_export_orders(123, ['active'])
         
         mock_export.assert_called_once_with(123, 'active')
         self.assertEqual(result['status'], 'success')

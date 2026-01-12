@@ -65,7 +65,7 @@ class TestAdminOrderCommands(unittest.TestCase):
         """Test that all viewing methods are properly delegated"""
         methods = [
             'handle_list_user_orders',
-            'handle_all_orders',
+            'handle_export_orders',
             'handle_offer_orders',
             'handle_list_user_orders_select',
             'handle_offer_orders_page',

@@ -31,7 +31,7 @@ class OrderViewing(BaseOrderHandler):
         """Show orders for a specific customer with pagination"""
         return self._show_customer_orders(chat_id, customer, page, show_order_ids=False, user_id=self.admin_user_id)
 
-    def handle_all_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
+    def handle_export_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /all_orders command"""
         if not args:
             # Show status selection buttons

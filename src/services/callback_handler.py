@@ -589,7 +589,7 @@ class CallbackHandler:
             'list_boxes': lambda: self.handlers['offer'].handle_list_boxes(chat_id),
             'audit_offer': lambda: self.handlers['offer'].handle_audit_offer(chat_id, []),
             'process_wholesale': lambda: self.handlers['offer'].handle_process_wholesale(chat_id, []),
-            'export_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),
+            'export_orders': lambda: self.handlers['admin_order'].handle_export_orders(chat_id, []),
             'list_user_orders': lambda: self._start_user_orders_input(chat_id),
             'list_offer_orders': lambda: self.handlers['admin_order'].handle_offer_orders(chat_id, []),
             'cancel_order': lambda: self.handlers['admin_order'].handle_cancel_order(chat_id, []),

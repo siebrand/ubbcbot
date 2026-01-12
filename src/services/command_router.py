@@ -177,7 +177,7 @@ class CommandRouter:
             elif command == '/list_offer_orders':
                 return self.handlers['admin_order'].handle_offer_orders(admin_target_chat, parts[1:])
             elif command == '/export_orders':
-                return self.handlers['admin_order'].handle_all_orders(admin_target_chat, parts[1:])
+                return self.handlers['admin_order'].handle_export_orders(admin_target_chat, parts[1:])
             elif command == '/list_pending':
                 return self.handlers['user'].handle_list_pending(admin_target_chat)
             elif command == '/approve_user':

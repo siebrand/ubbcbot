@@ -55,8 +55,8 @@ class AdminOrderCommands(BaseHandler):
     def handle_list_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         return self.viewing.handle_list_user_orders(chat_id, args)
     
-    def handle_all_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
-        return self.viewing.handle_all_orders(chat_id, args)
+    def handle_export_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
+        return self.viewing.handle_export_orders(chat_id, args)
     
     def handle_offer_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         return self.viewing.handle_offer_orders(chat_id, args)
