@@ -25,6 +25,8 @@ class BaseOrderHandler(BaseHandler):
         
         # Aggregate orders by offer, price and status
         aggregated = {}
+        bot_username = self._get_bot_username()
+        
         for order in orders:
             offer = self.db.get_offer(order.offer_id)
             offer_name = offer.name if offer else self._t('unknown', user_id=None)
@@ -33,6 +35,7 @@ class BaseOrderHandler(BaseHandler):
             if key not in aggregated:
                 aggregated[key] = {
                     'offer_name': offer_name,
+                    'offer_id': order.offer_id,
                     'unit_price': order.unit_price,
                     'status': order.status,
                     'quantity': 0,
@@ -122,11 +125,17 @@ class BaseOrderHandler(BaseHandler):
             
             date_display = f"[{list(data['dates'])[0]}]" if len(data['dates']) == 1 else f"[{self._t('multiple_days_label')}]"
             
+            # Create clickable offer link on offer_id for non-cancelled orders
+            if status != 'cancelled':
+                offer_id_link = f"<a href='https://t.me/{bot_username}?start=view_offer_{data['offer_id']}'>{data['offer_id']}</a>"
+            else:
+                offer_id_link = str(data['offer_id'])
+            
             if show_order_ids or is_admin:
                 short_order_id = data['order_ids'][0][:8] if data['order_ids'] else "unknown"
-                message += f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}\n"
+                message += f"{line_icon} {date_display} [{offer_id_link}] {self._escape_html(data['offer_name'])} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}\n"
             else:
-                message += f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}\n"
+                message += f"{line_icon} {date_display} [{offer_id_link}] {self._escape_html(data['offer_name'])} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}\n"
         
         # Show subtotal for last section (except cancelled)
         if current_status is not None and current_status != 'cancelled':
@@ -151,7 +160,7 @@ class BaseOrderHandler(BaseHandler):
             keyboard_buttons.append([{"text": self._t('back_to_admin'), "callback_data": "admin:main"}])
         
         reply_markup = {"inline_keyboard": keyboard_buttons} if keyboard_buttons else None
-        parse_mode = "HTML" if is_admin else None
+        parse_mode = "HTML"
         
         self._send_message(chat_id, message, reply_markup=reply_markup, parse_mode=parse_mode)
         return {'status': 'success'}

@@ -485,10 +485,14 @@ class InfoCommands(BaseHandler):
                 self._send_message(chat_id, self._t('offer_not_available'))
                 return {'status': 'offer_not_available'}
             
-            # Only show active offers to non-admin users
-            if not self._is_admin(user_id) and offer.status != OfferStatus.ACTIVE.value:
-                self._send_message(chat_id, self._t('offer_not_available'))
-                return {'status': 'offer_not_available'}
+            # Block DRAFT, IMPORT, INACTIVE for non-admins unless they have orders
+            RESTRICTED_STATUSES = [OfferStatus.DRAFT.value, OfferStatus.IMPORT.value, OfferStatus.INACTIVE.value]
+            
+            if not self._is_admin(user_id) and offer.status in RESTRICTED_STATUSES:
+                customer = self.db.get_customer_by_telegram_id(user_id)
+                if not customer or not self.db.get_orders_by_customer_and_offer(customer.customer_id, offer_id):
+                    self._send_message(chat_id, self._t('offer_not_available'))
+                    return {'status': 'offer_not_available'}
             
             # Handle edit mode for admins
             if edit_mode:
