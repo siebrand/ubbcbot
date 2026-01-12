@@ -23,7 +23,7 @@ class BoxStatus(Enum):
 
 class OrderStatus(Enum):
     PENDING = "pending"
-    CONFIRMED = "confirmed"
+    ORDERED = "ordered"
     RECEIVED_PARTIAL_DELAYED = "received_partial_delayed"
     CANCELLED_UNAVAILABLE = "cancelled_unavailable"
     READY_FOR_LABELING = "ready_for_labeling"

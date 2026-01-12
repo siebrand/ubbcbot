@@ -59,7 +59,7 @@ class BaseOrderHandler(BaseHandler):
         
         # Flatten items for pagination
         all_items = []
-        for status in ['pending', 'ordered', 'confirmed', 'ready_for_labeling', 'labeling_completed', 'awaiting_payment', 'delivered', 'completed', 'cancelled']:
+        for status in ['pending', 'ordered', 'ready_for_labeling', 'labeling_completed', 'awaiting_payment', 'delivered', 'completed', 'cancelled']:
             if status in status_groups:
                 all_items.extend([(status, item) for item in status_groups[status]['items']])
         
@@ -96,7 +96,6 @@ class BaseOrderHandler(BaseHandler):
                 status_emoji = {
                     'pending': '⏳',
                     'ordered': '📦',
-                    'confirmed': '✅',
                     'ready_for_labeling': '🏷️',
                     'labeling_completed': '✅',
                     'awaiting_payment': '💳',
