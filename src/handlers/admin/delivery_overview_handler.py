@@ -152,6 +152,7 @@ class DeliveryOverviewHandler(BaseHandler):
                     offer_name = offer.name if offer else self._t('unknown', user_id=None)
                     message += f"• {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
                 message += self._t('total_to_pay', user_id=None, total=delivered_total)
+                message += self._t('pickup_location', user_id=None, location=customer.location) + "\n"
                 message += self._t('payment_link', user_id=None, link=payment_link) + "\n\n"
             
             if delayed_orders:
@@ -224,7 +225,7 @@ class DeliveryOverviewHandler(BaseHandler):
             self._send_message(chat_id, self._t('payment_confirmed', user_id=None, customer_name=customer_name, updated_count=updated_count, total_amount=total_amount))
             
             # Notify customer
-            self._send_message(customer.telegram_user_id, self._t('payment_received_notification', customer.telegram_user_id, total_amount=total_amount))
+            self._send_message(customer.telegram_user_id, self._t('payment_received_notification', customer.telegram_user_id, total_amount=total_amount, location=customer.location))
             
             # Return to mark_paid list
             from handlers.admin.order_commands import AdminOrderCommands
