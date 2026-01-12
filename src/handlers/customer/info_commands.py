@@ -393,13 +393,18 @@ class InfoCommands(BaseHandler):
                     emoji = "📦🍺" if has_ordered_boxes else "🍺"
                     message += self._format_offer_line(offer_to_display, emoji, user_id, total_ordered, total_capacity)
                 else:
-                    total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id, boxes_by_offer, orders_by_offer)
                     status_emoji = {
                         OfferStatus.SOLD_OUT.value: "🚫",
                         OfferStatus.COMPLETED.value: "✅",
                         OfferStatus.INACTIVE.value: "❌"
                     }.get(status_type, "❓")
-                    message += self._format_offer_line(offer, status_emoji, user_id, total_ordered, total_capacity)
+                    
+                    # Only show availability for sold_out offers
+                    if status_type == OfferStatus.SOLD_OUT.value:
+                        total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id, boxes_by_offer, orders_by_offer)
+                        message += self._format_offer_line(offer, status_emoji, user_id, total_ordered, total_capacity)
+                    else:
+                        message += self._format_offer_line(offer, status_emoji, user_id)
             
             reply_markup = None
             if total_pages > 1:
