@@ -215,14 +215,18 @@ class CallbackHandler:
                             page = int(parts[3])
                         args = [filter_arg] if filter_arg else None
                         return self.handlers['info'].handle_list_offers(chat_id, user_id, args, page)
-                    # Handle multi-word entity types like mark_paid and user_orders
-                    elif len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'user']:
+                    # Handle multi-word entity types like mark_paid, user_orders, and my_orders
+                    elif len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'user', 'my']:
                         if parts[1] == 'mark' and parts[2] == 'paid':
                             entity_type = 'mark_paid'
                             page = int(parts[3])
                         elif parts[1] == 'user' and parts[2] == 'orders':
                             # Format: page_user_orders_{customer_id}_{page}
                             entity_type = f"user_orders_{parts[3]}"
+                            page = int(parts[4])
+                        elif parts[1] == 'my' and parts[2] == 'orders':
+                            # Format: page_my_orders_{user_id}_{page}
+                            entity_type = f"my_orders_{parts[3]}"
                             page = int(parts[4])
                         else:
                             entity_type = f"{parts[1]}_{parts[2]}"
