@@ -54,7 +54,6 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"import_orders\", \"description\": \"Import orders from CSV file\"},
          {\"command\": \"finalize_import\", \"description\": \"Finalize imported offer\"},
          {\"command\": \"publish_offer\", \"description\": \"Publish draft offer\"},
-         {\"command\": \"preview_offer\", \"description\": \"Preview offer appearance\"},
          {\"command\": \"cancel_offer\", \"description\": \"Cancel offer and all orders\"},
          {\"command\": \"create_box\", \"description\": \"Add box to offer\"},
          {\"command\": \"list_boxes\", \"description\": \"View box status\"},

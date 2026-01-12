@@ -59,7 +59,6 @@ The Telegram beer ordering bot with AWS serverless architecture has been success
 - `/update_offer_price <offer_id> <new_price>` - Update offer price
 - `/update_offer_description <offer_id> <description>` - Update description
 - `/publish_offer <offer_id>` - Publish draft offer
-- `/preview_offer <offer_id>` - Preview offer appearance
 - `/cancel_offer <offer_id>` - Cancel offer with confirmation
 - `/add_box <offer_id>` - Add box to offer
 - `/box_status` - View box status (paginated)

@@ -262,7 +262,7 @@ class CustomerOrderCommands(BaseHandler):
                 # If total_available == 0 and not sold out, show nothing
             
             # Format offer name as link
-            offer_link = f"<a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{self._escape_html(offer.name)}</a>"
+            offer_link = f"<a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{self._escape_html(offer.name)}</a>"
             
             # Only send notifications for non-guest orders
             if not customer.is_guest:

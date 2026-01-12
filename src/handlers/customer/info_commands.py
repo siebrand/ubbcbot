@@ -110,11 +110,11 @@ class InfoCommands(BaseHandler):
         bot_username = self._get_bot_username()
         
         if is_draft:
-            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f}\n"
+            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f}\n"
         elif total_ordered is not None and total_capacity is not None:
-            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f} ({total_ordered}/{total_capacity} {self._t('ordered_text', user_id)})\n"
+            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f} ({total_ordered}/{total_capacity} {self._t('ordered_text', user_id)})\n"
         else:
-            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f}\n"
+            return f"{status_emoji} <a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f}\n"
     
     def _get_offer_capacity_info(self, offer_id: int, user_id: int = None, boxes_by_offer: dict = None, orders_by_offer: dict = None):
         """Get order and capacity information for an offer

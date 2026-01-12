@@ -40,7 +40,7 @@ class NotificationHandler(OfferBaseHandler):
         bot_username = self._get_bot_username()
         
         # Send offer details message
-        message = f"<b><a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
+        message = f"<b><a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
         message += f"{offer.description}\n"
         
         # Add order buttons for non-preview announcements
@@ -179,7 +179,7 @@ class NotificationHandler(OfferBaseHandler):
         
         # Combine header and offer details in single message
         message = self._t('new_offer_available') + "\n\n"
-        message += f"<b><a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
+        message += f"<b><a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
         message += f"{offer.description}\n"
         
         # Add order buttons
@@ -198,7 +198,7 @@ class NotificationHandler(OfferBaseHandler):
         bot_username = self._get_bot_username()
         
         message = self._t('new_offer_available') + "\n\n"
-        message += f"<b><a href='https://t.me/{bot_username}?start=offer_details_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f} </b>\n\n"
+        message += f"<b><a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f} </b>\n\n"
         message += f"{offer.description}\n\n"
         message += self._t('order_with_command', offer_id=offer.offer_id)
         

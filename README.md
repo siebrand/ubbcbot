@@ -161,7 +161,6 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/update_offer_price <offer_id> <new_price>` - Update offer price
 - `/update_offer_description <offer_id> <description>` - Update offer description
 - `/publish_offer <offer_id>` - Publish draft offer and announce to customers
-- `/preview_offer <offer_id>` - Preview how offer will appear when published
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
 - `/delete_offer <offer_id>` - Delete completed or inactive offer from database
 - `/create_box <offer_id>` - Add single box to offer (updates sold out offers to active)
