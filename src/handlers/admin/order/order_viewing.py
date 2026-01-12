@@ -324,6 +324,14 @@ class OrderViewing(BaseOrderHandler):
             return {'status': 'user_not_found'}
         
         return self._show_user_orders(chat_id, customer)
+    
+    def handle_list_offer_orders_select(self, chat_id: int, offer_id: str) -> Dict[str, Any]:
+        """Handle offer selection from buttons for offer_orders"""
+        try:
+            return self._show_orders_for_offer(chat_id, int(offer_id))
+        except ValueError:
+            self._send_message(chat_id, self._t('invalid_offer_id', chat_id))
+            return {'status': 'invalid_format'}
 
     def handle_list_offer_orders_page(self, chat_id: int, page: int) -> Dict[str, Any]:
         """Handle pagination for offer selection"""

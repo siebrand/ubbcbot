@@ -64,6 +64,9 @@ class AdminOrderCommands(BaseHandler):
     def handle_list_user_orders_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         return self.viewing.handle_list_user_orders_select(chat_id, customer_id)
     
+    def handle_list_offer_orders_select(self, chat_id: int, offer_id: str) -> Dict[str, Any]:
+        return self.viewing.handle_list_offer_orders_select(chat_id, offer_id)
+    
     def handle_list_offer_orders_page(self, chat_id: int, page: int) -> Dict[str, Any]:
         return self.viewing.handle_list_offer_orders_page(chat_id, page)
     
