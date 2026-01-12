@@ -164,6 +164,12 @@ class BoxManagementHandler(OfferBaseHandler):
             else:
                 keyboard = {"inline_keyboard": labeling_buttons}
         
+        # Add back to admin button
+        if keyboard:
+            keyboard["inline_keyboard"].append([{"text": self._t('back_to_admin', chat_id), "callback_data": "admin:main"}])
+        else:
+            keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin', chat_id), "callback_data": "admin:main"}]]}
+        
         self._send_message(chat_id, message, reply_markup=keyboard, parse_mode="Markdown")
         return {'status': 'success'}
     
