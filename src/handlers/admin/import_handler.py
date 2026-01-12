@@ -240,28 +240,29 @@ class ImportHandler(NotificationHandler):
             return self._send_error(chat_id, 'finalize_import_wrong_status', 'wrong_status',
                                   status=offer.status)
         
-        # Mark all boxes as ORDERED
+        # Mark all boxes as ORDERED and update order statuses
         boxes = self.db.get_boxes_by_offer(offer.offer_id)
         if boxes:
             box_ids = [b.box_id for b in boxes]
             self.box_status_manager.mark_boxes_as_ordered(box_ids)
+            
+            # Update all orders in these boxes to ORDERED status
+            for box_id in box_ids:
+                orders = self.db.get_orders_by_box(box_id)
+                for order in orders:
+                    if order.status == 'pending':
+                        self.db.update_order(order.order_id, {'status': 'ordered'})
         
-        # Check if sold out
-        all_full = all(b.status == BoxStatus.FULL.value for b in boxes) if boxes else False
+        # Update offer status based on box states
+        new_status = self.box_status_manager.update_offer_status_after_change(offer.offer_id)
         
-        if all_full and boxes:
-            # Mark as SOLD_OUT, no announcements
-            self.db.update_offer(offer.offer_id, {'status': OfferStatus.SOLD_OUT.value})
+        if new_status == OfferStatus.SOLD_OUT.value:
             self._send_success(chat_id, 'finalize_import_sold_out', 'success',
                              offer_id=offer.offer_id, name=offer.name)
         else:
-            # Mark as ACTIVE and announce
-            self.db.update_offer(offer.offer_id, {'status': OfferStatus.ACTIVE.value})
+            # Offer is ACTIVE, announce it
             offer.status = OfferStatus.ACTIVE.value
-            
-            # Announce using existing logic
             self._announce_offer(offer)
-            
             self._send_success(chat_id, 'finalize_import_active', 'success',
                              offer_id=offer.offer_id, name=offer.name)
         

@@ -66,7 +66,7 @@ class BoxStatusManager:
         Returns: new status if changed, None otherwise
         """
         offer = self.db.get_offer(offer_id)
-        if not offer or offer.status not in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value]:
+        if not offer or offer.status not in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value, OfferStatus.IMPORT.value]:
             return None
         
         boxes = self.db.get_boxes_by_offer(offer_id)
