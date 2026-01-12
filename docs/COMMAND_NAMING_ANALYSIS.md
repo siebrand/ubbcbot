@@ -263,16 +263,36 @@ These handlers are for button callbacks and should not be renamed as they're not
 
 ## Implementation Plan
 
-### Phase 0: Test Current System (Week 1)
+### Phase 0: Test Current System ✅ COMPLETE
 **CRITICAL: Write tests for existing commands BEFORE any refactoring**
 
-- [ ] **Write comprehensive command routing tests for ALL current commands**
-- [ ] Test current command names route to correct handlers
-- [ ] Test parameter parsing for each current command
-- [ ] Test parameter validation (types, ranges, required/optional)
-- [ ] Test error handling for invalid commands
-- [ ] Ensure 100% test coverage of command routing
-- [ ] Document current behavior as baseline
+- [x] **Write comprehensive command routing tests for ALL current commands**
+- [x] Test current command names route to correct handlers
+- [x] Test parameter parsing for each current command
+- [x] Test parameter validation (types, ranges, required/optional)
+- [x] Test error handling for invalid commands
+- [x] Ensure 100% test coverage of command routing
+- [x] Document current behavior as baseline
+
+**Implementation Details:**
+- Created `tests/test_command_routing.py` with 63 test cases
+- Tests verify ACTUAL CommandRouter code logic (not just mocked handlers)
+- Tests command parsing: bot mention stripping, parameter extraction
+- Tests authorization logic: admin vs customer, approved vs unauthorized
+- Tests routing decisions: correct handler called for each command
+- Tests deep link handling: /start with order/confirm/help parameters
+- Tests filter parsing: status filters and search strings
+- Tests environment behavior: test vs production group handling
+- Uses pytest with parametrized tests for efficiency
+- Handlers mocked to isolate router logic being tested
+
+**Test Coverage:**
+- Command parsing (bot mentions, parameters)
+- Authorization (admin access, user approval status)
+- Routing (all customer and admin commands)
+- Deep links (/start with parameters)
+- Filter parsing (list_suppliers, list_users)
+- Unknown command handling
 
 **Rationale**: These tests serve as:
 1. **Regression prevention** - Catch any breaking changes during refactoring
@@ -418,6 +438,6 @@ def test_old_command_rejected():
 - **Permanent Aliases**: 3 (order, my_orders, order_for)
 - **Translation Keys Updated**: ~150
 - **Code Files Modified**: ~30
-- **Tests to Write**: ~90 command routing tests + parameter validation
-- **Estimated Effort**: 3-4 weeks (1 week for tests, 3 weeks for refactoring)
+- **Tests to Write**: 63 CommandRouter logic tests (COMPLETE)
+- **Estimated Effort**: 3-4 weeks (Phase 0 complete, 3 weeks remaining for Phases 1-3)
 - **User Impact**: High - requires immediate adaptation to new commands

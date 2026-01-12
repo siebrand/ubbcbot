@@ -50,6 +50,7 @@ fi
 # Run pytest tests
 echo "Running pytest tests..."
 PYTEST_FILES="
+    tests/test_command_routing.py
     tests/test_customer_orders.py
     tests/test_box_status_manager.py
     tests/test_box_deletion_service.py
