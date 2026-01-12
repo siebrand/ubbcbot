@@ -581,6 +581,7 @@
   "import_errors_header": "\n❌ Errors ({error_count}):",
   "multiple_matches": "multiple matches found",
   "not_found": "not found",
+  "grand_total": "Total",
   "usage_finalize_import": "Usage: /finalize_import <offer_id>",
   "finalize_import_wrong_status": "❌ Offer must have IMPORT status (current: {status})",
   "finalize_import_sold_out": "✅ Offer {offer_id} '{name}' finalized as SOLD OUT (no announcements)",

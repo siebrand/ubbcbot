@@ -581,6 +581,7 @@
   "import_errors_header": "\n❌ Fouten ({error_count}):",
   "multiple_matches": "meerdere overeenkomsten gevonden",
   "not_found": "niet gevonden",
+  "grand_total": "Totaal",
   "usage_finalize_import": "Gebruik: /finalize_import <aanbieding_id>",
   "finalize_import_wrong_status": "❌ Aanbieding moet IMPORT status hebben (huidige: {status})",
   "finalize_import_sold_out": "✅ Aanbieding {offer_id} '{name}' afgerond als UITVERKOCHT (geen aankondigingen)",

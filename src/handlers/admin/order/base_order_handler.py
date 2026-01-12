@@ -125,6 +125,13 @@ class BaseOrderHandler(BaseHandler):
             status_label = self._t(f"status_{current_status}", user_id=None)
             message += f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}\n"
         
+        # Show grand total excluding cancelled
+        non_cancelled_statuses = [s for s in status_groups.keys() if s != 'cancelled']
+        if len(non_cancelled_statuses) > 1:
+            grand_total = sum(status_groups[s]['total_price'] for s in non_cancelled_statuses)
+            message += f"\n━━━━━━━━━━━━━━━━━━━━\n"
+            message += f"{self._t('grand_total', user_id=None)}: €{grand_total:.2f}\n"
+        
         # Add pagination keyboard
         keyboard_buttons = []
         if total_pages > 1:
