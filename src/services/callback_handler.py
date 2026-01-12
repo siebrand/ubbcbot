@@ -251,6 +251,11 @@ class CallbackHandler:
                         return self.handlers['changelog'].handle_changelog(chat_id, user_id, page)
                     elif entity_type == 'mark_paid':
                         return self.handlers['admin_order'].handle_mark_paid(chat_id, [], page)
+                    elif entity_type.startswith('my_orders_'):
+                        target_user_id = int(entity_type.split('_', 2)[2])
+                        if user_id == target_user_id:
+                            return self.handlers['info'].handle_my_orders(chat_id, user_id, None, page)
+                        return {'status': 'unauthorized'}
             elif data == 'page_info':
                 return {'status': 'page_info'}
             

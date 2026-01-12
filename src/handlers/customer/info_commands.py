@@ -3,6 +3,7 @@ from decimal import Decimal
 from handlers.base_handler import BaseHandler
 from models.entities import OfferStatus
 from services.user_cache import UserCache
+from utils.pagination import PaginationUtils
 
 class InfoCommands(BaseHandler):
     def handle_start(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
@@ -375,7 +376,7 @@ class InfoCommands(BaseHandler):
         self._send_message(chat_id, message, parse_mode="HTML")
         return {'status': 'success'}
 
-    def handle_my_orders(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
+    def handle_my_orders(self, chat_id: int, user_id: int, args: list = None, page: int = 1) -> Dict[str, Any]:
         """Handle /my_orders command"""
         show_ids = args and len(args) > 0 and args[0].lower() == 'id'
         
@@ -427,11 +428,8 @@ class InfoCommands(BaseHandler):
             status_groups[status]['total_price'] += data['total_price']
             status_groups[status]['items'].append(((offer_id, unit_price, status), data))
         
-        # Build message parts
-        messages = []
-        current_message = self._t('my_orders_title', user_id) + "\n\n"
-        
-        # Display orders grouped by status
+        # Build list of all order lines for pagination
+        order_lines = []
         open_statuses = ['pending', 'ordered', 'confirmed']
         open_total = Decimal('0.0')
         
@@ -452,126 +450,86 @@ class InfoCommands(BaseHandler):
                 'completed': '✅'
             }.get(status, '❓')
             
-            # Always show status header for clarity
             status_key = f"status_{status}"
             status_label = self._t(status_key, user_id).upper()
-            status_header = f"{status_emoji} {status_label}:\n"
-            
-            # Check if adding header would exceed limit
-            if len(current_message) + len(status_header) > 3800:
-                messages.append(current_message)
-                current_message = status_header
-            else:
-                current_message += status_header
+            order_lines.append({'type': 'header', 'text': f"{status_emoji} {status_label}:"})
             
             line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups[status]['items']:
-                # Determine date display
                 if len(data['dates']) == 1:
                     date_display = f"[{list(data['dates'])[0]}]"
                 else:
                     date_display = f"[{self._t('multiple_days_label', user_id)}]"
                 
-                # Alternate diamond icons for better readability
                 line_icon = "🔸" if line_count % 2 == 0 else "🔹"
-                
                 order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
                 
                 if show_ids:
                     ids_display = ', '.join([order_id[:8] for order_id in data['order_ids']])
                     order_line += f" - {ids_display}"
                 
-                order_line += "\n"
-                
-                # Check if adding line would exceed limit
-                if len(current_message) + len(order_line) > 3800:
-                    messages.append(current_message)
-                    current_message = order_line
-                else:
-                    current_message += order_line
-                
+                order_lines.append({'type': 'order', 'text': order_line})
                 line_count += 1
             
-            # Add status total if multiple statuses present
             if len(status_groups) > 1:
-                subtotal_line = "\n" + self._t('subtotal_label', user_id, total=status_groups[status]['total_price']) + "\n\n"
-                if len(current_message) + len(subtotal_line) > 3800:
-                    messages.append(current_message)
-                    current_message = subtotal_line
-                else:
-                    current_message += subtotal_line
+                order_lines.append({'type': 'subtotal', 'text': self._t('subtotal_label', user_id, total=status_groups[status]['total_price'])})
             
-            # Add to open total if applicable
             if status in open_statuses:
                 open_total += status_groups[status]['total_price']
         
-        # Add open orders total before cancelled orders
         if open_total > 0 and 'cancelled' in status_groups:
-            open_total_line = "\n" + self._t('open_orders_total_label', user_id, total=open_total) + "\n\n"
-            if len(current_message) + len(open_total_line) > 3800:
-                messages.append(current_message)
-                current_message = open_total_line
-            else:
-                current_message += open_total_line
+            order_lines.append({'type': 'total', 'text': self._t('open_orders_total_label', user_id, total=open_total)})
         
-        # Show cancelled orders last (no total needed)
         if 'cancelled' in status_groups:
-            status_emoji = '❌'
-            # Always show status header for clarity
             if len(status_groups) > 1:
                 cancelled_label = self._t('status_cancelled', user_id).upper()
-                cancelled_header = f"{status_emoji} {cancelled_label}:\n"
-                if len(current_message) + len(cancelled_header) > 3800:
-                    messages.append(current_message)
-                    current_message = cancelled_header
-                else:
-                    current_message += cancelled_header
+                order_lines.append({'type': 'header', 'text': f"❌ {cancelled_label}:"})
             
             line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups['cancelled']['items']:
-                # Determine date display
                 if len(data['dates']) == 1:
                     date_display = f"[{list(data['dates'])[0]}]"
                 else:
                     date_display = f"[{self._t('multiple_days_label', user_id)}]"
                 
-                # Alternate diamond icons for better readability
                 line_icon = "🔸" if line_count % 2 == 0 else "🔹"
-                
                 order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
                 
                 if show_ids:
                     ids_display = ', '.join([order_id[:8] for order_id in data['order_ids']])
                     order_line += f" - {ids_display}"
                 
-                order_line += "\n"
-                
-                # Check if adding line would exceed limit
-                if len(current_message) + len(order_line) > 3800:
-                    messages.append(current_message)
-                    current_message = order_line
-                else:
-                    current_message += order_line
-                
+                order_lines.append({'type': 'order', 'text': order_line})
                 line_count += 1
         
-        # Add open orders total if no cancelled orders
         elif open_total > 0:
-            final_total_line = "\n" + self._t('open_orders_total_label', user_id, total=open_total)
-            if len(current_message) + len(final_total_line) > 3800:
-                messages.append(current_message)
-                current_message = final_total_line
-            else:
-                current_message += final_total_line
+            order_lines.append({'type': 'total', 'text': self._t('open_orders_total_label', user_id, total=open_total)})
         
-        # Add remaining message
-        if current_message:
-            messages.append(current_message)
+        # Paginate order lines (20 lines per page)
+        page_lines, total_pages = PaginationUtils.paginate_list(order_lines, page, 10)
         
-        # Send all messages
-        for msg in messages:
-            self._send_message(chat_id, msg)
+        # Build message from paginated lines
+        message = self._t('my_orders_title', user_id)
+        if total_pages > 1:
+            message += f" - Page {page}/{total_pages}"
+        message += "\n\n"
         
+        for line in page_lines:
+            if line['type'] == 'header':
+                message += line['text'] + "\n"
+            elif line['type'] == 'order':
+                message += line['text'] + "\n"
+            elif line['type'] == 'subtotal':
+                message += "\n" + line['text'] + "\n\n"
+            elif line['type'] == 'total':
+                message += "\n" + line['text']
+        
+        # Add pagination keyboard if needed
+        reply_markup = None
+        if total_pages > 1:
+            reply_markup = PaginationUtils.build_pagination_keyboard(page, total_pages, f"my_orders_{user_id}", enhanced=True)
+        
+        self._send_message(chat_id, message, reply_markup=reply_markup)
         return {'status': 'success'}
     
     def handle_offer_details(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
