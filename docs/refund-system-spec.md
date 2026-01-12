@@ -91,6 +91,41 @@ class CreditTransaction:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 ```
 
+### New Table: Order History (Audit Log)
+
+**DynamoDB Table:** `ubbc-bot-{environment}-order-history`
+
+**Primary Key:** `history_id` (String, UUID)
+**GSI:** `order-index` on `order_id`
+
+**Purpose:** Track all changes to orders for audit trail and compliance.
+
+**Attributes:**
+```python
+@dataclass
+class OrderHistory:
+    history_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    order_id: str = ""  # Links to Order
+    changed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    changed_by: int = 0  # Admin user ID (0 for system changes)
+    field_name: str = ""  # Field that changed (e.g., "unit_price", "status", "quantity")
+    old_value: str = ""  # Previous value (as string)
+    new_value: str = ""  # New value (as string)
+    reason: str = ""  # Admin-provided reason for change
+    
+    # Refund linkage (optional)
+    credit_transaction_id: Optional[str] = None  # Links to CreditTransaction if change triggered refund
+    triggers_refund: bool = False  # Flag indicating this change caused a refund
+    
+    # TTL for automatic cleanup (2 years)
+    ttl: Optional[int] = None  # Unix timestamp for DynamoDB TTL
+```
+
+**Relationship to Refund System:**
+- When order price is adjusted → OrderHistory entry created
+- If adjustment triggers refund → `credit_transaction_id` links to CreditTransaction
+- Provides complete audit trail: "Order price changed from X to Y, refund of Z issued"
+
 ### Modified Entities
 
 **Customer** - No changes needed (credit is separate table)
@@ -111,6 +146,152 @@ refunded_at: Optional[datetime] = None  # When refund was issued
 | APPLIED | Credit applied to delivery | Negative | -€30.00 |
 | MANUAL_ADD | Admin adds credit | Positive | +€10.00 |
 | MANUAL_SUBTRACT | Admin removes credit | Negative | -€10.00 |
+
+
+## Audit Trail Integration
+
+### Purpose
+
+The Order History table provides a complete audit trail that complements the refund system:
+- **Credit Transactions** track money movements (refunds, credits, applications)
+- **Order History** tracks data changes (what changed, why, and who changed it)
+
+Together they answer:
+- "Why was this refund issued?" → Order History shows price adjustment
+- "What refund was issued?" → Credit Transaction shows refund amount
+- "Who made the change?" → Both tables track admin_id
+- "When did it happen?" → Both tables have timestamps
+
+### Audit Trail Flow
+
+**Example: Defective Product Refund**
+
+1. **Admin adjusts order price** (2 defective bottles out of 5)
+   ```python
+   # Order updated
+   order.total_price: 50.00 → 30.00
+   
+   # Order History entry created
+   OrderHistory(
+       order_id="order-abc",
+       field_name="total_price",
+       old_value="50.00",
+       new_value="30.00",
+       reason="2 bottles defective",
+       changed_by=15005473,
+       triggers_refund=True,
+       credit_transaction_id="txn-001"
+   )
+   ```
+
+2. **System issues refund automatically**
+   ```python
+   # Credit Transaction created
+   CreditTransaction(
+       transaction_id="txn-001",
+       customer_id="cust-123",
+       transaction_type="REFUND",
+       amount=20.00,
+       reference_id="order-abc",
+       reason="2 bottles defective",
+       created_by=15005473
+   )
+   ```
+
+3. **Complete audit trail established**
+   - Order History: Shows what changed (price 50→30)
+   - Credit Transaction: Shows refund issued (€20)
+   - Linked via `credit_transaction_id`
+
+### Query Capabilities
+
+**Query 1: "Show complete history for order"**
+```python
+# Get all changes to order
+history = get_order_history(order_id)
+
+# Results:
+# - Price changed: 50.00 → 30.00 (refund triggered)
+# - Status changed: completed → completed
+# - Linked refund: €20.00 (txn-001)
+```
+
+**Query 2: "Show all refunds with reasons"**
+```python
+# Get refund transactions
+refunds = get_credit_transactions(type="REFUND")
+
+# For each refund, get order history
+for refund in refunds:
+    history = get_order_history(refund.reference_id)
+    # Shows: What changed that triggered the refund
+```
+
+**Query 3: "Show all actions by admin"**
+```python
+# Get order changes by admin
+order_changes = get_order_history_by_admin(admin_id)
+
+# Get credit transactions by admin
+credit_actions = get_credit_transactions_by_admin(admin_id)
+
+# Combined view of all admin actions
+```
+
+### Data Retention
+
+**Order History:**
+- TTL: 5 years production, 90 days test (automatic DynamoDB cleanup)
+- Rationale: 5-year retention for financial/tax compliance in prod, short retention in test
+- Cost: ~$0.08/month production (assuming 1000 records/year)
+
+**Credit Transactions:**
+- No TTL (permanent record)
+- Rationale: Financial records should be permanent
+- Cost: ~$0.02/month
+
+### Implementation Notes
+
+**When to log Order History:**
+- Price changes (unit_price, total_price)
+- Quantity changes
+- Status changes (if significant)
+- Refund-related fields (refund_amount, refund_reason)
+
+**When NOT to log:**
+- Automatic system updates (update_date)
+- Non-significant status transitions
+- Read operations
+
+**Logging helper:**
+```python
+def log_order_change_with_refund(order_id, field, old, new, reason, admin_id, refund_amount=None):
+    # Create order history entry
+    history = OrderHistory(
+        order_id=order_id,
+        field_name=field,
+        old_value=str(old),
+        new_value=str(new),
+        reason=reason,
+        changed_by=admin_id,
+        triggers_refund=(refund_amount is not None)
+    )
+    
+    # If refund triggered, create credit transaction
+    if refund_amount:
+        txn = create_credit_transaction(
+            customer_id=get_customer_for_order(order_id),
+            transaction_type="REFUND",
+            amount=refund_amount,
+            reference_id=order_id,
+            reason=reason,
+            created_by=admin_id
+        )
+        history.credit_transaction_id = txn.transaction_id
+    
+    # Save history
+    create_order_history(history)
+```
 
 
 ## Admin Commands
@@ -532,6 +713,7 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
 1. **`src/models/entities.py`** - Add new dataclasses:
    - `CustomerCredit`
    - `CreditTransaction`
+   - `OrderHistory`
    - Add refund fields to `Order`
 
 2. **`src/services/credit_service.py`** - New service:
@@ -543,14 +725,19 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
    - `get_credit_transactions(customer_id, limit, days)`
    - `get_customers_with_credit(min_amount)`
 
-3. **`src/handlers/admin/credit_commands.py`** - New handler:
+3. **`src/services/audit_service.py`** - New service:
+   - `log_order_change(order_id, admin_id, field_name, old_value, new_value, reason, credit_transaction_id)`
+   - `get_order_history(order_id, limit)`
+   - `get_changes_by_admin(admin_id, days)`
+
+4. **`src/handlers/admin/credit_commands.py`** - New handler:
    - `handle_refund(chat_id, args)`
    - `handle_credit_balance(chat_id, args)`
    - `handle_adjust_credit(chat_id, args)`
    - `handle_list_credits(chat_id, args)`
    - `handle_credit_history(chat_id, args)`
 
-4. **`src/handlers/customer/credit_commands.py`** - New handler:
+5. **`src/handlers/customer/credit_commands.py`** - New handler:
    - `handle_my_credit(chat_id, user_id)`
 
 ### Files to Modify
@@ -562,6 +749,9 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
    - `create_credit_transaction(transaction)`
    - `get_credit_transactions_by_customer(customer_id)`
    - `get_customers_with_credit_balance(min_amount)`
+   - `create_order_history(history)`
+   - `get_order_history(order_id)`
+   - `get_order_history_by_admin(admin_id, days)`
 
 2. **`src/handlers/admin/delivery_overview_handler.py`** - Modify:
    - `_send_delivery_overview()` - Add credit calculation and application
@@ -581,6 +771,7 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
 5. **`template.yaml`** - Add new DynamoDB tables:
    - `CustomerCreditsTable`
    - `CreditTransactionsTable`
+   - `OrderHistoryTable`
 
 6. **`src/translations/en.json` & `nl.json`** - Add translation keys:
    - Credit balance messages
@@ -599,6 +790,11 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
 - Primary Key: `transaction_id`
 - GSI: `customer-index` on `customer_id` (for transaction history)
 - GSI: `created-at-index` on `created_at` (for recent transactions, optional)
+
+**OrderHistoryTable:**
+- Primary Key: `history_id`
+- GSI: `order-index` on `order_id` (for order audit trail)
+- TTL: `ttl` attribute (2-year retention, automatic cleanup)
 
 ### Admin Panel Integration
 
@@ -1057,17 +1253,19 @@ logger.info(f"Credit cache invalidated for customer {customer_id}")
 ## Implementation Phases
 
 ### Phase 1: Core Refund System (MVP)
-**Estimated Time:** 15-20 hours
+**Estimated Time:** 17-22 hours
 
 **Deliverables:**
-1. Database tables (CustomerCredits, CreditTransactions)
+1. Database tables (CustomerCredits, CreditTransactions, OrderHistory)
 2. Credit service (issue refund, get balance, apply credit)
-3. Admin refund command (basic)
-4. Customer credit view command
-5. Delivery overview integration (credit application)
-6. Basic notifications
+3. Audit service (log order changes, link to refunds)
+4. Admin refund command (basic)
+5. Customer credit view command
+6. Delivery overview integration (credit application)
+7. Basic notifications
+8. Order history logging for refund-related changes
 
-**Testing:** Unit tests for credit service, integration test for refund workflow
+**Testing:** Unit tests for credit service, audit service tests, integration test for refund workflow
 
 ### Phase 2: Enhanced Admin Features
 **Estimated Time:** 10-15 hours
@@ -1104,7 +1302,7 @@ logger.info(f"Credit cache invalidated for customer {customer_id}")
 
 **Testing:** Edge case tests, concurrent operation tests
 
-**Total Estimated Time:** 38-55 hours
+**Total Estimated Time:** 40-57 hours
 
 ## Success Criteria
 
@@ -1116,6 +1314,7 @@ logger.info(f"Credit cache invalidated for customer {customer_id}")
 - ✅ Customers can view their credit balance
 - ✅ Admin can view and adjust customer credits
 - ✅ All transactions are logged and auditable
+- ✅ Complete order change history with refund linkage
 
 ### Non-Functional Requirements
 - ✅ Credit balance queries < 100ms (with cache)

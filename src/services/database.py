@@ -25,6 +25,7 @@ class DynamoDBService:
         self.counters_table = self.dynamodb.Table(f'{self.table_prefix}-counters')
         self.notifications_table = self.dynamodb.Table(f'{self.table_prefix}-notifications')
         self.edit_contexts_table = self.dynamodb.Table(f'{self.table_prefix}-edit-contexts')
+        self.order_history_table = self.dynamodb.Table(f'{self.table_prefix}-order-history')
 
     def _serialize_datetime(self, obj):
         """Convert datetime objects to ISO strings"""
@@ -1092,3 +1093,84 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error deleting offer images: {e}")
             return False
+    
+    # Order History operations
+    def create_order_history(self, history) -> bool:
+        """Create order history entry"""
+        try:
+            from models.entities import OrderHistory
+            item = self._prepare_item(history.__dict__)
+            self.order_history_table.put_item(Item=item)
+            return True
+        except Exception as e:
+            print(f"Error creating order history: {e}")
+            return False
+    
+    def get_order_history(self, order_id: str, limit: int = 50) -> List:
+        """Get history for specific order"""
+        try:
+            from models.entities import OrderHistory
+            response = self.order_history_table.query(
+                IndexName='order-index',
+                KeyConditionExpression=Key('order_id').eq(order_id),
+                Limit=limit,
+                ScanIndexForward=False  # Most recent first
+            )
+            return [OrderHistory(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting order history: {e}")
+            return []
+    
+    def get_customer_events(self, customer_id: str, event_type: Optional[str] = None, days: int = 30) -> List:
+        """Get events for customer"""
+        try:
+            from models.entities import OrderHistory
+            from datetime import datetime, UTC, timedelta
+            
+            cutoff_date = (datetime.now(UTC) - timedelta(days=days)).isoformat()
+            
+            if event_type:
+                customer_event = f"{customer_id}#{event_type}"
+                response = self.order_history_table.query(
+                    IndexName='customer-event-index',
+                    KeyConditionExpression=Key('customer_event').eq(customer_event) & Key('changed_at').gte(cutoff_date)
+                )
+            else:
+                # Get all events for customer (scan with filter)
+                response = self.order_history_table.scan(
+                    FilterExpression='customer_id = :cid AND changed_at >= :cutoff',
+                    ExpressionAttributeValues={
+                        ':cid': customer_id,
+                        ':cutoff': cutoff_date
+                    }
+                )
+            
+            return [OrderHistory(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting customer events: {e}")
+            return []
+    
+    def get_events_by_type(self, event_type: str, start_date: Optional[datetime] = None, 
+                          end_date: Optional[datetime] = None) -> List:
+        """Get all events of specific type in date range"""
+        try:
+            from models.entities import OrderHistory
+            from datetime import datetime, UTC
+            
+            if not start_date:
+                start_date = datetime(2020, 1, 1, tzinfo=UTC)
+            if not end_date:
+                end_date = datetime.now(UTC)
+            
+            start_key = f"{event_type}#{start_date.isoformat()}"
+            end_key = f"{event_type}#{end_date.isoformat()}"
+            
+            response = self.order_history_table.query(
+                IndexName='event-date-index',
+                KeyConditionExpression=Key('event_date').between(start_key, end_key)
+            )
+            
+            return [OrderHistory(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting events by type: {e}")
+            return []

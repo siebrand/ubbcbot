@@ -429,6 +429,65 @@ Resources:
         - Key: ManagedBy
           Value: sam
 
+  OrderHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-order-history'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: history_id
+          AttributeType: S
+        - AttributeName: order_id
+          AttributeType: S
+        - AttributeName: changed_at
+          AttributeType: S
+        - AttributeName: customer_event
+          AttributeType: S
+        - AttributeName: event_date
+          AttributeType: S
+      KeySchema:
+        - AttributeName: history_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: order-index
+          KeySchema:
+            - AttributeName: order_id
+              KeyType: HASH
+            - AttributeName: changed_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: customer-event-index
+          KeySchema:
+            - AttributeName: customer_event
+              KeyType: HASH
+            - AttributeName: changed_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: event-date-index
+          KeySchema:
+            - AttributeName: event_date
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: ubbc-telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
   # S3 Bucket for Images
   ImageBucket:
     Type: AWS::S3::Bucket

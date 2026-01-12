@@ -134,3 +134,44 @@ class NotificationMessage:
     chat_id: int = 0
     message_id: int = 0
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+@dataclass
+class OrderHistory:
+    history_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    order_id: str = ""
+    customer_id: str = ""  # Denormalized for reporting
+    customer_name: str = ""  # Denormalized - customer may be deleted
+    offer_name: str = ""  # Denormalized - offer may be deleted
+    event_type: str = ""  # ORDER_CREATED, ORDER_CANCELLED, PRICE_CHANGED, STATUS_CHANGED, PAYMENT_RECEIVED
+    changed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    changed_by: int = 0  # Admin user ID (0 for system)
+    field_name: str = ""  # Field that changed
+    old_value: str = ""
+    new_value: str = ""
+    reason: str = ""
+    
+    # Composite fields for GSI queries
+    customer_event: str = ""  # Format: "customer_id#event_type" for customer-event-index
+    event_date: str = ""  # Format: "event_type#2024-01-15T10:30:00Z" for event-date-index
+    
+    # Refund linkage
+    credit_transaction_id: Optional[str] = None
+    triggers_refund: bool = False
+    
+    # TTL (5 years prod, 90 days test)
+    ttl: Optional[int] = None
+    
+    def __post_init__(self):
+        # Auto-generate composite fields
+        if self.customer_id and self.event_type:
+            self.customer_event = f"{self.customer_id}#{self.event_type}"
+        if self.event_type and self.changed_at:
+            self.event_date = f"{self.event_type}#{self.changed_at.isoformat()}"
+        # Set TTL based on environment
+        if not self.ttl:
+            import os
+            from datetime import timedelta
+            environment = os.environ.get('ENVIRONMENT', 'test')
+            ttl_days = 1825 if environment == 'prod' else 90  # 5 years prod, 90 days test
+            expiry = self.changed_at + timedelta(days=ttl_days)
+            self.ttl = int(expiry.timestamp())
