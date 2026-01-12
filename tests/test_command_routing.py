@@ -221,7 +221,7 @@ class TestCommandRouting:
         ('/list_user_orders user', 'admin_order', 'handle_user_orders'),
         ('/list_offer_orders 1', 'admin_order', 'handle_offer_orders'),
         ('/export_orders', 'admin_order', 'handle_all_orders'),
-        ('/list_pending_users', 'user', 'handle_pending_users'),
+        ('/list_pending', 'user', 'handle_pending_users'),
         ('/list_users', 'user', 'handle_list_users'),
         ('/approve_user test', 'user', 'handle_approve_user'),
         ('/reject_user test', 'user', 'handle_reject_user'),

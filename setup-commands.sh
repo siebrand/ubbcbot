@@ -63,7 +63,7 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"cancel_order\", \"description\": \"Cancel order\"},
          {\"command\": \"list_user_orders\", \"description\": \"View user orders\"},
          {\"command\": \"export_orders\", \"description\": \"Download orders CSV\"},
-         {\"command\": \"list_pending_users\", \"description\": \"View users awaiting approval\"},
+         {\"command\": \"list_pending\", \"description\": \"View users awaiting approval\"},
          {\"command\": \"list_users\", \"description\": \"View all customers\"},
          {\"command\": \"list_subscribers\", \"description\": \"View subscribers\"},
          {\"command\": \"create_guest\", \"description\": \"Add guest user (non-Telegram)\"},

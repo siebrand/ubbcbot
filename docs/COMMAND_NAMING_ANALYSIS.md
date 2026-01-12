@@ -246,7 +246,7 @@ These handlers are for button callbacks and should not be renamed as they're not
 13. `/order_for` → `/create_order_for`
 14. `/user_orders` → `/list_user_orders`
 15. `/offer_orders` → `/list_offer_orders`
-16. `/pending_users` → `/list_pending_users`
+16. `/pending_users` → `/list_pending`
 17. `/add_guest` → `/create_guest`
 18. `/send_overviews` → `/send_delivery_overviews`
 
@@ -393,7 +393,7 @@ The following translation keys will need updates in Phase 2:
 - `/user_orders` → `/list_user_orders`
 - `/offer_orders` → `/list_offer_orders`
 - `/all_orders` → `/export_orders`
-- `/pending_users` → `/list_pending_users`
+- `/pending_users` → `/list_pending`
 - `/add_guest` → `/create_guest`
 - `/discount_status` → `/view_discount`
 - `/wholesale_delivery` → `/process_delivery`
