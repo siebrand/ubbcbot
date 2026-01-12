@@ -146,7 +146,7 @@
   "order_wholesale_boxes": "✅ Order {boxes} boxes wholesale",
   "custom_quantity": "📝 Custom Quantity",
   "enter_custom_wholesale_quantity": "📝 Enter number of boxes to order for offer {offer_id}:",
-  "usage_confirm_order_wholesale": "Usage: /confirm_order_wholesale <offer_id> <boxes_ordered>",
+  "usage_confirm_process_wholesale": "Usage: /confirm_process_wholesale <offer_id> <boxes_ordered>",
   "boxes_must_positive": "❌ Boxes ordered must be positive",
   "order_updated_limited": "⚠️ Your order has been updated due to limited availability:\n\n🍺 {name}\nOriginal: {old_qty} units\nUpdated: {new_qty} units\nNew total: €{total:.2f}\n\nYour order is confirmed and will be delivered.",
   "order_cancelled_insufficient": "❌ Your order has been cancelled:\n\n🍺 {name}\nQuantity: {quantity} units\nAmount: €{total:.2f}\nReason: Insufficient stock available",

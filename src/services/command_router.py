@@ -150,7 +150,7 @@ class CommandRouter:
                 return self.handlers['offer'].handle_audit_offer(admin_target_chat, parts[1:])
             elif command == '/process_wholesale':
                 return self.handlers['offer'].handle_process_wholesale(admin_target_chat, parts[1:])
-            elif command == '/confirm_order_wholesale':
+            elif command == '/confirm_process_wholesale':
                 return self.handlers['offer'].handle_confirm_process_wholesale(admin_target_chat, parts[1:])
             elif command == '/update_offer_name':
                 return self.handlers['offer'].handle_update_offer_name(admin_target_chat, parts[1:])

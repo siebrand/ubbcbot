@@ -103,12 +103,12 @@ class OfferManagementHandler(OfferBaseHandler):
             return {'status': 'invalid_format'}
     
     def handle_confirm_process_wholesale(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /confirm_order_wholesale command"""
+        """Handle /confirm_process_wholesale command"""
         logger.info(f"Starting handle_confirm_process_wholesale with args: {args}")
         
         if len(args) < 2:
             logger.error(f"Invalid args length: {len(args)}")
-            self._send_message(chat_id, self._t('usage_confirm_order_wholesale'))
+            self._send_message(chat_id, self._t('usage_confirm_process_wholesale'))
             return {'status': 'invalid_args'}
         
         logger.info(f"Validating offer with args[0]: {args[0]}")

@@ -146,7 +146,7 @@
   "order_wholesale_boxes": "✅ Bestel {boxes} dozen groothandel",
   "custom_quantity": "📝 Aangepast Aantal",
   "enter_custom_wholesale_quantity": "📝 Voer aantal te bestellen colli's in voor aanbieding {offer_id}:",
-  "usage_confirm_order_wholesale": "Gebruik: /confirm_order_wholesale <aanbieding_id> <bestelde_dozen>",
+  "usage_confirm_process_wholesale": "Gebruik: /confirm_process_wholesale <aanbieding_id> <bestelde_dozen>",
   "boxes_must_positive": "❌ Bestelde dozen moet positief zijn",
   "order_updated_limited": "⚠️ Je bestelling is bijgewerkt vanwege beperkte beschikbaarheid:\n\n🍺 {name}\nOrigineel: {old_qty} stuks\nBijgewerkt: {new_qty} stuks\nNieuw totaal: €{total:.2f}\n\nJe bestelling is bevestigd en wordt geleverd.",
   "order_cancelled_insufficient": "❌ Je bestelling is geannuleerd:\n\n🍺 {name}\nAantal: {quantity} stuks\nBedrag: €{total:.2f}\nReden: Onvoldoende voorraad beschikbaar",
