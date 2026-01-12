@@ -628,7 +628,7 @@ class CallbackHandler:
     
     def _start_user_orders_input(self, chat_id: int) -> Dict[str, Any]:
         """Start user orders process with text input"""
-        return self.edit_context_manager.handle_input_prompts(chat_id, 'user_orders_input')
+        return self.edit_context_manager.handle_input_prompts(chat_id, 'list_user_orders_input')
     
     def _start_cancel_order_input(self, chat_id: int) -> Dict[str, Any]:
         """Start cancel order process with text input"""

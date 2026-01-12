@@ -331,8 +331,8 @@ class BotService:
             return self.user_commands.handle_update_user_location(chat_id, [entity_id, text])
         elif edit_type == 'create_supplier_name':
             return self.supplier_commands._create_supplier(chat_id, text)
-        elif edit_type == 'user_orders_input':
-            return self.admin_order_commands.handle_user_orders(chat_id, [text])
+        elif edit_type == 'list_user_orders_input':
+            return self.admin_order_commands.handle_list_user_orders(chat_id, [text])
         elif edit_type == 'cancel_order_input':
             return self.admin_order_commands.handle_cancel_order(chat_id, [text])
         elif edit_type == 'incomplete_delivery':

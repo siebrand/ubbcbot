@@ -6,7 +6,7 @@ from .base_order_handler import BaseOrderHandler
 class OrderViewing(BaseOrderHandler):
     """Handles order viewing and export functionality"""
     
-    def handle_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
+    def handle_list_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /user_orders command"""
         if not args:
             # Show button-based UI to ask for username
@@ -315,7 +315,7 @@ class OrderViewing(BaseOrderHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
 
-    def handle_user_orders_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+    def handle_list_user_orders_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         """Handle user selection from disambiguation buttons for user_orders"""
         customer = self.db.get_customer(customer_id)
         

@@ -28,9 +28,9 @@ class TestOrderViewing(unittest.TestCase):
         )
     
     @patch.object(OrderViewing, '_send_message')
-    def test_handle_user_orders_no_args(self, mock_send):
+    def test_handle_list_user_orders_no_args(self, mock_send):
         """Test user orders with no arguments shows input UI"""
-        result = self.handler.handle_user_orders(123, [])
+        result = self.handler.handle_list_user_orders(123, [])
         
         self.assertEqual(result['status'], 'awaiting_input')
         mock_send.assert_called_once()

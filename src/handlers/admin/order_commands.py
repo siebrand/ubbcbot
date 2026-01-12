@@ -52,8 +52,8 @@ class AdminOrderCommands(BaseHandler):
         return self.placement.handle_order_for_other_quantity(chat_id, customer_id, offer_id)
     
     # Order Viewing Methods
-    def handle_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
-        return self.viewing.handle_user_orders(chat_id, args)
+    def handle_list_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
+        return self.viewing.handle_list_user_orders(chat_id, args)
     
     def handle_all_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         return self.viewing.handle_all_orders(chat_id, args)
@@ -61,8 +61,8 @@ class AdminOrderCommands(BaseHandler):
     def handle_offer_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         return self.viewing.handle_offer_orders(chat_id, args)
     
-    def handle_user_orders_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
-        return self.viewing.handle_user_orders_select(chat_id, customer_id)
+    def handle_list_user_orders_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        return self.viewing.handle_list_user_orders_select(chat_id, customer_id)
     
     def handle_offer_orders_page(self, chat_id: int, page: int) -> Dict[str, Any]:
         return self.viewing.handle_offer_orders_page(chat_id, page)

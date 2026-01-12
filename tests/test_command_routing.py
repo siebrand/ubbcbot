@@ -218,7 +218,7 @@ class TestCommandRouting:
         ('/create_order_for user 1 2', 'admin_order', 'handle_create_order_for'),
         ('/order_for user 1 2', 'admin_order', 'handle_create_order_for'),  # Permanent alias
         ('/cancel_order 1', 'admin_order', 'handle_cancel_order'),
-        ('/list_user_orders user', 'admin_order', 'handle_user_orders'),
+        ('/list_user_orders user', 'admin_order', 'handle_list_user_orders'),
         ('/list_offer_orders 1', 'admin_order', 'handle_offer_orders'),
         ('/export_orders', 'admin_order', 'handle_all_orders'),
         ('/list_pending', 'user', 'handle_list_pending'),
@@ -260,7 +260,6 @@ class TestCommandRouting:
         '/retire_supplier Test',
         '/offer_details 1',
         '/add_box 1',
-        '/user_orders user',
         '/offer_orders 1',
         '/all_orders',
         '/wholesale_delivery',

@@ -165,8 +165,8 @@ class EditContextManager:
                 'prompt_key': 'enter_supplier_name',
                 'placeholder': self._t('placeholder_supplier_name')
             },
-            'user_orders_input': {
-                'context_type': 'user_orders_input',
+            'list_user_orders_input': {
+                'context_type': 'list_user_orders_input',
                 'prompt_key': 'enter_username_for_orders',
                 'placeholder': self._t('placeholder_username')
             },

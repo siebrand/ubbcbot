@@ -64,10 +64,10 @@ class TestAdminOrderCommands(unittest.TestCase):
     def test_viewing_methods_exist(self):
         """Test that all viewing methods are properly delegated"""
         methods = [
-            'handle_user_orders',
+            'handle_list_user_orders',
             'handle_all_orders',
             'handle_offer_orders',
-            'handle_user_orders_select',
+            'handle_list_user_orders_select',
             'handle_offer_orders_page',
             'handle_offer_orders_detail_page',
             'handle_export_orders_callback'
@@ -118,9 +118,9 @@ class TestAdminOrderCommands(unittest.TestCase):
             self.assertEqual(result['status'], 'success')
         
         # Test viewing delegation
-        with patch.object(self.order_commands.viewing, 'handle_user_orders') as mock_view:
+        with patch.object(self.order_commands.viewing, 'handle_list_user_orders') as mock_view:
             mock_view.return_value = {'status': 'success'}
-            result = self.order_commands.handle_user_orders(123, ['test'])
+            result = self.order_commands.handle_list_user_orders(123, ['test'])
             mock_view.assert_called_once_with(123, ['test'])
             self.assertEqual(result['status'], 'success')
 
