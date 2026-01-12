@@ -252,6 +252,11 @@ credit_actions = get_credit_transactions_by_admin(admin_id)
 
 ### Implementation Notes
 
+**Audit Enforcement:**
+- All order modifications automatically log to audit trail (database-level enforcement)
+- Use transaction methods for sensitive operations: `cancel_order_with_audit()`, `adjust_order_price_with_audit()`, `mark_order_paid_with_audit()`
+- See `docs/audit-enforcement.md` for complete enforcement strategy
+
 **When to log Order History:**
 - Price changes (unit_price, total_price)
 - Quantity changes

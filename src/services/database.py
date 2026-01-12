@@ -390,10 +390,18 @@ class DynamoDBService:
             return False
 
     # Order operations
-    def create_order(self, order: Order) -> Optional[Order]:
+    def create_order(self, order: Order, admin_id: int = 0) -> Optional[Order]:
+        """Create order with automatic audit logging"""
         try:
+            from services.audit_service import AuditService
+            
             item = self._prepare_item(order.__dict__)
             self.orders_table.put_item(Item=item)
+            
+            # Auto-log order creation
+            audit = AuditService(self)
+            audit.log_order_created(order, admin_id)
+            
             return order
         except Exception as e:
             print(f"Error creating order: {e}")
@@ -569,9 +577,16 @@ class DynamoDBService:
             print(f"Error deleting order: {e}")
             return False
 
-    def update_order(self, order_id: str, updates: Dict[str, Any]) -> bool:
+    def update_order(self, order_id: str, updates: Dict[str, Any], admin_id: int = 0, reason: str = "") -> bool:
+        """Update order with automatic audit logging"""
         try:
             from datetime import datetime, UTC
+            from services.audit_service import AuditService
+            
+            # Get old order for comparison
+            old_order = self.get_order(order_id)
+            if not old_order:
+                return False
             
             # Always add update_date to any order update
             updates = updates.copy()  # Don't modify the original dict
@@ -594,6 +609,16 @@ class DynamoDBService:
                 ExpressionAttributeNames=expression_names,
                 ExpressionAttributeValues=expression_values
             )
+            
+            # Auto-log significant changes
+            audit = AuditService(self)
+            new_order = self.get_order(order_id)
+            
+            if 'total_price' in updates and old_order.total_price != new_order.total_price:
+                audit.log_price_change(new_order, old_order.total_price, new_order.total_price, admin_id, reason)
+            elif 'status' in updates and old_order.status != new_order.status:
+                audit.log_status_change(new_order, old_order.status, new_order.status, admin_id, reason)
+            
             return True
         except Exception as e:
             print(f"Error updating order: {e}")
@@ -1174,3 +1199,66 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error getting events by type: {e}")
             return []
+    
+    # Transaction methods for sensitive operations (audit enforced)
+    def cancel_order_with_audit(self, order_id: str, admin_id: int, reason: str) -> bool:
+        """Cancel order with mandatory audit logging"""
+        try:
+            from services.audit_service import AuditService
+            
+            order = self.get_order(order_id)
+            if not order:
+                return False
+            
+            # Log cancellation first
+            audit = AuditService(self)
+            audit.log_order_cancelled(order, admin_id, reason)
+            
+            # Then update order (will also log status change via update_order)
+            return self.update_order(order_id, {'status': 'cancelled'}, admin_id, reason)
+        except Exception as e:
+            print(f"Error cancelling order with audit: {e}")
+            return False
+    
+    def adjust_order_price_with_audit(self, order_id: str, new_price, admin_id: int, 
+                                     reason: str, credit_transaction_id: Optional[str] = None) -> bool:
+        """Adjust order price with mandatory audit logging and optional refund linkage"""
+        try:
+            from services.audit_service import AuditService
+            from decimal import Decimal
+            
+            order = self.get_order(order_id)
+            if not order:
+                return False
+            
+            old_price = order.total_price
+            new_price = Decimal(str(new_price))
+            
+            # Log price change with refund linkage
+            audit = AuditService(self)
+            audit.log_price_change(order, old_price, new_price, admin_id, reason, credit_transaction_id)
+            
+            # Update order (will also log via update_order, but price change already logged above)
+            return self.update_order(order_id, {'total_price': new_price}, admin_id, reason)
+        except Exception as e:
+            print(f"Error adjusting order price with audit: {e}")
+            return False
+    
+    def mark_order_paid_with_audit(self, order_id: str, admin_id: int) -> bool:
+        """Mark order as paid with mandatory audit logging"""
+        try:
+            from services.audit_service import AuditService
+            
+            order = self.get_order(order_id)
+            if not order:
+                return False
+            
+            # Log payment received
+            audit = AuditService(self)
+            audit.log_payment_received(order, admin_id)
+            
+            # Update order status (will also log via update_order)
+            return self.update_order(order_id, {'status': 'completed'}, admin_id, "Payment received")
+        except Exception as e:
+            print(f"Error marking order paid with audit: {e}")
+            return False

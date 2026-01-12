@@ -133,33 +133,44 @@ top_customers = sorted(revenue_by_customer.items(), key=lambda x: x[1], reverse=
 
 ## 🔗 Integration Points
 
-### Where to Add Audit Logging:
+### Automatic Enforcement (Database-Level)
 
-1. **Order Creation** - `src/handlers/customer/order_commands.py`
+**All order modifications automatically log to audit trail:**
+
+1. **Order Creation** - `src/services/database.py`
    ```python
-   from services.audit_service import AuditService
-   
-   audit = AuditService(self.db)
-   audit.log_order_created(order, admin_id=0)  # 0 = customer action
+   # Automatically logs when create_order() is called
+   order = Order(...)
+   db.create_order(order, admin_id=0)  # 0 = customer action
    ```
 
-2. **Order Cancellation** - `src/handlers/admin/order/order_cancellation.py`
+2. **Order Updates** - `src/services/database.py`
    ```python
-   audit = AuditService(self.db)
-   audit.log_order_cancelled(order, admin_id=15005473, reason="Customer request")
+   # Automatically logs price and status changes
+   db.update_order(order_id, {'total_price': 30.00}, admin_id=15005473, reason="Price adjustment")
    ```
 
-3. **Price Changes** - When implementing price adjustment command
+### Transaction Methods (Recommended for Sensitive Operations)
+
+**Use these methods for explicit audit control:**
+
+1. **Order Cancellation**
    ```python
-   audit = AuditService(self.db)
-   audit.log_price_change(order, old_price, new_price, admin_id, reason)
+   db.cancel_order_with_audit(order_id, admin_id=15005473, reason="Customer request")
    ```
 
-4. **Payment Received** - `src/handlers/admin/delivery_overview_handler.py`
+2. **Price Adjustment**
    ```python
-   audit = AuditService(self.db)
-   audit.log_payment_received(order, admin_id=15005473)
+   db.adjust_order_price_with_audit(order_id, new_price=25.00, admin_id=15005473,
+                                    reason="Defective product", credit_transaction_id="txn-123")
    ```
+
+3. **Payment Processing**
+   ```python
+   db.mark_order_paid_with_audit(order_id, admin_id=15005473)
+   ```
+
+**See `docs/audit-enforcement.md` for complete usage guidelines and enforcement details.**
 
 ---
 
