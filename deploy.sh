@@ -55,6 +55,7 @@ PYTEST_FILES="
     tests/test_customer_orders.py
     tests/test_box_status_manager.py
     tests/test_box_filtering_helpers.py
+    tests/test_delivered_box_availability.py
     tests/test_box_deletion_service.py
     tests/test_mark_paid_pagination.py
     tests/test_offer_cache.py
