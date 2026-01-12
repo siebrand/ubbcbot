@@ -16,25 +16,32 @@ class OfferBaseHandler(BaseHandler):
     
     def _validate_html_content(self, content: str) -> tuple[bool, str]:
         """Validate HTML content to prevent parse errors. Returns (is_valid, error_key)"""
-        from html.parser import HTMLParser
+        # Test if Telegram would accept this HTML by checking tag balance
+        import re
         
-        class TelegramHTMLValidator(HTMLParser):
-            def __init__(self):
-                super().__init__()
-                self.valid = True
-                self.error = None
-            
-            def error(self, message):
-                self.valid = False
-                self.error = message
+        # Find all HTML tags
+        tags = re.findall(r'<(/?)([a-zA-Z]+)[^>]*>', content)
+        stack = []
         
-        validator = TelegramHTMLValidator()
-        try:
-            validator.feed(content)
-            validator.close()
-            return (True, '') if validator.valid else (False, 'product_name_invalid_chars')
-        except Exception:
+        for is_closing, tag_name in tags:
+            if is_closing == '/':
+                # Closing tag
+                if not stack or stack[-1] != tag_name:
+                    return False, 'product_name_invalid_chars'
+                stack.pop()
+            else:
+                # Opening tag
+                stack.append(tag_name)
+        
+        # Check if all tags are closed
+        if stack:
             return False, 'product_name_invalid_chars'
+        
+        # Check for malformed patterns like "<0,3%"
+        if re.search(r'<(?![a-zA-Z/])', content):
+            return False, 'product_name_invalid_chars'
+        
+        return True, ''
     
     def _validate_box_size(self, box_size: int) -> bool:
         """Validate box size against allowed values"""
