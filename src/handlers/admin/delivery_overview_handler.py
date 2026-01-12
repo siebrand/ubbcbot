@@ -182,7 +182,7 @@ class DeliveryOverviewHandler(BaseHandler):
             if result.get('success'):
                 # Update orders to AWAITING_PAYMENT
                 for order in delivered_orders:
-                    self.db.update_order(order.order_id, {'status': OrderStatus.AWAITING_PAYMENT.value})
+                    self.db.update_order(order.order_id, {'status': OrderStatus.AWAITING_PAYMENT.value}, admin_id=self.admin_user_id, reason="Delivery overview sent")
                 
                 # Send success notification to admin
                 self._send_message(self.admin_user_id, self._t('admin_overview_sent_success', user_id=None, message=admin_message))
@@ -212,10 +212,10 @@ class DeliveryOverviewHandler(BaseHandler):
             self._send_message(chat_id, self._t('no_orders_awaiting_payment', user_id=None, customer_name=customer.first_name))
             return {'status': 'no_orders'}
         
-        # Update orders to COMPLETED
+        # Update orders to COMPLETED using transaction method
         updated_count = 0
         for order in awaiting_payment_orders:
-            if self.db.update_order(order.order_id, {'status': OrderStatus.COMPLETED.value}):
+            if self.db.mark_order_paid_with_audit(order.order_id, self.admin_user_id):
                 updated_count += 1
         
         customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)

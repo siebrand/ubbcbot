@@ -33,14 +33,14 @@ For sensitive operations, use transaction methods that **require** admin_id and 
 
 ```python
 # Cancel order (requires reason)
-db.cancel_order_with_audit(order_id, admin_id=15005473, reason="Customer request")
+db.cancel_order_with_audit(order_id, admin_id=<ADMIN_USER_ID>, reason="Customer request")
 
 # Adjust price (requires reason, optional refund link)
-db.adjust_order_price_with_audit(order_id, new_price=25.00, admin_id=15005473, 
+db.adjust_order_price_with_audit(order_id, new_price=25.00, admin_id=<ADMIN_USER_ID>, 
                                   reason="2 bottles defective", credit_transaction_id="txn-123")
 
 # Mark as paid
-db.mark_order_paid_with_audit(order_id, admin_id=15005473)
+db.mark_order_paid_with_audit(order_id, admin_id=<ADMIN_USER_ID>)
 ```
 
 **Benefits:**
@@ -69,7 +69,7 @@ db.mark_order_paid_with_audit(order_id, admin_id)
 ```python
 # Status change with context
 db.update_order(order_id, {'status': 'ready_for_labeling'}, 
-                admin_id=15005473, reason="Labeling completed")
+                admin_id=<ADMIN_USER_ID>, reason="Labeling completed")
 ```
 
 ### ⚠️ ACCEPTABLE: Use update_order without admin_id for non-sensitive changes
@@ -125,7 +125,7 @@ db.update_order(order_id, {'status': 'cancelled'})
 
 **After:**
 ```python
-db.cancel_order_with_audit(order_id, admin_id=15005473, reason="Customer request")
+db.cancel_order_with_audit(order_id, admin_id=<ADMIN_USER_ID>, reason="Customer request")
 ```
 
 ### Existing Code Using create_order

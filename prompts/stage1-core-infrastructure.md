@@ -5,7 +5,7 @@
 The Telegram beer ordering bot with AWS serverless architecture has been successfully implemented with comprehensive functionality that exceeds the original Stage 1 requirements.
 
 ## ✅ IMPLEMENTED CORE REQUIREMENTS:
-- Admin user ID: 15005473 (siebrand)
+- Admin user ID: <ADMIN_USER_ID> (siebrand)
 - AWS Lambda + DynamoDB + API Gateway + S3 architecture
 - Complete offer creation and management with supplier tracking
 - Advanced order placement with box assignment logic
@@ -40,7 +40,7 @@ The Telegram beer ordering bot with AWS serverless architecture has been success
 
 ## ✅ IMPLEMENTED COMMANDS:
 
-### Admin Commands (User ID: 15005473):
+### Admin Commands (User ID: <ADMIN_USER_ID>):
 **Test Environment:**
 - `/setup_test_data` - Setup test suppliers and offers
 
@@ -121,7 +121,7 @@ The Telegram beer ordering bot with AWS serverless architecture has been success
 - Customer order processing with validation ✓
 - Box status and capacity tracking ✓
 - Persistent DynamoDB storage ✓
-- Admin access control (ID: 15005473) ✓
+- Admin access control (ID: <ADMIN_USER_ID>) ✓
 - Resource naming convention and tagging ✓
 - Environment-specific configuration ✓
 - Order cancellation with inventory correction ✓

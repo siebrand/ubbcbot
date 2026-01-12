@@ -64,7 +64,7 @@ Use this checklist to track implementation progress across all stages.
 - [x] BR-010: Manual box ordering
 
 ### Security Requirements
-- [x] SR-001: Admin access control (ID: 15005473)
+- [x] SR-001: Admin access control (ID: <ADMIN_USER_ID>)
 - [x] SR-002: Customer data privacy
 - [x] SR-014: Webhook security (HTTPS, secret validation)
 - [x] SR-015: Token security (Parameter Store)

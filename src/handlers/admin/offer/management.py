@@ -166,7 +166,7 @@ class OfferManagementHandler(OfferBaseHandler):
         # Update fulfilled orders to 'ordered' and track which boxes need ORDERED status
         boxes_with_fulfilled_orders = set()
         for order in fulfilled_orders:
-            self.db.update_order(order.order_id, {'status': 'ordered'})
+            self.db.update_order(order.order_id, {'status': 'ordered'}, admin_id=self.admin_user_id, reason="Wholesale order processed")
             boxes_with_fulfilled_orders.add(order.box_id)
         
         # Update partially fulfilled orders and track boxes
@@ -176,7 +176,7 @@ class OfferManagementHandler(OfferBaseHandler):
                 'quantity': new_qty,
                 'total_price': new_total_price,
                 'status': 'ordered'
-            })
+            }, admin_id=self.admin_user_id, reason="Partial fulfillment - wholesale order")
             boxes_with_fulfilled_orders.add(order.box_id)
             
             # Notify customer of quantity reduction
@@ -205,7 +205,7 @@ class OfferManagementHandler(OfferBaseHandler):
         
         # Cancel remaining orders
         for order in cancelled_orders:
-            self.db.update_order(order.order_id, {'status': 'cancelled'})
+            self.db.cancel_order_with_audit(order.order_id, self.admin_user_id, "Insufficient wholesale capacity")
             
             # Notify customer of cancellation
             customer = self.db.get_customer(order.customer_id)
@@ -422,7 +422,7 @@ class OfferManagementHandler(OfferBaseHandler):
         cancelled_count = 0
         notified_customers = []
         for order in active_orders:
-            if self.db.update_order(order.order_id, {'status': OrderStatus.CANCELLED.value}):
+            if self.db.cancel_order_with_audit(order.order_id, self.admin_user_id, "Offer cancelled by admin"):
                 cancelled_count += 1
                 customer = self.db.get_customer(order.customer_id)
                 if customer:

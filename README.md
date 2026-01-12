@@ -67,7 +67,21 @@ Telegram beer ordering bot with AWS serverless architecture.
 
 ## Deployment
 
-1. ✅**Store bot tokens in Parameter Store:**
+1. ✅**Configure admin user ID:**
+
+Edit `samconfig.toml` and replace `<YOUR_TELEGRAM_USER_ID>` with your Telegram user ID:
+```toml
+[test.deploy.parameters]
+parameter_overrides = "Environment=test AdminUserId=YOUR_TELEGRAM_USER_ID"
+
+[prod.deploy.parameters]
+parameter_overrides = "Environment=prod AdminUserId=YOUR_TELEGRAM_USER_ID"
+```
+
+To find your Telegram user ID, send a message to @userinfobot on Telegram.
+
+2. ✅**Store bot tokens in Parameter Store:**
+2. ✅**Store bot tokens in Parameter Store:**
 ```bash
 # For test environment (use token from test bot creation)
 aws ssm put-parameter \
@@ -82,12 +96,12 @@ aws ssm put-parameter \
     --type "SecureString"
 ```
 
-2. ✅**Deploy to test environment:**
+3. ✅**Deploy to test environment:**
 ```bash
 ./deploy.sh test
 ```
 
-3. **Deploy to production:**
+4. **Deploy to production:**
 ```bash
 ./deploy.sh prod
 ```
@@ -100,7 +114,7 @@ aws ssm put-parameter \
 
 1. **Test bot functionality:**
    - Send `/start` to verify registration (both private and group)
-   - Admin (ID: 15005473): Use `/setup_test_data` to create test data
+   - Admin: Use `/setup_test_data` to create test data
    - Verify all messages are prefixed with "TEST - "
    - Test group functionality: orders, announcements
 
@@ -108,7 +122,7 @@ aws ssm put-parameter \
 
 1. **Production verification:**
    - Send `/start` to verify registration (both private and group)
-   - Admin (ID: 15005473): Add real suppliers
+   - Admin: Add real suppliers
    - Verify messages have NO "TEST - " prefix
    - Test complete order flow in production groups
    - Verify admin permissions work correctly
@@ -130,7 +144,7 @@ Expected response should show:
 
 These commands are set up in the deployment script, throught bash script setup-commands.sh.
 
-### Admin Commands (User ID: 15005473)
+### Admin Commands
 - `/admin` - Admin panel with buttons for all admin functions
 - `/help [section]` - Show help for specific section (general, orders, suppliers, offers, users, delivery, discounts, import, system)
 - `/setup_test_data` - Setup test data (test environment only)
@@ -242,7 +256,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - Wholesale box sizes: 1,2,6,8,10,12,15,16,18,20,24 units
 - Auto-create new boxes when capacity reached
 - Box status: open → full → ordered → delivered
-- Admin restricted to user ID 15005473
+- Admin access controlled via ADMIN_USER_ID environment variable
 
 ## Environment Management
 
@@ -267,7 +281,7 @@ Examples:
 - [x] Customer order processing with validation
 - [x] Box status and capacity tracking
 - [x] Persistent DynamoDB storage
-- [x] Admin access control (ID: 15005473)
+- [x] Admin access control via environment variable
 - [x] Resource naming convention and tagging
 - [x] Environment-specific configuration
 - [x] Order cancellation with inventory correction and customer notification

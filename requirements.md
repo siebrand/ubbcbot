@@ -563,7 +563,7 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-039**: All user inputs must be validated and sanitized before processing
 - **BR-040**: Numeric inputs must be within defined ranges (quantities > 0, prices > 0)
 - **BR-041**: Text inputs limited to maximum lengths and safe characters only
-- **BR-042**: Image uploads restricted to admin user only (ID: 15005473)
+- **BR-042**: Image uploads restricted to admin user only (ID: <ADMIN_USER_ID>)
 - **BR-043**: Referential integrity enforced before creating relationships
 - **BR-044**: Daily automated checks for orphaned records and data inconsistencies
 - **BR-045**: System prevents creation of orders for inactive offers or suppliers
@@ -577,12 +577,12 @@ Create a Telegram bot to automate beer order registration for a beer sales chann
 - **BR-051**: Automated cleanup of temporary data older than 24 hours
 - **BR-052**: System maintains complete chain of custody for all order state changes
 - **BR-053**: Audit trail includes IP address and user agent when available
-- **BR-054**: Supplier information is only displayed to admin users (ID: 15005473)
+- **BR-054**: Supplier information is only displayed to admin users (ID: <ADMIN_USER_ID>)
 
 ## 8. Security Requirements
 
 ### 8.1 Access Control
-- **SR-001**: Admin commands restricted to Telegram user ID 15005473 (siebrand)
+- **SR-001**: Admin commands restricted to Telegram user ID <ADMIN_USER_ID> (siebrand)
 - **SR-002**: Customer data privacy protection
 - **SR-003**: Order modification restricted to order owner
 - **SR-014**: Supplier information restricted to admin users only

@@ -109,7 +109,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         # Update all ready orders to LABELING_COMPLETED
         updated_count = 0
         for order in ready_orders:
-            if self.db.update_order(order.order_id, {'status': OrderStatus.LABELING_COMPLETED.value}):
+            if self.db.update_order(order.order_id, {'status': OrderStatus.LABELING_COMPLETED.value}, admin_id=self.admin_user_id, reason="Labeling completed"):
                 updated_count += 1
 
         if updated_count > 0:
@@ -159,7 +159,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
             ready_orders = [o for o in orders if o.status == OrderStatus.READY_FOR_LABELING.value]
             
             for order in ready_orders:
-                if self.db.update_order(order.order_id, {'status': OrderStatus.LABELING_COMPLETED.value}):
+                if self.db.update_order(order.order_id, {'status': OrderStatus.LABELING_COMPLETED.value}, admin_id=self.admin_user_id, reason="Labeling completed - batch"):
                     processed_count += 1
         
         if processed_count > 0:

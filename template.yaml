@@ -7,6 +7,9 @@ Parameters:
     Type: String
     Default: test
     AllowedValues: [test, prod]
+  AdminUserId:
+    Type: String
+    Description: Telegram user ID of the bot administrator
 
 Conditions:
   IsTestEnvironment: !Equals [!Ref Environment, test]
@@ -23,7 +26,7 @@ Globals:
         ENVIRONMENT: !Ref Environment
         DYNAMODB_TABLE_PREFIX: !Sub 'ubbc-bot-${Environment}'
         S3_BUCKET_NAME: !Ref ImageBucket
-        ADMIN_USER_ID: '15005473'
+        ADMIN_USER_ID: !Ref AdminUserId
         DEFAULT_GROUP_ID: !If 
           - IsTestEnvironment
           - '-1003399818858'

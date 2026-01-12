@@ -76,7 +76,7 @@ feat: add automatic webhook setup in deployment script
 A commit message must always be suggested right after completing changes to files in the project. 
 
 ## Business Logic
-- Admin user ID: 15005473
+- Admin user ID: <ADMIN_USER_ID>
 - Supported box sizes: 1,2,6,8,10,12,15,16,18,20,24 units
 - Test environment: all messages prefixed with "TEST - "
 - Production environment: clean messages without prefixes

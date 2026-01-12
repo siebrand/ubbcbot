@@ -2,7 +2,7 @@
 
 ## Prerequisites
 - Bot deployed in test environment
-- Admin user ID: 15005473
+- Admin user ID: <ADMIN_USER_ID>
 - Test customer registered and approved
 
 ## Test Scenario

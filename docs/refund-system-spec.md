@@ -178,7 +178,7 @@ Together they answer:
        old_value="50.00",
        new_value="30.00",
        reason="2 bottles defective",
-       changed_by=15005473,
+       changed_by=<ADMIN_USER_ID>,
        triggers_refund=True,
        credit_transaction_id="txn-001"
    )
@@ -194,7 +194,7 @@ Together they answer:
        amount=20.00,
        reference_id="order-abc",
        reason="2 bottles defective",
-       created_by=15005473
+       created_by=<ADMIN_USER_ID>
    )
    ```
 

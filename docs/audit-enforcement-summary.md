@@ -72,16 +72,16 @@ db.create_order(order, admin_id=0)  # Auto-logs ORDER_CREATED
 
 # Admin order
 order = Order(...)
-db.create_order(order, admin_id=15005473)  # Auto-logs with admin context
+db.create_order(order, admin_id=<ADMIN_USER_ID>)  # Auto-logs with admin context
 ```
 
 ### Updating Orders
 ```python
 # Price change (auto-logged)
-db.update_order(order_id, {'total_price': 30.00}, admin_id=15005473, reason="Adjustment")
+db.update_order(order_id, {'total_price': 30.00}, admin_id=<ADMIN_USER_ID>, reason="Adjustment")
 
 # Status change (auto-logged)
-db.update_order(order_id, {'status': 'ready_for_labeling'}, admin_id=15005473)
+db.update_order(order_id, {'status': 'ready_for_labeling'}, admin_id=<ADMIN_USER_ID>)
 
 # Non-sensitive change (not logged)
 db.update_order(order_id, {'delivery_notification_sent': True})
@@ -90,14 +90,14 @@ db.update_order(order_id, {'delivery_notification_sent': True})
 ### Sensitive Operations (Use Transaction Methods)
 ```python
 # Cancel order
-db.cancel_order_with_audit(order_id, admin_id=15005473, reason="Customer request")
+db.cancel_order_with_audit(order_id, admin_id=<ADMIN_USER_ID>, reason="Customer request")
 
 # Adjust price with refund
-db.adjust_order_price_with_audit(order_id, 25.00, admin_id=15005473,
+db.adjust_order_price_with_audit(order_id, 25.00, admin_id=<ADMIN_USER_ID>,
                                   reason="Defective product", credit_transaction_id="txn-123")
 
 # Mark paid
-db.mark_order_paid_with_audit(order_id, admin_id=15005473)
+db.mark_order_paid_with_audit(order_id, admin_id=<ADMIN_USER_ID>)
 ```
 
 ## Migration Required
@@ -148,7 +148,7 @@ assert len(history) == 1
 assert history[0].event_type == "ORDER_CREATED"
 
 # Update order
-db.update_order(order.order_id, {'total_price': 30.00}, admin_id=15005473, reason="Test")
+db.update_order(order.order_id, {'total_price': 30.00}, admin_id=<ADMIN_USER_ID>, reason="Test")
 
 # Verify price change logged
 history = audit.get_order_history(order.order_id)

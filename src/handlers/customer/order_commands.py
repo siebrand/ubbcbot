@@ -181,7 +181,7 @@ class CustomerOrderCommands(BaseHandler):
             placed_by_admin=placed_by_admin
         )
         
-        created_order = self.db.create_order(order)
+        created_order = self.db.create_order(order, admin_id=0)  # Customer action
         if not created_order:
             self._send_message(chat_id, self._t('order_failed', user_id))
             return None
@@ -207,7 +207,7 @@ class CustomerOrderCommands(BaseHandler):
         else:
             final_status = 'pending'
         
-        self.db.update_order(created_order.order_id, {'box_id': box.box_id, 'status': final_status})
+        self.db.update_order(created_order.order_id, {'box_id': box.box_id, 'status': final_status}, admin_id=0)
         created_order.status = final_status
         
         return created_order

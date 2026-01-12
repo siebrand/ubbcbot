@@ -35,9 +35,9 @@ warm_containers = "EAGER"
 [test]
 [test.deploy.parameters]
 stack_name = "ubbc-bot-test"
-parameter_overrides = "Environment=test"
+parameter_overrides = "Environment=test AdminUserId=15005473"
 
 [prod]
 [prod.deploy.parameters]
 stack_name = "ubbc-bot-prod"
-parameter_overrides = "Environment=prod"
+parameter_overrides = "Environment=prod AdminUserId=15005473"

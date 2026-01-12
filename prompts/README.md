@@ -46,5 +46,5 @@ This folder contains prompts for implementing the Telegram Beer Ordering Bot.
 
 ## Dependencies
 - Ensure you have access to requirements.md and aws-architecture.md
-- Admin user ID: 15005473 must be configured
+- Admin user ID: <ADMIN_USER_ID> must be configured
 - AWS account with appropriate permissions required

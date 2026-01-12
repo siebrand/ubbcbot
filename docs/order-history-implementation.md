@@ -147,7 +147,7 @@ top_customers = sorted(revenue_by_customer.items(), key=lambda x: x[1], reverse=
 2. **Order Updates** - `src/services/database.py`
    ```python
    # Automatically logs price and status changes
-   db.update_order(order_id, {'total_price': 30.00}, admin_id=15005473, reason="Price adjustment")
+   db.update_order(order_id, {'total_price': 30.00}, admin_id=<ADMIN_USER_ID>, reason="Price adjustment")
    ```
 
 ### Transaction Methods (Recommended for Sensitive Operations)
@@ -156,18 +156,18 @@ top_customers = sorted(revenue_by_customer.items(), key=lambda x: x[1], reverse=
 
 1. **Order Cancellation**
    ```python
-   db.cancel_order_with_audit(order_id, admin_id=15005473, reason="Customer request")
+   db.cancel_order_with_audit(order_id, admin_id=<ADMIN_USER_ID>, reason="Customer request")
    ```
 
 2. **Price Adjustment**
    ```python
-   db.adjust_order_price_with_audit(order_id, new_price=25.00, admin_id=15005473,
+   db.adjust_order_price_with_audit(order_id, new_price=25.00, admin_id=<ADMIN_USER_ID>,
                                     reason="Defective product", credit_transaction_id="txn-123")
    ```
 
 3. **Payment Processing**
    ```python
-   db.mark_order_paid_with_audit(order_id, admin_id=15005473)
+   db.mark_order_paid_with_audit(order_id, admin_id=<ADMIN_USER_ID>)
    ```
 
 **See `docs/audit-enforcement.md` for complete usage guidelines and enforcement details.**
@@ -268,7 +268,7 @@ order = db.get_order("order-123")
 audit.log_order_created(order, admin_id=0)
 
 # Log cancellation
-audit.log_order_cancelled(order, admin_id=15005473, reason="Customer request")
+audit.log_order_cancelled(order, admin_id=<ADMIN_USER_ID>, reason="Customer request")
 
 # Query history
 history = audit.get_order_history("order-123")

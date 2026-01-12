@@ -1,6 +1,7 @@
 import os
 import logging
 from typing import Dict, Any
+from config import ADMIN_USER_ID
 from services.database import DynamoDBService
 from services.command_router import CommandRouter
 from services.media_handler import MediaHandler
@@ -32,7 +33,7 @@ class BotService:
     
     def __init__(self):
         self.db = DynamoDBService()
-        self.admin_user_id = int(os.environ.get('ADMIN_USER_ID', '15005473'))
+        self.admin_user_id = ADMIN_USER_ID
         self.environment = os.environ.get('ENVIRONMENT', 'test')
         
         self.telegram_token = self._get_telegram_token()

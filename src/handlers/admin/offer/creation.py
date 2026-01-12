@@ -130,7 +130,7 @@ class OfferCreationHandler(OfferBaseHandler):
                         unit_price=offer.price_per_unit,
                         total_price=offer.price_per_unit
                     )
-                    created_admin_order = self.db.create_order(admin_order)
+                    created_admin_order = self.db.create_order(admin_order, admin_id=self.admin_user_id)
                     
                     if not created_admin_order:
                         logger.error(f"Failed to create admin order for offer {offer_id}")

@@ -96,7 +96,7 @@ Telegram API → API Gateway → Lambda Functions → DynamoDB
 - **Purpose**: Store configuration values
 - **Parameters**:
   - `/ubbc-bot/telegram-token` (SecureString)
-  - `/ubbc-bot/admin-user-id` (String): "15005473"
+  - `/ubbc-bot/admin-user-id` (String): "<ADMIN_USER_ID>"
   - `/ubbc-bot/default-group-id` (String)
   - `/ubbc-bot/s3-bucket-name` (String)
 
