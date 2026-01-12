@@ -205,8 +205,18 @@ class CallbackHandler:
             elif data.startswith('page_'):
                 parts = data.split('_')
                 if len(parts) >= 3:
+                    # Handle list_offers specially (page_list_offers_[filter]_page)
+                    if parts[1] == 'list' and len(parts) >= 4 and parts[2] == 'offers':
+                        if len(parts) == 5:
+                            filter_arg = parts[3]
+                            page = int(parts[4])
+                        else:
+                            filter_arg = None
+                            page = int(parts[3])
+                        args = [filter_arg] if filter_arg else None
+                        return self.handlers['info'].handle_list_offers(chat_id, user_id, args, page)
                     # Handle multi-word entity types like mark_paid and user_orders
-                    if len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'user']:
+                    elif len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'user']:
                         if parts[1] == 'mark' and parts[2] == 'paid':
                             entity_type = 'mark_paid'
                             page = int(parts[3])
@@ -256,10 +266,6 @@ class CallbackHandler:
                         if user_id == target_user_id:
                             return self.handlers['info'].handle_my_orders(chat_id, user_id, None, page)
                         return {'status': 'unauthorized'}
-                    elif entity_type == 'list_offers' or entity_type.startswith('list_offers_'):
-                        filter_arg = entity_type.split('_', 2)[2] if '_' in entity_type and len(entity_type.split('_')) > 2 else None
-                        args = [filter_arg] if filter_arg else None
-                        return self.handlers['info'].handle_list_offers(chat_id, user_id, args, page)
             elif data == 'page_info':
                 return {'status': 'page_info'}
             

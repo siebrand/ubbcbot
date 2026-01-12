@@ -242,12 +242,23 @@ class InfoCommands(BaseHandler):
                 self._send_message(chat_id, self._t('no_offers', user_id))
                 return {'status': 'no_offers'}
             
-            message += self._t('sold_out_offers_title', user_id) + "\n\n"
-            for offer in sold_out_offers:
+            # Paginate sold out offers
+            page_offers, total_pages = PaginationUtils.paginate_list(sold_out_offers, page, 20)
+            
+            message += self._t('sold_out_offers_title', user_id)
+            if total_pages > 1:
+                message += f" - Page {page}/{total_pages}"
+            message += "\n\n"
+            
+            for offer in page_offers:
                 total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id, boxes_by_offer, orders_by_offer)
                 message += self._format_offer_line(offer, "🚫", user_id, total_ordered, total_capacity)
             
-            self._send_message(chat_id, message, parse_mode="HTML")
+            reply_markup = None
+            if total_pages > 1:
+                reply_markup = PaginationUtils.build_pagination_keyboard(page, total_pages, "list_offers_soldout", enhanced=True)
+            
+            self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
             return {'status': 'success'}
         
         if is_admin and not show_user_view:
