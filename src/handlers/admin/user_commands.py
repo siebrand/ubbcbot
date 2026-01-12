@@ -39,8 +39,8 @@ class UserCommands(BaseHandler):
             self._send_message(chat_id, self._t('failed_approve_user', chat_id))
             return {'status': 'error'}
 
-    def handle_pending_users(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
-        """Handle /pending_users command with pagination"""
+    def handle_list_pending(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
+        """Handle /list_pending command with pagination"""
         customers = self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value)
         
         if not customers:

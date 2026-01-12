@@ -260,7 +260,7 @@ class CallbackHandler:
                         else:
                             return self.handlers['offer'].handle_list_boxes(chat_id, [filter_part, str(page)])
                     elif entity_type == 'pending':
-                        return self.handlers['user'].handle_pending_users(chat_id, page)
+                        return self.handlers['user'].handle_list_pending(chat_id, page)
                     elif entity_type.startswith('customers_'):
                         status_filter = entity_type.split('_', 1)[1]
                         return self.handlers['user'].handle_list_users(chat_id, page, status_filter)
@@ -594,7 +594,7 @@ class CallbackHandler:
             'list_offer_orders': lambda: self.handlers['admin_order'].handle_offer_orders(chat_id, []),
             'cancel_order': lambda: self.handlers['admin_order'].handle_cancel_order(chat_id, []),
             'create_order_for': lambda: self.handlers['admin_order'].handle_create_order_for(chat_id, user_id, []),
-            'list_pending': lambda: self.handlers['user'].handle_pending_users(chat_id),
+            'list_pending': lambda: self.handlers['user'].handle_list_pending(chat_id),
             'list_users': lambda: self.handlers['user'].handle_list_users(chat_id, 1, 'all'),
             'list_subscribers': lambda: self.handlers['user'].handle_list_subscribers(chat_id),
             'create_guest': lambda: self._send_usage_message(chat_id, 'usage_add_guest'),

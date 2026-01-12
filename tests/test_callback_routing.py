@@ -88,7 +88,7 @@ class TestCallbackRouting:
         ('cmd:list_user_orders', 'admin_order', '_start_user_orders_input'),
         ('cmd:list_offer_orders', 'admin_order', 'handle_offer_orders'),
         ('cmd:create_order_for', 'admin_order', 'handle_create_order_for'),
-        ('cmd:list_pending', 'user', 'handle_pending_users'),
+        ('cmd:list_pending', 'user', 'handle_list_pending'),
         ('cmd:create_guest', 'admin_commands', '_send_usage_message'),
         ('cmd:view_discount', 'discount', 'handle_discount_status'),
         ('cmd:process_delivery', 'wholesale_delivery', 'handle_wholesale_delivery'),
@@ -138,7 +138,7 @@ class TestCallbackRouting:
     @pytest.mark.parametrize("callback_data,handler,method,expected_page", [
         ('page_suppliers_2', 'supplier', 'handle_list_suppliers', 2),
         ('page_suppliers_active_3', 'supplier', 'handle_list_suppliers', 3),
-        ('page_pending_1', 'user', 'handle_pending_users', 1),
+        ('page_pending_1', 'user', 'handle_list_pending', 1),
         ('page_guests_2', 'user', 'handle_list_guests', 2),
         ('page_subscribers_1', 'user', 'handle_list_subscribers', 1),
         ('page_changelog_3', 'changelog', 'handle_changelog', 3),
