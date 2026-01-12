@@ -310,51 +310,63 @@ class InfoCommands(BaseHandler):
             # Paginate offers
             page_offers, total_pages = PaginationUtils.paginate_list(display_offers, page, 20)
             
-            # Build title based on filter
-            if show_all:
-                message += self._t('all_offers_admin')
-            elif show_draft:
-                message += self._t('draft_offers', user_id)
-            elif show_active:
-                message += self._t('active_offers', user_id)
-            elif show_import:
-                message += self._t('import_offers', user_id)
-            elif show_archived:
-                message += self._t('archived_offers', user_id)
-            else:
-                message += self._t('current_offers_admin', user_id)
+            # Determine if we need section headers
+            show_section_headers = show_all or (not filter_arg) or len([s for s in [show_draft, show_import, show_active, show_completed, show_inactive, show_archived] if s]) > 1
             
-            if total_pages > 1:
-                message += f" - Page {page}/{total_pages}"
-            message += "\n\n"
+            # Build title based on filter (only if not showing section headers)
+            if not show_section_headers:
+                if show_draft:
+                    message += self._t('draft_offers', user_id)
+                elif show_active:
+                    message += self._t('active_offers', user_id)
+                elif show_import:
+                    message += self._t('import_offers', user_id)
+                elif show_archived:
+                    message += self._t('archived_offers', user_id)
+                
+                if total_pages > 1:
+                    message += f" - Page {page}/{total_pages}"
+                message += "\n\n"
+            else:
+                # Show general title for multi-section views
+                if show_all:
+                    message += self._t('all_offers_admin')
+                else:
+                    message += self._t('current_offers_admin', user_id)
+                
+                if total_pages > 1:
+                    message += f" - Page {page}/{total_pages}"
+                message += "\n\n"
             
             # Group paginated offers by status for display
             current_status = None
             first_section = True
+            
             for status_type, offer in page_offers:
                 if status_type != current_status:
                     current_status = status_type
-                    if not first_section:
-                        message += "\n"
-                    first_section = False
-                    if status_type == 'draft':
-                        message += self._t('draft_offers') + "\n"
-                    elif status_type == 'import':
-                        message += self._t('import_offers') + "\n"
-                    elif status_type == 'active':
-                        message += self._t('active_offers') + "\n"
-                    else:
-                        status_emoji = {
-                            OfferStatus.SOLD_OUT.value: "🚫",
-                            OfferStatus.COMPLETED.value: "✅",
-                            OfferStatus.INACTIVE.value: "❌"
-                        }.get(status_type, "❓")
-                        status_label = {
-                            OfferStatus.SOLD_OUT.value: self._t('status_sold_out', user_id=None).upper(),
-                            OfferStatus.COMPLETED.value: self._t('status_completed', user_id=None).upper(),
-                            OfferStatus.INACTIVE.value: self._t('status_inactive', user_id=None).upper()
-                        }.get(status_type, status_type.upper())
-                        message += f"{status_emoji} {status_label}:\n"
+                    if show_section_headers:
+                        if not first_section:
+                            message += "\n"
+                        first_section = False
+                        if status_type == 'draft':
+                            message += self._t('draft_offers') + "\n"
+                        elif status_type == 'import':
+                            message += self._t('import_offers') + "\n"
+                        elif status_type == 'active':
+                            message += self._t('active_offers') + "\n"
+                        else:
+                            status_emoji = {
+                                OfferStatus.SOLD_OUT.value: "🚫",
+                                OfferStatus.COMPLETED.value: "✅",
+                                OfferStatus.INACTIVE.value: "❌"
+                            }.get(status_type, "❓")
+                            status_label = {
+                                OfferStatus.SOLD_OUT.value: self._t('status_sold_out', user_id=None).upper(),
+                                OfferStatus.COMPLETED.value: self._t('status_completed', user_id=None).upper(),
+                                OfferStatus.INACTIVE.value: self._t('status_inactive', user_id=None).upper()
+                            }.get(status_type, status_type.upper())
+                            message += f"{status_emoji} {status_label}:\n"
                 
                 # Format offer line
                 if status_type == 'draft':
