@@ -7,4 +7,3 @@
   - which other field may be useful?
   - indexes on user id and date, payment amount
   - ask LLM for comments
--

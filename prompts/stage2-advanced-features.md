@@ -14,10 +14,25 @@ Extend the existing Telegram bot with remaining advanced business features:
 ## ALREADY IMPLEMENTED (DO NOT RE-IMPLEMENT):
 - ✅ Image upload and management (S3 storage)
 - ✅ Discount system with time-based expiration
-- ✅ Admin proxy ordering (/order_for command)
+- ✅ Admin proxy ordering (/create_order_for command, alias: /order_for)
 - ✅ Offer editing with images and descriptions
 - ✅ CE(S)T timezone support
 - ✅ Order cancellation system
+- ✅ Guest user management (non-Telegram customers)
+- ✅ CSV order import functionality
+- ✅ Offer and user caching for performance
+- ✅ Async notification system (Lambda-based for large subscriber lists)
+- ✅ Comprehensive pagination system
+- ✅ Delivery overview and payment tracking
+- ✅ Labeling completion workflow
+- ✅ Box status management and tracking
+- ✅ Wholesale ordering workflow
+- ✅ Order export to CSV with filtering
+- ✅ User approval workflow
+- ✅ Subscriber management
+- ✅ Internationalization (English/Dutch)
+- ✅ Command naming standardization
+- ✅ Permanent command aliases (order, my_orders, order_for)
 
 ## REQUIREMENTS TO IMPLEMENT:
 **Functional Requirements:**
