@@ -6,6 +6,20 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "2025-01-15 - Command Naming Standardization",
+                "content": """<b>Command Naming Overhaul</b>
+• <b>Standardized Command Names</b> - All commands now follow consistent action-object pattern (create_, list_, view_, update_, process_, etc.)
+• <b>Supplier Commands</b> - /add_supplier → /create_supplier, /retire_supplier → /archive_supplier, /edit_supplier → /update_supplier
+• <b>Offer Commands</b> - /offer_details → /view_offer, /add_box → /create_box, /box_status → /list_boxes
+• <b>Order Commands</b> - /order_wholesale → /process_wholesale, /user_orders → /list_user_orders, /offer_orders → /list_offer_orders, /all_orders → /export_orders
+• <b>User Commands</b> - /pending_users → /list_pending, /add_guest → /create_guest
+• <b>Delivery Commands</b> - /wholesale_delivery → /process_delivery, /labeling_completed → /process_labeling, /send_overviews → /send_delivery_overviews, /mark_paid → /process_payment
+• <b>Utility Commands</b> - /discount_status → /view_discount, /delete_old → /delete_old_orders, /delete_cancelled → /delete_cancelled_orders, /delete_completed → /delete_completed_orders
+• <b>Permanent Aliases</b> - /order (→ /create_order), /my_orders (→ /list_my_orders), /order_for (→ /create_order_for) maintained for convenience
+• <b>No Backward Compatibility</b> - Old command names immediately deprecated, users must use new names
+• <b>Updated Documentation</b> - Help text, usage messages, and Telegram command list updated with new names"""
+            },
+            {
                 "title": "Up to 2025-01-12",
                 "content": """<b>User-Facing Updates</b>
 • <b>Enhanced Pagination</b> - Added pagination to /my_orders (20 lines per page) and /list_offers (20 offers per page) to prevent message length errors

@@ -134,15 +134,15 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/admin` - Admin panel with buttons for all admin functions
 - `/help [section]` - Show help for specific section (general, orders, suppliers, offers, users, delivery, discounts, import, system)
 - `/setup_test_data` - Setup test data (test environment only)
-- `/add_supplier <name>` - Register new supplier
-- `/retire_supplier <name>` - Retire supplier (no longer available for new offers)
+- `/create_supplier <name>` - Register new supplier
+- `/archive_supplier <name>` - Archive supplier (no longer available for new offers)
 - `/list_suppliers [active|retired|all]` - View suppliers by status (default: active, paginated)
-- `/edit_supplier <name>` - Edit supplier details with inline keyboard
+- `/update_supplier <name>` - Edit supplier details with inline keyboard
 - `/update_supplier_name <supplier_id> <new_name>` - Update supplier name
 - `/update_supplier_contact <supplier_id> <email>` - Update supplier contact email
 - `/update_supplier_full_name <supplier_id> <new_name>` - Update supplier full name
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create draft beer offer
-- `/offer_details <offer_id>` - View and edit offer details
+- `/view_offer <offer_id>` - View and edit offer details
 - `/update_offer_name <offer_id> <new_name>` - Update offer name
 - `/update_offer_price <offer_id> <new_price>` - Update offer price
 - `/update_offer_description <offer_id> <description>` - Update offer description
@@ -150,19 +150,19 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/preview_offer <offer_id>` - Preview how offer will appear when published
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
 - `/delete_offer <offer_id>` - Delete completed or inactive offer from database
-- `/add_box <offer_id>` - Add single box to offer (updates sold out offers to active)
-- `/box_status [<offer_id>|active|ordered|full|delivered|all|help]` - View box status and capacity (paginated with enhanced navigation)
+- `/create_box <offer_id>` - Add single box to offer (updates sold out offers to active)
+- `/list_boxes [<offer_id>|active|ordered|full|delivered|all|help]` - View box status and capacity (paginated with enhanced navigation)
 - `/audit_offer <offer_id>` - Audit offer capacity vs orders
-- `/order_wholesale <offer_id>` - Start wholesale ordering process (button confirmation)
-- `/order_for <username> <offer_id> [quantity]` - Place order for another user (10-unit admin limit)
+- `/process_wholesale <offer_id>` - Start wholesale ordering process (button confirmation)
+- `/create_order_for <username> <offer_id> [quantity]` - Place order for another user (10-unit admin limit, alias: /order_for)
 - `/cancel_order <order_id>` - Cancel customer order (button confirmation)
-- `/user_orders <username>` - View orders for specific user
-- `/offer_orders <offer_id>` - View all orders for specific offer
-- `/all_orders [active|cancelled|ordered|ready_for_labeling|labeling_completed|awaiting_payment|completed|all|full]` - Download CSV of all orders (default: active, full exports all fields)
-- `/pending_users` - View users awaiting approval (paginated with approve/reject buttons)
+- `/list_user_orders <username>` - View orders for specific user
+- `/list_offer_orders <offer_id>` - View all orders for specific offer
+- `/export_orders [active|cancelled|ordered|ready_for_labeling|labeling_completed|awaiting_payment|completed|all|full]` - Download CSV of all orders (default: active, full exports all fields)
+- `/list_pending` - View users awaiting approval (paginated with approve/reject buttons)
 - `/list_users` - View all customers (paginated with status filtering)
 - `/list_subscribers` - View users subscribed to offer notifications
-- `/add_guest <first_name> [last_name] [contact]` - Add guest user (non-Telegram)
+- `/create_guest <first_name> [last_name] [contact]` - Add guest user (non-Telegram)
 - `/list_guests` - View all guest users (paginated)
 - `/approve_user <name_or_username>` - Approve user
 - `/reject_user <name_or_username>` - Reject user
@@ -172,16 +172,18 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/update_user_last_name <customer_id> <new_last_name>` - Update customer last name
 - `/create_discount <percentage> [hours]` - Create discount (percentage 0-100, optional duration)
 - `/cancel_discount` - Cancel active discount
-- `/discount_status` - View current discount status
-- `/wholesale_delivery` - Process wholesale deliveries and manage delivery status
-- `/labeling_completed` - Complete labeling process for delivered orders
-- `/send_overviews` - Send delivery overviews to customers
-- `/mark_paid` - Mark customers as paid
+- `/view_discount` - View current discount status
+- `/process_delivery` - Process wholesale deliveries and manage delivery status
+- `/process_labeling` - Complete labeling process for delivered orders
+- `/send_delivery_overviews` - Send delivery overviews to customers
+- `/process_payment` - Mark customers as paid
 - `/failed_notifications` - View orders with failed delivery notifications
 - `/offer_status <offer_id> import` - Change offer status to import (for import workflow)
 - `/import_orders` - Import orders from CSV file
 - `/finalize_import <offer_id>` - Finalize imported offer
-- `/delete_old` - Delete cancelled and completed orders older than 7 days
+- `/delete_old_orders` - Delete cancelled and completed orders older than 7 days
+- `/delete_cancelled_orders` - Delete all cancelled orders from database
+- `/delete_completed_orders` - Delete all completed orders from database
 - `/audit_orders` - Audit orders - add update_date to orders missing it
 - `/cancel` - Cancel pending operation (e.g., text input prompts)
 
@@ -189,16 +191,15 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/start` - Register and view help
 - `/help [section]` - Show help for specific section (general, orders)
 - `/cancel` - Cancel pending operation (e.g., text input prompts)
-- `/order <offer_id> [quantity]` - Place order
+- `/create_order <offer_id> [quantity]` - Place order (alias: /order)
 - `/confirm_order <offer_id> <quantity>` - Confirm duplicate order
-- `/delete_cancelled` - Delete all cancelled orders from register
-- `/delete_completed` - Delete all completed orders from register
-- `/my_orders [id]` - View personal orders
+- `/list_my_orders [id]` - View personal orders (alias: /my_orders)
 - `/list_offers` - View available offers
-- `/offer_details <offer_id>` - View detailed offer information
+- `/view_offer <offer_id>` - View detailed offer information
 - `/subscribe` - Subscribe to new offer notifications
 - `/unsubscribe` - Unsubscribe from offer notifications
-- `/changelog` - View bot updates and feature changes
+- `/delete_cancelled_orders` - Delete all cancelled orders from personal register
+- `/delete_completed_orders` - Delete all completed orders from personal register
 - `/changelog` - View bot updates and feature changes
 
 ## Architecture
