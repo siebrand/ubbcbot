@@ -169,7 +169,7 @@ class CommandRouter:
             elif command == '/delete_offer':
                 return self.handlers['offer'].handle_delete_offer(admin_target_chat, parts[1:])
             elif command == '/create_order_for':
-                return self.handlers['admin_order'].handle_order_for(admin_target_chat, user_id, parts[1:])
+                return self.handlers['admin_order'].handle_create_order_for(admin_target_chat, user_id, parts[1:])
             elif command == '/cancel_order':
                 return self.handlers['admin_order'].handle_cancel_order(admin_target_chat, parts[1:])
             elif command == '/list_user_orders':

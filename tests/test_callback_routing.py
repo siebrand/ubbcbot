@@ -87,7 +87,7 @@ class TestCallbackRouting:
         ('cmd:export_orders', 'admin_order', 'handle_all_orders'),
         ('cmd:list_user_orders', 'admin_order', '_start_user_orders_input'),
         ('cmd:list_offer_orders', 'admin_order', 'handle_offer_orders'),
-        ('cmd:create_order_for', 'admin_order', 'handle_order_for'),
+        ('cmd:create_order_for', 'admin_order', 'handle_create_order_for'),
         ('cmd:list_pending', 'user', 'handle_pending_users'),
         ('cmd:create_guest', 'admin_commands', '_send_usage_message'),
         ('cmd:view_discount', 'discount', 'handle_discount_status'),

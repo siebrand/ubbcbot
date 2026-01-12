@@ -50,7 +50,7 @@ class TestAdminOrderCommands(unittest.TestCase):
     def test_placement_methods_exist(self):
         """Test that all placement methods are properly delegated"""
         methods = [
-            'handle_order_for',
+            'handle_create_order_for',
             'handle_order_for_user_select',
             'handle_order_for_offer_select',
             'handle_order_for_quantity_select',
@@ -111,9 +111,9 @@ class TestAdminOrderCommands(unittest.TestCase):
             self.assertEqual(result['status'], 'success')
         
         # Test placement delegation
-        with patch.object(self.order_commands.placement, 'handle_order_for') as mock_order:
+        with patch.object(self.order_commands.placement, 'handle_create_order_for') as mock_order:
             mock_order.return_value = {'status': 'success'}
-            result = self.order_commands.handle_order_for(123, 456, ['test'])
+            result = self.order_commands.handle_create_order_for(123, 456, ['test'])
             mock_order.assert_called_once_with(123, 456, ['test'])
             self.assertEqual(result['status'], 'success')
         

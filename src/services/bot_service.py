@@ -338,7 +338,7 @@ class BotService:
         elif edit_type == 'incomplete_delivery':
             return self.wholesale_delivery_commands.handle_incomplete_delivery_reply(chat_id, user_id, text, entity_id)
         elif edit_type == 'order_for_input':
-            return self.admin_order_commands.handle_order_for(chat_id, user_id, [text])
+            return self.admin_order_commands.handle_create_order_for(chat_id, user_id, [text])
         elif edit_type == 'approve_user_input':
             result = self.user_commands.handle_approve_user(chat_id, [text])
             if result.get('status') == 'user_not_found':

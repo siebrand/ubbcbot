@@ -10,8 +10,8 @@ class OrderPlacement(BaseOrderHandler):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.box_status_manager = BoxStatusManager(db)
     
-    def handle_order_for(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
-        """Handle /order_for command - admin places order for another user"""
+    def handle_create_order_for(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
+        """Handle /create_order_for command - admin places order for another user"""
         if not args:
             # Show button-based UI to ask for username
             message = self._t('enter_username_for_order_for', chat_id)

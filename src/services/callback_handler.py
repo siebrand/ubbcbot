@@ -593,7 +593,7 @@ class CallbackHandler:
             'list_user_orders': lambda: self._start_user_orders_input(chat_id),
             'list_offer_orders': lambda: self.handlers['admin_order'].handle_offer_orders(chat_id, []),
             'cancel_order': lambda: self.handlers['admin_order'].handle_cancel_order(chat_id, []),
-            'create_order_for': lambda: self.handlers['admin_order'].handle_order_for(chat_id, user_id, []),
+            'create_order_for': lambda: self.handlers['admin_order'].handle_create_order_for(chat_id, user_id, []),
             'list_pending': lambda: self.handlers['user'].handle_pending_users(chat_id),
             'list_users': lambda: self.handlers['user'].handle_list_users(chat_id, 1, 'all'),
             'list_subscribers': lambda: self.handlers['user'].handle_list_subscribers(chat_id),

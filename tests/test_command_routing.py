@@ -215,8 +215,8 @@ class TestCommandRouting:
         ('/list_boxes', 'offer', 'handle_list_boxes'),
         ('/audit_offer 1', 'offer', 'handle_audit_offer'),
         ('/process_wholesale 1', 'offer', 'handle_order_wholesale'),
-        ('/create_order_for user 1 2', 'admin_order', 'handle_order_for'),
-        ('/order_for user 1 2', 'admin_order', 'handle_order_for'),  # Permanent alias
+        ('/create_order_for user 1 2', 'admin_order', 'handle_create_order_for'),
+        ('/order_for user 1 2', 'admin_order', 'handle_create_order_for'),  # Permanent alias
         ('/cancel_order 1', 'admin_order', 'handle_cancel_order'),
         ('/list_user_orders user', 'admin_order', 'handle_user_orders'),
         ('/list_offer_orders 1', 'admin_order', 'handle_offer_orders'),
@@ -248,7 +248,7 @@ class TestCommandRouting:
     @pytest.mark.parametrize("alias,canonical,handler,method,user_id", [
         ('/order 1 2', '/create_order', 'customer_order', 'handle_order', 12345),
         ('/my_orders', '/list_my_orders', 'info', 'handle_my_orders', 12345),
-        ('/order_for user 1 2', '/create_order_for', 'admin_order', 'handle_order_for', 15005473),
+        ('/order_for user 1 2', '/create_order_for', 'admin_order', 'handle_create_order_for', 15005473),
     ])
     def test_permanent_aliases(self, router, mock_handlers, alias, canonical, handler, method, user_id):
         """Test that permanent aliases route to same handlers as canonical commands"""
