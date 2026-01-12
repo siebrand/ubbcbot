@@ -12,7 +12,7 @@ class BoxManagementHandler(OfferBaseHandler):
     
     def handle_add_box(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /add_box command"""
-        error = self._validate_args(args, 1, 'usage_add_box', chat_id)
+        error = self._validate_args(args, 1, 'usage_create_box', chat_id)
         if error:
             return error
 

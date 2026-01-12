@@ -72,7 +72,7 @@ class SupplierCommands(BaseHandler):
 
     def handle_retire_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /retire_supplier command"""
-        error = self._validate_args(args, 1, 'usage_retire_supplier', chat_id)
+        error = self._validate_args(args, 1, 'usage_archive_supplier', chat_id)
         if error:
             return error
 
@@ -153,7 +153,7 @@ class SupplierCommands(BaseHandler):
     
     def handle_edit_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /edit_supplier command"""
-        error = self._validate_args(args, 1, 'usage_edit_supplier', chat_id)
+        error = self._validate_args(args, 1, 'usage_update_supplier', chat_id)
         if error:
             return error
 
