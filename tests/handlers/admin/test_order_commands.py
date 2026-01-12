@@ -92,7 +92,7 @@ class TestAdminOrderCommands(unittest.TestCase):
     def test_maintenance_methods_exist(self):
         """Test that all maintenance methods are properly delegated"""
         methods = [
-            'handle_delete_old',
+            'handle_delete_old_orders',
             'handle_audit_orders'
         ]
         

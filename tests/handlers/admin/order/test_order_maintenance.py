@@ -33,7 +33,7 @@ class TestOrderMaintenance(unittest.TestCase):
         # Mock empty customer list
         self.mock_db.get_customers_by_status.return_value = []
         
-        result = self.handler.handle_delete_old(123)
+        result = self.handler.handle_delete_old_orders(123)
         
         self.assertEqual(result['status'], 'no_old_orders')
         mock_send.assert_called_once()
@@ -66,7 +66,7 @@ class TestOrderMaintenance(unittest.TestCase):
         # Mock successful deletion
         self.mock_db.delete_order.return_value = True
         
-        result = self.handler.handle_delete_old(123)
+        result = self.handler.handle_delete_old_orders(123)
         
         self.assertEqual(result['status'], 'success')
         self.assertEqual(result['deleted_cancelled_count'], 1)
@@ -95,7 +95,7 @@ class TestOrderMaintenance(unittest.TestCase):
             []                    # completed orders
         ]
         
-        result = self.handler.handle_delete_old(123)
+        result = self.handler.handle_delete_old_orders(123)
         
         self.assertEqual(result['status'], 'no_old_orders')
         # Verify delete_order not called
@@ -126,7 +126,7 @@ class TestOrderMaintenance(unittest.TestCase):
         self.mock_db.delete_order.return_value = True
         
         with patch.object(self.handler, '_send_message'):
-            result = self.handler.handle_delete_old(123)
+            result = self.handler.handle_delete_old_orders(123)
         
         # Should only delete the valid date order
         if result['status'] == 'success':
@@ -210,7 +210,7 @@ class TestOrderMaintenance(unittest.TestCase):
         # Mock exception during execution
         self.mock_db.get_customers_by_status.side_effect = Exception("Database error")
         
-        result = self.handler.handle_delete_old(123)
+        result = self.handler.handle_delete_old_orders(123)
         
         self.assertEqual(result['status'], 'error')
         mock_send.assert_called_once()

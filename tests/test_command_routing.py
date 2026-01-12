@@ -235,7 +235,7 @@ class TestCommandRouting:
         ('/process_payment', 'admin_order', 'handle_mark_paid'),
         ('/import_orders', 'import', 'handle_import_orders'),
         ('/finalize_import 1', 'import', 'handle_finalize_import'),
-        ('/delete_old_orders', 'admin_order', 'handle_delete_old'),
+        ('/delete_old_orders', 'admin_order', 'handle_delete_old_orders'),
         ('/audit_orders', 'admin_order', 'handle_audit_orders'),
         ('/admin', 'admin_commands', 'handle_admin'),
     ])
@@ -268,7 +268,6 @@ class TestCommandRouting:
         '/labeling_completed',
         '/send_overviews',
         '/mark_paid',
-        '/delete_old',
         '/delete_cancelled',
         '/delete_completed',
     ])

@@ -228,7 +228,7 @@ class CommandRouter:
             elif command == '/failed_notifications':
                 return self.handlers['admin_order'].handle_failed_notifications(admin_target_chat, parts[1:])
             elif command == '/delete_old_orders':
-                return self.handlers['admin_order'].handle_delete_old(admin_target_chat)
+                return self.handlers['admin_order'].handle_delete_old_orders(admin_target_chat)
             elif command == '/audit_orders':
                 return self.handlers['admin_order'].handle_audit_orders(admin_target_chat)
             elif command == '/admin':

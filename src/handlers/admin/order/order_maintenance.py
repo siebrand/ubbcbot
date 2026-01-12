@@ -6,8 +6,8 @@ from .base_order_handler import BaseOrderHandler
 class OrderMaintenance(BaseOrderHandler):
     """Handles order maintenance and cleanup functionality"""
     
-    def handle_delete_old(self, chat_id: int) -> Dict[str, Any]:
-        """Handle admin /delete_old command - delete cancelled and completed orders older than 7 days"""
+    def handle_delete_old_orders(self, chat_id: int) -> Dict[str, Any]:
+        """Handle admin /delete_old_orders command - delete cancelled and completed orders older than 7 days"""
         try:
             # Calculate cutoff date (7 days ago)
             cutoff_date = datetime.now(UTC) - timedelta(days=7)
@@ -75,7 +75,7 @@ class OrderMaintenance(BaseOrderHandler):
         except Exception as e:
             import logging
             logger = logging.getLogger()
-            logger.error(f"Error in admin handle_delete_old: {e}")
+            logger.error(f"Error in admin handle_delete_old_orders: {e}")
             self._send_message(chat_id, self._t('failed_delete_old_orders', chat_id))
             return {'status': 'error'}
     

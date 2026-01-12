@@ -95,7 +95,7 @@ class TestCallbackRouting:
         ('cmd:process_labeling', 'labeling', 'handle_labeling_completed'),
         ('cmd:send_delivery_overviews', 'admin_order', 'handle_send_overviews'),
         ('cmd:process_payment', 'admin_order', 'handle_mark_paid'),
-        ('cmd:delete_old_orders', 'admin_order', 'handle_delete_old'),
+        ('cmd:delete_old_orders', 'admin_order', 'handle_delete_old_orders'),
     ])
     def test_command_callbacks_new_names(self, callback_handler, mock_handlers, callback_data, handler, method):
         """Test command callbacks with new command names route correctly"""

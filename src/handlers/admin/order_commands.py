@@ -84,8 +84,8 @@ class AdminOrderCommands(BaseHandler):
         return self.status_mgmt.handle_failed_notifications(chat_id, args)
     
     # Order Maintenance Methods
-    def handle_delete_old(self, chat_id: int) -> Dict[str, Any]:
-        return self.maintenance.handle_delete_old(chat_id)
+    def handle_delete_old_orders(self, chat_id: int) -> Dict[str, Any]:
+        return self.maintenance.handle_delete_old_orders(chat_id)
     
     def handle_audit_orders(self, chat_id: int) -> Dict[str, Any]:
         return self.maintenance.handle_audit_orders(chat_id)

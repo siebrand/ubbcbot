@@ -610,7 +610,7 @@ class CallbackHandler:
             'cancel_discount': lambda: self.handlers['discount'].handle_cancel_discount(chat_id),
             'setup_test_data': lambda: self.handlers['test'].handle_setup_test_data(chat_id),
             'failed_notifications': lambda: self.handlers['admin_order'].handle_failed_notifications(chat_id, []),
-            'delete_old_orders': lambda: self.handlers['admin_order'].handle_delete_old(chat_id),
+            'delete_old_orders': lambda: self.handlers['admin_order'].handle_delete_old_orders(chat_id),
             'audit_orders': lambda: self.handlers['admin_order'].handle_audit_orders(chat_id),
             'import_orders': lambda: self.handlers['import'].handle_import_orders(chat_id, user_id),
             'finalize_import': lambda: self.handlers['import'].handle_finalize_import(chat_id, [])
