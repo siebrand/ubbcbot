@@ -66,10 +66,10 @@ class TestAdminOrderCommands(unittest.TestCase):
         methods = [
             'handle_list_user_orders',
             'handle_export_orders',
-            'handle_offer_orders',
+            'handle_list_offer_orders',
             'handle_list_user_orders_select',
-            'handle_offer_orders_page',
-            'handle_offer_orders_detail_page',
+            'handle_list_offer_orders_page',
+            'handle_list_offer_orders_detail_page',
             'handle_export_orders_callback'
         ]
         

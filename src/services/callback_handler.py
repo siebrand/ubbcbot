@@ -329,14 +329,14 @@ class CallbackHandler:
                 return self.handlers['import'].handle_finalize_import(chat_id, [offer_id])
             elif data.startswith('offer_orders_page_'):
                 page = int(data.split('_')[3])
-                return self.handlers['admin_order'].handle_offer_orders_page(chat_id, page)
+                return self.handlers['admin_order'].handle_list_offer_orders_page(chat_id, page)
             elif data.startswith('offer_orders_detail_'):
                 parts = data.split('_')
                 offer_id, page = int(parts[3]), int(parts[4])
-                return self.handlers['admin_order'].handle_offer_orders_detail_page(chat_id, str(offer_id), page)
+                return self.handlers['admin_order'].handle_list_offer_orders_detail_page(chat_id, str(offer_id), page)
             elif data.startswith('offer_orders_'):
                 offer_id = data.split('_')[2]
-                return self.handlers['admin_order'].handle_offer_orders_select(chat_id, offer_id)
+                return self.handlers['admin_order'].handle_list_offer_orders_select(chat_id, offer_id)
             elif data.startswith('audit_offers_page_'):
                 page = int(data.split('_')[3])
                 return self.handlers['offer']._show_audit_offer_selection(chat_id, page)
@@ -591,7 +591,7 @@ class CallbackHandler:
             'process_wholesale': lambda: self.handlers['offer'].handle_process_wholesale(chat_id, []),
             'export_orders': lambda: self.handlers['admin_order'].handle_export_orders(chat_id, []),
             'list_user_orders': lambda: self._start_user_orders_input(chat_id),
-            'list_offer_orders': lambda: self.handlers['admin_order'].handle_offer_orders(chat_id, []),
+            'list_offer_orders': lambda: self.handlers['admin_order'].handle_list_offer_orders(chat_id, []),
             'cancel_order': lambda: self.handlers['admin_order'].handle_cancel_order(chat_id, []),
             'create_order_for': lambda: self.handlers['admin_order'].handle_create_order_for(chat_id, user_id, []),
             'list_pending': lambda: self.handlers['user'].handle_list_pending(chat_id),

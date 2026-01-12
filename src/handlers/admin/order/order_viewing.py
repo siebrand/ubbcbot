@@ -177,7 +177,7 @@ class OrderViewing(BaseOrderHandler):
         
         return csv_content
 
-    def handle_offer_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
+    def handle_list_offer_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /offer_orders command"""
         if not args:
             # Show button-based UI to select offer
@@ -325,11 +325,11 @@ class OrderViewing(BaseOrderHandler):
         
         return self._show_user_orders(chat_id, customer)
 
-    def handle_offer_orders_page(self, chat_id: int, page: int) -> Dict[str, Any]:
+    def handle_list_offer_orders_page(self, chat_id: int, page: int) -> Dict[str, Any]:
         """Handle pagination for offer selection"""
         return self._show_offer_selection_for_orders(chat_id, page)
     
-    def handle_offer_orders_detail_page(self, chat_id: int, offer_id: str, page: int) -> Dict[str, Any]:
+    def handle_list_offer_orders_detail_page(self, chat_id: int, offer_id: str, page: int) -> Dict[str, Any]:
         """Handle pagination for offer orders detail"""
         try:
             return self._show_orders_for_offer(chat_id, int(offer_id), page)

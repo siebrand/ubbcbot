@@ -58,17 +58,17 @@ class AdminOrderCommands(BaseHandler):
     def handle_export_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
         return self.viewing.handle_export_orders(chat_id, args)
     
-    def handle_offer_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
-        return self.viewing.handle_offer_orders(chat_id, args)
+    def handle_list_offer_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
+        return self.viewing.handle_list_offer_orders(chat_id, args)
     
     def handle_list_user_orders_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         return self.viewing.handle_list_user_orders_select(chat_id, customer_id)
     
-    def handle_offer_orders_page(self, chat_id: int, page: int) -> Dict[str, Any]:
-        return self.viewing.handle_offer_orders_page(chat_id, page)
+    def handle_list_offer_orders_page(self, chat_id: int, page: int) -> Dict[str, Any]:
+        return self.viewing.handle_list_offer_orders_page(chat_id, page)
     
-    def handle_offer_orders_detail_page(self, chat_id: int, offer_id: str, page: int) -> Dict[str, Any]:
-        return self.viewing.handle_offer_orders_detail_page(chat_id, offer_id, page)
+    def handle_list_offer_orders_detail_page(self, chat_id: int, offer_id: str, page: int) -> Dict[str, Any]:
+        return self.viewing.handle_list_offer_orders_detail_page(chat_id, offer_id, page)
     
     def handle_export_orders_callback(self, chat_id: int, status_filter: str) -> Dict[str, Any]:
         return self.viewing.handle_export_orders_callback(chat_id, status_filter)
