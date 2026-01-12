@@ -91,6 +91,7 @@ class OrderViewing(BaseOrderHandler):
         
         # Display paginated items
         current_status = None
+        item_index = 0
         for status, ((offer_id, unit_price, order_status), data) in page_items:
             if status != current_status:
                 status_emoji = {
@@ -108,9 +109,13 @@ class OrderViewing(BaseOrderHandler):
                 message += f"{status_emoji} {status_label}:\n"
                 current_status = status
             
+            # Alternate diamond icons for better readability
+            line_icon = "🔸" if item_index % 2 == 0 else "🔹"
+            item_index += 1
+            
             date_display = f"[{list(data['dates'])[0]}]" if len(data['dates']) == 1 else f"[{self._t('multiple_days_label')}]"
             short_order_id = data['order_ids'][0][:8] if data['order_ids'] else "unknown"
-            message += f"🔸 {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}\n"
+            message += f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}\n"
         
         # Add pagination keyboard
         keyboard_buttons = []
