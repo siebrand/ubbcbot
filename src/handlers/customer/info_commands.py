@@ -503,6 +503,7 @@ class InfoCommands(BaseHandler):
         order_lines = []
         open_statuses = ['pending', 'ordered', 'confirmed']
         open_total = Decimal('0.0')
+        item_index = 0  # Track alternation across all items
         
         # First show open orders
         for status in ['pending', 'ordered', 'confirmed', 'ready_for_labeling', 'labeling_completed', 'awaiting_payment', 'delivered', 'completed']:
@@ -525,14 +526,14 @@ class InfoCommands(BaseHandler):
             status_label = self._t(status_key, user_id).upper()
             order_lines.append({'type': 'header', 'text': f"{status_emoji} {status_label}:"})
             
-            line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups[status]['items']:
                 if len(data['dates']) == 1:
                     date_display = f"[{list(data['dates'])[0]}]"
                 else:
                     date_display = f"[{self._t('multiple_days_label', user_id)}]"
                 
-                line_icon = "🔸" if line_count % 2 == 0 else "🔹"
+                line_icon = "🔸" if item_index % 2 == 0 else "🔹"
+                item_index += 1
                 order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
                 
                 if show_ids:
@@ -540,7 +541,6 @@ class InfoCommands(BaseHandler):
                     order_line += f" - {ids_display}"
                 
                 order_lines.append({'type': 'order', 'text': order_line})
-                line_count += 1
             
             if len(status_groups) > 1:
                 order_lines.append({'type': 'subtotal', 'text': self._t('subtotal_label', user_id, total=status_groups[status]['total_price'])})
@@ -556,14 +556,14 @@ class InfoCommands(BaseHandler):
                 cancelled_label = self._t('status_cancelled', user_id).upper()
                 order_lines.append({'type': 'header', 'text': f"❌ {cancelled_label}:"})
             
-            line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups['cancelled']['items']:
                 if len(data['dates']) == 1:
                     date_display = f"[{list(data['dates'])[0]}]"
                 else:
                     date_display = f"[{self._t('multiple_days_label', user_id)}]"
                 
-                line_icon = "🔸" if line_count % 2 == 0 else "🔹"
+                line_icon = "🔸" if item_index % 2 == 0 else "🔹"
+                item_index += 1
                 order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}"
                 
                 if show_ids:
@@ -571,7 +571,6 @@ class InfoCommands(BaseHandler):
                     order_line += f" - {ids_display}"
                 
                 order_lines.append({'type': 'order', 'text': order_line})
-                line_count += 1
         
         elif open_total > 0:
             order_lines.append({'type': 'total', 'text': self._t('open_orders_total_label', user_id, total=open_total)})
