@@ -8,14 +8,14 @@ class SupplierCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.update_utils = UpdateUtils(self.db, self._t, self._send_message)
         self.update_utils._show_supplier_edit_interface = self._show_edit_interface
-    def handle_add_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /add_supplier command"""
+    def handle_create_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /create_supplier command"""
         if not args:
             # Show button interface to add supplier
             message = self._t('add_supplier_prompt')
             keyboard = {
                 "inline_keyboard": [
-                    [{"text": self._t('add_supplier_button'), "callback_data": "add_supplier_start"}],
+                    [{"text": self._t('add_supplier_button'), "callback_data": "create_supplier_start"}],
                     [{"text": self._t('cancel'), "callback_data": "cancel_action"}]
                 ]
             }

@@ -79,7 +79,7 @@ class TestCallbackRouting:
     
     # Test 2: Command Callbacks with New Names
     @pytest.mark.parametrize("callback_data,handler,method", [
-        ('cmd:create_supplier', 'supplier', 'handle_add_supplier'),
+        ('cmd:create_supplier', 'supplier', 'handle_create_supplier'),
         ('cmd:update_supplier', 'supplier', 'handle_list_suppliers'),
         ('cmd:list_suppliers', 'supplier', 'handle_list_suppliers'),
         ('cmd:list_boxes', 'offer', 'handle_box_status'),
@@ -272,7 +272,7 @@ class TestCallbackRouting:
         ('page_suppliers_2', True),  # Pagination keeps keyboard
         ('wd_sup:123', True),  # Wholesale delivery keeps keyboard
         ('order_123_2', True),  # Order buttons keep keyboard
-        ('add_supplier_start', True),  # Add supplier flow keeps keyboard
+        ('create_supplier_start', True),  # Create supplier flow keeps keyboard
         ('confirm_order_123_2', False),  # Confirmation removes keyboard
         ('approve_user_123', False),  # User approval removes keyboard
     ])

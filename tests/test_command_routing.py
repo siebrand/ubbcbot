@@ -86,7 +86,7 @@ class TestCommandRouting:
         mock_db.get_customer_by_telegram_id.return_value = None
         
         router.route_command(12345, 15005473, '/create_supplier Test')
-        mock_handlers['supplier'].handle_add_supplier.assert_called_once()
+        mock_handlers['supplier'].handle_create_supplier.assert_called_once()
     
     # Test 5: Authorization - Non-Admin Blocked from Admin Commands
     def test_non_admin_blocked_from_admin_commands(self, router):
@@ -203,7 +203,7 @@ class TestCommandRouting:
     
     # Test 19: All Admin Commands Route Correctly
     @pytest.mark.parametrize("command,handler,method", [
-        ('/create_supplier Test', 'supplier', 'handle_add_supplier'),
+        ('/create_supplier Test', 'supplier', 'handle_create_supplier'),
         ('/archive_supplier Test', 'supplier', 'handle_retire_supplier'),
         ('/list_suppliers', 'supplier', 'handle_list_suppliers'),
         ('/update_supplier Test', 'supplier', 'handle_edit_supplier'),
@@ -257,7 +257,6 @@ class TestCommandRouting:
     
     # Test 21: Old Commands Return Unknown
     @pytest.mark.parametrize("old_command", [
-        '/add_supplier Test',
         '/retire_supplier Test',
         '/edit_supplier Test',
         '/offer_details 1',

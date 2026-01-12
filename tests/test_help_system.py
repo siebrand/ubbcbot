@@ -93,7 +93,7 @@ def test_command_descriptions():
     
     # Admin commands (subset)
     admin_commands = {
-        "/add_supplier": "Add supplier",
+        "/create_supplier": "Create supplier",
         "/list_suppliers": "View all suppliers",
         "/create_offer": "Create offer",
         "/list_users": "View all customers",

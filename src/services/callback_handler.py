@@ -37,7 +37,7 @@ class CallbackHandler:
                 should_remove_keyboard = False
             elif data.startswith('order_'):  # Keep keyboard for order buttons so multiple people can order
                 should_remove_keyboard = False
-            elif data == 'add_supplier_start':  # Keep keyboard for add supplier flow
+            elif data == 'create_supplier_start':  # Keep keyboard for create supplier flow
                 should_remove_keyboard = False
             
             if should_remove_keyboard:
@@ -75,7 +75,7 @@ class CallbackHandler:
                 return self._handle_admin_callbacks(chat_id, user_id, data)
             elif data.startswith('cmd'):
                 return self._handle_command_callbacks(chat_id, user_id, data)
-            elif data == 'add_supplier_start':
+            elif data == 'create_supplier_start':
                 return self._start_add_supplier(chat_id)
             
             # Order callbacks
@@ -580,7 +580,7 @@ class CallbackHandler:
         
         # Map callback data to command handlers
         command_map = {
-            'create_supplier': lambda: self.handlers['supplier'].handle_add_supplier(chat_id, []),
+            'create_supplier': lambda: self.handlers['supplier'].handle_create_supplier(chat_id, []),
             'list_suppliers': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
             'update_supplier': lambda: self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active'),
             'create_offer': lambda: self.handlers['offer'].handle_create_offer(chat_id, []),
@@ -624,7 +624,7 @@ class CallbackHandler:
     
     def _start_add_supplier(self, chat_id: int) -> Dict[str, Any]:
         """Start add supplier process with text input"""
-        return self.edit_context_manager.handle_input_prompts(chat_id, 'add_supplier_name')
+        return self.edit_context_manager.handle_input_prompts(chat_id, 'create_supplier_name')
     
     def _start_user_orders_input(self, chat_id: int) -> Dict[str, Any]:
         """Start user orders process with text input"""

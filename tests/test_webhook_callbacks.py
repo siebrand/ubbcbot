@@ -110,11 +110,11 @@ def test_command_extraction():
     print("✅ Bot mention removal works")
     
     # Multi-word arguments
-    text = "/add_supplier Test Brewery Name"
+    text = "/create_supplier Test Brewery Name"
     parts = text.split()
     command = parts[0].lower()
     supplier_name = ' '.join(parts[1:])
-    assert command == "/add_supplier"
+    assert command == "/create_supplier"
     assert supplier_name == "Test Brewery Name"
     print("✅ Multi-word argument handling works")
 

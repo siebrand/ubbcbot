@@ -329,7 +329,7 @@ class BotService:
             return self.user_commands.handle_update_user_contact(chat_id, [entity_id, text])
         elif edit_type == 'customer_location':
             return self.user_commands.handle_update_user_location(chat_id, [entity_id, text])
-        elif edit_type == 'add_supplier_name':
+        elif edit_type == 'create_supplier_name':
             return self.supplier_commands._create_supplier(chat_id, text)
         elif edit_type == 'user_orders_input':
             return self.admin_order_commands.handle_user_orders(chat_id, [text])

@@ -224,8 +224,7 @@ src/
 
 ### 9.2 Dependencies
 - `boto3`: AWS SDK
-- `python-telegram-bot`: Telegram API wrapper
-- `pydantic`: Data validation
+- `requests`: HTTP client for Telegram API
 - `pytest`: Testing framework
 
 ### 9.3 Local Development

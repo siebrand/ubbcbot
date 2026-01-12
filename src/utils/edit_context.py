@@ -160,8 +160,8 @@ class EditContextManager:
     def handle_input_prompts(self, chat_id: int, prompt_type: str, entity_id: str = 'new') -> Dict[str, Any]:
         """Handle various input prompts with unified pattern"""
         prompt_config = {
-            'add_supplier_name': {
-                'context_type': 'add_supplier_name',
+            'create_supplier_name': {
+                'context_type': 'create_supplier_name',
                 'prompt_key': 'enter_supplier_name',
                 'placeholder': self._t('placeholder_supplier_name')
             },
