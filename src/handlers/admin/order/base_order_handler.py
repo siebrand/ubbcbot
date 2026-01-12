@@ -86,8 +86,8 @@ class BaseOrderHandler(BaseHandler):
         
         for status, ((offer_id, unit_price, order_status), data) in page_items:
             if status != current_status:
-                # Show subtotal for previous section if multiple statuses
-                if current_status is not None and len(set(s for s, _ in page_items)) > 1:
+                # Show subtotal for previous section
+                if current_status is not None:
                     status_label = self._t(f"status_{current_status}", user_id=None)
                     message += f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}\n"
                 
@@ -120,8 +120,8 @@ class BaseOrderHandler(BaseHandler):
             else:
                 message += f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f}\n"
         
-        # Show subtotal for last section if multiple statuses
-        if current_status is not None and len(set(s for s, _ in page_items)) > 1:
+        # Show subtotal for last section
+        if current_status is not None:
             status_label = self._t(f"status_{current_status}", user_id=None)
             message += f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}\n"
         
