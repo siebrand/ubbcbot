@@ -6,6 +6,34 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2025-01-12",
+                "content": """<b>User-Facing Updates</b>
+• <b>Enhanced Pagination</b> - Added pagination to /my_orders (20 lines per page) and /list_offers (20 offers per page) to prevent message length errors
+• <b>Improved Offer Display</b> - Active offers now sorted newest-first for customers, making latest offers easier to find
+• <b>Cleaner Offer Lists</b> - Removed availability reporting for completed and inactive offers, showing only relevant data
+• <b>Performance Optimization</b> - Implemented caching for multiple entities, improving response times and reducing queries over 90%.
+
+<b>Admin-Facing Updates</b>
+• <b>Guest User System</b> - Added /add_guest and /list_guests commands for managing non-Telegram customers
+• <b>Comprehensive Pagination System</b> - Enhanced pagination with first/last/jump buttons for /my_orders, /list_offers, /user_orders, /mark_paid, and /box_status
+• <b>Order Import Feature</b> - New /import_orders command for CSV-based legacy order migration with validation and error reporting
+• <b>Enhanced Box Status</b> - Added offer_id filter, logical sorting (by offer/status/box), and help option to /box_status
+• <b>Offer Management</b> - Streamlined editing UX with auto-return to edit mode, prevented duplicate images on concurrent uploads
+• <b>Performance Optimization</b> - Implemented offer caching with 5-minute TTL and batch loading, reducing queries by over 90%
+• <b>Centralized Services</b> - Created BoxStatusManager and BoxDeletionService for consistent box operations across codebase
+• <b>Improved Order Exports</b> - Added full export option with all fields, normalized CSV format for Google Sheets
+• <b>Better Payment Tracking</b> - Enhanced /mark_paid with pagination, alphabetical sorting, and auto-return to list after confirmation
+• <b>Delivery Overview Improvements</b> - Guest users processed last with different message format, no failed Telegram attempts
+• <b>Box Status Refinements</b> - Boxes marked ORDERED based on fulfilled orders, not box count, preventing incorrect status
+• <b>HTML Validation</b> - Added HTMLParser validation for offer names and descriptions to prevent Telegram parse errors
+• <b>Code Quality</b> - Refactored order commands into focused modules, eliminated duplicate logic, improved test coverage
+• <b>Internationalization</b> - Fixes i18n for admin UI placeholders, headers, and labels
+• <b>System Reliability</b> - Fixed pagination callback parsing, mark_paid tests, box deletion logic, and offer sold-out detection
+• <b>Workflow Simplification</b> - Removed MINIMUM_REACHED status and breakeven fields, simplified to open→full→ordered→delivered
+• <b>Filter Enhancements</b> - Added status filtering to /list_offers (all, draft, active, soldout, completed, inactive, archived, import)
+• <b>Legacy Support</b> - Added script to update legacy customers with missing location and is_guest fields"""
+            },
+            {
                 "title": "Up to 2025-01-08",
                 "content": """<b>User-Facing Updates</b>
 • <b>Enhanced Offer Notifications</b> - Clickable offer links in group order announcements for quick access to offer details
