@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any
 from handlers.base_handler import BaseHandler
-from models.entities import Order, Box, BoxStatus, OfferStatus
+from models.entities import Order, Box, BoxStatus, OfferStatus, OrderStatus
 from services.box_status_manager import BoxStatusManager
 
 logger = logging.getLogger()
@@ -140,7 +140,14 @@ class CustomerOrderCommands(BaseHandler):
         """Find existing box with space or create new one"""
         boxes = self.db.get_boxes_by_offer(offer_id)
         
-        # Try to find existing box
+        # Prioritize delivered boxes first
+        delivered_boxes = self.box_status_manager.get_delivered_boxes(boxes)
+        for box in delivered_boxes:
+            available_space = box.max_capacity - box.current_quantity
+            if available_space >= quantity:
+                return box
+        
+        # Then try other boxes (open, full, ordered)
         for box in boxes:
             if box.status in [BoxStatus.OPEN.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
                 available_space = box.max_capacity - box.current_quantity
@@ -149,8 +156,10 @@ class CustomerOrderCommands(BaseHandler):
         
         # Create new box if allowed
         has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes) if boxes else False
+        has_delivered_boxes = len(self.box_status_manager.get_delivered_boxes(boxes)) > 0
         
-        if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes:
+        # Cannot create new boxes if delivered boxes exist
+        if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes and not has_delivered_boxes:
             new_box = Box(offer_id=offer_id, max_capacity=offer.wholesale_box_size)
             suitable_box = self.db.create_box(new_box)
             if not suitable_box:
@@ -191,7 +200,13 @@ class CustomerOrderCommands(BaseHandler):
             return None
         
         # Update order with box_id and status
-        final_status = 'ordered' if box.status == BoxStatus.ORDERED.value else 'pending'
+        if box.status == BoxStatus.DELIVERED.value:
+            final_status = OrderStatus.READY_FOR_LABELING.value
+        elif box.status == BoxStatus.ORDERED.value:
+            final_status = 'ordered'
+        else:
+            final_status = 'pending'
+        
         self.db.update_order(created_order.order_id, {'box_id': box.box_id, 'status': final_status})
         created_order.status = final_status
         
@@ -236,13 +251,9 @@ class CustomerOrderCommands(BaseHandler):
             if updated_offer and updated_offer.status == OfferStatus.SOLD_OUT.value:
                 availability_text = f" - {self._t('status_sold_out', force_group_lang=True)}"
             else:
-                # Calculate remaining availability
+                # Calculate remaining availability from delivered boxes only
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
-                total_available = sum(
-                    box.max_capacity - box.current_quantity 
-                    for box in boxes 
-                    if box.current_quantity < box.max_capacity
-                )
+                total_available = self.box_status_manager.get_available_capacity_in_delivered(boxes)
                 
                 if total_available > 6:
                     availability_text = f" ({self._t('sufficient_available', force_group_lang=True)})"

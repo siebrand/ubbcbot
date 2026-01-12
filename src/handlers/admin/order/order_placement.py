@@ -23,9 +23,9 @@ class OrderPlacement(BaseOrderHandler):
             self._send_message(chat_id, message, reply_markup=keyboard)
             return {'status': 'awaiting_input'}
 
-        # Legacy behavior for direct command usage
+        # Direct command usage with arguments
         if len(args) >= 2:
-            return self._execute_order_for_legacy(chat_id, user_id, args)
+            return self._parse_order_for_command(chat_id, user_id, args)
         
         # Username provided - find customer and show offers
         identifier = ' '.join(args)
@@ -36,8 +36,8 @@ class OrderPlacement(BaseOrderHandler):
         
         return self._show_offers_for_order_for(chat_id, customer)
 
-    def _execute_order_for_legacy(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
-        """Legacy order_for execution for direct command usage"""
+    def _parse_order_for_command(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
+        """Parse direct command format: /order_for username offer_id [quantity]"""
         try:
             username = args[0]
             offer_id = int(args[1])
