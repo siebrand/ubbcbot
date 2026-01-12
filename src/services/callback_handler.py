@@ -541,7 +541,7 @@ class CallbackHandler:
         if action == 'main':
             return self.handlers['admin_commands'].handle_admin(chat_id, user_id)
         elif action == 'close':
-            self._send_message(chat_id, self._t('close_panel', user_id))
+            self._send_message(chat_id, self._t('close_panel'))
             return {'status': 'closed'}
         elif action == 'workflow':
             return self.handlers['admin_commands'].handle_admin_workflow(chat_id, user_id)
