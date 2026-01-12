@@ -256,6 +256,10 @@ class CallbackHandler:
                         if user_id == target_user_id:
                             return self.handlers['info'].handle_my_orders(chat_id, user_id, None, page)
                         return {'status': 'unauthorized'}
+                    elif entity_type == 'list_offers' or entity_type.startswith('list_offers_'):
+                        filter_arg = entity_type.split('_', 2)[2] if '_' in entity_type and len(entity_type.split('_')) > 2 else None
+                        args = [filter_arg] if filter_arg else None
+                        return self.handlers['info'].handle_list_offers(chat_id, user_id, args, page)
             elif data == 'page_info':
                 return {'status': 'page_info'}
             
