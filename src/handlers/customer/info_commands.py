@@ -419,8 +419,6 @@ class InfoCommands(BaseHandler):
             from utils.timezone import to_cet_string
             aggregated[key]['dates'].add(to_cet_string(order.created_at, '%Y-%m-%d'))
 
-        message = self._t('my_orders_title', user_id) + "\n\n"
-        
         # Group by status for totals
         status_groups = {}
         for (offer_id, unit_price, status), data in aggregated.items():
@@ -428,6 +426,10 @@ class InfoCommands(BaseHandler):
                 status_groups[status] = {'total_price': Decimal('0.0'), 'items': []}
             status_groups[status]['total_price'] += data['total_price']
             status_groups[status]['items'].append(((offer_id, unit_price, status), data))
+        
+        # Build message parts
+        messages = []
+        current_message = self._t('my_orders_title', user_id) + "\n\n"
         
         # Display orders grouped by status
         open_statuses = ['pending', 'ordered', 'confirmed']
@@ -453,7 +455,14 @@ class InfoCommands(BaseHandler):
             # Always show status header for clarity
             status_key = f"status_{status}"
             status_label = self._t(status_key, user_id).upper()
-            message += f"{status_emoji} {status_label}:\n"
+            status_header = f"{status_emoji} {status_label}:\n"
+            
+            # Check if adding header would exceed limit
+            if len(current_message) + len(status_header) > 3800:
+                messages.append(current_message)
+                current_message = status_header
+            else:
+                current_message += status_header
             
             line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups[status]['items']:
@@ -472,12 +481,25 @@ class InfoCommands(BaseHandler):
                     ids_display = ', '.join([order_id[:8] for order_id in data['order_ids']])
                     order_line += f" - {ids_display}"
                 
-                message += order_line + "\n"
+                order_line += "\n"
+                
+                # Check if adding line would exceed limit
+                if len(current_message) + len(order_line) > 3800:
+                    messages.append(current_message)
+                    current_message = order_line
+                else:
+                    current_message += order_line
+                
                 line_count += 1
             
             # Add status total if multiple statuses present
             if len(status_groups) > 1:
-                message += "\n" + self._t('subtotal_label', user_id, total=status_groups[status]['total_price']) + "\n\n"
+                subtotal_line = "\n" + self._t('subtotal_label', user_id, total=status_groups[status]['total_price']) + "\n\n"
+                if len(current_message) + len(subtotal_line) > 3800:
+                    messages.append(current_message)
+                    current_message = subtotal_line
+                else:
+                    current_message += subtotal_line
             
             # Add to open total if applicable
             if status in open_statuses:
@@ -485,7 +507,12 @@ class InfoCommands(BaseHandler):
         
         # Add open orders total before cancelled orders
         if open_total > 0 and 'cancelled' in status_groups:
-            message += "\n" + self._t('open_orders_total_label', user_id, total=open_total) + "\n\n"
+            open_total_line = "\n" + self._t('open_orders_total_label', user_id, total=open_total) + "\n\n"
+            if len(current_message) + len(open_total_line) > 3800:
+                messages.append(current_message)
+                current_message = open_total_line
+            else:
+                current_message += open_total_line
         
         # Show cancelled orders last (no total needed)
         if 'cancelled' in status_groups:
@@ -493,7 +520,12 @@ class InfoCommands(BaseHandler):
             # Always show status header for clarity
             if len(status_groups) > 1:
                 cancelled_label = self._t('status_cancelled', user_id).upper()
-                message += f"{status_emoji} {cancelled_label}:\n"
+                cancelled_header = f"{status_emoji} {cancelled_label}:\n"
+                if len(current_message) + len(cancelled_header) > 3800:
+                    messages.append(current_message)
+                    current_message = cancelled_header
+                else:
+                    current_message += cancelled_header
             
             line_count = 0
             for (offer_id, unit_price, order_status), data in status_groups['cancelled']['items']:
@@ -512,14 +544,34 @@ class InfoCommands(BaseHandler):
                     ids_display = ', '.join([order_id[:8] for order_id in data['order_ids']])
                     order_line += f" - {ids_display}"
                 
-                message += order_line + "\n"
+                order_line += "\n"
+                
+                # Check if adding line would exceed limit
+                if len(current_message) + len(order_line) > 3800:
+                    messages.append(current_message)
+                    current_message = order_line
+                else:
+                    current_message += order_line
+                
                 line_count += 1
         
         # Add open orders total if no cancelled orders
         elif open_total > 0:
-            message += "\n" + self._t('open_orders_total_label', user_id, total=open_total)
-
-        self._send_message(chat_id, message)
+            final_total_line = "\n" + self._t('open_orders_total_label', user_id, total=open_total)
+            if len(current_message) + len(final_total_line) > 3800:
+                messages.append(current_message)
+                current_message = final_total_line
+            else:
+                current_message += final_total_line
+        
+        # Add remaining message
+        if current_message:
+            messages.append(current_message)
+        
+        # Send all messages
+        for msg in messages:
+            self._send_message(chat_id, msg)
+        
         return {'status': 'success'}
     
     def handle_offer_details(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:

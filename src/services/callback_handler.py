@@ -205,11 +205,15 @@ class CallbackHandler:
             elif data.startswith('page_'):
                 parts = data.split('_')
                 if len(parts) >= 3:
-                    # Handle multi-word entity types like mark_paid
-                    if len(parts) == 4 and parts[1] in ['customers', 'suppliers', 'mark']:
+                    # Handle multi-word entity types like mark_paid and user_orders
+                    if len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'user']:
                         if parts[1] == 'mark' and parts[2] == 'paid':
                             entity_type = 'mark_paid'
                             page = int(parts[3])
+                        elif parts[1] == 'user' and parts[2] == 'orders':
+                            # Format: page_user_orders_{customer_id}_{page}
+                            entity_type = f"user_orders_{parts[3]}"
+                            page = int(parts[4])
                         else:
                             entity_type = f"{parts[1]}_{parts[2]}"
                             page = int(parts[3])
