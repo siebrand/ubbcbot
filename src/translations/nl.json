@@ -453,6 +453,7 @@
   "import_orders_btn": "📤 Bestellingen importeren",
   "finalize_import_btn": "✅ Import afronden",
   "back_to_admin": "⬅️ Terug naar Adminpaneel",
+  "process_next_offer": "➡️ Volgende verwerken",
   "add_supplier_prompt": "➕ Nieuwe Leverancier Toevoegen\n\nKlik op de knop hieronder om een leverancier toe te voegen:",
   "add_supplier_button": "📝 Leverancier Naam Invoeren",
   "enter_supplier_name": "📝 Voer de naam in voor de nieuwe leverancier:",

@@ -301,12 +301,31 @@ class OfferManagementHandler(OfferBaseHandler):
         if deleted_boxes > 0:
             summary += "\n" + self._t('cleaned_empty_boxes', count=deleted_boxes)
         
-        # Add back to admin panel button
-        keyboard = {
-            "inline_keyboard": [[
-                {"text": self._t('back_to_admin'), "callback_data": "admin:main"}
-            ]]
-        }
+        # Check if there are more offers to process
+        all_offers = self.db.list_offers()
+        active_offers = [o for o in all_offers if o.status in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value]]
+        has_more_pending = False
+        for offer in active_offers:
+            orders = self.db.get_orders_by_offer(offer.offer_id)
+            if any(o.status == 'pending' for o in orders):
+                has_more_pending = True
+                break
+        
+        if has_more_pending:
+            # Add button to continue with next offer
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": self._t('process_next_offer'), "callback_data": "process_wholesale"}],
+                    [{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]
+                ]
+            }
+        else:
+            # No more offers, just show back button
+            keyboard = {
+                "inline_keyboard": [[
+                    {"text": self._t('back_to_admin'), "callback_data": "admin:main"}
+                ]]
+            }
         
         self._send_message(chat_id, summary, reply_markup=keyboard)
         return {'status': 'success'}
