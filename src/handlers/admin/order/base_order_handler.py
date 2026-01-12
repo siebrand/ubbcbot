@@ -125,8 +125,8 @@ class BaseOrderHandler(BaseHandler):
             status_label = self._t(f"status_{current_status}", user_id=None)
             message += f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}\n"
         
-        # Show grand total excluding cancelled
-        non_cancelled_statuses = [s for s in status_groups.keys() if s != 'cancelled']
+        # Show grand total excluding cancelled and completed
+        non_cancelled_statuses = [s for s in status_groups.keys() if s not in ['cancelled', 'completed']]
         if len(non_cancelled_statuses) > 1:
             grand_total = sum(status_groups[s]['total_price'] for s in non_cancelled_statuses)
             message += f"\n━━━━━━━━━━━━━━━━━━━━\n"
