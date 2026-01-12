@@ -237,6 +237,12 @@ class CallbackHandler:
                         return self.handlers['user'].handle_list_guests(chat_id, page)
                     elif entity_type == 'subscribers':
                         return self.handlers['user'].handle_list_subscribers(chat_id, page)
+                    elif entity_type.startswith('user_orders_'):
+                        customer_id = entity_type.split('_', 2)[2]
+                        customer = self.db.get_customer(customer_id)
+                        if customer:
+                            return self.handlers['admin_order']._show_user_orders(chat_id, customer, page)
+                        return {'status': 'customer_not_found'}
                     elif entity_type == 'changelog':
                         return self.handlers['changelog'].handle_changelog(chat_id, user_id, page)
                     elif entity_type == 'mark_paid':

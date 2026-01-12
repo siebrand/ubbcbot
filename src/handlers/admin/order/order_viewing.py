@@ -27,8 +27,8 @@ class OrderViewing(BaseOrderHandler):
         
         return self._show_user_orders(chat_id, customer)
     
-    def _show_user_orders(self, chat_id: int, customer) -> Dict[str, Any]:
-        """Show orders for a specific customer"""
+    def _show_user_orders(self, chat_id: int, customer, page: int = 1) -> Dict[str, Any]:
+        """Show orders for a specific customer with pagination"""
         orders = self.db.get_orders_by_customer(customer.customer_id)
         
         if not orders:
@@ -65,11 +65,7 @@ class OrderViewing(BaseOrderHandler):
             from utils.timezone import to_cet_string
             aggregated[key]['dates'].add(to_cet_string(order.created_at, '%Y-%m-%d'))
 
-        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or self._t('unknown', user_id=None))
-        message = self._t('user_orders_title', user_id=None, name=display_name)
-        message += "\n\n"
-        
-        # Group by status for totals
+        # Group by status
         status_groups = {}
         for (offer_id, unit_price, status), data in aggregated.items():
             if status not in status_groups:
@@ -77,91 +73,50 @@ class OrderViewing(BaseOrderHandler):
             status_groups[status]['total_price'] += data['total_price']
             status_groups[status]['items'].append(((offer_id, unit_price, status), data))
         
-        # Display orders grouped by status
-        open_statuses = ['pending', 'ordered', 'confirmed']
-        open_total = Decimal('0.0')
+        # Flatten items for pagination
+        all_items = []
+        for status in ['pending', 'ordered', 'confirmed', 'ready_for_labeling', 'labeling_completed', 'awaiting_payment', 'delivered', 'completed', 'cancelled']:
+            if status in status_groups:
+                all_items.extend([(status, item) for item in status_groups[status]['items']])
         
-        # First show open orders
-        for status in ['pending', 'ordered', 'confirmed', 'delivered', 'completed']:
-            if status not in status_groups:
-                continue
-                
-            status_emoji = {
-                'pending': '⏳',
-                'ordered': '📦',
-                'confirmed': '✅',
-                'cancelled': '❌',
-                'delivered': '🚚',
-                'completed': '✅'
-            }.get(status, '❓')
-            
-            # Always show status header for clarity
-            status_key = f"status_{status}"
-            status_label = self._t(status_key, user_id=None).upper()
-            message += f"{status_emoji} {status_label}:\n"
-            
-            line_count = 0
-            for (offer_id, unit_price, order_status), data in status_groups[status]['items']:
-                # Determine date display
-                if len(data['dates']) == 1:
-                    date_display = f"[{list(data['dates'])[0]}]"
-                else:
-                    date_display = f"[{self._t('multiple_days_label')}]"
-                
-                # Alternate diamond icons for better readability
-                line_icon = "🔸" if line_count % 2 == 0 else "🔹"
-                
-                # Get first 8 characters of first order ID
-                short_order_id = data['order_ids'][0][:8] if data['order_ids'] else "unknown"
-                
-                order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}"
-                
-                message += order_line + "\n"
-                line_count += 1
-            
-            # Add status total if multiple statuses present
-            if len(status_groups) > 1:
-                message += "\n" + self._t('subtotal_label', user_id=None, total=status_groups[status]['total_price']) + "\n\n"
-            
-            # Add to open total if applicable
-            if status in open_statuses:
-                open_total += status_groups[status]['total_price']
+        # Paginate
+        page_items, total_pages = self._paginate_list(all_items, page, 10)
         
-        # Add open orders total before cancelled orders
-        if open_total > 0 and 'cancelled' in status_groups:
-            message += "\n" + self._t('open_orders_total_label', user_id=None, total=open_total) + "\n\n"
+        display_name = self._escape_html(f"{customer.first_name} {customer.last_name}" or self._t('unknown', user_id=None))
+        message = self._t('user_orders_title', user_id=None, name=display_name)
+        if total_pages > 1:
+            message += f" - Page {page}/{total_pages}"
+        message += "\n\n"
         
-        # Show cancelled orders last (no total needed)
-        if 'cancelled' in status_groups:
-            status_emoji = '❌'
-            # Always show status header for clarity
-            cancelled_label = self._t('status_cancelled', user_id=None).upper()
-            message += f"{status_emoji} {cancelled_label}:\n"
+        # Display paginated items
+        current_status = None
+        for status, ((offer_id, unit_price, order_status), data) in page_items:
+            if status != current_status:
+                status_emoji = {
+                    'pending': '⏳',
+                    'ordered': '📦',
+                    'confirmed': '✅',
+                    'ready_for_labeling': '🏷️',
+                    'labeling_completed': '✅',
+                    'awaiting_payment': '💳',
+                    'cancelled': '❌',
+                    'delivered': '🚚',
+                    'completed': '✅'
+                }.get(status, '❓')
+                status_label = self._t(f"status_{status}", user_id=None).upper()
+                message += f"{status_emoji} {status_label}:\n"
+                current_status = status
             
-            line_count = 0
-            for (offer_id, unit_price, order_status), data in status_groups['cancelled']['items']:
-                # Determine date display
-                if len(data['dates']) == 1:
-                    date_display = f"[{list(data['dates'])[0]}]"
-                else:
-                    date_display = f"[{self._t('multiple_days_label')}]"
-                
-                # Alternate diamond icons for better readability
-                line_icon = "🔸" if line_count % 2 == 0 else "🔹"
-                
-                # Get first 8 characters of first order ID
-                short_order_id = data['order_ids'][0][:8] if data['order_ids'] else "unknown"
-                
-                order_line = f"{line_icon} {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}"
-                
-                message += order_line + "\n"
-                line_count += 1
+            date_display = f"[{list(data['dates'])[0]}]" if len(data['dates']) == 1 else f"[{self._t('multiple_days_label')}]"
+            short_order_id = data['order_ids'][0][:8] if data['order_ids'] else "unknown"
+            message += f"🔸 {date_display} [{offer_id}] {data['offer_name']} €{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}\n"
         
-        # Add open orders total if no cancelled orders
-        elif open_total > 0:
-            message += "\n" + self._t('open_orders_total_label', user_id=None, total=open_total)
+        # Add pagination keyboard
+        keyboard = None
+        if total_pages > 1:
+            keyboard = self._build_pagination_keyboard(page, total_pages, f"user_orders_{customer.customer_id}", enhanced=True)
         
-        self._send_message(chat_id, message)
+        self._send_message(chat_id, message, reply_markup=keyboard, parse_mode="HTML")
         return {'status': 'success'}
 
     def handle_all_orders(self, chat_id: int, args: list) -> Dict[str, Any]:
