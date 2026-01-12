@@ -151,8 +151,8 @@ class SupplierCommands(BaseHandler):
         
         return self._show_edit_interface(chat_id, supplier)
     
-    def handle_edit_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /edit_supplier command"""
+    def handle_update_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /update_supplier command"""
         error = self._validate_args(args, 1, 'usage_update_supplier', chat_id)
         if error:
             return error

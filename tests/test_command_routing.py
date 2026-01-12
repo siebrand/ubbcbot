@@ -206,7 +206,7 @@ class TestCommandRouting:
         ('/create_supplier Test', 'supplier', 'handle_create_supplier'),
         ('/archive_supplier Test', 'supplier', 'handle_retire_supplier'),
         ('/list_suppliers', 'supplier', 'handle_list_suppliers'),
-        ('/update_supplier Test', 'supplier', 'handle_edit_supplier'),
+        ('/update_supplier Test', 'supplier', 'handle_update_supplier'),
         ('/create_offer S B 10 12', 'offer', 'handle_create_offer'),
         ('/publish_offer 1', 'offer', 'handle_publish_offer'),
         ('/cancel_offer 1', 'offer', 'handle_cancel_offer'),
@@ -258,7 +258,6 @@ class TestCommandRouting:
     # Test 21: Old Commands Return Unknown
     @pytest.mark.parametrize("old_command", [
         '/retire_supplier Test',
-        '/edit_supplier Test',
         '/offer_details 1',
         '/add_box 1',
         '/box_status',

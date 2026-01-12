@@ -133,7 +133,7 @@ class CommandRouter:
                 status_filter = parts[1] if len(parts) > 1 and parts[1] in ['active', 'retired', 'all'] else 'active'
                 return self.handlers['supplier'].handle_list_suppliers(admin_target_chat, 1, status_filter)
             elif command == '/update_supplier':
-                return self.handlers['supplier'].handle_edit_supplier(admin_target_chat, parts[1:])
+                return self.handlers['supplier'].handle_update_supplier(admin_target_chat, parts[1:])
             elif command == '/update_supplier_name':
                 return self.handlers['supplier'].handle_update_supplier_name(admin_target_chat, parts[1:])
             elif command == '/update_supplier_contact':
