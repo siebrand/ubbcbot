@@ -46,8 +46,8 @@ class BaseOrderHandler(BaseHandler):
             aggregated[key]['order_ids'].append(order.order_id)
             
             # Add date in localized format (d MMM yy)
-            from utils.timezone import to_cet_string
-            date_str = to_cet_string(order.created_at, '%d %b %y')
+            from utils.timezone import to_cet_localized
+            date_str = to_cet_localized(order.created_at, 'nl')
             aggregated[key]['dates'].add(date_str)
 
         # Group by status
