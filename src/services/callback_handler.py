@@ -256,9 +256,9 @@ class CallbackHandler:
                         # Check if filter is offer_id (starts with 'offer_') or status
                         if filter_part.startswith('offer_'):
                             offer_id = filter_part.split('_', 1)[1]
-                            return self.handlers['offer'].handle_box_status(chat_id, [offer_id, str(page)])
+                            return self.handlers['offer'].handle_list_boxes(chat_id, [offer_id, str(page)])
                         else:
-                            return self.handlers['offer'].handle_box_status(chat_id, [filter_part, str(page)])
+                            return self.handlers['offer'].handle_list_boxes(chat_id, [filter_part, str(page)])
                     elif entity_type == 'pending':
                         return self.handlers['user'].handle_pending_users(chat_id, page)
                     elif entity_type.startswith('customers_'):
@@ -586,7 +586,7 @@ class CallbackHandler:
             'create_offer': lambda: self.handlers['offer'].handle_create_offer(chat_id, []),
             'publish_offer': lambda: self._send_usage_message(chat_id, 'usage_publish_offer'),
             'list_offers': lambda: self.handlers['info'].handle_list_offers(chat_id, user_id, []),
-            'list_boxes': lambda: self.handlers['offer'].handle_box_status(chat_id),
+            'list_boxes': lambda: self.handlers['offer'].handle_list_boxes(chat_id),
             'audit_offer': lambda: self.handlers['offer'].handle_audit_offer(chat_id, []),
             'process_wholesale': lambda: self.handlers['offer'].handle_order_wholesale(chat_id, []),
             'export_orders': lambda: self.handlers['admin_order'].handle_all_orders(chat_id, []),

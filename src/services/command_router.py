@@ -145,7 +145,7 @@ class CommandRouter:
             elif command == '/create_box':
                 return self.handlers['offer'].handle_add_box(admin_target_chat, parts[1:])
             elif command == '/list_boxes':
-                return self.handlers['offer'].handle_box_status(admin_target_chat, parts[1:])
+                return self.handlers['offer'].handle_list_boxes(admin_target_chat, parts[1:])
             elif command == '/audit_offer':
                 return self.handlers['offer'].handle_audit_offer(admin_target_chat, parts[1:])
             elif command == '/process_wholesale':

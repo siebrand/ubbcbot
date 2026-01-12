@@ -46,8 +46,8 @@ class BoxManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('invalid_offer_id', chat_id))
             return {'status': 'invalid_format'}
 
-    def handle_box_status(self, chat_id: int, args: list = None) -> Dict[str, Any]:
-        """Handle /box_status command with pagination and optional status/offer filter"""
+    def handle_list_boxes(self, chat_id: int, args: list = None) -> Dict[str, Any]:
+        """Handle /list_boxes command with pagination and optional status/offer filter"""
         # Handle None args for backward compatibility
         if args is None:
             args = []

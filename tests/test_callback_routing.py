@@ -82,7 +82,7 @@ class TestCallbackRouting:
         ('cmd:create_supplier', 'supplier', 'handle_create_supplier'),
         ('cmd:update_supplier', 'supplier', 'handle_list_suppliers'),
         ('cmd:list_suppliers', 'supplier', 'handle_list_suppliers'),
-        ('cmd:list_boxes', 'offer', 'handle_box_status'),
+        ('cmd:list_boxes', 'offer', 'handle_list_boxes'),
         ('cmd:process_wholesale', 'offer', 'handle_order_wholesale'),
         ('cmd:export_orders', 'admin_order', 'handle_all_orders'),
         ('cmd:list_user_orders', 'admin_order', '_start_user_orders_input'),
