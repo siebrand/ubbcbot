@@ -13,12 +13,22 @@ This document outlines the step-by-step refactoring of command names from old to
 **Files to modify:**
 - `src/handlers/admin/supplier_commands.py`
 - `src/services/callback_handler.py`
+- `src/services/command_router.py`
+- `src/services/bot_service.py`
 - `src/utils/edit_context.py`
+
+**Test files to check:**
+- `tests/test_command_routing.py`
+- `tests/test_callback_routing.py`
+- `tests/test_help_system.py`
+- `tests/test_webhook_callbacks.py`
 
 **Changes:**
 1. Rename `handle_add_supplier` → `handle_create_supplier`
 2. Update callback handler method calls
-3. Update edit context: `add_supplier_name` → `create_supplier_name`
+3. Update callback data: `add_supplier_start` → `create_supplier_start`
+4. Update edit context: `add_supplier_name` → `create_supplier_name`
+5. Update test assertions and test data
 
 **Commit message:**
 ```
@@ -26,6 +36,8 @@ refactor: rename add_supplier to create_supplier
 
 - Rename handle_add_supplier → handle_create_supplier
 - Update callback handler and edit context references
+- Update callback data and edit context keys
+- Update tests to reflect new naming
 - Align method names with /create_supplier command
 ```
 
@@ -248,24 +260,36 @@ For each refactoring step:
 
 1. **Read the current step** from this document
 2. **Make the specified changes** to the listed files
-3. **Test the changes** by checking that:
+3. **Check and update tests**:
+   - Search for old method/command names in `tests/` directory
+   - Update test assertions to use new method names
+   - Update test data (callback patterns, command examples)
+   - Remove old command names from "old commands" rejection tests
+4. **Validate the changes**:
    - No syntax errors exist
-   - Method calls are updated consistently
+   - Method calls are updated consistently across src/ and tests/
    - Callback patterns match new method names
-4. **Commit the changes** using the provided commit message
-5. **Verify the commit** was successful before proceeding
-6. **Move to the next step**
+   - All grep validation commands return no results
+5. **Commit the changes** using the provided commit message
+6. **Verify the commit** was successful before proceeding
+7. **Move to the next step**
 
 ## Validation Commands
 
 After each step, run these commands to verify consistency:
 
 ```bash
-# Check for remaining old method names
+# Check for remaining old method names in source code
 grep -r "handle_add_supplier\|handle_edit_supplier\|handle_box_status\|handle_order_for\|handle_pending_users\|handle_add_guest\|handle_discount_status\|handle_delete_old\|handle_order_wholesale\|handle_user_orders\|handle_all_orders\|handle_offer_orders" src/ --exclude-dir=__pycache__
 
+# Check for remaining old method names in tests
+grep -r "handle_add_supplier\|handle_edit_supplier\|handle_box_status\|handle_order_for\|handle_pending_users\|handle_add_guest\|handle_discount_status\|handle_delete_old\|handle_order_wholesale\|handle_user_orders\|handle_all_orders\|handle_offer_orders" tests/ --exclude-dir=__pycache__
+
 # Check for callback pattern consistency  
-grep -r "confirm_order_wholesale\|user_orders_input\|add_supplier_name" src/ --exclude-dir=__pycache__
+grep -r "confirm_order_wholesale\|user_orders_input\|add_supplier_name\|add_supplier_start" src/ --exclude-dir=__pycache__
+
+# Check for old callback patterns in tests
+grep -r "confirm_order_wholesale\|user_orders_input\|add_supplier_name\|add_supplier_start" tests/ --exclude-dir=__pycache__
 
 # Check translation key consistency
 grep -r "order_wholesale_boxes\|usage_confirm_order_wholesale" src/translations/
@@ -274,10 +298,12 @@ grep -r "order_wholesale_boxes\|usage_confirm_order_wholesale" src/translations/
 ## Success Criteria
 
 Refactoring is complete when:
-- [ ] All method names match command names
+- [ ] All method names match command names in source code
+- [ ] All method names match command names in tests
 - [ ] All callback patterns are consistent
 - [ ] All translation keys are updated
-- [ ] No old naming patterns remain in codebase
+- [ ] No old naming patterns remain in src/ or tests/
+- [ ] All validation grep commands return no results
 - [ ] All functionality works as expected
 
 ## Rollback Plan
