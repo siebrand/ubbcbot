@@ -373,15 +373,11 @@ class OfferManagementHandler(OfferBaseHandler):
             
             box_size = offer.wholesale_box_size
             boxes_needed = (total_units + box_size - 1) // box_size
+            boxes_text = self._t('box', chat_id) if boxes_needed == 1 else self._t('boxes', chat_id)
+            orders_text = self._t('orders_abbrev', chat_id)
+            units_text = self._t('units', chat_id)
             
-            message += self._t('wholesale_offer_summary',
-                name=offer.name,
-                offer_id=offer.offer_id,
-                order_count=order_count,
-                total_units=total_units,
-                boxes_needed=boxes_needed,
-                supplier=supplier_name
-            ) + "\n\n"
+            message += f"🍺 {offer.name} ({offer.offer_id}) • {order_count} {orders_text} • {total_units} {units_text} • {boxes_needed} {boxes_text} • {supplier_name}\n"
             
             keyboard_buttons.append([{
                 "text": self._t('select_wholesale_offer', name=offer.name, boxes=boxes_needed),
