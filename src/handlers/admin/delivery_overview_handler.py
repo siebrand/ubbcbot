@@ -238,7 +238,7 @@ class DeliveryOverviewHandler(BaseHandler):
             self._send_message(chat_id, self._t('payment_confirmed', user_id=None, customer_name=customer_name, updated_count=updated_count, total_amount=total_amount))
             
             # Notify customer
-            self._send_message(customer.telegram_user_id, self._t('payment_received_notification', customer.telegram_user_id, total_amount=total_amount, location=customer.location))
+            self._send_message(customer.telegram_user_id, self._t('payment_received_notification', customer.telegram_user_id, total_amount=total_amount, location=customer.location), parse_mode="HTML")
             
             # Return to mark_paid list
             from handlers.admin.order_commands import AdminOrderCommands

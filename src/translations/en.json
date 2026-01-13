@@ -379,7 +379,7 @@
   "all_overviews_sent": "🎉 All delivery overviews sent!\nTotal customers notified: {total_customers}",
   "customers_awaiting_payment": "💳 Customers Awaiting Payment:\n\n",
   "payment_confirmed": "✅ Payment confirmed for {customer_name}\n{updated_count} orders marked as COMPLETED\nTotal: €{total_amount:.2f}",
-  "payment_received_notification": "✅ Payment received! Thank you!\nTotal: €{total_amount:.2f}\n📍 Pickup location: {location}\n\nPlease let @siebrand know if you have any comments about this message.",
+  "payment_received_notification": "<b>✅ Payment Received!</b>\n\nThank you! Your payment of €{total_amount:.2f} has been received in good order. You are all set to pick up your order.\n━━━━━━━━━━━━━━━━━━━━\n📍 Pickup Location: {location}\n\n<b>See you soon! 👋</b>\n\nQuestions? Feel free to reach out to @siebrand.",
   "no_customers_awaiting_payment": "❌ No customers with orders awaiting payment",
   "no_orders_awaiting_payment": "❌ No orders awaiting payment for {customer_name}",
   "failed_update_orders_customer": "❌ Failed to update orders for {customer_name}",
