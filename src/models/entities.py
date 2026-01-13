@@ -154,6 +154,7 @@ class OrderHistory:
     # Composite fields for GSI queries
     customer_event: str = ""  # Format: "customer_id#event_type" for customer-event-index
     event_date: str = ""  # Format: "event_type#2024-01-15T10:30:00Z" for event-date-index
+    customer_name_event: str = ""  # Format: "customer_name#event_type" for customer-name-event-index
     
     # Refund linkage
     credit_transaction_id: Optional[str] = None
@@ -168,6 +169,8 @@ class OrderHistory:
             self.customer_event = f"{self.customer_id}#{self.event_type}"
         if self.event_type and self.changed_at:
             self.event_date = f"{self.event_type}#{self.changed_at.isoformat()}"
+        if self.customer_name and self.event_type:
+            self.customer_name_event = f"{self.customer_name}#{self.event_type}"
         # Set TTL based on environment
         if not self.ttl:
             import os

@@ -448,6 +448,8 @@ Resources:
           AttributeType: S
         - AttributeName: event_date
           AttributeType: S
+        - AttributeName: customer_name_event
+          AttributeType: S
       KeySchema:
         - AttributeName: history_id
           KeyType: HASH
@@ -472,6 +474,14 @@ Resources:
           KeySchema:
             - AttributeName: event_date
               KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: customer-name-event-index
+          KeySchema:
+            - AttributeName: customer_name_event
+              KeyType: HASH
+            - AttributeName: changed_at
+              KeyType: RANGE
           Projection:
             ProjectionType: ALL
       TimeToLiveSpecification:

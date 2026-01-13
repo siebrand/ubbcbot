@@ -1200,6 +1200,34 @@ class DynamoDBService:
             print(f"Error getting events by type: {e}")
             return []
     
+    def get_history_by_customer_name(self, customer_name: str, event_type: Optional[str] = None, limit: int = 50) -> List:
+        """Get history for customer by name (for deleted customers)"""
+        try:
+            from models.entities import OrderHistory
+            
+            if event_type:
+                # Query specific event type for customer
+                key = f"{customer_name}#{event_type}"
+                response = self.order_history_table.query(
+                    IndexName='customer-name-event-index',
+                    KeyConditionExpression=Key('customer_name_event').eq(key),
+                    Limit=limit,
+                    ScanIndexForward=False  # Most recent first
+                )
+            else:
+                # Query all events for customer (begins_with)
+                response = self.order_history_table.query(
+                    IndexName='customer-name-event-index',
+                    KeyConditionExpression=Key('customer_name_event').begins_with(customer_name + '#'),
+                    Limit=limit,
+                    ScanIndexForward=False  # Most recent first
+                )
+            
+            return [OrderHistory(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting history by customer name: {e}")
+            return []
+    
     # Transaction methods for sensitive operations (audit enforced)
     def cancel_order_with_audit(self, order_id: str, admin_id: int, reason: str) -> bool:
         """Cancel order with mandatory audit logging"""
