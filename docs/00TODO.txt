@@ -1,1 +1,4 @@
 - BIN management
+- Address IDE code remarks
+- More refactoring
+- More actual unit tests
