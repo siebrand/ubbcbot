@@ -384,13 +384,7 @@
   "no_orders_awaiting_payment": "❌ Geen bestellingen die wachten op betaling voor {customer_name}",
   "failed_update_orders_customer": "❌ Kon bestellingen niet bijwerken voor {customer_name}",
   "no_customers_ready_overview": "❌ Geen klanten met bestellingen klaar voor leveringsoverzicht",
-  "delivery_overview_sent_to": "📋 Leveringsoverzicht verstuurd naar {customer_name}:",
   "delivery_overview_for": "📋 Leveringsoverzicht voor {customer_name}:",
-  "delivery_overview_title": "📦 Leveringsoverzicht",
-  "ready_for_pickup": "✅ Klaar voor ophalen:",
-  "total_to_pay": "\nTotaal te betalen: €{total:.2f}",
-  "pickup_location": "\n📍 Ophaallocatie: {location}\n\nLaat het @siebrand weten als je opmerkingen hebt over dit bericht.",
-  "payment_link": "\n\nTikkie: {link}\n\nLet op: Je moet zelf het bedrag invullen.",
   "delayed_items_info": "⏳ Vertraagde Items (ter informatie):",
   "will_arrive_later": "komt later aan",
   "admin_panel_title": "👑 Adminpaneel\n\nSelecteer een categorie:",
@@ -589,5 +583,12 @@
   "finalize_import_sold_out": "✅ Aanbieding {offer_id} '{name}' afgerond als UITVERKOCHT (geen aankondigingen)",
   "finalize_import_active": "✅ Aanbieding {offer_id} '{name}' afgerond als ACTIEF en aangekondigd",
   "no_import_offers": "❌ Geen aanbiedingen met IMPORT status gevonden",
-  "select_offer_finalize_import": "📥 Selecteer aanbieding om import af te ronden:"
+  "select_offer_finalize_import": "📥 Selecteer aanbieding om import af te ronden:",
+  "delivery_ready_title": "<b>📦 Je bestelling is klaar!</b>",
+  "delivery_ready_intro": "Je bestelling is gelabeld en klaar voor ophalen. Voltooi alsjeblieft de betaling via onderstaande link voordat je langskomt.",
+  "order_summary_title": "<b>Bestellingoverzicht:</b>",
+  "total_amount_bold": "<b>💰 Totaalbedrag: €{total:.2f}</b>",
+  "pay_via_tikkie": "<b>Betaal via Tikkie:</b> 📲 {link} (Let op: Vul zelf het bedrag van €{total:.2f} in)",
+  "pickup_location_bold": "<b>📍 Ophaallocatie:</b> {location}",
+  "questions_contact": "Vragen? Neem gerust contact op met @siebrand."
 }

@@ -143,17 +143,23 @@ class DeliveryOverviewHandler(BaseHandler):
             if customer.username:
                 customer_name += f" (@{customer.username})"
             
-            message = self._t('delivery_overview_title', user_id=None) + "\n\n"
+            # Build message
+            message = self._t('delivery_ready_title', user_id=None) + "\n\n"
+            message += self._t('delivery_ready_intro', user_id=None) + "\n\n"
             
             if delivered_orders:
-                message += self._t('ready_for_pickup', user_id=None) + "\n"
+                message += self._t('order_summary_title', user_id=None) + "\n\n"
                 for order in delivered_orders:
                     offer = self.db.get_offer(order.offer_id)
                     offer_name = offer.name if offer else self._t('unknown', user_id=None)
-                    message += f"• {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
-                message += self._t('total_to_pay', user_id=None, total=delivered_total)
-                message += self._t('pickup_location', user_id=None, location=customer.location) + "\n"
-                message += self._t('payment_link', user_id=None, link=payment_link) + "\n\n"
+                    message += f"- {order.quantity}x {offer_name} — €{order.total_price:.2f}\n"
+                
+                message += "\n" + self._t('total_amount_bold', user_id=None, total=delivered_total) + "\n\n"
+                message += self._t('pay_via_tikkie', user_id=None, link=payment_link, total=delivered_total) + "\n"
+                message += "━━━━━━━━━━━━━━━━━━━━\n"
+                message += self._t('pickup_location_bold', user_id=None, location=customer.location) + "\n"
+                message += "━━━━━━━━━━━━━━━━━━━━\n"
+                message += self._t('questions_contact', user_id=None) + "\n\n"
             
             if delayed_orders:
                 message += self._t('delayed_items_info', user_id=None) + "\n"
@@ -168,16 +174,23 @@ class DeliveryOverviewHandler(BaseHandler):
             
             # Send message to customer only if not a guest
             if not is_guest:
-                result = self._send_message(customer.telegram_user_id, message)
+                result = self._send_message(customer.telegram_user_id, message, parse_mode="HTML")
             else:
                 # For guest users, skip sending and mark as success
                 result = {'success': True}
             
             # Send copy to admin with customer info
             if is_guest:
-                admin_message = f"{self._t('delivery_overview_for', user_id=None, customer_name=customer_name)}\n\n{message}"
+                # For guests, send full message as it needs to be relayed
+                admin_message = f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=customer_name)}\n\n{message}"
             else:
-                admin_message = f"{self._t('delivery_overview_sent_to', user_id=None, customer_name=customer_name)}\n\n{message}"
+                # For regular customers, send spartan summary
+                admin_message = f"✅ {customer_name}\n"
+                for order in delivered_orders:
+                    offer = self.db.get_offer(order.offer_id)
+                    offer_name = offer.name if offer else self._t('unknown', user_id=None)
+                    admin_message += f"{order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
+                admin_message += f"Total: €{delivered_total:.2f}"
             
             if result.get('success'):
                 # Update orders to AWAITING_PAYMENT
@@ -185,7 +198,7 @@ class DeliveryOverviewHandler(BaseHandler):
                     self.db.update_order(order.order_id, {'status': OrderStatus.AWAITING_PAYMENT.value}, admin_id=self.admin_user_id, reason="Delivery overview sent")
                 
                 # Send success notification to admin
-                self._send_message(self.admin_user_id, self._t('admin_overview_sent_success', user_id=None, message=admin_message))
+                self._send_message(self.admin_user_id, self._t('admin_overview_sent_success', user_id=None, message=admin_message), parse_mode="HTML")
                 return True
             else:
                 # Send failure notification to admin

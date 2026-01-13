@@ -384,13 +384,7 @@
   "no_orders_awaiting_payment": "❌ No orders awaiting payment for {customer_name}",
   "failed_update_orders_customer": "❌ Failed to update orders for {customer_name}",
   "no_customers_ready_overview": "❌ No customers with orders ready for delivery overview",
-  "delivery_overview_sent_to": "📋 Delivery Overview Sent to {customer_name}:",
   "delivery_overview_for": "📋 Delivery Overview for {customer_name}:",
-  "delivery_overview_title": "📦 Delivery Overview",
-  "ready_for_pickup": "✅ Ready for Pickup:",
-  "total_to_pay": "\nTotal to pay: €{total:.2f}",
-  "pickup_location": "\n📍 Pickup location: {location}\n\nPlease let @siebrand know if you have any comments about this message.",
-  "payment_link": "\n\nPayment link: {link}\n\nNote: You will have to enter the amount yourself.",
   "delayed_items_info": "⏳ Delayed Items (for your information):",
   "will_arrive_later": "will arrive later",
   "admin_panel_title": "👑 Admin Panel\n\nSelect a category:",
@@ -589,5 +583,12 @@
   "finalize_import_sold_out": "✅ Offer {offer_id} '{name}' finalized as SOLD OUT (no announcements)",
   "finalize_import_active": "✅ Offer {offer_id} '{name}' finalized as ACTIVE and announced",
   "no_import_offers": "❌ No offers with IMPORT status found",
-  "select_offer_finalize_import": "📥 Select offer to finalize import:"
+  "select_offer_finalize_import": "📥 Select offer to finalize import:",
+  "delivery_ready_title": "<b>📦 Your order is ready!</b>",
+  "delivery_ready_intro": "Your order is labeled and ready for pickup. Please complete the payment via the link below before heading over.",
+  "order_summary_title": "<b>Order Summary:</b>",
+  "total_amount_bold": "<b>💰 Total Amount: €{total:.2f}</b>",
+  "pay_via_tikkie": "<b>Pay via Tikkie:</b> 📲 {link} (Note: Please manually enter the amount of €{total:.2f})",
+  "pickup_location_bold": "<b>📍 Pickup Location:</b> {location}",
+  "questions_contact": "Any questions? Feel free to reach out to @siebrand."
 }
