@@ -1275,17 +1275,11 @@ class DynamoDBService:
     def mark_order_paid_with_audit(self, order_id: str, admin_id: int) -> bool:
         """Mark order as paid with mandatory audit logging"""
         try:
-            from services.audit_service import AuditService
-            
             order = self.get_order(order_id)
             if not order:
                 return False
             
-            # Log payment received
-            audit = AuditService(self)
-            audit.log_payment_received(order, admin_id)
-            
-            # Update order status (will also log via update_order)
+            # Update order status (audit logging handled by update_order)
             return self.update_order(order_id, {'status': 'completed'}, admin_id, "Payment received")
         except Exception as e:
             print(f"Error marking order paid with audit: {e}")
