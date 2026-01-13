@@ -16,7 +16,11 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
 
         suppliers = self.db.get_suppliers_with_ready_for_labeling_offers()
         if not suppliers:
-            return self._send_message(chat_id, self._t('no_ready_for_labeling_offers', user_id))
+            return self._send_message(
+                chat_id, 
+                self._t('no_ready_for_labeling_offers', user_id),
+                reply_markup=self._build_admin_menu_keyboard()
+            )
 
         keyboard = self._build_supplier_keyboard(suppliers, 'lc')
         return self._send_message(
