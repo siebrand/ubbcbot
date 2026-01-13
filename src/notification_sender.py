@@ -27,9 +27,8 @@ def lambda_handler(event, context):
         
         # Extract payload
         offer_id = event['offer_id']
-        subscriber_ids = event['subscriber_ids']
         
-        logger.info(f"Processing notifications for offer {offer_id} to {len(subscriber_ids)} subscribers")
+        logger.info(f"Processing notifications for offer {offer_id}")
         
         # Get offer details
         offer = db.get_offer(offer_id)
@@ -37,12 +36,10 @@ def lambda_handler(event, context):
             logger.error(f"Offer {offer_id} not found")
             return {'statusCode': 404, 'body': 'Offer not found'}
         
-        # Get subscribers
-        subscribers = []
-        for customer_id in subscriber_ids:
-            customer = db.get_customer(customer_id)
-            if customer and getattr(customer, 'subscribed_to_offers', False):
-                subscribers.append(customer)
+        # Get all subscribers directly from database
+        subscribers = db.get_subscribers()
+        
+        logger.info(f"Found {len(subscribers)} subscribers")
         
         # Send notifications
         success_count, error_count = handler.send_bulk_notifications(subscribers, offer)

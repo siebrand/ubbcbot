@@ -114,15 +114,14 @@ class NotificationHandler(OfferBaseHandler):
         try:
             lambda_client = boto3.client('lambda')
             function_name = os.environ.get('NOTIFICATION_LAMBDA_NAME', f"ubbc-bot-{os.environ.get('ENVIRONMENT', 'test')}-notification-sender")
-            
+
             # Prepare payload with Decimal conversion
             payload = {
                 'offer_id': offer.offer_id,
-                'subscriber_ids': [c.customer_id for c in subscribers],
                 'environment': os.environ.get('ENVIRONMENT', 'test')
             }
             
-            # Custom JSON encoder to handle Decimal
+            # Custom JSON encoder to handle Decimal offer_id
             class DecimalEncoder(json.JSONEncoder):
                 def default(self, obj):
                     if isinstance(obj, Decimal):
