@@ -20,7 +20,11 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
 
         suppliers = self.db.get_suppliers_with_ordered_offers()
         if not suppliers:
-            return self._send_message(chat_id, self._t('no_ordered_offers', user_id))
+            return self._send_message(
+                chat_id, 
+                self._t('no_ordered_offers', user_id),
+                reply_markup=self._build_admin_menu_keyboard()
+            )
 
         keyboard = self._build_supplier_keyboard(suppliers, 'wd')
         return self._send_message(
