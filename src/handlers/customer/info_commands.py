@@ -445,7 +445,8 @@ class InfoCommands(BaseHandler):
             
             reply_markup = None
             if total_pages > 1:
-                reply_markup = PaginationUtils.build_pagination_keyboard(page, total_pages, "list_offers", enhanced=True)
+                filter_suffix = "_user" if show_user_view else ""
+                reply_markup = PaginationUtils.build_pagination_keyboard(page, total_pages, f"list_offers{filter_suffix}", enhanced=True)
             
             self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
             return {'status': 'success'}
