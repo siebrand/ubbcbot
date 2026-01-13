@@ -23,6 +23,14 @@ class BoxStatusManager:
             if box.current_quantity < box.max_capacity
         )
     
+    def get_available_capacity_for_orders(self, boxes: List[Box]) -> int:
+        """Calculate total available capacity in all boxes (any box under capacity can accept orders)"""
+        return sum(
+            box.max_capacity - box.current_quantity 
+            for box in boxes 
+            if box.current_quantity < box.max_capacity
+        )
+    
     def update_box_after_order_placement(self, box_id: str, quantity_added: int) -> bool:
         """Update box status after adding an order"""
         box = self.db.get_box(box_id)

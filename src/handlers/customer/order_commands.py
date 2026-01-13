@@ -251,9 +251,9 @@ class CustomerOrderCommands(BaseHandler):
             if updated_offer and updated_offer.status == OfferStatus.SOLD_OUT.value:
                 availability_text = f" - {self._t('status_sold_out', force_group_lang=True)}"
             else:
-                # Calculate remaining availability from delivered boxes only
+                # Calculate remaining availability from all boxes under capacity
                 boxes = self.db.get_boxes_by_offer(offer.offer_id)
-                total_available = self.box_status_manager.get_available_capacity_in_delivered(boxes)
+                total_available = self.box_status_manager.get_available_capacity_for_orders(boxes)
                 
                 if total_available > 6:
                     availability_text = f" ({self._t('sufficient_available', force_group_lang=True)})"
