@@ -208,6 +208,14 @@ class BaseHandler:
         """Build pagination keyboard for list commands"""
         return PaginationUtils.build_pagination_keyboard(current_page, total_pages, entity_type, filters, enhanced)
     
+    def _build_admin_menu_keyboard(self) -> Dict[str, Any]:
+        """Build keyboard with button to return to admin menu"""
+        return {
+            "inline_keyboard": [[
+                {"text": "🏠 Admin Menu", "callback_data": "admin:main"}
+            ]]
+        }
+    
     def _paginate_list(self, items: list, page: int, page_size: int = 10) -> tuple:
         """Paginate a list of items"""
         return PaginationUtils.paginate_list(items, page, page_size)
