@@ -1,9 +1,1 @@
 - BIN management
-- When paid, save transaction to transactions table
-  - original payment request date
-  - payment amount
-  - user id
-  - user name (in case user id would ever disappear)
-  - which other field may be useful?
-  - indexes on user id and date, payment amount
-  - ask LLM for comments
