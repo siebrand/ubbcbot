@@ -215,6 +215,10 @@ class CallbackHandler:
                             page = int(parts[3])
                         args = [filter_arg] if filter_arg else None
                         return self.handlers['info'].handle_list_offers(chat_id, user_id, args, page)
+                    # Handle process_wholesale pagination
+                    elif parts[1] == 'process' and parts[2] == 'wholesale':
+                        page = int(parts[3])
+                        return self.handlers['offer'].handle_process_wholesale_page(chat_id, page)
                     # Handle multi-word entity types like process_payment, list_user_orders, and list_my_orders
                     elif len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'process', 'list', 'user', 'my']:
                         if parts[1] == 'mark' and parts[2] == 'paid':

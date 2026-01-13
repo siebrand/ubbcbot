@@ -4,6 +4,7 @@ from models.entities import OfferStatus, OrderStatus, BoxStatus
 from .base import OfferBaseHandler
 from services.box_status_manager import BoxStatusManager
 from services.box_deletion_service import BoxDeletionService
+from utils.pagination import PaginationUtils
 
 logger = logging.getLogger()
 
@@ -19,7 +20,7 @@ class OfferManagementHandler(OfferBaseHandler):
         """Handle /order_wholesale command"""
         if not args:
             # Show available offers with pending orders
-            return self._show_wholesale_offers_selection(chat_id)
+            return self._show_wholesale_offers_selection(chat_id, page=1)
 
         offer, error = self._validate_and_get_offer(args, chat_id)
         if error:
@@ -330,7 +331,11 @@ class OfferManagementHandler(OfferBaseHandler):
         self._send_message(chat_id, summary, reply_markup=keyboard)
         return {'status': 'success'}
     
-    def _show_wholesale_offers_selection(self, chat_id: int) -> Dict[str, Any]:
+    def handle_process_wholesale_page(self, chat_id: int, page: int) -> Dict[str, Any]:
+        """Handle pagination for process_wholesale offer selection"""
+        return self._show_wholesale_offers_selection(chat_id, page=page)
+    
+    def _show_wholesale_offers_selection(self, chat_id: int, page: int = 1) -> Dict[str, Any]:
         """Show offers with pending orders for wholesale ordering"""
         # Get all active and sold out offers
         all_offers = self.db.list_offers()
@@ -349,11 +354,20 @@ class OfferManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('no_pending_orders'))
             return {'status': 'no_offers'}
         
+        # Sort alphabetically by offer name
+        offers_with_orders.sort(key=lambda x: x[0].name.lower())
+        
+        # Paginate
+        page_offers, total_pages = PaginationUtils.paginate_list(offers_with_orders, page, page_size=10)
+        
         # Create message with offer selection
-        message = self._t('select_offer_wholesale') + "\n\n"
+        message = self._t('select_offer_wholesale')
+        if total_pages > 1:
+            message += f" (Page {page}/{total_pages})"
+        message += "\n\n"
         keyboard_buttons = []
         
-        for offer, order_count, total_units in offers_with_orders:
+        for offer, order_count, total_units in page_offers:
             supplier = self.db.get_supplier_by_name(offer.supplier_name)
             supplier_name = supplier.name if supplier else self._t('unknown', user_id=None)
             
@@ -373,6 +387,16 @@ class OfferManagementHandler(OfferBaseHandler):
                 "text": self._t('select_wholesale_offer', name=offer.name, boxes=boxes_needed),
                 "callback_data": f"wholesale_select_{offer.offer_id}"
             }])
+        
+        # Add pagination buttons
+        if total_pages > 1:
+            nav_buttons = []
+            if page > 1:
+                nav_buttons.append({"text": "◀️ Prev", "callback_data": f"page_process_wholesale_{page-1}"})
+            if page < total_pages:
+                nav_buttons.append({"text": "Next ▶️", "callback_data": f"page_process_wholesale_{page+1}"})
+            if nav_buttons:
+                keyboard_buttons.append(nav_buttons)
         
         keyboard_buttons.append([{"text": self._t('cancel'), "callback_data": "cancel_action"}])
         keyboard = {"inline_keyboard": keyboard_buttons}
