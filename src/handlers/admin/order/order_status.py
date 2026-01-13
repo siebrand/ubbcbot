@@ -50,7 +50,11 @@ class OrderStatusManagement(BaseOrderHandler):
                 customers_awaiting_payment.append((customer, awaiting_payment_orders))
         
         if not customers_awaiting_payment:
-            self._send_message(chat_id, self._t('no_customers_awaiting_payment', user_id=None))
+            self._send_message(
+                chat_id, 
+                self._t('no_customers_awaiting_payment', user_id=None),
+                reply_markup=self._build_admin_menu_keyboard()
+            )
             return {'status': 'no_customers'}
         
         # Sort alphabetically by last name, then first name
