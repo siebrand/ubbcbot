@@ -149,6 +149,7 @@ class OrderHistory:
     old_value: str = ""
     new_value: str = ""
     reason: str = ""
+    amount: Optional[Decimal] = None  # Payment/refund amount for financial events
     
     # Composite fields for GSI queries
     customer_event: str = ""  # Format: "customer_id#event_type" for customer-event-index

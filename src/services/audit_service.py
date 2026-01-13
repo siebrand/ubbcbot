@@ -78,7 +78,8 @@ class AuditService:
             new_value=str(new_price),
             reason=reason or "Price adjusted",
             credit_transaction_id=credit_transaction_id,
-            triggers_refund=(credit_transaction_id is not None)
+            triggers_refund=(credit_transaction_id is not None),
+            amount=new_price - old_price  # Difference (negative for refunds)
         )
         self.db.create_order_history(history)
         logger.info(f"Audit: Price changed {order.order_id}: {old_price} -> {new_price}")
@@ -95,10 +96,11 @@ class AuditService:
             field_name="status",
             old_value="awaiting_payment",
             new_value="completed",
-            reason="Payment received"
+            reason="Payment received",
+            amount=order.total_price
         )
         self.db.create_order_history(history)
-        logger.info(f"Audit: Payment received {order.order_id}")
+        logger.info(f"Audit: Payment received {order.order_id} - Amount: {order.total_price}")
     
     def log_status_change(self, order, old_status: str, new_status: str, 
                          admin_id: int = 0, reason: str = ""):
@@ -111,6 +113,9 @@ class AuditService:
         else:
             event_type = "STATUS_CHANGED"
         
+        # Include amount for payment events
+        amount = order.total_price if event_type == "PAYMENT_RECEIVED" else None
+        
         history = OrderHistory(
             order_id=order.order_id,
             customer_id=order.customer_id,
@@ -121,7 +126,8 @@ class AuditService:
             field_name="status",
             old_value=old_status,
             new_value=new_status,
-            reason=reason or f"Status changed to {new_status}"
+            reason=reason or f"Status changed to {new_status}",
+            amount=amount
         )
         self.db.create_order_history(history)
         logger.info(f"Audit: Status changed {order.order_id}: {old_status} -> {new_status}")
