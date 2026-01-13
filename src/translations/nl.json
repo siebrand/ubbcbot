@@ -459,7 +459,7 @@
   "quantity_must_be_1_to_10": "❌ Aantal moet tussen 1 en 10 zijn",
   "enter_valid_number": "❌ Voer een geldig getal in",
   "other_quantity": "📝 Anders",
-  "select_offer_wholesale": "📦 Selecteer aanbieding voor groothandel bestelling:",
+  "select_offer_wholesale": "📦 Selecteer aanbieding voor groothandelbestelling:",
   "wholesale_offer_summary": "🍺 {name} (ID: {offer_id})\n   📦 {order_count} bestellingen, {total_units} stuks → {boxes_needed} dozen\n   🏢 {supplier}",
   "select_wholesale_offer": "📦 {name} ({boxes} dozen)",
   "operation_cancelled": "✅ Handeling geannuleerd",
