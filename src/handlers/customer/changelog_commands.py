@@ -6,18 +6,26 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
-                "title": "2025-01-15 - Command Naming Standardization",
-                "content": """<b>Command Naming Overhaul</b>
-• <b>Standardized Command Names</b> - All commands now follow consistent action-object pattern (create_, list_, view_, update_, process_, etc.)
-• <b>Supplier Commands</b> - /add_supplier → /create_supplier, /retire_supplier → /archive_supplier, /edit_supplier → /update_supplier
-• <b>Offer Commands</b> - /offer_details → /view_offer, /add_box → /create_box, /box_status → /list_boxes
-• <b>Order Commands</b> - /order_wholesale → /process_wholesale, /user_orders → /list_user_orders, /offer_orders → /list_offer_orders, /all_orders → /export_orders
-• <b>User Commands</b> - /pending_users → /list_pending, /add_guest → /create_guest
-• <b>Delivery Commands</b> - /wholesale_delivery → /process_delivery, /labeling_completed → /process_labeling, /send_overviews → /send_delivery_overviews, /mark_paid → /process_payment
-• <b>Utility Commands</b> - /discount_status → /view_discount, /delete_old → /delete_old_orders, /delete_cancelled → /delete_cancelled_orders, /delete_completed → /delete_completed_orders
-• <b>Permanent Aliases</b> - /order (→ /create_order), /my_orders (→ /list_my_orders), /order_for (→ /create_order_for) maintained for convenience
-• <b>No Backward Compatibility</b> - Old command names immediately deprecated, users must use new names
-• <b>Updated Documentation</b> - Help text, usage messages, and Telegram command list updated with new names"""
+                "title": "Up to 2025-01-13",
+                "content": """<b>User-Facing Updates</b>
+• <b>Enhanced Order Display</b> - Localized dates with month abbreviations (e.g., "11 jan 26"), clickable offer links in order lists
+• <b>Smart Subtotals</b> - Category subtotals with grand total (excludes cancelled/completed orders)
+• <b>Visual Improvements</b> - Alternating diamond icons (🔸🔹) improve readability in long order lists
+• <b>Better Offer Access</b> - Non-admins can view sold-out/completed offers if they have orders
+• <b>Improved Notifications</b> - Restored availability display in group order announcements
+• <b>Delivery & Payment Redesign</b> - Fancy HTML-formatted messages with pickup location
+• <b>Bug Fixes</b> - Availability calculation restored, pagination fixed
+
+<b>Admin-Facing Updates</b>
+• <b>Command Naming Standardization</b> - 23 commands renamed to consistent action-object pattern (create_, list_, view_, update_, process_), permanent aliases for /order, /my_orders, /order_for
+• <b>Order History & Audit Trail</b> - Complete audit system with automatic logging, financial tracking for payments/refunds, 5-year retention, database-level enforcement
+• <b>Delivered Box Availability</b> - Smart box prioritization places orders in delivered boxes first, prevents unnecessary box creation, orders automatically marked ready_for_labeling
+• <b>Streamlined Admin Panel</b> - Reduced from 9 to 7 categories with logical grouping, process next offer button for continuous workflows
+• <b>Enhanced Workflows</b> - Return to admin menu after completing all deliveries/labeling/payments, complete help system with discounts/import/system sections
+• <b>Centralized Configuration</b> - Admin user ID from environment variable (no hardcoding)
+• <b>Order Display Consolidation</b> - Unified my_orders and user_orders logic reduces duplication
+• <b>Data Correction Tools</b> - Script to fix import order status bugs, removed CONFIRMED status (simplified to pending → ordered → ready_for_labeling)
+• <b>Improved Automatic Testing</b> - 212 passing tests (151 routing + 61 integration) with TDD approach for newly implemented features"""
             },
             {
                 "title": "Up to 2025-01-12",
