@@ -200,6 +200,9 @@ class CallbackHandler:
             elif data == 'cancel_action':
                 # Return to admin panel instead of just saying "done"
                 return self.handlers['admin_commands'].handle_admin(chat_id, user_id)
+            elif data == 'process_wholesale':
+                # Handle process next offer button
+                return self.handlers['offer'].handle_process_wholesale(chat_id, [])
             
             # Pagination callbacks
             elif data.startswith('page_'):
