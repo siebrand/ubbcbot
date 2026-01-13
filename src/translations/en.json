@@ -390,7 +390,7 @@
   "ready_for_pickup": "✅ Ready for Pickup:",
   "total_to_pay": "\nTotal to pay: €{total:.2f}",
   "pickup_location": "\n📍 Pickup location: {location}\n\nPlease let @siebrand know if you have any comments about this message.",
-  "payment_link": "\n\nPayment: {link}",
+  "payment_link": "\n\nPayment link: {link}\n\nNote: You will have to enter the amount yourself.",
   "delayed_items_info": "⏳ Delayed Items (for your information):",
   "will_arrive_later": "will arrive later",
   "admin_panel_title": "👑 Admin Panel\n\nSelect a category:",
