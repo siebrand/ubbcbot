@@ -1,2 +1,1 @@
 - BIN management
-- broken: {availability}
