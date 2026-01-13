@@ -389,7 +389,7 @@
   "delivery_overview_title": "📦 Leveringsoverzicht",
   "ready_for_pickup": "✅ Klaar voor ophalen:",
   "total_to_pay": "\nTotaal te betalen: €{total:.2f}",
-  "pickup_location": "\n📍 Ophaallocatie: {location}",
+  "pickup_location": "\n📍 Ophaallocatie: {location}\n\nLaat het @siebrand weten als je opmerkingen hebt over dit bericht.",
   "payment_link": "\n\nTikkie: {link}",
   "delayed_items_info": "⏳ Vertraagde Items (ter informatie):",
   "will_arrive_later": "komt later aan",

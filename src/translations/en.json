@@ -389,7 +389,7 @@
   "delivery_overview_title": "📦 Delivery Overview",
   "ready_for_pickup": "✅ Ready for Pickup:",
   "total_to_pay": "\nTotal to pay: €{total:.2f}",
-  "pickup_location": "\n📍 Pickup location: {location}",
+  "pickup_location": "\n📍 Pickup location: {location}\n\nPlease let @siebrand know if you have any comments about this message.",
   "payment_link": "\n\nPayment: {link}",
   "delayed_items_info": "⏳ Delayed Items (for your information):",
   "will_arrive_later": "will arrive later",
