@@ -3,6 +3,7 @@ from decimal import Decimal
 from handlers.base_handler import BaseHandler
 from models.entities import OfferStatus
 from services.user_cache import UserCache
+from services.box_status_manager import BoxStatusManager
 from utils.pagination import PaginationUtils
 
 class InfoCommands(BaseHandler):
@@ -123,26 +124,42 @@ class InfoCommands(BaseHandler):
             return f"{status_emoji} <a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'><b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f}\n"
     
     def _get_offer_capacity_info(self, offer_id: int, user_id: int = None, boxes_by_offer: dict = None, orders_by_offer: dict = None):
-        """Get order and capacity information for an offer
+        """Get order and capacity information for an offer using BoxStatusManager
         
         Args:
             offer_id: The offer ID
             user_id: Optional user ID (unused, kept for compatibility)
             boxes_by_offer: Optional pre-loaded boxes dictionary
-            orders_by_offer: Optional pre-loaded orders dictionary
-        """
-        if boxes_by_offer is not None and orders_by_offer is not None:
-            # Use pre-loaded data
-            boxes = boxes_by_offer.get(offer_id, [])
-            orders = orders_by_offer.get(offer_id, [])
-        else:
-            # Fall back to individual queries
-            boxes = self.db.get_boxes_by_offer(offer_id)
-            orders = self.db.get_orders_by_offer(offer_id)
-            orders = [o for o in orders if o.status in ['pending', 'ordered']]
+            orders_by_offer: Optional pre-loaded orders dictionary (unused when boxes provided)
         
-        total_capacity = sum(box.max_capacity for box in boxes)
-        total_ordered = sum(order.quantity for order in orders)
+        Returns:
+            tuple: (total_ordered, total_capacity)
+        """
+        if boxes_by_offer is not None:
+            boxes = boxes_by_offer.get(offer_id, [])
+        else:
+            boxes = self.db.get_boxes_by_offer(offer_id)
+        
+        box_manager = BoxStatusManager(self.db)
+        
+        # Check if any boxes are delivered
+        delivered_boxes = box_manager.get_delivered_boxes(boxes)
+        
+        if delivered_boxes:
+            # For delivered boxes: calculate from box capacity
+            total_capacity = sum(box.max_capacity for box in delivered_boxes)
+            total_ordered = sum(box.current_quantity for box in delivered_boxes)
+        else:
+            # For non-delivered boxes: calculate from orders
+            if orders_by_offer is not None:
+                orders = orders_by_offer.get(offer_id, [])
+            else:
+                orders = self.db.get_orders_by_offer(offer_id)
+                orders = [o for o in orders if o.status in ['pending', 'ordered']]
+            
+            total_capacity = sum(box.max_capacity for box in boxes)
+            total_ordered = sum(order.quantity for order in orders)
+        
         return total_ordered, total_capacity
     
     def _apply_discount_to_offer(self, offer, active_discount):

@@ -433,14 +433,13 @@ class DynamoDBService:
         """Scan all boxes from DynamoDB with minimal fields for list_offers"""
         try:
             response = self.boxes_table.scan(
-                ProjectionExpression='box_id, offer_id, max_capacity, #status',
+                ProjectionExpression='box_id, offer_id, current_quantity, max_capacity, #status',
                 ExpressionAttributeNames={'#status': 'status'}
             )
             boxes = []
             for item in response.get('Items', []):
+                item['current_quantity'] = int(item['current_quantity'])
                 item['max_capacity'] = int(item['max_capacity'])
-                # Add default values for required Box fields not fetched
-                item.setdefault('current_quantity', 0)
                 boxes.append(Box(**item))
             return boxes
         except Exception as e:
