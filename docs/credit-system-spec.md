@@ -15,7 +15,7 @@ Customers may need credits for various reasons:
 
 ### Core Functionality
 1. Admin can issue credits to customers
-2. Credits can be any amount (not tied to specific orders)
+2. Credits can be any amount and are not tied to orders
 3. Credits create a credit balance for the customer
 4. Credit balance is automatically applied to future deliveries
 5. Credit balance can exceed next delivery amount (carry forward)
@@ -50,7 +50,6 @@ Customers may need credits for various reasons:
 ## Data Model Changes
 
 ### New Table: Customer Credits
-
 
 **DynamoDB Table:** `ubbc-bot-{environment}-customer-credits`
 
@@ -240,46 +239,41 @@ def log_order_change(order_id, field, old, new, reason, admin_id):
 
 ## Admin Commands
 
-### 1. Issue Refund
+### 1. Issue Credit
 
-**Command:** `/refund <username_or_order_id> <amount> [reason]`
+**Command:** `/credit <username> <amount> [reason]`
 
 **Examples:**
 ```
-/refund john_doe 20.50 Defective bottles
-/refund a1b2c3d4 15.00 Cancelled order
-/refund @johndoe 50.00 Customer dissatisfaction
+/credit john_doe 20.5 Defective bottles
+/credit @johndoe 50 Customer dissatisfaction
 ```
 
 **Workflow:**
 1. Admin enters command
-2. System validates customer/order exists
-3. If order_id provided, show order details for confirmation
-4. If username provided, show recent orders to select from (optional)
-5. Show confirmation with:
+2. System validates customer exists using the existing customer matching code
+3. System validates amount is positive
+4. Show confirmation with:
    - Customer name
-   - Refund amount
+   - Credit amount
    - Current credit balance
-   - New credit balance after refund
+   - New credit balance after crediting
    - Reason
-6. Admin confirms
-7. System creates credit transaction
-8. System updates customer credit balance
-9. System updates order (if order_id provided)
-10. System notifies customer
-11. System confirms to admin
+5. Admin confirms
+6. System creates credit transaction
+7. System updates customer credit balance
+8. System notifies customer
+9. System confirms to admin
 
 **Alternative Flow (Button-based):**
-1. Admin uses `/refund` without args
+1. Admin uses `/credit` without args
 2. System prompts for username input
-3. System shows customer's completed/cancelled orders
-4. Admin selects order
-5. System shows refund options:
-   - Full refund (order total)
-   - Partial refund (enter amount)
-   - Custom amount (not tied to order)
-6. Admin enters reason
-7. Confirmation and execution as above
+3. Admin enters username
+4. System requests amount
+5. Admin enters amount
+6. System requests reason
+7. Admin enters reason
+8. Confirmation and execution as above
 
 ### 2. View Customer Credit
 
@@ -300,9 +294,9 @@ Total Credits Issued: €120.00
 Total Credits Used: €74.50
 
 Recent Transactions:
-• 2024-01-10: +€20.00 (REFUND) - Defective bottles [Order: a1b2c3d4]
+• 2024-01-10: +€20.00 (CREDIT_ISSUED) - Defective bottles
 • 2024-01-08: -€30.00 (APPLIED) - Applied to delivery
-• 2024-01-05: +€25.50 (REFUND) - Cancelled order [Order: e5f6g7h8]
+• 2024-01-05: +€25.50 (CREDIT_ISSUED) - Goodwill gesture
 
 [View All Transactions] [Adjust Balance]
 ```
@@ -378,33 +372,13 @@ Current Balance: €45.50
 This credit will be automatically applied to your next delivery.
 
 Recent Credits:
-• 2024-01-10: +€20.00 - Refund for order #a1b2c3d4
-• 2024-01-05: +€25.50 - Refund for order #e5f6g7h8
+• 2024-01-10: +€20.00 - Defective bottles
+• 2024-01-05: +€25.50 - Goodwill gesture
 
 Recent Usage:
 • 2024-01-08: -€30.00 - Applied to delivery
 
 Questions? Contact admin.
-```
-
-### 2. View Orders with Refunds
-
-**Command:** `/my_orders` (enhanced to show refunds)
-
-**Output Enhancement:**
-```
-📦 Your Orders
-
-Active Orders:
-• [2024-01-12] 3x Brewery IPA - €30.00 (pending)
-
-Completed Orders:
-• [2024-01-10] 2x Stout Beer - €20.00 (completed)
-  ↳ ⚠️ Refunded: €20.00 - Defective bottles
-
-Cancelled Orders:
-• [2024-01-05] 5x Lager - €25.50 (cancelled)
-  ↳ 💰 Refunded: €25.50 - Order cancelled by admin
 ```
 
 ## Delivery Overview Integration
@@ -435,6 +409,7 @@ Cancelled Orders:
 
 ### Enhanced Delivery Overview Message
 
+Review the current messaging and integration the credits into those.
 **Scenario 1: Credit < Total**
 ```
 📦 Delivery Overview
@@ -488,38 +463,10 @@ Payment Link: [link]
 
 ## Business Logic & Rules
 
-### Credit Application Rules
-
-1. **Automatic Application**
-   - Credits are ALWAYS automatically applied during delivery overview generation
-   - No manual customer action required
-   - Credits applied in chronological order (oldest first)
-
-2. **Credit Limits**
-   - No maximum credit balance limit
-   - Credits never expire
-   - Credits are non-transferable between customers
-
-3. **Refund Limits**
-   - Refund amount cannot exceed original order total
-   - Partial refunds allowed (e.g., refund 2 out of 5 units)
-   - Multiple refunds per order not allowed (one refund per order maximum)
-
-4. **Credit Usage Priority**
-   - Credits applied before any payment
-   - If multiple credit sources exist, use oldest first (FIFO)
-   - Credit application is atomic (all or nothing per delivery)
-
-5. **Order Status and Refunds**
-   - Can refund: COMPLETED, CANCELLED, AWAITING_PAYMENT orders
-   - Cannot refund: PENDING, ORDERED, READY_FOR_LABELING orders (cancel instead)
-   - Refunded orders remain in database with refund metadata
-
-### Calculation Logic
-
-**Credit Application Algorithm:**
+### Credit Application Algorithm
 ```python
 def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
+    """Apply credit when orders transition LABELING_COMPLETED → AWAITING_PAYMENT"""
     credit_balance = get_customer_credit_balance(customer_id)
     
     if credit_balance <= 0:
@@ -555,99 +502,22 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
     }
 ```
 
-## Edge Cases & Considerations
+## Edge Cases & Handling
 
-### 1. Refund After Credit Already Applied
-**Scenario:** Customer receives delivery, pays €30 (after €20 credit applied). Later, admin issues €50 refund for defective items.
+### 1. Credit Issued for Wrong Customer
+**Handling:** Admin manually reverses using adjustment transaction with audit trail
 
-**Question:** Should the refund be:
-- A) €50 credit (full refund amount)
-- B) €30 credit (only what customer actually paid)
-- C) €50 credit, but note that €20 was already credited
-
-**Recommendation:** Option A - Full refund amount as credit. The original credit and new refund are separate transactions.
-
-### 2. Refund for Guest Users
-**Question:** Can guest users receive refunds?
-
-**Considerations:**
-- Guest users don't have Telegram accounts
-- Credits cannot be applied automatically
-- Need alternative refund method (cash, bank transfer)
-
-**Recommendation:** 
-- Allow credit balance for guest users
-- Admin manually tracks when guest credit is settled
-- Add "settled" flag to credit transactions for guests
+### 2. Credit Applied but Delivery Fails
+**Handling:** Credit remains applied, customer contacts admin for manual resolution
 
 ### 3. Customer Deletion with Credit Balance
-**Question:** What happens if customer is deleted/rejected with remaining credit?
+**Handling:** System allows deletion, does not require credit settlement first
 
-**Options:**
-- A) Prevent deletion if credit balance > 0
-- B) Transfer credit to admin notification for manual settlement
-- C) Allow deletion, credit is forfeited
+### 4. Concurrent Credit Updates
+**Handling:** DynamoDB conditional updates ensure atomic operations
 
-**Recommendation:** Option A - Prevent deletion, require credit settlement first.
-
-### 4. Concurrent Credit Application
-**Question:** What if two deliveries are processed simultaneously?
-
-**Mitigation:** Use DynamoDB conditional updates to ensure atomic credit balance updates.
-
-### 5. Refund Larger Than Order Total
-**Question:** Should admin be able to issue refund > order total?
-
-**Options:**
-- A) Block refunds > order total
-- B) Allow with warning
-- C) Allow freely (for goodwill gestures)
-
-**Recommendation:** Option B - Allow with explicit warning and confirmation.
-
-### 6. Credit Display in Order History
-**Question:** Should order history show original price or price after credit?
-
-**Recommendation:** Show both:
-- Original order total
-- Credit applied (if any)
-- Amount paid
-
-### 7. Partial Delivery with Refund
-**Scenario:** Order 10 units, receive 6 units, 4 units cancelled.
-
-**Question:** Should refund be automatic or manual?
-
-**Options:**
-- A) Automatic refund for undelivered units
-- B) Manual admin refund decision
-- C) Automatic credit, admin can adjust
-
-**Recommendation:** Option B - Manual decision. Admin may want to offer discount on future order instead.
-
-### 8. Refund Notification Timing
-**Question:** When should customer be notified of refund?
-
-**Options:**
-- A) Immediately when refund issued
-- B) With next delivery overview
-- C) Both
-
-**Recommendation:** Option A - Immediate notification for transparency.
-
-### 9. Credit Balance in Order Placement
-**Question:** Should customers see credit balance when placing orders?
-
-**Recommendation:** No - Credits only apply at delivery/payment time, not at order time.
-
-### 10. Negative Credit Balance
-**Question:** Can credit balance go negative (customer owes money)?
-
-**Options:**
-- A) Never allow negative balance
-- B) Allow for corrections (e.g., overpayment refund reversal)
-
-**Recommendation:** Option A - Use separate debt tracking if needed.
+### 5. Delivery Overview Regeneration
+**Handling:** Not applicable - delivery overviews cannot be regenerated in current system. Credits are only applied during LABELING_COMPLETED → AWAITING_PAYMENT transition.
 
 
 ## Implementation Details
@@ -658,13 +528,12 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
    - `CustomerCredit`
    - `CreditTransaction`
    - `OrderHistory`
-   - Add refund fields to `Order`
 
 2. **`src/services/credit_service.py`** - New service:
    - `get_customer_credit_balance(customer_id)`
    - `create_credit_transaction(transaction_data)`
    - `apply_credit_to_delivery(customer_id, delivery_total)`
-   - `issue_refund(customer_id, amount, reason, order_id, admin_id)`
+   - `issue_credit(customer_id, amount, reason, admin_id)`
    - `adjust_credit_balance(customer_id, amount, reason, admin_id)`
    - `get_credit_transactions(customer_id, limit, days)`
    - `get_customers_with_credit(min_amount)`
@@ -675,7 +544,7 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
    - `get_changes_by_admin(admin_id, days)`
 
 4. **`src/handlers/admin/credit_commands.py`** - New handler:
-   - `handle_refund(chat_id, args)`
+   - `handle_credit(chat_id, args)`
    - `handle_credit_balance(chat_id, args)`
    - `handle_adjust_credit(chat_id, args)`
    - `handle_list_credits(chat_id, args)`
@@ -702,10 +571,10 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
    - Update message template to show credit information
 
 3. **`src/handlers/customer/order_commands.py`** - Modify:
-   - `handle_my_orders()` - Show refund information
+   - `handle_my_orders()` - Show credit information
 
 4. **`src/services/command_router.py`** - Add new commands:
-   - `/refund` → admin credit handler
+   - `/credit` → admin credit handler
    - `/credit_balance` → admin credit handler
    - `/adjust_credit` → admin credit handler
    - `/list_credits` → admin credit handler
@@ -719,7 +588,7 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
 
 6. **`src/translations/en.json` & `nl.json`** - Add translation keys:
    - Credit balance messages
-   - Refund notifications
+   - Credit notifications
    - Delivery overview credit text
    - Admin confirmation messages
    - Error messages
@@ -742,10 +611,10 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
 
 ### Admin Panel Integration
 
-Add new section: **💰 Credits & Refunds**
+Add new section: **💰 Credits **
 
 Buttons:
-- Issue Refund
+- Issue Credit
 - View Credit Balances
 - Adjust Credit
 - Credit History
@@ -753,14 +622,13 @@ Buttons:
 
 ### Notification Messages
 
-**Customer Refund Notification:**
+**Customer Credit Issued Notification:**
 ```
-💰 Refund Issued
+💰 Credit Issued
 
-You have received a refund of €20.00
+You have received a credit of €20.00
 
 Reason: Defective bottles
-Order: #a1b2c3d4 - 2x Stout Beer
 
 Your new credit balance: €45.50
 
@@ -769,27 +637,13 @@ This credit will be automatically applied to your next delivery.
 Questions? Contact admin.
 ```
 
-**Customer Credit Applied Notification:**
+**Admin Credit Confirmation:**
 ```
-💰 Credit Applied
-
-Your credit of €20.00 has been applied to your delivery.
-
-Original Total: €50.00
-Credit Applied: -€20.00
-Amount to Pay: €30.00
-
-Remaining Credit: €0.00
-```
-
-**Admin Refund Confirmation:**
-```
-✅ Refund Issued Successfully
+✅ Credit Issued Successfully
 
 Customer: John Doe (@johndoe)
 Amount: €20.00
 Reason: Defective bottles
-Order: #a1b2c3d4
 
 Previous Balance: €25.50
 New Balance: €45.50
@@ -805,7 +659,7 @@ Customer has been notified.
    - Test credit balance retrieval
    - Test credit transaction creation
    - Test credit application with various scenarios
-   - Test refund issuance
+   - Test credir issuance
    - Test credit adjustment
    - Test concurrent credit updates
 
@@ -816,31 +670,31 @@ Customer has been notified.
    - Zero credit
    - Multiple credits applied
 
-3. **Refund Validation Tests**
-   - Refund amount validation
+3. **Credit Validation Tests**
+   - Credit amount validation
    - Order status validation
-   - Duplicate refund prevention
-   - Refund > order total handling
+   - Duplicate credit prevention
+   - Credit > order total handling
 
 ### Integration Tests
 
-1. **Full Refund Workflow**
-   - Issue refund → verify credit balance → apply to delivery → verify payment
+1. **Full Credit Workflow**
+   - Issue credit → verify credit balance → apply to delivery → verify payment
 
 2. **Multi-Delivery Credit Usage**
-   - Large refund → multiple deliveries → credit depletion
+   - Large credit → multiple deliveries → credit depletion
 
-3. **Guest User Refund**
-   - Issue refund to guest → verify credit tracking
+3. **Guest User Credit**
+   - Issue credit to guest → verify credit tracking
 
 4. **Concurrent Operations**
    - Simultaneous credit applications
-   - Refund during delivery processing
+   - Credit during delivery processing
 
 ### Manual Testing Scenarios
 
-1. Issue refund for completed order
-2. Issue refund for cancelled order
+1. Issue credit for completed order
+2. Issue credit for cancelled order
 3. Apply credit to delivery (credit < total)
 4. Apply credit to delivery (credit > total)
 5. Adjust credit balance (add/subtract)
@@ -866,7 +720,7 @@ Customer has been notified.
 
 **Medium Frequency (Cache Optional):**
 3. **Admin views customer credit** - `/credit_balance` command
-   - Frequency: Medium (admin checking before refund/adjustment)
+   - Frequency: Medium (admin checking before credit/adjustment)
    - Pattern: Individual, sporadic
    - Cache benefit: MEDIUM
 
@@ -881,7 +735,7 @@ Customer has been notified.
    - Pattern: Historical query
    - Cache benefit: NONE
 
-6. **Issue refund** - `/refund` command
+6. **Issue credit** - `/credit` command
    - Frequency: Low (exception handling)
    - Pattern: Write operation
    - Cache benefit: NONE (invalidates cache)
@@ -942,7 +796,7 @@ class CreditCache:
 ```
 
 **Cache Invalidation Points:**
-1. After issuing refund → `CreditCache.invalidate(customer_id)`
+1. After issuing credit → `CreditCache.invalidate(customer_id)`
 2. After adjusting credit → `CreditCache.invalidate(customer_id)`
 3. After applying credit to delivery → `CreditCache.invalidate(customer_id)`
 4. After any credit transaction → `CreditCache.invalidate(customer_id)`
@@ -1024,7 +878,7 @@ def _send_delivery_overview(self, customer_data: Dict, payment_link: str):
 
 **Implementation Priority:** Medium
 - Not critical for MVP
-- Add after core refund functionality works
+- Add after core credit functionality works
 - Easy to add later without breaking changes
 
 ### Cache Monitoring
@@ -1047,248 +901,886 @@ logger.info(f"Credit cache invalidated for customer {customer_id}")
 1. Cache miss on first read
 2. Cache hit on subsequent read within TTL
 3. Cache expiry after TTL
-4. Cache invalidation after refund
+4. Cache invalidation after credit
 5. Cache invalidation after credit application
 6. Concurrent access (multiple Lambda invocations)
 
 
-## Critical Questions Requiring Answers
+## Business Rules & Decisions
 
-### 1. Refund Policy Questions
+### Credit Application Timing
+**DECISION:** Credits are applied automatically only when orders transition from LABELING_COMPLETED → AWAITING_PAYMENT status.
+- Credits are NOT applied to existing AWAITING_PAYMENT orders
+- Credits are NOT applied when manually regenerating delivery overviews
+- Single trigger point ensures consistency and prevents double-application
+- **Credit application happens AFTER order status transition** (Decision #31)
+- **If credit application fails, order remains AWAITING_PAYMENT and admin manually resolves** (Decision #32)
+- **No compensating transactions or intermediate statuses** (Decision #33)
 
-**Q1.1:** Can refunds be issued for orders in PENDING or ORDERED status?
-- **Option A:** No - Cancel the order instead (no refund needed, order not yet paid)
-- **Option B:** Yes - Allow refund for pre-paid orders
-- **Recommendation:** Option A - Use cancellation for unpaid orders
+### Confirmed Decisions
 
-**Q1.2:** Should there be a time limit for issuing refunds?
-- **Option A:** No time limit (refund anytime)
-- **Option B:** 30 days after delivery
-- **Option C:** 90 days after delivery
-- **Recommendation:** Option A - Admin discretion, no automatic limit
+**Credit Application:**
+1. **Automatic Application:** YES - Credits always applied automatically (no customer consent required)
+2. **Customer Opt-Out:** NO - Customers cannot opt-out of credit application
+3. **Guest Users:** YES - Track credit, admin manually settles
+4. **Delivery Overview Regeneration:** N/A - Not possible in current system
 
-**Q1.3:** Can the same order be refunded multiple times?
-- **Option A:** No - One refund per order maximum
-- **Option B:** Yes - Allow multiple partial refunds
-- **Recommendation:** Option A - Simpler tracking, prevents abuse
+**Notifications:**
+5. **Credit Issued:** YES - Immediate notification to customer
+6. **Credit Applied:** NO - Only shown in delivery overview (no separate notification)
+7. **Admin Notification:** NO - Admin not notified when customer views balance
 
-**Q1.4:** Should refunds be allowed for orders with status AWAITING_PAYMENT?
-- **Option A:** Yes - Customer paid but admin issues refund before marking as paid
-- **Option B:** No - Wait until COMPLETED status
-- **Recommendation:** Option A - Allows flexibility for payment issues
+**Reporting:**
+8. **Monthly Reports:** NO - On-demand reports only
+9. **Metrics:** Basic metrics (total outstanding, issued, applied)
 
-### 2. Credit Application Questions
+**Technical:**
+10. **Caching:** YES - 5-minute TTL in-memory cache
+11. **Concurrency:** DynamoDB conditional updates with retry logic
 
-**Q2.1:** Should credit application be automatic or require customer consent?
-- **Option A:** Automatic (always apply)
-- **Option B:** Customer can opt-out
-- **Option C:** Customer must opt-in
-- **Recommendation:** Option A - Simplest, most expected behavior
+### Confirmed Decisions (Additional)
 
-**Q2.2:** Can customers request to NOT use their credit for a specific delivery?
-- **Option A:** No - Credit always applied automatically
-- **Option B:** Yes - Customer can request to save credit
-- **Recommendation:** Option A - Simpler implementation, rare use case
+12. **Credit Export:** YES - Separate `/export_credits` command for CSV export (8 fields: customer_id, customer_name, username, current_balance, total_issued, total_used, last_transaction_date, is_guest)
+13. **Transaction Immutability:** YES - Never delete/modify transactions, use adjustment transactions for corrections
+14. **Amount Precision:** 2 decimal places (€0.01)
+15. **Maximum Balance:** NO - No limit on customer credit balance
+16. **Customer Deletion:** ALLOW - Customer deletion allowed regardless of credit balance, audit log maintains historical record
+17. **Wrong Customer Credit:** Manual reversal via adjustment transactions (negative for wrong customer, positive for correct customer)
+18. **Failed Delivery:** Credit remains applied, admin manually resolves if needed
+19. **Credit Expiry:** NO - Credits never expire
+20. **Credit Issuance:** Credits are always independent (no order linkage)
+21. **Guest User Credits:** Credits apply automatically to deliveries; admin receives delivery overview with credit info and manually relays to guest via contact method
+22. **Partial Delivery Credits:** Credits apply to delivered items only (not delayed items)
+23. **Credit Notifications:** Always notify customers for all credit transactions (CREDIT_ISSUED, ADJUSTMENT, MANUAL_ADD, MANUAL_SUBTRACT)
+24. **Negative Balance:** System warns but allows admin to confirm and proceed with negative balance
+25. **Multiple Credits Display:** Show separate line items with dates in delivery overview for maximum transparency
+26. **Batch Processing Rollback:** No rollback - credit remains applied even if overview send fails, admin manually resolves
+27. **Customer Credit History:** `/my_credit` shows last 10 transactions only; admin has full access via `/credit_history`
+28. **Order List Display:** Do not mention credit in `/list_my_orders`; `/help` shows `/my_credit` command
+29. **Concurrency:** Not applicable - single admin, no special concurrency handling needed
+30. **Cancelled Order Credits:** Credits are never automatically reversed; admin manually adjusts if needed.
+31. **Credit Application Timing:** Credit application happens AFTER order status transition to AWAITING_PAYMENT
+32. **Failed Credit Application:** If credit application fails, order remains AWAITING_PAYMENT and admin manually resolves
+33. **No Compensating Transactions:** No automatic rollback or intermediate statuses for credit application failures
 
-**Q2.3:** Should credit be applied to guest user deliveries?
-- **Option A:** Yes - Track credit, admin manually settles
-- **Option B:** No - Guest users get direct refunds only
-- **Recommendation:** Option A - Consistent system, admin flexibility
+---
 
-**Q2.4:** What happens if delivery overview is regenerated for same customer?
-- **Option A:** Credit applied again (double application)
-- **Option B:** Check if already applied, skip
-- **Option C:** Prevent regeneration if credit already applied
-- **Recommendation:** Option B - Idempotent operation with transaction tracking
+## Open Questions (Added from Viability Review)
 
-### 3. Notification Questions
+### Specification Completion
+- **Q1:** ✅ RESOLVED - ALL credit issuance is manual, regardless of cancellation reason. Credits are never automatically issued or reversed when orders are cancelled.
+- **Q2:** ✅ RESOLVED - No additional decisions beyond #30
+- **Q3:** ✅ RESOLVED - No unresolved edge cases
 
-**Q3.1:** Should customers be notified immediately when refund is issued?
-- **Option A:** Yes - Immediate notification
-- **Option B:** No - Only show in next delivery overview
-- **Option C:** Both - Immediate + reminder in overview
-- **Recommendation:** Option A - Transparency and customer satisfaction
+### Credit Application Timing
+- **Q4:** ✅ RESOLVED - Credit application happens AFTER status transition to AWAITING_PAYMENT. Order status is updated first, then credit is applied.
+- **Q5:** ✅ RESOLVED - NO rollback. If credit application fails, order status remains AWAITING_PAYMENT and admin manually resolves.
+- **Q6:** ✅ RESOLVED - NO atomic transaction. Status update and credit application are separate sequential operations.
 
-**Q3.2:** Should customers be notified when credit is applied to delivery?
-- **Option A:** Yes - Separate notification
-- **Option B:** No - Only shown in delivery overview
-- **Recommendation:** Option B - Delivery overview already shows credit application
+### Batch Processing Rollback
+- **Q7:** ✅ RESOLVED - NO pending credit application state. Admin relies on error messages to identify failed credit applications.
+- **Q8:** ✅ RESOLVED - NO automatic reversal. Credit remains applied even if delivery overview send fails, admin manually resolves (per Decision #26).
+- **Q9:** ✅ RESOLVED - No threshold. Process all customers regardless of failure rate. Admin is notified per-customer using `admin_overview_sent_failed` translation key.
+- **Q10:** ✅ RESOLVED - YES. Admin receives aggregated summary at end of batch showing total customers, successful sends, failed sends, and list of failed customers with reasons.
 
-**Q3.3:** Should admin be notified when customer views their credit balance?
-- **Option A:** Yes - Track customer awareness
-- **Option B:** No - Privacy concern
-- **Recommendation:** Option B - Unnecessary tracking
+### Guest User Credit Workflow
+- **Q11:** ✅ RESOLVED - YES. Guest delivery overviews in admin message include credit balance at the top.
+- **Q12:** ✅ RESOLVED - Credit application is already part of delivery overview message. For guest users, show remaining credit balance in admin message ONLY if balance is non-zero (positive or negative).
+- **Q13:** ✅ RESOLVED - Batch summary shows: (1) count of successfully notified users, (2) failed users section with details (if any), (3) guest users section with full overviews (if any). Omit section headers when section is empty.
 
-### 4. Reporting Questions
+### Caching Strategy
+- **Q14:** ✅ RESOLVED - Use in-memory caching (not DynamoDB DAX). Zero cost, simple implementation.
+- **Q15:** ✅ RESOLVED - Implement caching in Phase 1 (MVP).
+- **Q16:** ✅ RESOLVED - 1 Lambda instance during batch processing (sequential). Cache will be effective within single batch.
+- **Q17:** ✅ RESOLVED - YES. Pre-load credit balances into cache before processing batch to ensure cache hits.
 
-**Q4.1:** Should there be a monthly credit report for accounting?
-- **Option A:** Yes - Automated monthly report
-- **Option B:** Yes - On-demand report only
-- **Option C:** No - Admin queries as needed
-- **Recommendation:** Option B - Flexibility without automation overhead
+### Negative Balance Safeguards
+- **Q18:** ✅ RESOLVED - Warning message: "⚠️ Creating a negative balance. Continue? Yes/No"
+- **Q19:** ✅ RESOLVED - NO maximum negative balance limit.
+- **Q20:** ✅ RESOLVED - NO admin alerts/reports for negative balances.
+- **Q21:** ✅ RESOLVED - YES. Reason field is mandatory when creating negative balance.
 
-**Q4.2:** What credit metrics should be tracked?
-- **Suggested Metrics:**
-  - Total outstanding credits
-  - Total credits issued this month
-  - Total credits applied this month
-  - Average credit per customer
-  - Customers with credit > €50
-- **Recommendation:** Implement basic metrics, expand based on need
+### Database Design
+- **Q22:** ✅ RESOLVED - NO GSI on CreditTransaction.created_by (single admin only).
+- **Q23:** ✅ RESOLVED - NO GSI on CustomerCredit.current_balance (table scan acceptable for infrequent queries).
 
-**Q4.3:** Should credit transactions be exportable to CSV?
-- **Option A:** Yes - Include in `/all_orders` export
-- **Option B:** Yes - Separate `/export_credits` command
-- **Option C:** No - Admin can query as needed
-- **Recommendation:** Option B - Separate export for accounting
+### Command Integration
+- **Q24:** ✅ RESOLVED - YES. Add credit commands to `/admin` panel with button-based interface.
+- **Q25:** ✅ RESOLVED - YES. Add `/my_credit` to customer help menu.
+- **Q26:** ✅ RESOLVED - NO. Do not show credit balance in `/list_my_orders` output (per Decision #28).
 
-### 5. Technical Questions
+### Translation Keys
+- **Q27:** ✅ RESOLVED - Create translation key mapping during implementation (not now).
+- **Q28:** ✅ RESOLVED - Amazon Q will provide Dutch translations.
+- **Q29:** ✅ RESOLVED - YES. Follow existing tone/style guide.
 
-**Q5.1:** Should credit balance be cached?
-- **Answer:** YES - See caching strategy section above
-- **Implementation:** In-memory cache with 5-minute TTL
+### Correction Workflow
+- **Q30:** ✅ RESOLVED - NO `/transfer_credit` command. Use `/adjust_credit` twice manually.
+- **Q31:** ✅ RESOLVED - NO separate transaction type for corrections. Use ADJUSTMENT type.
+- **Q32:** ✅ RESOLVED - NO automatic validation. Admin manually ensures correction transactions balance.
 
-**Q5.2:** How to handle concurrent credit updates?
-- **Option A:** DynamoDB conditional updates (optimistic locking)
-- **Option B:** Lambda concurrency limit = 1 (pessimistic locking)
-- **Option C:** Accept eventual consistency
-- **Recommendation:** Option A - Conditional updates with retry logic
+### Partial Delivery Logic
+- **Q33:** ✅ RESOLVED - Out of scope. Partial delivery price recalculation not part of credit system.
+- **Q34:** ✅ RESOLVED - Out of scope. Delayed item handling not part of credit system.
+- **Q35:** ✅ RESOLVED - Not relevant. Credits apply to delivered orders as specified in Decision #22.
 
-**Q5.3:** Should credit transactions be immutable?
-- **Option A:** Yes - Never delete/modify transactions (audit trail)
-- **Option B:** No - Allow admin to delete erroneous transactions
-- **Recommendation:** Option A - Immutable audit trail, use adjustment transactions for corrections
+### Performance
+- **Q36:** ✅ RESOLVED - Current batch processing time: ~10 seconds for 100 customers.
+- **Q37:** ✅ RESOLVED - NO parallel processing for batch sends.
+- **Q38:** ✅ RESOLVED - NO progress indicators for long batches.
 
-**Q5.4:** What precision for credit amounts?
-- **Option A:** 2 decimal places (cents)
-- **Option B:** 4 decimal places (for future flexibility)
-- **Recommendation:** Option A - Match currency precision (€0.01)
+### Testing
+- **Q39:** ✅ RESOLVED - YES. Use TDD approach (create test files with failing tests first).
+- **Q40:** ✅ RESOLVED - YES. Add credit system to end-to-end test plan.
+- **Q41:** ✅ RESOLVED - 80% minimum test coverage required.
 
-**Q5.5:** Should there be a maximum credit balance per customer?
-- **Option A:** No limit
-- **Option B:** €500 limit (flag for admin review)
-- **Option C:** €1000 limit (hard cap)
-- **Recommendation:** Option A - No limit, admin discretion
+### Implementation Scope
+- **Q42:** ✅ RESOLVED - NO scope reduction. Implement full MVP including caching and reporting.
+- **Q43:** ✅ RESOLVED - NO smaller increments. Implement complete Phase 1 functionality.
+- **Q44:** ✅ RESOLVED - Flexible timeline. Estimated 60-80 hours total (3-8 weeks depending on availability).
 
-### 6. Edge Case Questions
+### Deployment Strategy
+- **Q45:** ✅ RESOLVED - NO feature flag.
+- **Q46:** ✅ RESOLVED - NO subset testing. Deploy to full environment.
+- **Q47:** ✅ RESOLVED - NO formal rollback plan. Disable commands via router if issues arise (per spec Rollback Plan section).
 
-**Q6.1:** What if customer is deleted while having credit balance?
-- **Option A:** Prevent deletion (require settlement first)
-- **Option B:** Transfer credit to admin notification
-- **Option C:** Allow deletion, credit forfeited
-- **Recommendation:** Option A - Prevent data loss
+### Database Design (Future-Proofing)
+- **Q48:** ⚠️ OPEN - Should we add GSI on `CreditTransaction.created_by` for future-proofing, even if single admin today? (Viability Review: Recommended for multi-admin scenarios)
+- **Q49:** ⚠️ OPEN - Should we add GSI on `CustomerCredit.current_balance` to avoid table scans for `/list_credits`? (Viability Review: Recommended when customer count exceeds 1000)
 
-**Q6.2:** What if refund is issued for wrong customer?
-- **Option A:** Admin manually reverses (adjustment transaction)
-- **Option B:** System provides "undo refund" feature
-- **Recommendation:** Option A - Manual correction with audit trail
+### Credit Application Timing (CRITICAL)
+- **Q50:** ✅ RESOLVED - Credit application happens AFTER order status transition. If credit application fails, order remains AWAITING_PAYMENT and admin manually resolves.
+- **Q51:** ✅ RESOLVED - NO compensating transactions. Failed credit applications require manual admin cleanup.
+- **Q52:** ✅ RESOLVED - NO intermediate status. Direct transition LABELING_COMPLETED → AWAITING_PAYMENT is correct.
 
-**Q6.3:** What if credit is applied but delivery fails?
-- **Option A:** Credit remains applied (customer must contact admin)
-- **Option B:** Automatic credit restoration
-- **Recommendation:** Option A - Manual resolution, rare case
+### Batch Processing Enhancements
+- **Q53:** ⚠️ OPEN - Should we add batch progress indicators (e.g., "Processing 25/100...")? (Viability Review: Recommended for batches >50 customers)
+- **Q54:** ⚠️ OPEN - Should we implement batch checkpointing to resume failed batches? (Viability Review: Recommended for batches >200 customers)
+- **Q55:** ⚠️ OPEN - Should guest user overviews show credit balance even when zero (for consistency)? (Viability Review: Minor UX improvement)
 
-**Q6.4:** Should there be a "credit expiry" feature?
-- **Option A:** No - Credits never expire
-- **Option B:** Yes - 1 year expiry
-- **Option C:** Yes - Configurable expiry
-- **Recommendation:** Option A - No expiry, simpler system
+### Caching Enhancements
+- **Q56:** ⚠️ OPEN - Should we pre-warm cache before batch processing (load all customer credits upfront)? (Viability Review: Recommended for Phase 1)
+- **Q57:** ⚠️ OPEN - Should we add cache hit/miss metrics for monitoring? (Viability Review: Nice to have)
+
+### Technical Implementation Details
+- **Q58:** ⚠️ OPEN - Should we use DynamoDB TransactWriteItems for atomic credit+order updates? (Viability Review: Would eliminate race conditions)
+- **Q59:** ⚠️ OPEN - What retry strategy should we use for conditional update failures? (Viability Review: Need to specify exponential backoff parameters)
+
+### Translation & Documentation
+- **Q60:** ⚠️ OPEN - Should we create a translation key mapping document now or during implementation? (Viability Review: Recommended before implementation)
+
+### Admin UX Improvements
+- **Q61:** ⚠️ OPEN - Should we add `/undo_credit` command for quick reversal of last credit transaction? (Viability Review: Recommended for Phase 2)
+- **Q62:** ⚠️ OPEN - Should negative balance warnings require explicit confirmation (two-step process)? (Viability Review: Recommended to prevent accidents)
+
+### Testing Strategy
+- **Q63:** ⚠️ OPEN - Should we add performance benchmarks for batch processing with credits? (Viability Review: Nice to have)
+- **Q64:** ⚠️ OPEN - Should we add chaos testing (simulate DynamoDB failures, Lambda timeouts)? (Viability Review: Nice to have)
+
+---
+
+## Questions Status Summary
+
+**Total Questions:** 64
+**Resolved:** 50
+**Critical Open:** 0
+**Important Open:** 8 (Q48, Q49, Q53, Q54, Q58, Q59, Q61, Q62)
+**Nice to Have Open:** 6 (Q55, Q56, Q57, Q60, Q63, Q64)
+
+**Status:** ✅ CRITICAL QUESTIONS RESOLVED - Ready for implementation with open questions to be decided during development
+
+**See:** `docs/credit-system-viability-review.md` for detailed analysis and recommendations
+
+---
+
+## Implementation Scope
+- **Q42:** ✅ RESOLVED - NO scope reduction. Implement full MVP including caching and reporting.
+- **Q43:** ✅ RESOLVED - NO smaller increments. Implement complete Phase 1 functionality.
+- **Q44:** ✅ RESOLVED - Flexible timeline. Estimated 60-80 hours total (3-8 weeks depending on availability).
+
+### Deployment Strategy
+- **Q45:** Should we implement feature flag for credit system?
+- **Q46:** Should we test with subset of customers first?
+- **Q47:** Should we have rollback plan if issues discovered?
+
+--- are never automatically reversed; admin manually adjusts if needed
 
 ## Implementation Phases
 
-### Phase 1: Core Refund System (MVP)
+### Phase 1: Core Credit System (MVP)
 **Estimated Time:** 17-22 hours
+**TDD Approach:** Write failing tests first, then implement code to pass tests
 
-**Deliverables:**
-1. Database tables (CustomerCredits, CreditTransactions, OrderHistory)
-2. Credit service (issue refund, get balance, apply credit)
-3. Audit service (log order changes, link to refunds)
-4. Admin refund command (basic)
-5. Customer credit view command
-6. Delivery overview integration (credit application)
-7. Basic notifications
-8. Order history logging for refund-related changes
+#### Task 1.1: Database Schema & Infrastructure (2-3 hours)
+**Commit:** `feat: add credit system database tables to CloudFormation`
 
-**Testing:** Unit tests for credit service, audit service tests, integration test for refund workflow
+- Add 3 new DynamoDB tables to `template.yaml`:
+  - `CustomerCreditsTable`
+  - `CreditTransactionsTable`
+  - `OrderHistoryTable`
+- Add IAM permissions for Lambda to access new tables
+- Deploy infrastructure only (no code changes)
+
+**Files:** `template.yaml`
+**Note:** Infrastructure setup - no tests needed
+
+#### Task 1.2: Data Models (1-2 hours)
+**Commit:** `feat: add credit system data models`
+
+- Add `CustomerCredit` dataclass to `src/models/entities.py`
+- Add `CreditTransaction` dataclass
+- Add `OrderHistory` dataclass
+- No business logic, just data structures
+
+**Files:** `src/models/entities.py`
+**Note:** Data models - no tests needed (dataclasses)
+
+#### Task 1.3: Database Access Layer (2-3 hours)
+**Commit:** `test: add failing tests for credit database operations`
+**Commit:** `feat: implement database methods for credit system`
+
+**TDD Steps:**
+1. Create `tests/test_database_credit.py` with failing tests:
+   - Test `create_customer_credit()`
+   - Test `get_customer_credit()`
+   - Test `update_customer_credit()`
+   - Test `create_credit_transaction()`
+   - Test `get_credit_transactions_by_customer()`
+   - Test `create_order_history()`
+   - Test `get_order_history()`
+2. Run tests (should fail)
+3. Implement methods in `src/services/database.py`
+4. Run tests (should pass)
+
+**Files:** `tests/test_database_credit.py`, `src/services/database.py`
+
+#### Task 1.4: Credit Service - Core Logic (3-4 hours)
+**Commit:** `test: add failing tests for core credit service`
+**Commit:** `feat: implement core credit service logic`
+
+**TDD Steps:**
+1. Create `tests/test_credit_service.py` with failing tests:
+   - Test `get_customer_credit_balance()` with existing credit
+   - Test `get_customer_credit_balance()` with no credit (returns 0)
+   - Test `create_credit_transaction()`
+   - Test `_update_customer_credit_balance()`
+2. Run tests (should fail)
+3. Create `src/services/credit_service.py` and implement methods
+4. Run tests (should pass)
+
+**Files:** `tests/test_credit_service.py`, `src/services/credit_service.py`
+
+#### Task 1.5: Credit Service - Issue Credit (2-3 hours)
+**Commit:** `test: add failing tests for issue credit functionality`
+**Commit:** `feat: add issue credit functionality`
+
+**TDD Steps:**
+1. Add to `tests/test_credit_service.py`:
+   - Test `issue_credit()` with valid amount
+   - Test `issue_credit()` with invalid amount (negative, zero)
+   - Test `issue_credit()` with non-existent customer
+   - Test transaction creation and balance update
+2. Run tests (should fail)
+3. Implement `issue_credit()` in `src/services/credit_service.py`
+4. Run tests (should pass)
+
+**Files:** `tests/test_credit_service.py`, `src/services/credit_service.py`
+
+#### Task 1.6: Credit Service - Apply Credit (2-3 hours)
+**Commit:** `test: add failing tests for credit application logic`
+**Commit:** `feat: add credit application logic for deliveries`
+
+**TDD Steps:**
+1. Add to `tests/test_credit_service.py`:
+   - Test `apply_credit_to_delivery()` with credit < total
+   - Test `apply_credit_to_delivery()` with credit > total
+   - Test `apply_credit_to_delivery()` with credit = total
+   - Test `apply_credit_to_delivery()` with zero credit
+   - Test balance updates and transaction creation
+2. Run tests (should fail)
+3. Implement `apply_credit_to_delivery()` in `src/services/credit_service.py`
+4. Run tests (should pass)
+
+**Files:** `tests/test_credit_service.py`, `src/services/credit_service.py`
+
+#### Task 1.7: Audit Service (2 hours)
+**Commit:** `test: add failing tests for audit service`
+**Commit:** `feat: add audit service for order history tracking`
+
+**TDD Steps:**
+1. Create `tests/test_audit_service.py` with failing tests:
+   - Test `log_order_change()` creates history entry
+   - Test `get_order_history()` retrieves entries
+   - Test TTL is set correctly
+2. Run tests (should fail)
+3. Create `src/services/audit_service.py` and implement methods
+4. Run tests (should pass)
+
+**Files:** `tests/test_audit_service.py`, `src/services/audit_service.py`
+
+#### Task 1.8: Translation Keys (1 hour)
+**Commit:** `feat: add translation keys for credit system`
+
+- Add credit-related keys to `src/translations/en.json`
+- Add credit-related keys to `src/translations/nl.json`
+- Basic keys only (notifications, errors, confirmations)
+
+**Files:** `src/translations/en.json`, `src/translations/nl.json`
+**Note:** Translation files - no tests needed
+
+#### Task 1.9: Admin Command - Issue Credit (Basic) (2-3 hours)
+**Commit:** `test: add failing tests for /credit command`
+**Commit:** `feat: add basic /credit command for admins`
+
+**TDD Steps:**
+1. Create `tests/test_admin_credit_commands.py` with failing tests:
+   - Test `/credit` with valid input
+   - Test `/credit` with invalid username
+   - Test `/credit` with invalid amount
+   - Test `/credit` with missing reason
+   - Test command routing
+2. Run tests (should fail)
+3. Create `src/handlers/admin/credit_commands.py` and implement
+4. Add to command router
+5. Run tests (should pass)
+
+**Files:** `tests/test_admin_credit_commands.py`, `src/handlers/admin/credit_commands.py`, `src/services/command_router.py`
+
+#### Task 1.10: Customer Command - View Credit (1-2 hours)
+**Commit:** `test: add failing tests for /my_credit command`
+**Commit:** `feat: add /my_credit command for customers`
+
+**TDD Steps:**
+1. Create `tests/test_customer_credit_commands.py` with failing tests:
+   - Test `/my_credit` with existing credit
+   - Test `/my_credit` with zero credit
+   - Test `/my_credit` displays recent transactions
+   - Test command routing
+2. Run tests (should fail)
+3. Create `src/handlers/customer/credit_commands.py` and implement
+4. Add to command router
+5. Run tests (should pass)
+
+**Files:** `tests/test_customer_credit_commands.py`, `src/handlers/customer/credit_commands.py`, `src/services/command_router.py`
+
+#### Task 1.11: Delivery Overview Integration (3-4 hours)
+**Commit:** `test: add failing tests for delivery overview credit integration`
+**Commit:** `feat: integrate credit application into delivery overviews`
+
+**TDD Steps:**
+1. Create `tests/test_delivery_overview_credit.py` with failing tests:
+   - Test overview with credit < total
+   - Test overview with credit > total
+   - Test overview with credit = total
+   - Test overview with zero credit
+   - Test message formatting with credit info
+2. Run tests (should fail)
+3. Modify `src/handlers/admin/delivery_overview_handler.py`
+4. Run tests (should pass)
+
+**Files:** `tests/test_delivery_overview_credit.py`, `src/handlers/admin/delivery_overview_handler.py`
+
+#### Task 1.12: Credit Notifications (1-2 hours)
+**Commit:** `test: add failing tests for credit notifications`
+**Commit:** `feat: add customer notifications for credit transactions`
+
+**TDD Steps:**
+1. Add to `tests/test_credit_service.py`:
+   - Test notification sent when credit issued
+   - Test notification content and formatting
+   - Test notification failure handling
+2. Run tests (should fail)
+3. Add notification logic to `src/services/credit_service.py`
+4. Run tests (should pass)
+
+**Files:** `tests/test_credit_service.py`, `src/services/credit_service.py`
+
+#### Task 1.13: Integration Tests (2-3 hours)
+**Commit:** `test: add end-to-end integration tests for credit workflow`
+
+**TDD Steps:**
+1. Create `tests/integration/test_credit_workflow.py`:
+   - Test full workflow: issue credit → apply to delivery → verify balance
+   - Test multiple delivery scenarios with carry-forward
+   - Test edge cases (credit > total, credit < total)
+   - Test guest user credit workflow
+2. Run integration tests
+3. Fix any issues discovered
+4. Verify 80% test coverage achieved
+
+**Files:** `tests/integration/test_credit_workflow.py`
+
+#### Task 1.14: Documentation (1 hour)
+**Commit:** `docs: add credit system documentation`
+
+- Update `README.md` with credit commands
+- Add credit system overview
+- Document admin and customer workflows
+
+**Files:** `README.md`
+**Note:** Documentation - no tests needed
+
+**Phase 1 Summary:**
+- **Total Tasks:** 14 atomic tasks
+- **Estimated Time:** 17-22 hours
+- **Average Task Size:** 1-3 hours each
+- **TDD Approach:** Tests written before implementation for all business logic
+- **Test Coverage Target:** 80% minimum
+
+---
 
 ### Phase 2: Enhanced Admin Features
 **Estimated Time:** 10-15 hours
+**TDD Approach:** Write failing tests first, then implement code to pass tests
 
-**Deliverables:**
-1. Credit adjustment command
-2. List customers with credit
-3. Credit transaction history
-4. Admin panel integration
-5. Enhanced refund UI (button-based)
+#### Task 2.1: Credit Adjustment Command (2-3 hours)
+**Commit:** `test: add failing tests for /adjust_credit command`
+**Commit:** `feat: add /adjust_credit command for admins`
 
-**Testing:** Admin workflow tests, pagination tests
+**TDD Steps:**
+1. Add to `tests/test_admin_credit_commands.py`:
+   - Test `/adjust_credit` with positive adjustment
+   - Test `/adjust_credit` with negative adjustment
+   - Test `/adjust_credit` creating negative balance
+   - Test validation and error handling
+2. Run tests (should fail)
+3. Add `adjust_credit_balance()` to `src/services/credit_service.py`
+4. Implement `/adjust_credit` command in `src/handlers/admin/credit_commands.py`
+5. Run tests (should pass)
+
+**Files:** `tests/test_admin_credit_commands.py`, `src/services/credit_service.py`, `src/handlers/admin/credit_commands.py`
+
+#### Task 2.2: List Customers with Credit (2-3 hours)
+**Commit:** `test: add failing tests for /list_credits command`
+**Commit:** `feat: add /list_credits command for admins`
+
+**TDD Steps:**
+1. Add to `tests/test_admin_credit_commands.py`:
+   - Test `/list_credits` returns all customers with credit
+   - Test `/list_credits` with min_amount filter
+   - Test pagination
+   - Test empty results
+2. Run tests (should fail)
+3. Add `get_customers_with_credit()` to `src/services/credit_service.py`
+4. Implement `/list_credits` command
+5. Run tests (should pass)
+
+**Files:** `tests/test_admin_credit_commands.py`, `src/services/credit_service.py`, `src/handlers/admin/credit_commands.py`
+
+#### Task 2.3: Credit Transaction History (2-3 hours)
+**Commit:** `test: add failing tests for /credit_history command`
+**Commit:** `feat: add /credit_history command for admins`
+
+**TDD Steps:**
+1. Add to `tests/test_admin_credit_commands.py`:
+   - Test `/credit_history` retrieves transactions
+   - Test `/credit_history` with days filter
+   - Test pagination
+   - Test transaction formatting
+2. Run tests (should fail)
+3. Add `get_credit_transactions()` to `src/services/credit_service.py`
+4. Implement `/credit_history` command
+5. Run tests (should pass)
+
+**Files:** `tests/test_admin_credit_commands.py`, `src/services/credit_service.py`, `src/handlers/admin/credit_commands.py`
+
+#### Task 2.4: Credit Balance View Command (1-2 hours)
+**Commit:** `test: add failing tests for /credit_balance command`
+**Commit:** `feat: add /credit_balance command for admins`
+
+**TDD Steps:**
+1. Add to `tests/test_admin_credit_commands.py`:
+   - Test `/credit_balance` displays customer info
+   - Test balance, totals, and recent transactions
+   - Test action buttons
+2. Run tests (should fail)
+3. Implement `/credit_balance` command
+4. Run tests (should pass)
+
+**Files:** `tests/test_admin_credit_commands.py`, `src/handlers/admin/credit_commands.py`
+
+#### Task 2.5: Admin Panel Integration (2-3 hours)
+**Commit:** `test: add failing tests for admin panel credit integration`
+**Commit:** `feat: integrate credit commands into admin panel`
+
+**TDD Steps:**
+1. Add to `tests/test_admin_panel.py`:
+   - Test "💰 Credits" section appears
+   - Test credit buttons (Issue, View, Adjust, History)
+   - Test callback handlers
+2. Run tests (should fail)
+3. Modify `src/handlers/admin/admin_panel.py`
+4. Add callback handlers
+5. Run tests (should pass)
+
+**Files:** `tests/test_admin_panel.py`, `src/handlers/admin/admin_panel.py`
+
+#### Task 2.6: Enhanced Credit UI - Confirmation Dialogs (1-2 hours)
+**Commit:** `test: add failing tests for credit confirmation dialogs`
+**Commit:** `feat: add confirmation dialogs for credit operations`
+
+**TDD Steps:**
+1. Add to `tests/test_admin_credit_commands.py`:
+   - Test confirmation dialog for `/credit`
+   - Test confirmation dialog for `/adjust_credit`
+   - Test before/after balance preview
+   - Test cancel option
+2. Run tests (should fail)
+3. Add confirmation logic to `src/handlers/admin/credit_commands.py`
+4. Run tests (should pass)
+
+**Files:** `tests/test_admin_credit_commands.py`, `src/handlers/admin/credit_commands.py`
+
+#### Task 2.7: Translation Keys - Phase 2 (1 hour)
+**Commit:** `feat: add Phase 2 translation keys for credit system`
+
+- Add adjustment-related keys
+- Add list/history display keys
+- Add admin panel button labels
+- Add confirmation dialog keys
+
+**Files:** `src/translations/en.json`, `src/translations/nl.json`
+**Note:** Translation files - no tests needed
+
+#### Task 2.8: Admin Workflow Tests (1-2 hours)
+**Commit:** `test: add admin workflow integration tests`
+
+**TDD Steps:**
+1. Create `tests/integration/test_admin_credit_workflows.py`:
+   - Test complete credit adjustment workflow
+   - Test list credits with pagination
+   - Test credit history retrieval
+   - Test admin panel button interactions
+2. Run integration tests
+3. Fix any issues discovered
+
+**Files:** `tests/integration/test_admin_credit_workflows.py`
+
+**Phase 2 Summary:**
+- **Total Tasks:** 8 atomic tasks
+- **Estimated Time:** 10-15 hours
+- **Average Task Size:** 1-3 hours each
+- **TDD Approach:** Tests written before implementation for all features
+
+---
 
 ### Phase 3: Reporting & Optimization
 **Estimated Time:** 8-12 hours
+**TDD Approach:** Write failing tests first, then implement code to pass tests
 
-**Deliverables:**
-1. Credit caching implementation
-2. Credit export/reporting
-3. Metrics and monitoring
-4. Performance optimization
+#### Task 3.1: Credit Cache Service (2-3 hours)
+**Commit:** `test: add failing tests for credit cache service`
+**Commit:** `feat: implement credit balance caching`
 
-**Testing:** Cache tests, performance benchmarks, load testing
+**TDD Steps:**
+1. Create `tests/test_credit_cache.py` with failing tests:
+   - Test cache miss on first read
+   - Test cache hit on subsequent read
+   - Test cache expiry after TTL
+   - Test cache invalidation
+   - Test concurrent access
+2. Run tests (should fail)
+3. Create `src/services/credit_cache.py`
+4. Implement cache with 5-minute TTL
+5. Run tests (should pass)
+
+**Files:** `tests/test_credit_cache.py`, `src/services/credit_cache.py`
+
+#### Task 3.2: Integrate Cache into Credit Service (1-2 hours)
+**Commit:** `test: add failing tests for cache integration`
+**Commit:** `feat: integrate caching into credit service`
+
+**TDD Steps:**
+1. Add to `tests/test_credit_service.py`:
+   - Test `get_customer_credit_balance()` uses cache
+   - Test cache invalidation on write operations
+   - Test cache pre-warming for batch processing
+2. Run tests (should fail)
+3. Modify `src/services/credit_service.py` to use cache
+4. Add cache invalidation to all write methods
+5. Run tests (should pass)
+
+**Files:** `tests/test_credit_service.py`, `src/services/credit_service.py`
+
+#### Task 3.3: Credit Export Command (2-3 hours)
+**Commit:** `test: add failing tests for /export_credits command`
+**Commit:** `feat: add /export_credits command for admins`
+
+**TDD Steps:**
+1. Add to `tests/test_admin_credit_commands.py`:
+   - Test `/export_credits` generates CSV
+   - Test CSV contains 8 required fields
+   - Test CSV formatting and encoding
+   - Test empty results
+2. Run tests (should fail)
+3. Implement `/export_credits` in `src/handlers/admin/credit_commands.py`
+4. Add to command router and admin panel
+5. Run tests (should pass)
+
+**Files:** `tests/test_admin_credit_commands.py`, `src/handlers/admin/credit_commands.py`
+
+#### Task 3.4: Credit Metrics and Monitoring (1-2 hours)
+**Commit:** `test: add failing tests for credit metrics`
+**Commit:** `feat: add credit system metrics and monitoring`
+
+**TDD Steps:**
+1. Create `tests/test_credit_metrics.py` with failing tests:
+   - Test CloudWatch metrics are published
+   - Test metric values are correct
+   - Test cache hit rate calculation
+2. Run tests (should fail)
+3. Add metrics to `src/services/credit_service.py` and `src/services/credit_cache.py`
+4. Run tests (should pass)
+
+**Files:** `tests/test_credit_metrics.py`, `src/services/credit_service.py`, `src/services/credit_cache.py`
+
+#### Task 3.5: Performance Optimization - Batch Processing (1-2 hours)
+**Commit:** `test: add failing tests for batch processing optimization`
+**Commit:** `refactor: optimize delivery overview batch processing`
+
+**TDD Steps:**
+1. Add to `tests/test_delivery_overview_credit.py`:
+   - Test batch pre-loads all customer credits
+   - Test batch processing time < 5s for 100 customers
+   - Test cache effectiveness during batch
+2. Run tests (should fail)
+3. Modify `src/handlers/admin/delivery_overview_handler.py`
+4. Add cache pre-warming
+5. Run tests (should pass)
+
+**Files:** `tests/test_delivery_overview_credit.py`, `src/handlers/admin/delivery_overview_handler.py`
+
+#### Task 3.6: Cache Tests (1-2 hours)
+**Commit:** `test: add comprehensive cache tests`
+
+**TDD Steps:**
+1. Expand `tests/test_credit_cache.py`:
+   - Test cache hit/miss scenarios
+   - Test cache expiry (TTL)
+   - Test cache invalidation on all write operations
+   - Test concurrent access patterns
+   - Test cache pre-warming
+2. Run tests
+3. Fix any issues discovered
+4. Verify cache hit rate > 80% in batch scenarios
+
+**Files:** `tests/test_credit_cache.py`
+
+#### Task 3.7: Performance Benchmarks (1 hour)
+**Commit:** `test: add performance benchmarks for credit operations`
+
+**TDD Steps:**
+1. Create `tests/benchmarks/test_credit_performance.py`:
+   - Benchmark credit balance queries (target: <100ms)
+   - Benchmark credit processing (target: <2s)
+   - Benchmark batch processing (target: <5s for 100 customers)
+   - Document results
+2. Run benchmarks
+3. Verify all targets met
+4. Document performance characteristics
+
+**Files:** `tests/benchmarks/test_credit_performance.py`
+
+**Phase 3 Summary:**
+- **Total Tasks:** 7 atomic tasks
+- **Estimated Time:** 8-12 hours
+- **Average Task Size:** 1-3 hours each
+- **TDD Approach:** Tests written before implementation, includes performance benchmarks
+
+---
 
 ### Phase 4: Polish & Edge Cases
 **Estimated Time:** 5-8 hours
+**TDD Approach:** Write failing tests first, then implement code to pass tests
 
-**Deliverables:**
-1. Guest user credit handling
-2. Concurrent update handling
-3. Error recovery mechanisms
-4. Enhanced customer notifications
-5. Documentation updates
+#### Task 4.1: Guest User Credit Handling (1-2 hours)
+**Commit:** `test: add failing tests for guest user credit support`
+**Commit:** `feat: add guest user credit support`
 
-**Testing:** Edge case tests, concurrent operation tests
+**TDD Steps:**
+1. Add to `tests/test_delivery_overview_credit.py`:
+   - Test guest user delivery overview shows credit info
+   - Test credit balance in admin message for guests
+   - Test guest flag in credit export
+2. Run tests (should fail)
+3. Modify `src/handlers/admin/delivery_overview_handler.py`
+4. Run tests (should pass)
 
-**Total Estimated Time:** 40-57 hours
+**Files:** `tests/test_delivery_overview_credit.py`, `src/handlers/admin/delivery_overview_handler.py`
+
+#### Task 4.2: Negative Balance Safeguards (1-2 hours)
+**Commit:** `test: add failing tests for negative balance warnings`
+**Commit:** `feat: add negative balance warnings and confirmations`
+
+**TDD Steps:**
+1. Add to `tests/test_credit_service.py` and `tests/test_admin_credit_commands.py`:
+   - Test warning when adjustment creates negative balance
+   - Test explicit confirmation required
+   - Test reason field mandatory for negative balance
+   - Test validation and error messages
+2. Run tests (should fail)
+3. Add validation to `src/services/credit_service.py`
+4. Add confirmation dialog to `src/handlers/admin/credit_commands.py`
+5. Run tests (should pass)
+
+**Files:** `tests/test_credit_service.py`, `tests/test_admin_credit_commands.py`, `src/services/credit_service.py`, `src/handlers/admin/credit_commands.py`
+
+#### Task 4.3: Concurrent Update Handling (1-2 hours)
+**Commit:** `test: add failing tests for concurrent update handling`
+**Commit:** `feat: add retry logic for concurrent credit updates`
+
+**TDD Steps:**
+1. Add to `tests/test_credit_service.py`:
+   - Test exponential backoff for DynamoDB conditional updates
+   - Test retry logic on concurrent update conflicts
+   - Test max retry limit
+   - Test logging for retry attempts
+2. Run tests (should fail)
+3. Implement retry logic in `src/services/credit_service.py`
+4. Run tests (should pass)
+
+**Files:** `tests/test_credit_service.py`, `src/services/credit_service.py`
+
+#### Task 4.4: Error Recovery Mechanisms (1 hour)
+**Commit:** `test: add failing tests for error recovery`
+**Commit:** `feat: add error recovery for credit operations`
+
+**TDD Steps:**
+1. Add to `tests/test_credit_service.py` and `tests/test_delivery_overview_credit.py`:
+   - Test error handling for failed credit applications
+   - Test admin notification for credit failures
+   - Test manual resolution workflow
+2. Run tests (should fail)
+3. Add error handling to `src/services/credit_service.py`
+4. Add admin notifications to `src/handlers/admin/delivery_overview_handler.py`
+5. Run tests (should pass)
+
+**Files:** `tests/test_credit_service.py`, `tests/test_delivery_overview_credit.py`, `src/services/credit_service.py`, `src/handlers/admin/delivery_overview_handler.py`
+
+#### Task 4.5: Enhanced Customer Notifications (1 hour)
+**Commit:** `test: add failing tests for enhanced notifications`
+**Commit:** `feat: enhance customer credit notifications`
+
+**TDD Steps:**
+1. Add to `tests/test_credit_service.py`:
+   - Test notification message formatting
+   - Test context-specific messages (issued, applied, adjusted)
+   - Test helpful tips and contact info
+   - Test notification delivery
+2. Run tests (should fail)
+3. Improve notification logic in `src/services/credit_service.py`
+4. Update translation keys
+5. Run tests (should pass)
+
+**Files:** `tests/test_credit_service.py`, `src/services/credit_service.py`, `src/translations/en.json`, `src/translations/nl.json`
+
+#### Task 4.6: Edge Case Tests (1-2 hours)
+**Commit:** `test: add comprehensive edge case tests for credit system`
+
+**TDD Steps:**
+1. Create `tests/test_credit_edge_cases.py`:
+   - Test wrong customer credit issuance and correction
+   - Test failed delivery with applied credit
+   - Test customer deletion with credit balance
+   - Test zero and negative amounts
+   - Test concurrent operations
+   - Test boundary conditions
+2. Run tests
+3. Fix any issues discovered
+4. Verify 80% test coverage achieved
+
+**Files:** `tests/test_credit_edge_cases.py`
+
+#### Task 4.7: Documentation Updates (1 hour)
+**Commit:** `docs: update credit system documentation`
+
+- Add admin documentation (how to issue, adjust, view credits)
+- Add customer documentation (how credits work)
+- Add developer documentation (API, caching, testing)
+- Add troubleshooting guide
+
+**Files:** `README.md`, `docs/credit-system-admin-guide.md`, `docs/credit-system-dev-guide.md`
+**Note:** Documentation - no tests needed
+
+**Phase 4 Summary:**
+- **Total Tasks:** 7 atomic tasks
+- **Estimated Time:** 5-8 hours
+- **Average Task Size:** 1-2 hours each
+- **TDD Approach:** Tests written before implementation for all edge cases
+
+---
+
+**Total Implementation:**
+- **Total Tasks:** 36 atomic tasks across 4 phases
+- **Total Estimated Time:** 40-57 hours
+- **Average Task Size:** 1-3 hours each
+- **Smallest Task:** 1 hour (translation keys, documentation)
+- **Largest Task:** 4 hours (delivery overview integration)
+
+**TDD Benefits:**
+1. **Quality assurance** - Tests define expected behavior before implementation
+2. **Regression prevention** - Comprehensive test suite catches breaking changes
+3. **Design improvement** - Writing tests first leads to better API design
+4. **Documentation** - Tests serve as executable documentation
+5. **Confidence** - 80% test coverage ensures system reliability
+6. **Refactoring safety** - Can refactor with confidence tests will catch issues
+
+**Commit Pattern:**
+- Most tasks have 2 commits: `test:` followed by `feat:` or `refactor:`
+- Infrastructure and documentation tasks have single commits
+- Integration test tasks focus on comprehensive test coverage
+
+**Benefits of Atomic Task Breakdown:**
+1. **Smaller commits** - Each task is focused and reviewable
+2. **Incremental progress** - Can stop/resume at any task boundary
+3. **Easier testing** - Test each component independently
+4. **Clearer history** - Git history shows logical progression
+5. **Reduced risk** - Smaller changes = easier to debug/rollback
+6. **Better estimation** - Granular tasks improve time estimates
+7. **Flexible scheduling** - Can fit 1-3 hour tasks into available time slots
+8. **TDD compliance** - Follows Q39 requirement for test-driven development
 
 ## Success Criteria
 
 ### Functional Requirements
-- ✅ Admin can issue refunds via command
-- ✅ Refunds create customer credit balance
+- ✅ Admin can issue credits via command
+- ✅ Credits create customer credit balance
 - ✅ Credits automatically apply to deliveries
 - ✅ Credits carry forward across multiple deliveries
 - ✅ Customers can view their credit balance
 - ✅ Admin can view and adjust customer credits
 - ✅ All transactions are logged and auditable
-- ✅ Complete order change history with refund linkage
 
 ### Non-Functional Requirements
 - ✅ Credit balance queries < 100ms (with cache)
-- ✅ Refund processing < 2 seconds
+- ✅ Credit processing < 2 seconds
 - ✅ Delivery overview generation < 5 seconds for 100 customers
 - ✅ Zero credit balance inconsistencies (strong consistency)
 - ✅ Complete audit trail for all credit operations
 
 ### User Experience
 - ✅ Clear credit information in delivery overviews
-- ✅ Immediate refund notifications to customers
-- ✅ Simple admin workflow for issuing refunds
+- ✅ Immediate credit notifications to customers
+- ✅ Simple admin workflow for issuing credit
 - ✅ Transparent credit balance display
 
 ## Risks & Mitigation
 
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| Credit balance inconsistency | High | Low | Conditional DynamoDB updates, transaction logging |
-| Concurrent credit application | High | Low | Idempotent operations, transaction deduplication |
-| Cache invalidation failure | Medium | Low | Short TTL, invalidate on all writes |
-| Customer confusion about credits | Medium | Medium | Clear messaging, immediate notifications |
-| Refund abuse | Medium | Low | Admin-only refunds, audit trail |
-| Performance degradation | Low | Low | Caching, batch optimization |
-| Data loss during migration | High | Low | No migration needed (new tables) |
+| Risk                             | Impact | Probability | Mitigation                                        |
+|----------------------------------|--------|-------------|---------------------------------------------------|
+| Credit balance inconsistency     | High | Low | Conditional DynamoDB updates, transaction logging |
+| Credit application failure       | Medium | Low | Admin notification, manual resolution, audit trail |
+| Concurrent credit application    | High | Low | Idempotent operations, transaction deduplication  |
+| Cache invalidation failure       | Medium | Low | Short TTL, invalidate on all writes               |
+| Customer confusion about credits | Medium | Medium | Clear messaging, immediate notifications          |
+| Credit abuse                     | Medium | Low | Admin-only credits, audit trail                   |
+| Performance degradation          | Low | Low | Caching, batch optimization                       |
+| Data loss during migration       | High | Low | No migration needed (new tables)                  |
 
 ## Rollback Plan
 
 **If critical issues discovered:**
-1. Disable refund commands (remove from command router)
+1. Disable credit commands (remove from command router)
 2. Existing credits remain in database (no data loss)
 3. Manual credit application by admin if needed
 4. Fix issues and redeploy
@@ -1316,7 +1808,7 @@ logger.info(f"Credit cache invalidated for customer {customer_id}")
 ## Documentation Requirements
 
 ### Admin Documentation
-1. How to issue refunds
+1. How to issue credits
 2. How to view customer credits
 3. How to adjust credit balances
 4. Credit transaction types explained
@@ -1326,7 +1818,7 @@ logger.info(f"Credit cache invalidated for customer {customer_id}")
 1. How credits work
 2. How to view credit balance
 3. How credits are applied to deliveries
-4. Refund policy
+4. Credit policy
 
 ### Developer Documentation
 1. Credit service API
@@ -1338,25 +1830,31 @@ logger.info(f"Credit cache invalidated for customer {customer_id}")
 ## Appendix: Translation Keys Required
 
 **Admin Keys:**
-- `refund_issued_success`
-- `refund_confirmation`
+- `credit_issued_success`
+- `credit_confirmation`
 - `credit_balance_display`
 - `credit_adjustment_success`
 - `list_credits_header`
 - `credit_transaction_history`
 
 **Customer Keys:**
-- `refund_notification`
+- `credit_notification`
 - `credit_balance_info`
 - `credit_applied_notification`
 - `delivery_overview_with_credit`
 - `no_payment_needed`
 
 **Error Keys:**
-- `refund_amount_invalid`
-- `refund_exceeds_order_total`
-- `customer_not_found_refund`
-- `order_not_found_refund`
+- `credit_amount_invalid`
+- `credit_exceeds_order_total`
+- `customer_not_found_credit`
+- `order_not_found_credit`
 - `credit_balance_negative`
 
 **Estimated:** 30-40 new translation keys (English + Dutch)
+
+---
+
+## All Questions Resolved
+
+All open questions have been answered and documented in the "Confirmed Decisions" section above. The specification is now complete and ready for implementation.
