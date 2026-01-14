@@ -1,21 +1,22 @@
-# Customer Refund System Specification
+# Customer Credit System Specification
 
 ## Problem Statement
 
-Customers may need refunds for various reasons:
+Customers may need credits for various reasons:
 - Order cancelled by admin after payment
 - Defective/incorrect product delivered
 - Customer dissatisfaction
-- Partial delivery with no future delivery expected
+- Goodwill gestures
+- Manual adjustments
 
-**Key Challenge:** Refund amounts may exceed the customer's next delivery total, requiring a credit/balance system.
+**Key Challenge:** Credit amounts may exceed the customer's next delivery total, requiring a balance system.
 
 ## Business Requirements
 
 ### Core Functionality
-1. Admin can issue refunds to customers
-2. Refunds can be partial or full order amounts
-3. Refunds create a credit balance for the customer
+1. Admin can issue credits to customers
+2. Credits can be any amount (not tied to specific orders)
+3. Credits create a credit balance for the customer
 4. Credit balance is automatically applied to future deliveries
 5. Credit balance can exceed next delivery amount (carry forward)
 6. Admin can view customer credit balances
@@ -23,14 +24,14 @@ Customers may need refunds for various reasons:
 8. Customers can view their credit balance
 9. Delivery overviews show credit balance and adjusted payment amount
 
-### Refund Scenarios
+### Credit Scenarios
 
-**Scenario 1: Simple Refund (Refund < Next Delivery)**
+**Scenario 1: Simple Credit (Credit < Next Delivery)**
 - Customer has €20 credit
 - Next delivery total: €50
 - Payment required: €30
 
-**Scenario 2: Large Refund (Refund > Next Delivery)**
+**Scenario 2: Large Credit (Credit > Next Delivery)**
 - Customer has €60 credit
 - Next delivery total: €50
 - Payment required: €0
@@ -42,9 +43,8 @@ Customers may need refunds for various reasons:
 - Delivery 2: €35 → €0 payment, €25 credit remains
 - Delivery 3: €30 → €0 payment, €0 credit remains (credit depleted)
 
-**Scenario 4: Partial Refund**
-- Order total: €50
-- Refund: €20 (e.g., 2 out of 5 units defective)
+**Scenario 4: Partial Credit**
+- Admin issues €20 credit for defective items
 - Customer credit: €20
 
 ## Data Model Changes
@@ -81,11 +81,10 @@ class CustomerCredit:
 class CreditTransaction:
     transaction_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     customer_id: str = ""
-    transaction_type: str = ""  # REFUND, ADJUSTMENT, APPLIED, MANUAL_ADD, MANUAL_SUBTRACT
+    transaction_type: str = ""  # CREDIT_ISSUED, ADJUSTMENT, APPLIED, MANUAL_ADD, MANUAL_SUBTRACT
     amount: Decimal = Decimal('0.0')  # Positive for credits, negative for usage
     balance_before: Decimal = Decimal('0.0')
     balance_after: Decimal = Decimal('0.0')
-    reference_id: Optional[str] = None  # order_id for refunds, delivery_batch_id for applications
     reason: str = ""  # Admin-provided reason
     created_by: int = 0  # Admin user ID
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -113,35 +112,21 @@ class OrderHistory:
     new_value: str = ""  # New value (as string)
     reason: str = ""  # Admin-provided reason for change
     
-    # Refund linkage (optional)
-    credit_transaction_id: Optional[str] = None  # Links to CreditTransaction if change triggered refund
-    triggers_refund: bool = False  # Flag indicating this change caused a refund
-    
     # TTL for automatic cleanup (2 years)
     ttl: Optional[int] = None  # Unix timestamp for DynamoDB TTL
 ```
-
-**Relationship to Refund System:**
-- When order price is adjusted → OrderHistory entry created
-- If adjustment triggers refund → `credit_transaction_id` links to CreditTransaction
-- Provides complete audit trail: "Order price changed from X to Y, refund of Z issued"
 
 ### Modified Entities
 
 **Customer** - No changes needed (credit is separate table)
 
-**Order** - Add optional field:
-```python
-refund_amount: Optional[Decimal] = None  # Amount refunded for this order
-refund_reason: Optional[str] = None  # Reason for refund
-refunded_at: Optional[datetime] = None  # When refund was issued
-```
+**Order** - No changes needed (credits are independent of orders)
 
 ## Transaction Types
 
 | Type | Description | Amount Sign | Example |
 |------|-------------|-------------|---------|
-| REFUND | Refund for cancelled/defective order | Positive | +€20.00 |
+| CREDIT_ISSUED | Credit issued to customer | Positive | +€20.00 |
 | ADJUSTMENT | Admin manual adjustment | Positive/Negative | +€5.00 or -€5.00 |
 | APPLIED | Credit applied to delivery | Negative | -€30.00 |
 | MANUAL_ADD | Admin adds credit | Positive | +€10.00 |
@@ -152,82 +137,50 @@ refunded_at: Optional[datetime] = None  # When refund was issued
 
 ### Purpose
 
-The Order History table provides a complete audit trail that complements the refund system:
-- **Credit Transactions** track money movements (refunds, credits, applications)
+The Order History table provides a complete audit trail:
+- **Credit Transactions** track money movements (credits issued, credits applied)
 - **Order History** tracks data changes (what changed, why, and who changed it)
 
 Together they answer:
-- "Why was this refund issued?" → Order History shows price adjustment
-- "What refund was issued?" → Credit Transaction shows refund amount
+- "What changed?" → Order History shows data modifications
+- "What credit was issued?" → Credit Transaction shows credit amount
 - "Who made the change?" → Both tables track admin_id
 - "When did it happen?" → Both tables have timestamps
 
 ### Audit Trail Flow
 
-**Example: Defective Product Refund**
+**Example: Admin Issues Credit for Defective Product**
 
-1. **Admin adjusts order price** (2 defective bottles out of 5)
-   ```python
-   # Order updated
-   order.total_price: 50.00 → 30.00
-   
-   # Order History entry created
-   OrderHistory(
-       order_id="order-abc",
-       field_name="total_price",
-       old_value="50.00",
-       new_value="30.00",
-       reason="2 bottles defective",
-       changed_by=<ADMIN_USER_ID>,
-       triggers_refund=True,
-       credit_transaction_id="txn-001"
-   )
-   ```
-
-2. **System issues refund automatically**
+1. **Admin issues credit** (independent of order)
    ```python
    # Credit Transaction created
    CreditTransaction(
        transaction_id="txn-001",
        customer_id="cust-123",
-       transaction_type="REFUND",
+       transaction_type="CREDIT_ISSUED",
        amount=20.00,
-       reference_id="order-abc",
        reason="2 bottles defective",
        created_by=<ADMIN_USER_ID>
    )
    ```
 
-3. **Complete audit trail established**
-   - Order History: Shows what changed (price 50→30)
-   - Credit Transaction: Shows refund issued (€20)
-   - Linked via `credit_transaction_id`
+2. **Complete audit trail established**
+   - Credit Transaction: Shows credit issued (€20)
+   - No order linkage required
 
 ### Query Capabilities
 
-**Query 1: "Show complete history for order"**
+**Query 1: "Show all credits issued"**
 ```python
-# Get all changes to order
-history = get_order_history(order_id)
+# Get credit transactions
+credits = get_credit_transactions(type="CREDIT_ISSUED")
 
 # Results:
-# - Price changed: 50.00 → 30.00 (refund triggered)
-# - Status changed: completed → completed
-# - Linked refund: €20.00 (txn-001)
+# - €20.00 issued to John Doe - "2 bottles defective"
+# - €15.00 issued to Jane Smith - "Goodwill gesture"
 ```
 
-**Query 2: "Show all refunds with reasons"**
-```python
-# Get refund transactions
-refunds = get_credit_transactions(type="REFUND")
-
-# For each refund, get order history
-for refund in refunds:
-    history = get_order_history(refund.reference_id)
-    # Shows: What changed that triggered the refund
-```
-
-**Query 3: "Show all actions by admin"**
+**Query 2: "Show all actions by admin"**
 ```python
 # Get order changes by admin
 order_changes = get_order_history_by_admin(admin_id)
@@ -261,7 +214,6 @@ credit_actions = get_credit_transactions_by_admin(admin_id)
 - Price changes (unit_price, total_price)
 - Quantity changes
 - Status changes (if significant)
-- Refund-related fields (refund_amount, refund_reason)
 
 **When NOT to log:**
 - Automatic system updates (update_date)
@@ -270,7 +222,7 @@ credit_actions = get_credit_transactions_by_admin(admin_id)
 
 **Logging helper:**
 ```python
-def log_order_change_with_refund(order_id, field, old, new, reason, admin_id, refund_amount=None):
+def log_order_change(order_id, field, old, new, reason, admin_id):
     # Create order history entry
     history = OrderHistory(
         order_id=order_id,
@@ -278,21 +230,8 @@ def log_order_change_with_refund(order_id, field, old, new, reason, admin_id, re
         old_value=str(old),
         new_value=str(new),
         reason=reason,
-        changed_by=admin_id,
-        triggers_refund=(refund_amount is not None)
+        changed_by=admin_id
     )
-    
-    # If refund triggered, create credit transaction
-    if refund_amount:
-        txn = create_credit_transaction(
-            customer_id=get_customer_for_order(order_id),
-            transaction_type="REFUND",
-            amount=refund_amount,
-            reference_id=order_id,
-            reason=reason,
-            created_by=admin_id
-        )
-        history.credit_transaction_id = txn.transaction_id
     
     # Save history
     create_order_history(history)
