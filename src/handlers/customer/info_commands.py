@@ -59,18 +59,15 @@ class InfoCommands(BaseHandler):
     def _show_help_section(self, chat_id: int, user_id: int, section: str) -> Dict[str, Any]:
         """Show help for specific section"""
         if section == "all":
-            # Show all available sections
+            # Show all available sections in separate messages
             sections = ["general", "orders"]
             if self._is_admin(user_id):
                 sections.extend(["suppliers", "offers", "users", "delivery", "discounts", "import", "system"])
             
-            message = ""
-            for i, sect in enumerate(sections):
-                if i > 0:
-                    message += "\n\n"
-                message += self._get_section_help(sect)
+            for sect in sections:
+                message = self._get_section_help(sect)
+                self._send_message(chat_id, message)
             
-            self._send_message(chat_id, message)
             return {'status': 'success'}
         
         elif section in ["general", "orders", "suppliers", "offers", "users", "delivery", "discounts", "import", "system"]:
