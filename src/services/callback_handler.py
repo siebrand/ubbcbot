@@ -33,6 +33,8 @@ class CallbackHandler:
             should_remove_keyboard = True
             if data.startswith('page_') and not data == 'page_info':
                 should_remove_keyboard = False
+            elif data == 'page_info':  # Keep keyboard for page info display
+                should_remove_keyboard = False
             elif data.startswith('wd_'):  # Keep keyboard for wholesale delivery navigation
                 should_remove_keyboard = False
             elif data.startswith('order_'):  # Keep keyboard for order buttons so multiple people can order
@@ -300,7 +302,8 @@ class CallbackHandler:
                             return self.handlers['info'].handle_my_orders(chat_id, user_id, None, page)
                         return {'status': 'unauthorized'}
             elif data == 'page_info':
-                return {'status': 'page_info'}
+                # Do nothing - this is just a display button
+                return {'status': 'page_info', 'no_action': True}
             
             # Edit callbacks
             elif data.startswith('edit_'):
