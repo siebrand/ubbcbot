@@ -592,5 +592,15 @@
   "total_amount_bold": "<b>💰 Total Amount: €{total:.2f}</b>",
   "pay_via_tikkie": "<b>Pay via Tikkie:</b> 📲 {link} (Note: Please manually enter the amount of €{total:.2f})",
   "pickup_location_bold": "<b>📍 Pickup Location:</b> {location}",
-  "questions_contact": "Any questions? Feel free to reach out to @siebrand."
+  "questions_contact": "Any questions? Feel free to reach out to @siebrand.",
+  "credit_issued_success": "✅ Credit issued: €{amount:.2f} to {customer_name}",
+  "credit_balance_title": "💰 Credit Balance for {customer_name}",
+  "current_balance": "Current Balance: €{balance:.2f}",
+  "my_credit_balance": "💰 Your Credit Balance: €{balance:.2f}",
+  "no_credit_balance": "You have no credit balance",
+  "credit_applied_to_delivery": "Credit Applied: -€{amount:.2f}",
+  "payment_required": "Total to Pay: €{amount:.2f}",
+  "remaining_credit": "💰 Remaining Credit: €{amount:.2f}",
+  "no_payment_needed": "✅ No payment needed! Your credit covers this delivery.",
+  "credit_notification": "💰 Credit Issued\n\nYou have received a credit of €{amount:.2f}\n\nReason: {reason}\n\nYour new credit balance: €{balance:.2f}\n\nThis credit will be automatically applied to your next delivery."
 }
