@@ -195,6 +195,9 @@ class CallbackHandler:
             elif data.startswith('order_for_user_select_'):
                 customer_id = data.split('_')[4]
                 return self.handlers['admin_order'].handle_order_for_user_select(chat_id, customer_id)
+            elif data.startswith('credit_customer_'):
+                customer_id = data.split('_')[2]
+                return self.handlers['credit'].handle_credit_customer_select(chat_id, customer_id)
             elif data.startswith('user_status_select_'):
                 customer_id = data.replace('user_status_select_', '')
                 return self.handlers['user'].handle_user_status_select(chat_id, customer_id)
