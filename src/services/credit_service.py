@@ -48,7 +48,7 @@ class CreditService:
             # Update existing credit
             updates = {
                 'current_balance': new_balance,
-                'last_updated': datetime.now(UTC)
+                'last_updated': datetime.now(UTC).isoformat()
             }
             
             # Update totals based on whether adding or using credit
