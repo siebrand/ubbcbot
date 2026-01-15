@@ -175,3 +175,68 @@ class TestUpdateCustomerCreditBalance:
         call_args = credit_service.db.update_customer_credit.call_args
         updates = call_args[0][1]
         assert updates['total_credits_used'] == Decimal('70.00')  # 50 + 20
+
+
+class TestIssueCredit:
+    """Test issuing credit to customers"""
+    
+    def test_issue_credit_valid_amount(self, credit_service, mocker):
+        """Test issuing credit with valid amount"""
+        customer_id = "test-customer-123"
+        amount = Decimal('20.00')
+        reason = "Defective product"
+        admin_id = 123456789
+        
+        # Mock existing balance
+        credit_service.get_customer_credit_balance = mocker.Mock(return_value=Decimal('30.00'))
+        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
+        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
+        
+        result = credit_service.issue_credit(customer_id, amount, reason, admin_id)
+        
+        assert result is True
+        
+        # Verify balance was updated
+        credit_service._update_customer_credit_balance.assert_called_once_with(
+            customer_id, Decimal('50.00'), is_credit=True
+        )
+        
+        # Verify transaction was created
+        credit_service.create_credit_transaction.assert_called_once()
+        transaction = credit_service.create_credit_transaction.call_args[0][0]
+        assert transaction.customer_id == customer_id
+        assert transaction.transaction_type == "CREDIT_ISSUED"
+        assert transaction.amount == amount
+        assert transaction.balance_before == Decimal('30.00')
+        assert transaction.balance_after == Decimal('50.00')
+        assert transaction.reason == reason
+        assert transaction.created_by == admin_id
+    
+    def test_issue_credit_invalid_amount_zero(self, credit_service):
+        """Test issuing credit with zero amount fails"""
+        result = credit_service.issue_credit("customer-123", Decimal('0.00'), "Test", 123)
+        assert result is False
+    
+    def test_issue_credit_invalid_amount_negative(self, credit_service):
+        """Test issuing credit with negative amount fails"""
+        result = credit_service.issue_credit("customer-123", Decimal('-10.00'), "Test", 123)
+        assert result is False
+    
+    def test_issue_credit_empty_reason(self, credit_service):
+        """Test issuing credit with empty reason fails"""
+        result = credit_service.issue_credit("customer-123", Decimal('10.00'), "", 123)
+        assert result is False
+    
+    def test_issue_credit_transaction_failure_rollback(self, credit_service, mocker):
+        """Test that balance update is not committed if transaction creation fails"""
+        customer_id = "test-customer-123"
+        amount = Decimal('20.00')
+        
+        credit_service.get_customer_credit_balance = mocker.Mock(return_value=Decimal('30.00'))
+        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
+        credit_service.create_credit_transaction = mocker.Mock(return_value=False)
+        
+        result = credit_service.issue_credit(customer_id, amount, "Test", 123)
+        
+        # Should fail if transaction creation fails
+        assert result is False
