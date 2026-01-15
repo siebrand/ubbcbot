@@ -67,3 +67,43 @@ class CreditService:
                 total_credits_used=Decimal('0.0')
             )
             return self.db.create_customer_credit(new_credit)
+    
+    def issue_credit(self, customer_id: str, amount: Decimal, reason: str, admin_id: int) -> bool:
+        """Issue credit to customer
+        
+        Args:
+            customer_id: Customer ID
+            amount: Credit amount (must be positive)
+            reason: Reason for credit (required)
+            admin_id: Admin user ID issuing the credit
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        # Validate inputs
+        if amount <= 0:
+            return False
+        if not reason or not reason.strip():
+            return False
+        
+        # Get current balance
+        current_balance = self.get_customer_credit_balance(customer_id)
+        new_balance = current_balance + amount
+        
+        # Create transaction record
+        transaction = CreditTransaction(
+            customer_id=customer_id,
+            transaction_type="CREDIT_ISSUED",
+            amount=amount,
+            balance_before=current_balance,
+            balance_after=new_balance,
+            reason=reason.strip(),
+            created_by=admin_id
+        )
+        
+        # Create transaction first (fail fast if this fails)
+        if not self.create_credit_transaction(transaction):
+            return False
+        
+        # Update balance
+        return self._update_customer_credit_balance(customer_id, new_balance, is_credit=True)
