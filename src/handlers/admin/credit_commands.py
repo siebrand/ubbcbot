@@ -8,10 +8,10 @@ from utils.validation import ValidationUtils
 class CreditCommands(BaseHandler):
     """Admin commands for credit management"""
     
-    def __init__(self, db_service, bot_service):
-        super().__init__(db_service, bot_service)
-        self.credit_service = CreditService(db_service)
-        self.validation = ValidationUtils(db_service, self._t)
+    def __init__(self, db, admin_user_id, environment, telegram_token):
+        super().__init__(db, admin_user_id, environment, telegram_token)
+        self.credit_service = CreditService(db)
+        self.validation = ValidationUtils(db, self._t)
     
     def handle_credit(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /credit <username> <amount> [reason] command"""
