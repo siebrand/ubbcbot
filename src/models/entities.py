@@ -179,3 +179,24 @@ class OrderHistory:
             ttl_days = 1825 if environment == 'prod' else 90  # 5 years prod, 90 days test
             expiry = self.changed_at + timedelta(days=ttl_days)
             self.ttl = int(expiry.timestamp())
+
+@dataclass
+class CustomerCredit:
+    customer_id: str = ""  # Primary key
+    current_balance: Decimal = Decimal('0.0')
+    total_credits_issued: Decimal = Decimal('0.0')
+    total_credits_used: Decimal = Decimal('0.0')
+    last_updated: datetime = field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+@dataclass
+class CreditTransaction:
+    transaction_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    customer_id: str = ""
+    transaction_type: str = ""  # CREDIT_ISSUED, ADJUSTMENT, APPLIED, MANUAL_ADD, MANUAL_SUBTRACT
+    amount: Decimal = Decimal('0.0')  # Positive for credits, negative for usage
+    balance_before: Decimal = Decimal('0.0')
+    balance_after: Decimal = Decimal('0.0')
+    reason: str = ""
+    created_by: int = 0  # Admin user ID
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
