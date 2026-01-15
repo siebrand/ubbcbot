@@ -80,8 +80,12 @@ class CreditService:
         Returns:
             True if successful, False otherwise
         """
-        # Validate reason is required for negative amounts
-        if amount < 0 and (not reason or not reason.strip()):
+        # Validate amount
+        if amount == 0:
+            return False
+        
+        # Validate reason is required
+        if not reason or not reason.strip():
             return False
         
         # Get current balance
