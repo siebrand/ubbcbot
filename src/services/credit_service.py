@@ -120,7 +120,33 @@ class CreditService:
         """
         credit_balance = self.get_customer_credit_balance(customer_id)
         
-        if credit_balance <= 0:
+        # Handle negative balance (charge customer)
+        if credit_balance < 0:
+            payment_required = delivery_total + abs(credit_balance)
+            
+            # Create APPLIED transaction for negative balance
+            transaction = CreditTransaction(
+                customer_id=customer_id,
+                transaction_type="APPLIED",
+                amount=credit_balance,  # Negative amount (charge)
+                balance_before=credit_balance,
+                balance_after=Decimal('0.0'),
+                reason="Applied to delivery (negative balance charge)",
+                created_by=0
+            )
+            
+            self.create_credit_transaction(transaction)
+            self._update_customer_credit_balance(customer_id, Decimal('0.0'), is_credit=False)
+            
+            return {
+                'original_total': delivery_total,
+                'credit_applied': credit_balance,  # Negative value
+                'payment_required': payment_required,
+                'remaining_credit': Decimal('0.0')
+            }
+        
+        # Handle zero balance
+        if credit_balance == 0:
             return {
                 'original_total': delivery_total,
                 'credit_applied': Decimal('0.0'),
@@ -128,6 +154,7 @@ class CreditService:
                 'remaining_credit': Decimal('0.0')
             }
         
+        # Handle positive balance
         credit_to_apply = min(credit_balance, delivery_total)
         payment_required = delivery_total - credit_to_apply
         remaining_credit = credit_balance - credit_to_apply

@@ -346,3 +346,26 @@ class TestApplyCreditToDelivery:
         credit_service._update_customer_credit_balance.assert_called_once_with(
             customer_id, Decimal('0.0'), is_credit=False
         )
+    
+    def test_apply_credit_negative_balance_adds_charge(self, credit_service, mocker):
+        """Test applying negative balance adds charge to delivery total"""
+        customer_id = "test-customer-123"
+        delivery_total = Decimal('50.00')
+        negative_balance = Decimal('-20.00')
+        
+        credit_service.get_customer_credit_balance = mocker.Mock(return_value=negative_balance)
+        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
+        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
+        
+        result = credit_service.apply_credit_to_delivery(customer_id, delivery_total)
+        
+        assert result['original_total'] == delivery_total
+        assert result['credit_applied'] == Decimal('-20.00')  # Negative
+        assert result['payment_required'] == Decimal('70.00')  # 50 + 20
+        assert result['remaining_credit'] == Decimal('0.0')
+        
+        # Verify transaction created with negative amount
+        transaction = credit_service.create_credit_transaction.call_args[0][0]
+        assert transaction.amount == Decimal('-20.00')
+        assert transaction.balance_before == Decimal('-20.00')
+        assert transaction.balance_after == Decimal('0.0')
