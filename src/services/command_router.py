@@ -233,6 +233,8 @@ class CommandRouter:
                 return self.handlers['admin_order'].handle_audit_orders(admin_target_chat)
             elif command == '/admin':
                 return self.handlers['admin_commands'].handle_admin(admin_target_chat, user_id)
+            elif command == '/credit':
+                return self.handlers['credit'].handle_credit(admin_target_chat, parts[1:])
 
         return {'status': 'unknown_command'}
     
