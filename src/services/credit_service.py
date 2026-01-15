@@ -1,0 +1,69 @@
+"""
+Credit Service - Core credit system business logic
+"""
+from decimal import Decimal
+from datetime import datetime, UTC
+from typing import Optional
+from models.entities import CustomerCredit, CreditTransaction
+
+
+class CreditService:
+    """Service for managing customer credits and transactions"""
+    
+    def __init__(self, db_service):
+        """Initialize credit service with database service"""
+        self.db = db_service
+    
+    def get_customer_credit_balance(self, customer_id: str) -> Decimal:
+        """
+        Get customer's current credit balance
+        Returns Decimal('0.0') if customer has no credit record
+        """
+        credit = self.db.get_customer_credit(customer_id)
+        return credit.current_balance if credit else Decimal('0.0')
+    
+    def create_credit_transaction(self, transaction: CreditTransaction) -> bool:
+        """Create a credit transaction record"""
+        return self.db.create_credit_transaction(transaction)
+    
+    def _update_customer_credit_balance(self, customer_id: str, new_balance: Decimal, 
+                                       is_credit: bool = True) -> bool:
+        """
+        Update customer credit balance and totals
+        
+        Args:
+            customer_id: Customer ID
+            new_balance: New balance to set
+            is_credit: True if adding credit, False if using credit
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        existing_credit = self.db.get_customer_credit(customer_id)
+        
+        if existing_credit:
+            # Calculate change amount
+            change = new_balance - existing_credit.current_balance
+            
+            # Update existing credit
+            updates = {
+                'current_balance': new_balance,
+                'last_updated': datetime.now(UTC)
+            }
+            
+            # Update totals based on whether adding or using credit
+            if is_credit and change > 0:
+                updates['total_credits_issued'] = existing_credit.total_credits_issued + change
+            elif not is_credit and change < 0:
+                updates['total_credits_used'] = existing_credit.total_credits_used + abs(change)
+            
+            return self.db.update_customer_credit(customer_id, updates)
+        else:
+            # Create new credit record
+            new_credit = CustomerCredit(
+                customer_id=customer_id,
+                current_balance=new_balance,
+                total_credits_issued=new_balance if is_credit else Decimal('0.0'),
+                total_credits_used=Decimal('0.0')
+            )
+            return self.db.create_customer_credit(new_credit)
