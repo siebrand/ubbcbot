@@ -26,6 +26,8 @@ class DynamoDBService:
         self.notifications_table = self.dynamodb.Table(f'{self.table_prefix}-notifications')
         self.edit_contexts_table = self.dynamodb.Table(f'{self.table_prefix}-edit-contexts')
         self.order_history_table = self.dynamodb.Table(f'{self.table_prefix}-order-history')
+        self.customer_credits_table = self.dynamodb.Table(f'{self.table_prefix}-customer-credits')
+        self.credit_transactions_table = self.dynamodb.Table(f'{self.table_prefix}-credit-transactions')
 
     def _serialize_datetime(self, obj):
         """Convert datetime objects to ISO strings"""
@@ -1283,3 +1285,100 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error marking order paid with audit: {e}")
             return False
+    
+    # Credit system operations
+    def create_customer_credit(self, credit) -> bool:
+        """Create customer credit record"""
+        try:
+            from models.entities import CustomerCredit
+            item = self._prepare_item(credit.__dict__)
+            self.customer_credits_table.put_item(Item=item)
+            return True
+        except Exception as e:
+            print(f"Error creating customer credit: {e}")
+            return False
+    
+    def get_customer_credit(self, customer_id: str):
+        """Get customer credit by customer ID"""
+        try:
+            from models.entities import CustomerCredit
+            response = self.customer_credits_table.get_item(Key={'customer_id': customer_id})
+            if 'Item' in response:
+                return CustomerCredit(**response['Item'])
+            return None
+        except Exception as e:
+            print(f"Error getting customer credit: {e}")
+            return None
+    
+    def update_customer_credit(self, customer_id: str, updates: Dict[str, Any]) -> bool:
+        """Update customer credit balance"""
+        try:
+            update_expression = "SET "
+            expression_values = {}
+            expression_names = {}
+            
+            for key, value in updates.items():
+                update_expression += f"#{key} = :{key}, "
+                expression_values[f":{key}"] = value
+                expression_names[f"#{key}"] = key
+            
+            update_expression = update_expression.rstrip(", ")
+            
+            self.customer_credits_table.update_item(
+                Key={'customer_id': customer_id},
+                UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_names,
+                ExpressionAttributeValues=expression_values
+            )
+            return True
+        except Exception as e:
+            print(f"Error updating customer credit: {e}")
+            return False
+    
+    def create_credit_transaction(self, transaction) -> bool:
+        """Create credit transaction record"""
+        try:
+            from models.entities import CreditTransaction
+            item = self._prepare_item(transaction.__dict__)
+            self.credit_transactions_table.put_item(Item=item)
+            return True
+        except Exception as e:
+            print(f"Error creating credit transaction: {e}")
+            return False
+    
+    def get_credit_transactions_by_customer(self, customer_id: str, limit: int = 50) -> List:
+        """Get credit transactions for a customer"""
+        try:
+            from models.entities import CreditTransaction
+            response = self.credit_transactions_table.query(
+                IndexName='customer-index',
+                KeyConditionExpression=Key('customer_id').eq(customer_id),
+                Limit=limit,
+                ScanIndexForward=False  # Most recent first
+            )
+            return [CreditTransaction(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting credit transactions: {e}")
+            return []
+    
+    def get_customers_with_credit_balance(self, min_amount=None) -> List:
+        """Get all customers with credit balance (optionally filtered by minimum amount)"""
+        try:
+            from models.entities import CustomerCredit
+            from decimal import Decimal
+            
+            if min_amount:
+                response = self.customer_credits_table.scan(
+                    FilterExpression='current_balance >= :min_amount',
+                    ExpressionAttributeValues={':min_amount': Decimal(str(min_amount))}
+                )
+            else:
+                response = self.customer_credits_table.scan()
+            
+            return [CustomerCredit(**item) for item in response.get('Items', [])]
+        except Exception as e:
+            print(f"Error getting customers with credit balance: {e}")
+            return []
+
+# Alias for backward compatibility and testing
+DatabaseService = DynamoDBService
