@@ -37,7 +37,7 @@ class CreditCommands(BaseHandler):
         
         if error:
             if error.get('keyboard'):
-                self._send_message(chat_id, error['message'], keyboard=error['keyboard'])
+                self._send_message(chat_id, error['message'], reply_markup=error['keyboard'])
             else:
                 self._send_message(chat_id, error['message'])
             return error
