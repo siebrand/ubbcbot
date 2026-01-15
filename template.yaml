@@ -501,6 +501,65 @@ Resources:
         - Key: ManagedBy
           Value: sam
 
+  CustomerCreditsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-customer-credits'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: customer_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: customer_id
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: ubbc-telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
+  CreditTransactionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-credit-transactions'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: transaction_id
+          AttributeType: S
+        - AttributeName: customer_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: transaction_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: customer-index
+          KeySchema:
+            - AttributeName: customer_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: ubbc-telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
   # S3 Bucket for Images
   ImageBucket:
     Type: AWS::S3::Bucket
