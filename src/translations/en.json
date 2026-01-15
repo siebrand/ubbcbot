@@ -604,6 +604,7 @@
   "no_payment_needed": "✅ No payment needed! Your credit covers this delivery.",
   "credit_notification": "💰 Credit Issued\n\nYou have received a credit of €{amount:.2f}\n\nReason: {reason}\n\nYour new credit balance: €{balance:.2f}\n\nThis credit will be automatically applied to your next delivery.",
   "usage_credit": "Usage: /credit <username> <amount> [reason]",
+  "reason_required_negative": "❌ Reason is required for negative amounts",
   "invalid_amount": "❌ Invalid amount",
   "failed_issue_credit": "❌ Failed to issue credit"
 }

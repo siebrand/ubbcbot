@@ -604,6 +604,7 @@
   "no_payment_needed": "✅ Geen betaling nodig! Je tegoed dekt deze levering.",
   "credit_notification": "💰 Tegoed Uitgegeven\n\nJe hebt een tegoed ontvangen van €{amount:.2f}\n\nReden: {reason}\n\nJe nieuwe tegoedsaldo: €{balance:.2f}\n\nDit tegoed wordt automatisch toegepast op je volgende levering.",
   "usage_credit": "Gebruik: /credit <gebruikersnaam> <bedrag> [reden]",
+  "reason_required_negative": "❌ Reden is verplicht voor negatieve bedragen",
   "invalid_amount": "❌ Ongeldig bedrag",
   "failed_issue_credit": "❌ Kon tegoed niet uitgeven"
 }

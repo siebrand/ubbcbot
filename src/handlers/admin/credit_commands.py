@@ -28,6 +28,10 @@ class CreditCommands(BaseHandler):
         
         reason = ' '.join(args[2:]) if len(args) > 2 else ''
         
+        # Require reason for negative amounts
+        if amount < 0 and not reason:
+            return self._send_error(chat_id, 'reason_required_negative', 'invalid_format', user_id=chat_id)
+        
         # Find customer using validation utility
         customer, error = self.validation.find_customer_with_disambiguation(
             username, 

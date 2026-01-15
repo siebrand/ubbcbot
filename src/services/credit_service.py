@@ -73,17 +73,15 @@ class CreditService:
         
         Args:
             customer_id: Customer ID
-            amount: Credit amount (must be positive)
-            reason: Reason for credit (required)
+            amount: Credit amount (positive adds credit, negative creates debt)
+            reason: Reason for credit (required for negative amounts)
             admin_id: Admin user ID issuing the credit
         
         Returns:
             True if successful, False otherwise
         """
-        # Validate inputs
-        if amount <= 0:
-            return False
-        if not reason or not reason.strip():
+        # Validate reason is required for negative amounts
+        if amount < 0 and (not reason or not reason.strip()):
             return False
         
         # Get current balance
@@ -97,7 +95,7 @@ class CreditService:
             amount=amount,
             balance_before=current_balance,
             balance_after=new_balance,
-            reason=reason.strip(),
+            reason=reason.strip() if reason else "Credit issued",
             created_by=admin_id
         )
         
@@ -106,7 +104,8 @@ class CreditService:
             return False
         
         # Update balance
-        return self._update_customer_credit_balance(customer_id, new_balance, is_credit=True)
+        is_credit = amount > 0
+        return self._update_customer_credit_balance(customer_id, new_balance, is_credit=is_credit)
     
     def apply_credit_to_delivery(self, customer_id: str, delivery_total: Decimal) -> dict:
         """Apply credit when orders transition LABELING_COMPLETED → AWAITING_PAYMENT
