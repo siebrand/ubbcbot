@@ -118,6 +118,8 @@ class CommandRouter:
             return self.handlers['changelog'].handle_changelog(target_chat, user_id, 1)
         elif command == '/cancel':
             return self._handle_cancel_command(target_chat, user_id)
+        elif command == '/my_credit':
+            return self.handlers['customer_credit'].handle_my_credit(target_chat, user_id)
 
         # Admin-only commands
         if self._is_admin(user_id):
