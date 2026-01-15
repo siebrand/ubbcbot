@@ -24,6 +24,8 @@ from handlers.customer.order_commands import CustomerOrderCommands
 from handlers.customer.info_commands import InfoCommands
 from handlers.customer.auth_commands import AuthCommands
 from handlers.customer.changelog_commands import ChangelogCommands
+from handlers.admin.credit_commands import AdminCreditCommands
+from handlers.customer.credit_commands import CustomerCreditCommands
 
 logger = logging.getLogger()
 
@@ -94,12 +96,14 @@ class BotService:
         self.delivery_overview_handler = DeliveryOverviewHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.admin_commands_handler = AdminCommandsHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.import_handler = ImportHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        self.admin_credit_commands = AdminCreditCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         # Customer handlers
         self.customer_order_commands = CustomerOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.info_commands = InfoCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.auth_commands = AuthCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.changelog_commands = ChangelogCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        self.customer_credit_commands = CustomerCreditCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
     
     def _init_services(self):
         """Initialize service components"""
@@ -119,7 +123,9 @@ class BotService:
             'changelog': self.changelog_commands,
             'customer_order': self.customer_order_commands,
             'info': self.info_commands,
-            'auth': self.auth_commands
+            'auth': self.auth_commands,
+            'credit': self.admin_credit_commands,
+            'customer_credit': self.customer_credit_commands
         }
         
         # Inject handlers into offer_commands for cross-handler calls
