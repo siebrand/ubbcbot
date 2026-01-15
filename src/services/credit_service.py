@@ -107,3 +107,48 @@ class CreditService:
         
         # Update balance
         return self._update_customer_credit_balance(customer_id, new_balance, is_credit=True)
+    
+    def apply_credit_to_delivery(self, customer_id: str, delivery_total: Decimal) -> dict:
+        """Apply credit when orders transition LABELING_COMPLETED → AWAITING_PAYMENT
+        
+        Args:
+            customer_id: Customer ID
+            delivery_total: Total delivery amount
+        
+        Returns:
+            Dict with original_total, credit_applied, payment_required, remaining_credit
+        """
+        credit_balance = self.get_customer_credit_balance(customer_id)
+        
+        if credit_balance <= 0:
+            return {
+                'original_total': delivery_total,
+                'credit_applied': Decimal('0.0'),
+                'payment_required': delivery_total,
+                'remaining_credit': Decimal('0.0')
+            }
+        
+        credit_to_apply = min(credit_balance, delivery_total)
+        payment_required = delivery_total - credit_to_apply
+        remaining_credit = credit_balance - credit_to_apply
+        
+        # Create APPLIED transaction
+        transaction = CreditTransaction(
+            customer_id=customer_id,
+            transaction_type="APPLIED",
+            amount=-credit_to_apply,  # Negative for usage
+            balance_before=credit_balance,
+            balance_after=remaining_credit,
+            reason="Applied to delivery",
+            created_by=0  # System operation
+        )
+        
+        self.create_credit_transaction(transaction)
+        self._update_customer_credit_balance(customer_id, remaining_credit, is_credit=False)
+        
+        return {
+            'original_total': delivery_total,
+            'credit_applied': credit_to_apply,
+            'payment_required': payment_required,
+            'remaining_credit': remaining_credit
+        }
