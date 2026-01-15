@@ -38,7 +38,7 @@ class TestCommandRouting:
         handlers = {}
         for name in ['info', 'customer_order', 'auth', 'test', 'supplier', 'offer', 
                      'import', 'admin_order', 'user', 'discount', 'wholesale_delivery', 
-                     'labeling', 'admin_commands', 'changelog']:
+                     'labeling', 'admin_commands', 'changelog', 'credit']:
             handlers[name] = Mock()
         return handlers
     
@@ -238,6 +238,7 @@ class TestCommandRouting:
         ('/delete_old_orders', 'admin_order', 'handle_delete_old_orders'),
         ('/audit_orders', 'admin_order', 'handle_audit_orders'),
         ('/admin', 'admin_commands', 'handle_admin'),
+        ('/credit user 10 reason', 'credit', 'handle_credit'),
     ])
     def test_admin_command_routing(self, router, mock_handlers, command, handler, method):
         """Test that admin commands route to correct handlers"""

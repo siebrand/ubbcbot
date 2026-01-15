@@ -217,10 +217,19 @@ class TestIssueCredit:
         result = credit_service.issue_credit("customer-123", Decimal('0.00'), "Test", 123)
         assert result is False
     
-    def test_issue_credit_invalid_amount_negative(self, credit_service):
-        """Test issuing credit with negative amount fails"""
-        result = credit_service.issue_credit("customer-123", Decimal('-10.00'), "Test", 123)
-        assert result is False
+    def test_issue_credit_negative_amount_with_reason_succeeds(self, credit_service, mocker):
+        """Test issuing negative credit (debt) with reason succeeds"""
+        customer_id = "customer-123"
+        amount = Decimal('-10.00')
+        reason = "Damaged product charge"
+        admin_id = 123
+        
+        credit_service.get_customer_credit_balance = mocker.Mock(return_value=Decimal('0.00'))
+        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
+        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
+        
+        result = credit_service.issue_credit(customer_id, amount, reason, admin_id)
+        assert result is True
     
     def test_issue_credit_empty_reason(self, credit_service):
         """Test issuing credit with empty reason fails"""
