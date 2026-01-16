@@ -232,7 +232,10 @@ class BotService:
     def _notify_admin_new_user_pending(self, user_data: Dict[str, Any], created_customer):
         """Send notification to admin when new user registration is pending"""
         try:
-            first_name = user_data.get('first_name', self._t('unknown', user_id=None))
+            from handlers.base_handler import BaseHandler
+            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            
+            first_name = user_data.get('first_name', base_handler._t('unknown', user_id=None))
             last_name = user_data.get('last_name', '')
             username = user_data.get('username', 'no_username')
             user_id = user_data.get('id')
@@ -245,9 +248,6 @@ class BotService:
                 display_name += f" {last_name}"
 
             # Create notification message using translation system
-            from handlers.base_handler import BaseHandler
-            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-
             message = base_handler._t(
                 'new_user_pending_notification',
                 self.admin_user_id,
