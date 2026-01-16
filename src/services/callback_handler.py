@@ -172,7 +172,7 @@ class CallbackHandler:
                 return self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active')
             elif data.startswith('user_orders_select_'):
                 customer_id = data.split('_')[3]
-                return self.handlers['admin_order'].handle_user_orders_select(chat_id, customer_id)
+                return self.handlers['admin_order'].handle_list_user_orders_select(chat_id, customer_id)
             elif data.startswith('cancel_order_user_select_'):
                 customer_id = data.split('_')[4]
                 return self.handlers['admin_order'].handle_cancel_order_user_select(chat_id, customer_id)
