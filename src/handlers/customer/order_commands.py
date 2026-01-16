@@ -242,6 +242,11 @@ class CustomerOrderCommands(BaseHandler):
             if not group_id:
                 return False
             
+            # Only send notifications for non-guest orders
+            if customer.is_guest:
+                logger.info("Skipping message to guest user")
+                return False
+            
             bot_username = self._get_bot_username()
             
             # Check if offer is now sold out and calculate remaining availability
@@ -264,14 +269,12 @@ class CustomerOrderCommands(BaseHandler):
             # Format offer name as link
             offer_link = f"<a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{self._escape_html(offer.name)}</a>"
             
-            # Only send notifications for non-guest orders
-            if not customer.is_guest:
-                customer_name = self._get_public_name(customer)
-                message = self._t('order_notification', force_group_lang=True, 
-                                customer_name=customer_name, 
-                                quantity=quantity, 
-                                offer_name=offer_link, 
-                                availability=availability_text)
+            customer_name = self._get_public_name(customer)
+            message = self._t('order_notification', force_group_lang=True, 
+                            customer_name=customer_name, 
+                            quantity=quantity, 
+                            offer_name=offer_link, 
+                            availability=availability_text)
             
             result = self._send_message(int(group_id), message, parse_mode="HTML", force_group=True)
             success = result.get('success', False)
