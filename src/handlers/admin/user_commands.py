@@ -26,8 +26,13 @@ class UserCommands(BaseHandler):
 
         # Update user status
         if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.APPROVED.value}):
-            # Notify user
-            self._send_message(customer.telegram_user_id, self._t('user_authorized', customer.telegram_user_id))
+            # Try to notify user (may fail if they have blocked bot or restrictive privacy settings)
+            try:
+                self._send_message(customer.telegram_user_id, self._t('user_authorized', customer.telegram_user_id))
+            except Exception as e:
+                # Notify admin about failed message
+                admin_msg = f"⚠️ Failed to notify user:\n\nName: {customer.first_name or 'N/A'} {customer.last_name or ''}\nUsername: @{customer.username or 'N/A'}\nTelegram ID: {customer.telegram_user_id}\n\nMessage: {self._t('user_authorized', customer.telegram_user_id)}\n\nError: {str(e)}"
+                self._send_message(self.admin_user_id, admin_msg)
             
             # Confirm to admin
             display_name = customer.first_name or self._t('unknown', user_id=None)
@@ -113,8 +118,13 @@ class UserCommands(BaseHandler):
 
         # Update user status
         if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.REJECTED.value}):
-            # Notify user
-            self._send_message(customer.telegram_user_id, self._t('access_rejected', customer.telegram_user_id))
+            # Try to notify user (may fail if they have blocked bot or restrictive privacy settings)
+            try:
+                self._send_message(customer.telegram_user_id, self._t('access_rejected', customer.telegram_user_id))
+            except Exception as e:
+                # Notify admin about failed message
+                admin_msg = f"⚠️ Failed to notify user:\n\nName: {customer.first_name or 'N/A'} {customer.last_name or ''}\nUsername: @{customer.username or 'N/A'}\nTelegram ID: {customer.telegram_user_id}\n\nMessage: {self._t('access_rejected', customer.telegram_user_id)}\n\nError: {str(e)}"
+                self._send_message(self.admin_user_id, admin_msg)
             
             # Confirm to admin
             display_name = customer.first_name or self._t('unknown', user_id=None)
@@ -322,8 +332,13 @@ class UserCommands(BaseHandler):
 
         # Update user status
         if self.db.update_customer(customer.customer_id, {'authorization_status': AuthorizationStatus.REJECTED.value}):
-            # Notify user
-            self._send_message(customer.telegram_user_id, self._t('access_rejected', customer.telegram_user_id))
+            # Try to notify user (may fail if they have blocked bot or restrictive privacy settings)
+            try:
+                self._send_message(customer.telegram_user_id, self._t('access_rejected', customer.telegram_user_id))
+            except Exception as e:
+                # Notify admin about failed message
+                admin_msg = f"⚠️ Failed to notify user:\n\nName: {customer.first_name or 'N/A'} {customer.last_name or ''}\nUsername: @{customer.username or 'N/A'}\nTelegram ID: {customer.telegram_user_id}\n\nMessage: {self._t('access_rejected', customer.telegram_user_id)}\n\nError: {str(e)}"
+                self._send_message(self.admin_user_id, admin_msg)
             
             # Confirm to admin
             display_name = customer.first_name or self._t('unknown', user_id=None)
