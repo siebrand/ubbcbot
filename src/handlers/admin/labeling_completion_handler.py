@@ -9,7 +9,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
 
-    def handle_labeling_completed(self, chat_id: int, user_id: int, args: List[str]) -> Dict[str, Any]:
+    def handle_process_labeling(self, chat_id: int, user_id: int, args: List[str]) -> Dict[str, Any]:
         """Start labeling completion drill-down interface"""
         if not self._is_admin(user_id):
             return self._send_message(chat_id, self._t('admin_only', user_id))
@@ -173,7 +173,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
                 chat_id, 
                 self._t('complete_labeling_success', box_count=len(all_boxes))
             )
-            return self.handle_labeling_completed(chat_id, self.admin_user_id, [])
+            return self.handle_process_labeling(chat_id, self.admin_user_id, [])
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 

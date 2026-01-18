@@ -8,12 +8,12 @@ class LabelingCommands(BaseHandler):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.completion_handler = LabelingCompletionHandler(db, admin_user_id, environment, telegram_token)
 
-    def handle_labeling_completed(self, chat_id: int, user_id: int, args: List[str]) -> Dict[str, Any]:
-        """Handle /labeling_completed command"""
+    def handle_process_labeling(self, chat_id: int, user_id: int, args: List[str]) -> Dict[str, Any]:
+        """Handle /process_labeling command"""
         if not self._is_admin(user_id):
             return self._send_message(chat_id, self._t('admin_only', user_id))
         
-        return self.completion_handler.handle_labeling_completed(chat_id, user_id, args)
+        return self.completion_handler.handle_process_labeling(chat_id, user_id, args)
 
     def handle_supplier_selection(self, chat_id: int, supplier_id_short: str) -> Dict[str, Any]:
         """Handle supplier selection"""
