@@ -237,10 +237,12 @@ Phase 3 (Remaining - Alphabetical Batches):
     ✅ clear_offer_images_<offer_id> - COMPLETED
   
   Batch D (User/Status patterns):
-    ☐ user_orders_select_<customer_id>
-    ☐ user_status_select_<customer_id>
-    ☐ credit_customer_<customer_id>
-    ☐ enter_username_<action>
+    ✅ user_orders_select_<customer_id> - COMPLETED
+    ✅ user_status_select_<customer_id> - COMPLETED
+    ✅ credit_customer_<customer_id> - COMPLETED
+    ✅ enter_username_orders - COMPLETED
+    ✅ enter_username_cancel - COMPLETED
+    ✅ enter_username_order_for - COMPLETED
   
   Batch E (Audit patterns):
     ☐ audit_offer_<offer_id>
@@ -280,10 +282,6 @@ and may require separate handling or can remain in dedicated methods.
 ## Migration Status
 
 ### ✅ Phase 0: Infrastructure Setup (COMPLETED)
-**Commits:**
-- `test: add CallbackRouter infrastructure tests (TDD red phase)` - 12d2203
-- `feat: implement CallbackRouter infrastructure (TDD green phase)` - b76ec21
-
 **Deliverables:**
 - `src/services/routing/callback_router.py` - Router implementation
 - `tests/test_callback_router.py` - 10 unit tests
@@ -291,41 +289,125 @@ and may require separate handling or can remain in dedicated methods.
 - All infrastructure tests passing
 
 ### ✅ Phase 1: Single Pattern Migration (COMPLETED)
-**Commits:**
-- `test: add approve_user callback migration tests (Phase 1)` - 3bd7ee7
-- `feat: migrate approve_user callbacks to router (Phase 1 complete)` - 4c01271
-
 **Deliverables:**
-- `tests/test_approve_callback_migration.py` - 6 integration tests
 - Router integrated into CallbackHandler
-- Migrated patterns:
+- Migrated patterns (2 total):
   - `approve_user_<customer_id>` → `handle_approve_user_by_id`
   - `approve_user_select_<customer_id>` → `handle_approve_user_select`
 - Removed legacy if/elif blocks for approve callbacks
-- All 78 callback tests passing (62 existing + 16 new)
 
 **Key Learnings:**
 - Pattern order matters: register more specific patterns first
-- Use negative character class `[^_]` to prevent overlap (e.g., `approve_user_[^_]+` won't match `approve_user_select_`)
+- Use negative character class `[^_]` to prevent overlap
 - Router dispatch must happen after callback answer but before keyboard removal
 - Customer IDs are UUIDs (alphanumeric), not just digits
 
-**Testing in Production:**
-1. Test approve user flow: `/list_pending` → click approve button
-2. Test approve user search: Admin panel → Users → Approve User → enter username → approve
-3. Monitor CloudWatch logs for "Callback handled by router" messages
+### ✅ Phase 2: User Actions & Confirmations (COMPLETED)
+**Deliverables:**
+- Migrated patterns (11 total):
+  - `reject_user_<customer_id>`
+  - `cancel_order_user_select_<customer_id>`
+  - `cancel_order_confirm_<order_id>`
+  - `cancel_orders_page_<customer_id>_<page>`
+  - `cancel_confirmation`
+  - `cancel_action`
+  - `confirm_process_wholesale_<offer_id>_<boxes>`
+  - `confirm_cancel_offer_<offer_id>`
+  - `confirm_cancel_order_<order_id>`
+  - `confirm_fulfill_<offer_id>_<boxes>`
+  - `confirm_order_<offer_id>_<quantity>`
+- Added error handling wrapper for confirm_process_wholesale
+- Removed ~70 lines of legacy handler code
 
-### ☐ Phase 2: Three Pattern Migration (NEXT)
-**Target Patterns:**
-1. `cancel_<action>` - Various cancellation callbacks
-2. `confirm_<action>_<params>` - Confirmation callbacks  
-3. `archive_supplier_<supplier_id>` - Supplier archival
+### ✅ Phase 3 Batch A: Edit Patterns (COMPLETED)
+**Deliverables:**
+- Migrated patterns (3 total):
+  - `edit_user_select_<customer_id>`
+  - `edit_supplier_select_<supplier_id>`
+  - `edit_<entity>_<field>_<id>` (generic pattern with wrapper)
+- Removed ~10 lines of legacy handler code
 
-**Estimated Effort:** 2-3 commits following same TDD pattern
+### ✅ Phase 3 Batch B: Order Patterns (COMPLETED)
+**Deliverables:**
+- Migrated patterns (5 total):
+  - `order_for_quantity_<customer_id>_<offer_id>_<quantity>`
+  - `order_for_other_<customer_id>_<offer_id>`
+  - `order_for_offer_<customer_id>_<offer_id>`
+  - `order_for_user_select_<customer_id>`
+  - `order_<offer_id>_<quantity>`
+- Removed ~30 lines of legacy handler code with complex string parsing
 
-### ☐ Phase 3: Batch Migration (FUTURE)
-**Remaining Patterns:** See catalog above
-**Estimated Effort:** 10-15 commits (2-3 patterns per commit)
+### ✅ Phase 3 Batch C: Offer/Supplier Patterns (COMPLETED)
+**Deliverables:**
+- Migrated patterns (8 total):
+  - `wholesale_select_<offer_id>`
+  - `custom_wholesale_quantity_<offer_id>`
+  - `publish_offer_<offer_id>`
+  - `finalize_import_<offer_id>`
+  - `offer_details_<offer_id>` (with optional edit mode)
+  - `offer_orders_<offer_id>` (+ pagination patterns)
+  - `upload_offer_image_<offer_id>`
+  - `clear_offer_images_<offer_id>`
+- Added wrapper methods for image operations
+- Removed ~40 lines of legacy handler code
+
+### ✅ Phase 3 Batch D: User/Status Patterns (COMPLETED)
+**Deliverables:**
+- Migrated patterns (6 total):
+  - `user_orders_select_<customer_id>`
+  - `user_status_select_<customer_id>`
+  - `credit_customer_<customer_id>`
+  - `enter_username_orders`
+  - `enter_username_cancel`
+  - `enter_username_order_for`
+- Removed ~20 lines of legacy handler code
+
+### ☐ Phase 3 Batch E: Audit Patterns (NEXT)
+**Target Patterns (5 total):**
+- `audit_offer_<offer_id>`
+- `audit_fill_boxes_<offer_id>_<excess>`
+- `audit_fill_create_<offer_id>_<excess>`
+- `audit_create_boxes_<offer_id>_<excess>`
+- `audit_cancel_orders_<offer_id>_<excess>`
+
+### ☐ Phase 3 Batch F: Delivery/Export Patterns (FUTURE)
+**Target Patterns (5 total):**
+- `export_orders_<status>`
+- `start_send_overviews`
+- `finish_labeling_<box_id>`
+- `mark_paid_<customer_id>`
+- `request_cancel_reason_<order_id>`
+
+### ☐ Phase 3 Batch G: Navigation Patterns (FUTURE)
+**Target Patterns (3 total):**
+- `back_to_supplier_list`
+- `process_wholesale`
+- `create_supplier_start`
+
+**Note:** page_, admin, cmd, wd_, and lc_ patterns use different formats (colon-separated) and remain in dedicated methods.
+
+## Progress Summary
+
+**Completed:**
+- Phase 0: Infrastructure (router + tests)
+- Phase 1: 2 patterns
+- Phase 2: 11 patterns
+- Phase 3 Batch A: 3 patterns
+- Phase 3 Batch B: 5 patterns
+- Phase 3 Batch C: 8 patterns
+- Phase 3 Batch D: 6 patterns
+- **Total: 35 patterns migrated**
+
+**Remaining:**
+- Phase 3 Batch E: 5 patterns
+- Phase 3 Batch F: 5 patterns
+- Phase 3 Batch G: 3 patterns
+- **Total: 13 patterns remaining**
+
+**Code Reduction:**
+- ~170 lines of legacy handler code removed
+- Callback handler complexity significantly reduced
+- All migrated patterns now use consistent regex-based routing
 
 ## Migration Checklist Template
 
@@ -343,9 +425,10 @@ For each pattern/batch:
 
 ## Metrics
 
-| Metric | Before | After Phase 1 | Target (Complete) |
-|--------|--------|---------------|-------------------|
-| Callback patterns in if/elif | ~50 | ~48 | 0 |
-| Callback patterns in router | 0 | 2 | ~50 |
-| Lines in handle_callback_query | ~700 | ~695 | ~100 |
-| Test coverage | 62 tests | 78 tests | ~120 tests |
+| Metric | Before | Current (Phase 3D) | Target (Complete) |
+|--------|--------|-------------------|-------------------|
+| Callback patterns in if/elif | ~50 | ~15 | 0 |
+| Callback patterns in router | 0 | 35 | ~48 |
+| Lines in handle_callback_query | ~700 | ~530 | ~100 |
+| Legacy code removed | 0 | ~170 lines | ~600 lines |
+| Test coverage | 62 tests | ~100 tests | ~120 tests |
