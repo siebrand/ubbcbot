@@ -7,6 +7,10 @@ from boto3.dynamodb.conditions import Key
 from models.entities import Supplier, Offer, Customer, Box, Order, DiscountPeriod, DiscountStatus, BoxStatus
 from services.user_cache import UserCache
 from services.offer_cache import OfferCache
+from src.repositories.supplier_repository import SupplierRepository
+from src.repositories.offer_repository import OfferRepository
+from src.repositories.system_repository import SystemRepository
+from src.repositories.customer_repository import CustomerRepository
 
 class DynamoDBService:
     def __init__(self):
@@ -15,7 +19,13 @@ class DynamoDBService:
         self.table_prefix = os.environ.get('DYNAMODB_TABLE_PREFIX', 'ubbc-bot-test')
         self.s3_bucket = os.environ.get('S3_BUCKET_NAME', f'{self.table_prefix}-images')
         
-        # Initialize tables
+        # Initialize repositories
+        self.system_repo = SystemRepository()
+        self.supplier_repo = SupplierRepository()
+        self.offer_repo = OfferRepository(self.system_repo)
+        self.customer_repo = CustomerRepository(self.system_repo)
+        
+        # Initialize tables (Legacy - to be removed)
         self.suppliers_table = self.dynamodb.Table(f'{self.table_prefix}-suppliers')
         self.offers_table = self.dynamodb.Table(f'{self.table_prefix}-offers')
         self.customers_table = self.dynamodb.Table(f'{self.table_prefix}-customers')
@@ -47,245 +57,53 @@ class DynamoDBService:
 
     def _get_next_offer_id(self) -> int:
         """Get next auto-incrementing offer ID"""
-        try:
-            response = self.counters_table.update_item(
-                Key={'counter_name': 'offer_id'},
-                UpdateExpression='ADD #val :inc',
-                ExpressionAttributeNames={'#val': 'value'},
-                ExpressionAttributeValues={':inc': 1},
-                ReturnValues='UPDATED_NEW'
-            )
-            return int(response['Attributes']['value'])
-        except Exception as e:
-            print(f"Error getting next offer ID: {e}")
-            # Initialize counter if it doesn't exist
-            try:
-                self.counters_table.put_item(
-                    Item={'counter_name': 'offer_id', 'value': 1},
-                    ConditionExpression='attribute_not_exists(counter_name)'
-                )
-                return 1
-            except Exception:
-                return 1
+        return self.system_repo.get_next_id('offer_id')
 
     def get_next_guest_id(self) -> int:
         """Get next auto-incrementing guest ID"""
-        try:
-            response = self.counters_table.update_item(
-                Key={'counter_name': 'guest_id'},
-                UpdateExpression='ADD #val :inc',
-                ExpressionAttributeNames={'#val': 'value'},
-                ExpressionAttributeValues={':inc': 1},
-                ReturnValues='UPDATED_NEW'
-            )
-            return int(response['Attributes']['value'])
-        except Exception as e:
-            print(f"Error getting next guest ID: {e}")
-            # Initialize counter if it doesn't exist
-            try:
-                self.counters_table.put_item(
-                    Item={'counter_name': 'guest_id', 'value': 1},
-                    ConditionExpression='attribute_not_exists(counter_name)'
-                )
-                return 1
-            except Exception:
-                return 1
+        return self.system_repo.get_next_id('guest_id')
 
     # Supplier operations
     def create_supplier(self, supplier: Supplier) -> bool:
-        try:
-            # Check for duplicate name (case-insensitive)
-            existing = self.get_supplier_by_name(supplier.name)
-            if existing:
-                return False
-            
-            item = self._prepare_item(supplier.__dict__)
-            self.suppliers_table.put_item(Item=item)
-            return True
-        except Exception as e:
-            print(f"Error creating supplier: {e}")
-            return False
+        return self.supplier_repo.create_supplier(supplier)
 
     def get_supplier(self, supplier_id: str) -> Optional[Supplier]:
-        try:
-            response = self.suppliers_table.get_item(Key={'supplier_id': supplier_id})
-            if 'Item' in response:
-                return Supplier(**response['Item'])
-            return None
-        except Exception as e:
-            print(f"Error getting supplier: {e}")
-            return None
+        return self.supplier_repo.get_supplier(supplier_id)
 
     def get_supplier_by_name(self, name: str) -> Optional[Supplier]:
-        try:
-            response = self.suppliers_table.scan(
-                FilterExpression='#name = :name',
-                ExpressionAttributeNames={'#name': 'name'},
-                ExpressionAttributeValues={':name': name.strip()}
-            )
-            items = response.get('Items', [])
-            if items:
-                return Supplier(**items[0])
-            return None
-        except Exception as e:
-            print(f"Error getting supplier by name: {e}")
-            return None
+        return self.supplier_repo.get_supplier_by_name(name)
 
     def update_supplier(self, supplier_id: str, updates: Dict[str, Any]) -> bool:
-        try:
-            update_expression = "SET "
-            expression_values = {}
-            expression_names = {}
-            
-            for key, value in updates.items():
-                update_expression += f"#{key} = :{key}, "
-                expression_values[f":{key}"] = value
-                expression_names[f"#{key}"] = key
-            
-            update_expression = update_expression.rstrip(", ")
-            
-            self.suppliers_table.update_item(
-                Key={'supplier_id': supplier_id},
-                UpdateExpression=update_expression,
-                ExpressionAttributeNames=expression_names,
-                ExpressionAttributeValues=expression_values
-            )
-            return True
-        except Exception as e:
-            print(f"Error updating supplier: {e}")
-            return False
+        return self.supplier_repo.update_supplier(supplier_id, updates)
 
     def list_suppliers(self) -> List[Supplier]:
-        try:
-            response = self.suppliers_table.scan()
-            return [Supplier(**item) for item in response.get('Items', [])]
-        except Exception as e:
-            print(f"Error listing suppliers: {e}")
-            return []
+        return self.supplier_repo.list_suppliers()
 
     # Offer operations
     def create_offer(self, offer: Offer) -> bool:
-        try:
-            # Get next offer ID if not set
-            if offer.offer_id == 0:
-                offer.offer_id = self._get_next_offer_id()
-            
-            item = self._prepare_item(offer.__dict__)
-            self.offers_table.put_item(Item=item)
-            
-            # Invalidate cache
-            OfferCache.invalidate_cache()
-            
-            return True
-        except Exception as e:
-            print(f"Error creating offer: {e}")
-            return False
+        return self.offer_repo.create_offer(offer)
 
     def get_offer(self, offer_id: int) -> Optional[Offer]:
-        try:
-            # Ensure offer_id is an integer (handle float inputs)
-            offer_id = int(offer_id)
-            response = self.offers_table.get_item(Key={'offer_id': offer_id})
-            if 'Item' in response:
-                item = response['Item']
-                # Convert Decimal fields to appropriate types
-                if 'wholesale_box_size' in item:
-                    item['wholesale_box_size'] = int(item['wholesale_box_size'])
-                # Remove deprecated fields for backward compatibility
-                item.pop('min_quantity_breakeven', None)
-                return Offer(**item)
-            return None
-        except Exception as e:
-            print(f"Error getting offer: {e}")
-            return None
+        return self.offer_repo.get_offer(offer_id)
 
     def list_offers(self) -> List[Offer]:
         """Get all offers with caching"""
-        return OfferCache.get_offers(self)
+        return self.offer_repo.list_offers()
     
     def _list_offers_uncached(self) -> List[Offer]:
         """Internal method to get offers without caching"""
-        try:
-            response = self.offers_table.scan()
-            offers = []
-            for item in response.get('Items', []):
-                # Convert Decimal fields to appropriate types
-                if 'wholesale_box_size' in item:
-                    item['wholesale_box_size'] = int(item['wholesale_box_size'])
-                # Remove deprecated fields for backward compatibility
-                item.pop('min_quantity_breakeven', None)
-                offers.append(Offer(**item))
-            return offers
-        except Exception as e:
-            print(f"Error listing offers: {e}")
-            return []
+        return self.offer_repo._list_offers_uncached()
     
     def list_sold_out_offers_recent(self, days: int = 7) -> List[Offer]:
         """Get sold out offers from last N days"""
-        try:
-            from datetime import datetime, timedelta, UTC
-            cutoff_date = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-            
-            response = self.offers_table.scan(
-                FilterExpression='#status = :status AND created_at >= :cutoff',
-                ExpressionAttributeNames={'#status': 'status'},
-                ExpressionAttributeValues={
-                    ':status': 'sold_out',
-                    ':cutoff': cutoff_date
-                }
-            )
-            return [Offer(**item) for item in response.get('Items', [])]
-        except Exception as e:
-            print(f"Error listing recent sold out offers: {e}")
-            return []
+        return self.offer_repo.list_sold_out_offers_recent(days)
 
     def update_offer(self, offer_id: int, updates: Dict[str, Any]) -> bool:
-        try:
-            update_expression = "SET "
-            expression_values = {}
-            expression_names = {}
-            
-            for key, value in updates.items():
-                update_expression += f"#{key} = :{key}, "
-                expression_values[f":{key}"] = value
-                expression_names[f"#{key}"] = key
-            
-            update_expression = update_expression.rstrip(", ")
-            
-            self.offers_table.update_item(
-                Key={'offer_id': offer_id},
-                UpdateExpression=update_expression,
-                ExpressionAttributeNames=expression_names,
-                ExpressionAttributeValues=expression_values
-            )
-            
-            # Invalidate cache
-            OfferCache.invalidate_cache()
-            
-            return True
-        except Exception as e:
-            print(f"Error updating offer: {e}")
-            return False
+        return self.offer_repo.update_offer(offer_id, updates)
     
     def append_offer_image(self, offer_id: int, image_url: str) -> bool:
         """Atomically append an image to offer's images list"""
-        try:
-            self.offers_table.update_item(
-                Key={'offer_id': offer_id},
-                UpdateExpression='SET images = list_append(if_not_exists(images, :empty_list), :new_image)',
-                ExpressionAttributeValues={
-                    ':new_image': [image_url],
-                    ':empty_list': []
-                }
-            )
-            
-            # Invalidate cache
-            OfferCache.invalidate_cache()
-            
-            return True
-        except Exception as e:
-            print(f"Error appending image to offer: {e}")
-            return False
+        return self.offer_repo.append_offer_image(offer_id, image_url)
 
     def delete_box(self, box_id: str) -> bool:
         try:
@@ -298,42 +116,15 @@ class DynamoDBService:
     # Customer operations
     def create_customer(self, customer: Customer) -> Optional[Customer]:
         """Create customer and invalidate cache"""
-        try:
-            item = self._prepare_item(customer.__dict__)
-            self.customers_table.put_item(Item=item)
-            
-            # Invalidate cache for the customer's status
-            UserCache.invalidate_status_cache(customer.authorization_status)
-
-            return customer
-        except Exception as e:
-            print(f"Error creating customer: {e}")
-            return None
+        return self.customer_repo.create_customer(customer)
 
     def get_customer_by_telegram_id(self, telegram_user_id: int) -> Optional[Customer]:
         """Get customer by telegram ID with caching"""
-        return UserCache.get_customer_by_telegram_id(telegram_user_id, self)
+        return self.customer_repo.get_customer_by_telegram_id(telegram_user_id)
     
     def _get_customer_by_telegram_id_uncached(self, telegram_user_id: int) -> Optional[Customer]:
         """Internal method to get customer by telegram ID without caching"""
-        try:
-            response = self.customers_table.query(
-                IndexName='telegram-user-index',
-                KeyConditionExpression=Key('telegram_user_id').eq(telegram_user_id)
-            )
-            items = response.get('Items', [])
-            if items:
-                item = items[0]
-                # Handle missing fields for backward compatibility
-                if 'is_guest' not in item:
-                    item['is_guest'] = False
-                if 'contact_info' not in item:
-                    item['contact_info'] = None
-                return Customer(**item)
-            return None
-        except Exception as e:
-            print(f"Error getting customer by telegram ID: {e}")
-            return None
+        return self.customer_repo._get_customer_by_telegram_id_uncached(telegram_user_id)
 
     # Box operations
     def create_box(self, box: Box) -> Optional[Box]:
@@ -539,20 +330,7 @@ class DynamoDBService:
             return None
 
     def get_customer(self, customer_id: str) -> Optional[Customer]:
-        try:
-            response = self.customers_table.get_item(Key={'customer_id': customer_id})
-            if 'Item' in response:
-                item = response['Item']
-                # Handle missing fields for backward compatibility
-                if 'is_guest' not in item:
-                    item['is_guest'] = False
-                if 'contact_info' not in item:
-                    item['contact_info'] = None
-                return Customer(**item)
-            return None
-        except Exception as e:
-            print(f"Error getting customer: {e}")
-            return None
+        return self.customer_repo.get_customer(customer_id)
 
     def get_box(self, box_id: str) -> Optional[Box]:
         try:
@@ -627,104 +405,21 @@ class DynamoDBService:
 
     def get_customers_by_status(self, status: str) -> List[Customer]:
         """Get customers by status with caching"""
-        return UserCache.get_customers_by_status(status, self)
+        return self.customer_repo.get_customers_by_status(status)
     
     def _get_customers_by_status_uncached(self, status: str) -> List[Customer]:
         """Internal method to get customers by status without caching"""
-        try:
-            response = self.customers_table.scan(
-                FilterExpression='authorization_status = :status',
-                ExpressionAttributeValues={':status': status}
-            )
-            customers = []
-            for item in response.get('Items', []):
-                # Handle missing fields for backward compatibility
-                if 'is_guest' not in item:
-                    item['is_guest'] = False
-                if 'contact_info' not in item:
-                    item['contact_info'] = None
-                customers.append(Customer(**item))
-            return customers
-        except Exception as e:
-            print(f"Error getting customers by status: {e}")
-            return []
+        return self.customer_repo._get_customers_by_by_status_uncached(status)
 
     def get_customer_by_username(self, username: str) -> Optional[Customer]:
-        try:
-            response = self.customers_table.scan(
-                FilterExpression='username = :username',
-                ExpressionAttributeValues={':username': username}
-            )
-            items = response.get('Items', [])
-            if items:
-                return Customer(**items[0])
-            return None
-        except Exception as e:
-            print(f"Error getting customer by username: {e}")
-            return None
+        return self.customer_repo.get_customer_by_username(username)
 
     def get_customer_by_name(self, name: str) -> Optional[Customer]:
-        try:
-            response = self.customers_table.scan(
-                FilterExpression='contains(first_name, :name) OR contains(last_name, :name)',
-                ExpressionAttributeValues={':name': name}
-            )
-            items = response.get('Items', [])
-            if items:
-                return Customer(**items[0])
-            return None
-        except Exception as e:
-            print(f"Error getting customer by name: {e}")
-            return None
+        """Search customer by name (first + last)"""
+        return self.customer_repo.get_customer_by_name(name)
 
     def update_customer(self, customer_id: str, updates: Dict[str, Any]) -> bool:
-        """Update customer and invalidate cache"""
-        try:
-            # Get current customer to determine status changes
-            current_customer = self.get_customer(customer_id)
-            
-            update_expression = "SET "
-            expression_values = {}
-            expression_names = {}
-            
-            for key, value in updates.items():
-                update_expression += f"#{key} = :{key}, "
-                expression_values[f":{key}"] = value
-                expression_names[f"#{key}"] = key
-            
-            update_expression = update_expression.rstrip(", ")
-            
-            self.customers_table.update_item(
-                Key={'customer_id': customer_id},
-                UpdateExpression=update_expression,
-                ExpressionAttributeNames=expression_names,
-                ExpressionAttributeValues=expression_values
-            )
-            
-            # Invalidate relevant caches
-            if current_customer:
-                # Invalidate telegram_id cache
-                UserCache.invalidate_customer_cache(current_customer.telegram_user_id)
-                
-                # If authorization status changed, invalidate both old and new status caches
-                if 'authorization_status' in updates:
-                    UserCache.invalidate_status_cache(current_customer.authorization_status)
-                    UserCache.invalidate_status_cache(updates['authorization_status'])
-                else:
-                    # Otherwise just invalidate current status cache
-                    UserCache.invalidate_status_cache(current_customer.authorization_status)
-                
-                # If subscription status changed, invalidate subscriber cache
-                if 'subscribed_to_offers' in updates:
-                    UserCache.invalidate_subscriber_cache()
-            else:
-                # If we can't determine current status, invalidate all caches
-                UserCache.invalidate_cache()
-            
-            return True
-        except Exception as e:
-            print(f"Error updating customer: {e}")
-            return False
+        return self.customer_repo.update_customer(customer_id, updates)
 
     # Notification message operations
     def create_notification_message(self, notification) -> bool:
@@ -835,31 +530,15 @@ class DynamoDBService:
     
     def get_subscribers(self) -> List[Customer]:
         """Get subscribers with caching"""
-        return UserCache.get_subscribers(self)
+        return self.customer_repo.get_subscribers()
     
     def _get_subscribers_uncached(self) -> List[Customer]:
         """Internal method to get subscribers without caching"""
-        try:
-            response = self.customers_table.scan(
-                FilterExpression='subscribed_to_offers = :subscribed',
-                ExpressionAttributeValues={':subscribed': True}
-            )
-            customers = []
-            for item in response.get('Items', []):
-                # Handle missing fields for backward compatibility
-                if 'is_guest' not in item:
-                    item['is_guest'] = False
-                if 'contact_info' not in item:
-                    item['contact_info'] = None
-                customers.append(Customer(**item))
-            return customers
-        except Exception as e:
-            print(f"Error getting subscribers: {e}")
-            return []
+        return self.customer_repo._get_subscribers_uncached()
 
     def get_all_customers(self) -> List[Customer]:
         """Get all customers with caching"""
-        return UserCache.get_all_customers(self)
+        return self.customer_repo.get_all_customers()
 
     def cleanup_old_edit_contexts(self) -> int:
         """Clean up edit contexts older than 1 hour"""
