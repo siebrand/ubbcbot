@@ -81,7 +81,7 @@ class TestAdminOrderCommands(unittest.TestCase):
         """Test that all status management methods are properly delegated"""
         methods = [
             'handle_send_delivery_overviews',
-            'handle_mark_paid',
+            'handle_process_payment',
             'handle_failed_notifications'
         ]
         

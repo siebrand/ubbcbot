@@ -243,7 +243,7 @@ class DeliveryOverviewHandler(BaseHandler):
             # Return to mark_paid list
             from handlers.admin.order_commands import AdminOrderCommands
             order_commands = AdminOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            return order_commands.handle_mark_paid(chat_id, [], 1)
+            return order_commands.handle_process_payment(chat_id, [], 1)
         else:
             self._send_message(chat_id, self._t('failed_update_orders_customer', user_id=None, customer_name=customer_name))
             return {'status': 'error'}

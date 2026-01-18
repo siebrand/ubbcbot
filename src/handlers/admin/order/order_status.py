@@ -37,8 +37,8 @@ class OrderStatusManagement(BaseOrderHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'confirmation_shown'}
     
-    def handle_mark_paid(self, chat_id: int, args: list, page: int = 1) -> Dict[str, Any]:
-        """Handle /mark_paid command with pagination"""
+    def handle_process_payment(self, chat_id: int, args: list, page: int = 1) -> Dict[str, Any]:
+        """Handle /process_payment command with pagination"""
         # Get customers with AWAITING_PAYMENT orders
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
         customers_awaiting_payment = []

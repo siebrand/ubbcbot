@@ -30,7 +30,7 @@ class TestMarkPaidPagination:
         """Test mark_paid with no customers awaiting payment"""
         mock_db.get_customers_by_status.return_value = []
         
-        result = handler.handle_mark_paid(123, [])
+        result = handler.handle_process_payment(123, [])
         
         assert result['status'] == 'no_customers'
         handler._send_message.assert_called_once()
@@ -64,7 +64,7 @@ class TestMarkPaidPagination:
         
         mock_db.get_orders_by_customer.side_effect = get_orders
         
-        result = handler.handle_mark_paid(123, [], page=1)
+        result = handler.handle_process_payment(123, [], page=1)
         
         assert result['status'] == 'customers_shown'
         handler._send_message.assert_called_once()
@@ -119,7 +119,7 @@ class TestMarkPaidPagination:
         mock_db.get_orders_by_customer.side_effect = get_orders
         
         # Test page 1
-        result = handler.handle_mark_paid(123, [], page=1)
+        result = handler.handle_process_payment(123, [], page=1)
         assert result['status'] == 'customers_shown'
         
         call_args = handler._send_message.call_args
@@ -167,7 +167,7 @@ class TestMarkPaidPagination:
         mock_db.get_orders_by_customer.side_effect = get_orders
         
         # Test page 2
-        result = handler.handle_mark_paid(123, [], page=2)
+        result = handler.handle_process_payment(123, [], page=2)
         
         call_args = handler._send_message.call_args
         message = call_args[0][1]
@@ -214,7 +214,7 @@ class TestMarkPaidPagination:
         
         mock_db.get_orders_by_customer.return_value = orders
         
-        result = handler.handle_mark_paid(123, [], page=1)
+        result = handler.handle_process_payment(123, [], page=1)
         
         call_args = handler._send_message.call_args
         message = call_args[0][1]

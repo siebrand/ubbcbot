@@ -232,7 +232,7 @@ class TestCommandRouting:
         ('/process_delivery', 'wholesale_delivery', 'handle_wholesale_delivery'),
         ('/process_labeling', 'labeling', 'handle_process_labeling'),
         ('/send_delivery_overviews', 'admin_order', 'handle_send_delivery_overviews'),
-        ('/process_payment', 'admin_order', 'handle_mark_paid'),
+        ('/process_payment', 'admin_order', 'handle_process_payment'),
         ('/import_orders', 'import', 'handle_import_orders'),
         ('/finalize_import 1', 'import', 'handle_finalize_import'),
         ('/delete_old_orders', 'admin_order', 'handle_delete_old_orders'),

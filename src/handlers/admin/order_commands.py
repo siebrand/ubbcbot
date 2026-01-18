@@ -80,8 +80,8 @@ class AdminOrderCommands(BaseHandler):
     def handle_send_delivery_overviews(self, chat_id: int, args: list) -> Dict[str, Any]:
         return self.status_mgmt.handle_send_delivery_overviews(chat_id, args)
     
-    def handle_mark_paid(self, chat_id: int, args: list, page: int = 1) -> Dict[str, Any]:
-        return self.status_mgmt.handle_mark_paid(chat_id, args, page)
+    def handle_process_payment(self, chat_id: int, args: list, page: int = 1) -> Dict[str, Any]:
+        return self.status_mgmt.handle_process_payment(chat_id, args, page)
     
     def handle_failed_notifications(self, chat_id: int, args: list) -> Dict[str, Any]:
         return self.status_mgmt.handle_failed_notifications(chat_id, args)

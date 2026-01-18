@@ -408,7 +408,7 @@ class CallbackHandler:
         elif entity_type == 'changelog':
             return self.handlers['changelog'].handle_changelog(chat_id, user_id, page)
         elif entity_type in ['mark_paid', 'process_payment']:
-            return self.handlers['admin_order'].handle_mark_paid(chat_id, [], page)
+            return self.handlers['admin_order'].handle_process_payment(chat_id, [], page)
         elif entity_type.startswith('my_orders_') or entity_type.startswith('list_my_orders_'):
             target_user_id = int(entity_type.split('_', 3)[3] if entity_type.startswith('list_my_orders_') else entity_type.split('_', 2)[2])
             if user_id == target_user_id:
@@ -653,7 +653,7 @@ class CallbackHandler:
             'process_delivery': lambda: self.handlers['wholesale_delivery'].handle_wholesale_delivery(chat_id, user_id, []),
             'process_labeling': lambda: self.handlers['labeling'].handle_process_labeling(chat_id, user_id, []),
             'send_delivery_overviews': lambda: self.handlers['admin_order'].handle_send_delivery_overviews(chat_id, []),
-            'process_payment': lambda: self.handlers['admin_order'].handle_mark_paid(chat_id, []),
+            'process_payment': lambda: self.handlers['admin_order'].handle_process_payment(chat_id, []),
             'create_discount': lambda: self._send_usage_message(chat_id, 'usage_create_discount'),
             'view_discount': lambda: self.handlers['discount'].handle_view_discount(chat_id),
             'cancel_discount': lambda: self.handlers['discount'].handle_cancel_discount(chat_id),

@@ -4,9 +4,9 @@ This document lists ALL remaining method name refactorings needed to align with 
 
 **Implementation Order:** Tasks ordered from simplest (fewest occurrences) to most complex.
 
-## Status: 20 commands fully refactored ✅, 3 commands remaining ❌
+## Status: 21 commands fully refactored ✅, 2 commands remaining ❌
 
-**Total Progress: 20/23 (87%)**
+**Total Progress: 21/23 (91%)**
 
 ---
 
@@ -190,33 +190,22 @@ grep -r "handle_add_box" src/ --include="*.py"
 
 ---
 
-### 9. process_payment (7 occurrences)
-**Status:** ❌ NOT STARTED
+### 9. ✅ COMPLETE: process_payment (7 occurrences)
+**Status:** ✅ COMPLETE
 
-**Files to modify:**
+**Files modified:**
 - `src/handlers/admin/order/order_status.py`
-- `src/handlers/admin/order_commands.py` (2 references)
-- `src/handlers/admin/delivery_overview_handler.py` (1 reference)
+- `src/handlers/admin/order_commands.py`
+- `src/handlers/admin/delivery_overview_handler.py`
 - `src/services/command_router.py`
 - `src/services/callback_handler.py`
+- `tests/test_command_routing.py`
+- `tests/test_callback_routing.py`
+- `tests/test_mark_paid_pagination.py`
+- `tests/handlers/admin/test_order_commands.py`
 
-**Changes:**
-1. Rename `handle_mark_paid` → `handle_process_payment`
-
-**Validation:**
-```bash
-grep -r "handle_mark_paid" src/ --include="*.py"
-```
-
-**Commit message:**
-```
-refactor: rename mark_paid to process_payment
-
-- Rename handle_mark_paid → handle_process_payment
-- Update 3 internal method calls across handlers
-- Update command router and callback handler references
-- Align method names with /process_payment command
-```
+**Changes completed:**
+1. Renamed `handle_mark_paid` → `handle_process_payment`
 
 ---
 

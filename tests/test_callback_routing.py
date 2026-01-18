@@ -94,7 +94,7 @@ class TestCallbackRouting:
         ('cmd:process_delivery', 'wholesale_delivery', 'handle_wholesale_delivery'),
         ('cmd:process_labeling', 'labeling', 'handle_process_labeling'),
         ('cmd:send_delivery_overviews', 'admin_order', 'handle_send_delivery_overviews'),
-        ('cmd:process_payment', 'admin_order', 'handle_mark_paid'),
+        ('cmd:process_payment', 'admin_order', 'handle_process_payment'),
         ('cmd:delete_old_orders', 'admin_order', 'handle_delete_old_orders'),
     ])
     def test_command_callbacks_new_names(self, callback_handler, mock_handlers, callback_data, handler, method):
@@ -117,8 +117,8 @@ class TestCallbackRouting:
         """Test pagination for process_payment (new 2-word command)"""
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
-        mock_handlers['admin_order'].handle_mark_paid.assert_called_once()
-        call_args = mock_handlers['admin_order'].handle_mark_paid.call_args[0]
+        mock_handlers['admin_order'].handle_process_payment.assert_called_once()
+        call_args = mock_handlers['admin_order'].handle_process_payment.call_args[0]
         assert call_args[2] == expected_page
     
     # Test 4: Pagination Callbacks - Legacy Support
@@ -130,8 +130,8 @@ class TestCallbackRouting:
         """Test pagination for mark_paid (legacy 2-word command) still works"""
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
-        mock_handlers['admin_order'].handle_mark_paid.assert_called_once()
-        call_args = mock_handlers['admin_order'].handle_mark_paid.call_args[0]
+        mock_handlers['admin_order'].handle_process_payment.assert_called_once()
+        call_args = mock_handlers['admin_order'].handle_process_payment.call_args[0]
         assert call_args[2] == expected_page
     
     # Test 5: Pagination - Standard Single-Word Commands
