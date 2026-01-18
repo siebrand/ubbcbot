@@ -6,6 +6,22 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2026-01-18",
+                "content": """<b>User-Facing Updates</b>
+• <b>Credit System</b> - New <code>/my_credit</code> command for customers to view their account balance
+• <b>Command Standardization</b> - Renamed /offer_details to <code>/view_offer</code> for consistency
+• <b>Improved Deep Links</b> - Offer links now use the standardized <code>view_offer</code> format
+
+<b>Admin-Facing Updates</b>
+• <b>Credit Management</b> - Complete system for issuing credits/charges (<code>/credit</code>) with automatic application to deliveries
+• <b>Process Command Standardization</b> - Renamed workflow commands: <code>/process_payment</code> (was mark_paid), <code>/process_delivery</code> (was wholesale_delivery), and <code>/process_labeling</code> (was labeling_completed)
+• <b>Callback Router Infrastructure</b> - Replaced monolithic callback handling with modular <code>CallbackRouter</code> (Phases 0-3 complete)
+• <b>Database Architecture</b> - Completed migration to Repository pattern (Phases 4-8), slimming down core DatabaseService
+• <b>Codebase Refactoring</b> - Completed massive refactoring of 23 command handlers and internal routing logic
+• <b>Enhanced Wholesale</b> - Added pagination and alphabetical sorting to <code>/process_wholesale</code>
+• <b>Legacy Cleanup</b> - Removed deprecated methods and updated test suites (179+ routing tests passing)"""
+            },
+            {
                 "title": "Up to 2025-01-13",
                 "content": """<b>User-Facing Updates</b>
 • <b>Enhanced Order Display</b> - Localized dates with month abbreviations (e.g., "11 jan 26"), clickable offer links in order lists
