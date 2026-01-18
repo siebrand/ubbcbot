@@ -13,7 +13,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         box_status_manager = BoxStatusManager(db)
         self.delivery_service = WholesalerDeliveryService(db, box_status_manager)
 
-    def handle_wholesale_delivery(self, chat_id: int, user_id: int, args: List[str]) -> Dict[str, Any]:
+    def handle_process_delivery(self, chat_id: int, user_id: int, args: List[str]) -> Dict[str, Any]:
         """Start wholesale delivery drill-down interface"""
         if not self._is_admin(user_id):
             return self._send_message(chat_id, self._t('admin_only', user_id))
@@ -350,7 +350,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
             return self.handle_offer_selection(chat_id, offer_id, supplier_id_short)
         else:
             # No more boxes for this offer, go back to main wholesale delivery menu
-            return self.handle_wholesale_delivery(chat_id, self.admin_user_id, [])
+            return self.handle_process_delivery(chat_id, self.admin_user_id, [])
 
     def _continue_workflow_after_action(self, chat_id: int, processed_box_id: str) -> Dict[str, Any]:
         """Continue workflow by showing remaining boxes for the same offer"""
@@ -381,7 +381,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
                 supplier_id_short = supplier.supplier_id[:8]
                 return self.handle_supplier_selection(chat_id, supplier_id_short)
             else:
-                return self.handle_wholesale_delivery(chat_id, self.admin_user_id, [])
+                return self.handle_process_delivery(chat_id, self.admin_user_id, [])
         
         # Show remaining boxes
         supplier = self.db.get_supplier_by_name(offer.supplier_name)

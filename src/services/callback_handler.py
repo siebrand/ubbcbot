@@ -301,7 +301,7 @@ class CallbackHandler:
             
             # Special handlers for complex patterns
             if data.startswith('wd_'):
-                return self._handle_wholesale_delivery_callbacks(chat_id, user_id, data)
+                return self._handle_process_delivery_callbacks(chat_id, user_id, data)
             elif data.startswith('lc_'):
                 return self._handle_labeling_completion_callbacks(chat_id, user_id, data)
             elif data.startswith('admin'):
@@ -501,7 +501,7 @@ class CallbackHandler:
             logger.error(f"Error removing keyboard: {e}")
             return False
     
-    def _handle_wholesale_delivery_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
+    def _handle_process_delivery_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
         """Handle wholesale delivery callbacks"""
         if not self._is_admin(user_id):
             return self._send_message(chat_id, self._t('admin_only', user_id))
@@ -650,7 +650,7 @@ class CallbackHandler:
             'list_guests': lambda: self.handlers['user'].handle_list_guests(chat_id),
             'approve_user': lambda: self._start_approve_user_input(chat_id),
             'user_status': lambda: self._start_user_status_input(chat_id),
-            'process_delivery': lambda: self.handlers['wholesale_delivery'].handle_wholesale_delivery(chat_id, user_id, []),
+            'process_delivery': lambda: self.handlers['wholesale_delivery'].handle_process_delivery(chat_id, user_id, []),
             'process_labeling': lambda: self.handlers['labeling'].handle_process_labeling(chat_id, user_id, []),
             'send_delivery_overviews': lambda: self.handlers['admin_order'].handle_send_delivery_overviews(chat_id, []),
             'process_payment': lambda: self.handlers['admin_order'].handle_process_payment(chat_id, []),

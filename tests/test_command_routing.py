@@ -229,7 +229,7 @@ class TestCommandRouting:
         ('/create_discount 10', 'discount', 'handle_create_discount'),
         ('/cancel_discount', 'discount', 'handle_cancel_discount'),
         ('/view_discount', 'discount', 'handle_view_discount'),
-        ('/process_delivery', 'wholesale_delivery', 'handle_wholesale_delivery'),
+        ('/process_delivery', 'wholesale_delivery', 'handle_process_delivery'),
         ('/process_labeling', 'labeling', 'handle_process_labeling'),
         ('/send_delivery_overviews', 'admin_order', 'handle_send_delivery_overviews'),
         ('/process_payment', 'admin_order', 'handle_process_payment'),
