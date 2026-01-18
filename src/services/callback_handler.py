@@ -160,6 +160,32 @@ class CallbackHandler:
             r"^clear_offer_images_(\d+)$",
             lambda match, ctx: self._handle_clear_offer_images(ctx['chat_id'], ctx['user_id'], match.group(1))
         )
+        
+        # User/Status patterns (Phase 3 Batch D)
+        self.router.register(
+            r"^user_orders_select_(.+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_list_user_orders_select(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^user_status_select_(.+)$",
+            lambda match, ctx: self.handlers['user'].handle_user_status_select(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^credit_customer_(.+)$",
+            lambda match, ctx: self.handlers['credit'].handle_credit_customer_select(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^enter_username_orders$",
+            lambda match, ctx: self._start_user_orders_input(ctx['chat_id'])
+        )
+        self.router.register(
+            r"^enter_username_cancel$",
+            lambda match, ctx: self._start_cancel_order_input(ctx['chat_id'])
+        )
+        self.router.register(
+            r"^enter_username_order_for$",
+            lambda match, ctx: self._start_order_for_input(ctx['chat_id'])
+        )
     
     def _handle_confirm_wholesale_wrapper(self, chat_id: int, offer_id: str, boxes: str) -> Dict[str, Any]:
         """Wrapper for confirm_process_wholesale with error handling"""
@@ -198,7 +224,7 @@ class CallbackHandler:
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
             
-            # Try router first (Phase 3 Batch C: includes offer/supplier patterns)
+            # Try router first (Phase 3 Batch D: includes user/status patterns)
             context = {'chat_id': chat_id, 'user_id': user_id, 'message_id': message_id}
             router_handled = self.router.dispatch(data, context)
             
@@ -278,25 +304,16 @@ class CallbackHandler:
             # edit_supplier_select_ callbacks now handled by router
             elif data == 'back_to_supplier_list':
                 return self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active')
-            elif data.startswith('user_orders_select_'):
-                customer_id = data.split('_')[3]
-                return self.handlers['admin_order'].handle_list_user_orders_select(chat_id, customer_id)
+            # user_orders_select_ callbacks now handled by router
             # cancel_order_ callbacks now handled by router
             # cancel_orders_page_ callbacks now handled by router
-            elif data == 'enter_username_orders':
-                return self._start_user_orders_input(chat_id)
-            elif data == 'enter_username_cancel':
-                return self._start_cancel_order_input(chat_id)
-            elif data == 'enter_username_order_for':
-                return self._start_order_for_input(chat_id)
+            # enter_username_orders callback now handled by router
+            # enter_username_cancel callback now handled by router
+            # enter_username_order_for callback now handled by router
             # approve_user_select_ callbacks now handled by router
             # order_for_user_select_ callbacks now handled by router
-            elif data.startswith('credit_customer_'):
-                customer_id = data.split('_')[2]
-                return self.handlers['credit'].handle_credit_customer_select(chat_id, customer_id)
-            elif data.startswith('user_status_select_'):
-                customer_id = data.replace('user_status_select_', '')
-                return self.handlers['user'].handle_user_status_select(chat_id, customer_id)
+            # credit_customer_ callbacks now handled by router
+            # user_status_select_ callbacks now handled by router
 
             # cancel_action callback now handled by router
             elif data == 'process_wholesale':
