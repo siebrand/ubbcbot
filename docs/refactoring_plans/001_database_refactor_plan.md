@@ -83,18 +83,16 @@ The `DynamoDBService` can be retained temporarily as a facade to maintain backwa
       - `DynamoDBService` delegates order operations.
       - Audit logging preserved in facade layer.
       - Comprehensive unit tests added (10 test cases, all passing).
+    - [x] **Phase 6: Order History**
+      - `OrderHistoryRepository` created using TDD.
+      - All order history operations extracted.
+      - `DynamoDBService` delegates order history operations.
+      - Datetime conversion utility added for DynamoDB compatibility.
+      - Comprehensive unit tests added (7 test cases, all passing).
 
 ## Pending Tasks
 
-### Phase 6: Order History (Next)
-
-### Phase 6: Order History (Next)
-- [ ] Create `OrderHistoryRepository`.
-- [ ] Move `create_order_history`, `get_order_history`, `get_customer_events`, `get_events_by_type`, `get_history_by_customer_name`.
-- [ ] Update `DynamoDBService`.
-- [ ] Add unit tests.
-
-### Phase 7: Credits
+### Phase 7: Credits (Next)
 - [ ] Create `CreditRepository`.
 - [ ] Move `create_customer_credit`, `get_customer_credit`, `update_customer_credit`.
 - [ ] Move `create_credit_transaction`, `get_credit_transactions_...`.

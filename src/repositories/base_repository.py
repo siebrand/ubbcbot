@@ -12,12 +12,12 @@ class BaseRepository:
         self.table = self.dynamodb.Table(self.table_name)
 
     def _prepare_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
-        """Prepare item for DynamoDB storage by converting datetimes and removing None values"""
+        """Prepare item for DynamoDB storage by converting datetimes and removing None values and empty strings"""
         prepared = {}
         for key, value in item.items():
             if isinstance(value, datetime):
                 prepared[key] = value.isoformat()
-            elif value is not None:
+            elif value is not None and value != "":
                 prepared[key] = value
         return prepared
 

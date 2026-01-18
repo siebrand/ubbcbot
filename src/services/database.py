@@ -13,6 +13,7 @@ from repositories.system_repository import SystemRepository
 from repositories.customer_repository import CustomerRepository
 from repositories.box_repository import BoxRepository
 from repositories.order_repository import OrderRepository
+from repositories.order_history_repository import OrderHistoryRepository
 
 class DynamoDBService:
     def __init__(self):
@@ -28,6 +29,7 @@ class DynamoDBService:
         self.customer_repo = CustomerRepository(self.system_repo)
         self.box_repo = BoxRepository()
         self.order_repo = OrderRepository()
+        self.order_history_repo = OrderHistoryRepository()
         
         # Initialize tables (Legacy - to be removed)
         self.suppliers_table = self.dynamodb.Table(f'{self.table_prefix}-suppliers')
@@ -642,112 +644,19 @@ class DynamoDBService:
     
     # Order History operations
     def create_order_history(self, history) -> bool:
-        """Create order history entry"""
-        try:
-            from models.entities import OrderHistory
-            item = self._prepare_item(history.__dict__)
-            self.order_history_table.put_item(Item=item)
-            return True
-        except Exception as e:
-            print(f"Error creating order history: {e}")
-            return False
+        return self.order_history_repo.create_order_history(history)
     
     def get_order_history(self, order_id: str, limit: int = 50) -> List:
-        """Get history for specific order"""
-        try:
-            from models.entities import OrderHistory
-            response = self.order_history_table.query(
-                IndexName='order-index',
-                KeyConditionExpression=Key('order_id').eq(order_id),
-                Limit=limit,
-                ScanIndexForward=False  # Most recent first
-            )
-            return [OrderHistory(**item) for item in response.get('Items', [])]
-        except Exception as e:
-            print(f"Error getting order history: {e}")
-            return []
+        return self.order_history_repo.get_order_history(order_id, limit)
     
     def get_customer_events(self, customer_id: str, event_type: Optional[str] = None, days: int = 30) -> List:
-        """Get events for customer"""
-        try:
-            from models.entities import OrderHistory
-            from datetime import datetime, UTC, timedelta
-            
-            cutoff_date = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-            
-            if event_type:
-                customer_event = f"{customer_id}#{event_type}"
-                response = self.order_history_table.query(
-                    IndexName='customer-event-index',
-                    KeyConditionExpression=Key('customer_event').eq(customer_event) & Key('changed_at').gte(cutoff_date)
-                )
-            else:
-                # Get all events for customer (scan with filter)
-                response = self.order_history_table.scan(
-                    FilterExpression='customer_id = :cid AND changed_at >= :cutoff',
-                    ExpressionAttributeValues={
-                        ':cid': customer_id,
-                        ':cutoff': cutoff_date
-                    }
-                )
-            
-            return [OrderHistory(**item) for item in response.get('Items', [])]
-        except Exception as e:
-            print(f"Error getting customer events: {e}")
-            return []
+        return self.order_history_repo.get_customer_events(customer_id, event_type, days)
     
-    def get_events_by_type(self, event_type: str, start_date: Optional[datetime] = None, 
-                          end_date: Optional[datetime] = None) -> List:
-        """Get all events of specific type in date range"""
-        try:
-            from models.entities import OrderHistory
-            from datetime import datetime, UTC
-            
-            if not start_date:
-                start_date = datetime(2020, 1, 1, tzinfo=UTC)
-            if not end_date:
-                end_date = datetime.now(UTC)
-            
-            start_key = f"{event_type}#{start_date.isoformat()}"
-            end_key = f"{event_type}#{end_date.isoformat()}"
-            
-            response = self.order_history_table.query(
-                IndexName='event-date-index',
-                KeyConditionExpression=Key('event_date').between(start_key, end_key)
-            )
-            
-            return [OrderHistory(**item) for item in response.get('Items', [])]
-        except Exception as e:
-            print(f"Error getting events by type: {e}")
-            return []
+    def get_events_by_type(self, event_type: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List:
+        return self.order_history_repo.get_events_by_type(event_type, start_date, end_date)
     
     def get_history_by_customer_name(self, customer_name: str, event_type: Optional[str] = None, limit: int = 50) -> List:
-        """Get history for customer by name (for deleted customers)"""
-        try:
-            from models.entities import OrderHistory
-            
-            if event_type:
-                # Query specific event type for customer
-                key = f"{customer_name}#{event_type}"
-                response = self.order_history_table.query(
-                    IndexName='customer-name-event-index',
-                    KeyConditionExpression=Key('customer_name_event').eq(key),
-                    Limit=limit,
-                    ScanIndexForward=False  # Most recent first
-                )
-            else:
-                # Query all events for customer (begins_with)
-                response = self.order_history_table.query(
-                    IndexName='customer-name-event-index',
-                    KeyConditionExpression=Key('customer_name_event').begins_with(customer_name + '#'),
-                    Limit=limit,
-                    ScanIndexForward=False  # Most recent first
-                )
-            
-            return [OrderHistory(**item) for item in response.get('Items', [])]
-        except Exception as e:
-            print(f"Error getting history by customer name: {e}")
-            return []
+        return self.order_history_repo.get_history_by_customer_name(customer_name, event_type, limit)
     
     # Transaction methods for sensitive operations (audit enforced)
     def cancel_order_with_audit(self, order_id: str, admin_id: int, reason: str) -> bool:
