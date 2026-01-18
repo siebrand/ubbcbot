@@ -2,28 +2,31 @@
 
 This document lists ALL remaining method name refactorings needed to align with the new command names from COMMAND_NAMING_ANALYSIS.md.
 
-## Status: 12 commands already refactored, 11 commands remaining
+## Status: 12 commands already refactored ✅ VERIFIED, 11 commands remaining (NONE COMPLETED YET)
 
-### Already Completed (from FUNCTION_NAME_REFACTORING_PLAN.md)
-1. ✅ create_supplier (was add_supplier)
-2. ✅ update_supplier (was edit_supplier)
-3. ✅ list_boxes (was box_status)
-4. ✅ create_order_for (was order_for)
-5. ✅ list_pending (was pending_users)
-6. ✅ create_guest (was add_guest)
-7. ✅ view_discount (was discount_status)
-8. ✅ delete_old_orders (was delete_old)
-9. ✅ process_wholesale (was order_wholesale)
-10. ✅ list_user_orders (was user_orders)
-11. ✅ export_orders (was all_orders)
-12. ✅ list_offer_orders (was offer_orders)
+### Already Completed (from FUNCTION_NAME_REFACTORING_PLAN.md) - ✅ VERIFIED
+1. ✅ create_supplier (was add_supplier) - VERIFIED: handle_create_supplier exists
+2. ✅ update_supplier (was edit_supplier) - VERIFIED: handle_update_supplier exists
+3. ✅ list_boxes (was box_status) - VERIFIED: handle_list_boxes exists
+4. ✅ create_order_for (was order_for) - VERIFIED: handle_create_order_for exists
+5. ✅ list_pending (was pending_users) - VERIFIED: handle_list_pending exists
+6. ✅ create_guest (was add_guest) - VERIFIED: handle_create_guest exists
+7. ✅ view_discount (was discount_status) - VERIFIED: handle_view_discount exists
+8. ✅ delete_old_orders (was delete_old) - VERIFIED: handle_delete_old_orders exists
+9. ✅ process_wholesale (was order_wholesale) - VERIFIED: handle_process_wholesale exists
+10. ✅ list_user_orders (was user_orders) - VERIFIED: handle_list_user_orders exists
+11. ✅ export_orders (was all_orders) - VERIFIED: handle_export_orders exists
+12. ✅ list_offer_orders (was offer_orders) - VERIFIED: handle_list_offer_orders exists
+
+**Verification Date:** 2025-01-18
+**Verification Method:** Checked for absence of old method names and presence of new method definitions in codebase
 
 ---
 
 ## Remaining Refactorings (11 commands)
 
 ### 13. archive_supplier (was retire_supplier)
-**Status:** Method name still uses old name
+**Status:** ❌ NOT STARTED - Method name still uses old name (2 occurrences)
 
 **Files to modify:**
 - `src/handlers/admin/supplier_commands.py`
@@ -51,7 +54,7 @@ refactor: rename retire_supplier to archive_supplier
 ---
 
 ### 14. view_offer (was offer_details)
-**Status:** Method name still uses old name
+**Status:** ❌ NOT STARTED - Method name still uses old name (12 occurrences)
 
 **Files to modify:**
 - `src/handlers/customer/info_commands.py`
@@ -83,7 +86,7 @@ refactor: rename offer_details to view_offer
 ---
 
 ### 15. create_box (was add_box)
-**Status:** Method name still uses old name
+**Status:** ❌ NOT STARTED - Method name still uses old name (2 occurrences)
 
 **Files to modify:**
 - `src/handlers/admin/offer/boxes.py`
@@ -110,7 +113,7 @@ refactor: rename add_box to create_box
 ---
 
 ### 16. process_delivery (was wholesale_delivery)
-**Status:** Method name still uses old name
+**Status:** ❌ NOT STARTED - Method name still uses old name (9 occurrences)
 
 **Files to modify:**
 - `src/handlers/admin/wholesale_delivery_handler.py` (3 references)
@@ -141,7 +144,7 @@ refactor: rename wholesale_delivery to process_delivery
 ---
 
 ### 17. process_labeling (was labeling_completed)
-**Status:** Method name still uses old name
+**Status:** ❌ NOT STARTED - Method name still uses old name (6 occurrences)
 
 **Files to modify:**
 - `src/handlers/admin/labeling_completion_handler.py` (2 references)
@@ -172,7 +175,7 @@ refactor: rename labeling_completed to process_labeling
 ---
 
 ### 18. send_delivery_overviews (was send_overviews)
-**Status:** Method name still uses old name
+**Status:** ❌ NOT STARTED - Method name still uses old name (5 occurrences)
 
 **Files to modify:**
 - `src/handlers/admin/order/order_status.py`
@@ -202,7 +205,7 @@ refactor: rename send_overviews to send_delivery_overviews
 ---
 
 ### 19. process_payment (was mark_paid)
-**Status:** Method name still uses old name
+**Status:** ❌ NOT STARTED - Method name still uses old name (7 occurrences)
 
 **Files to modify:**
 - `src/handlers/admin/order/order_status.py`
@@ -233,7 +236,7 @@ refactor: rename mark_paid to process_payment
 ---
 
 ### 20. delete_cancelled_orders (was delete_cancelled) - CUSTOMER COMMAND
-**Status:** Method name still uses old name
+**Status:** ❌ NOT STARTED - Method name still uses old name (3 occurrences)
 
 **Files to modify:**
 - `src/handlers/customer/order_commands.py`
@@ -262,7 +265,7 @@ refactor: rename delete_cancelled to delete_cancelled_orders
 ---
 
 ### 21. delete_completed_orders (was delete_completed) - CUSTOMER COMMAND
-**Status:** Method name still uses old name
+**Status:** ❌ NOT STARTED - Method name still uses old name (3 occurrences)
 
 **Files to modify:**
 - `src/handlers/customer/order_commands.py`
@@ -291,7 +294,7 @@ refactor: rename delete_completed to delete_completed_orders
 ---
 
 ### 22. create_order (was order) - CUSTOMER COMMAND WITH PERMANENT ALIAS
-**Status:** Check if method name needs updating
+**Status:** ❌ NOT STARTED - Method is `handle_order`, needs rename to `handle_create_order` (6 occurrences)
 
 **Files to check:**
 - `src/handlers/customer/order_commands.py`
@@ -322,15 +325,54 @@ refactor: rename order to create_order (keep /order alias)
 ---
 
 ### 23. list_my_orders (was my_orders) - CUSTOMER COMMAND WITH PERMANENT ALIAS
-**Status:** Check if method name needs updating
+**Status:** ❌ NOT STARTED - Method is `handle_my_orders`, needs rename to `handle_list_my_orders` (3 occurrences)
 
-**Files to check:**
-- `src/handlers/customer/order_commands.py`
-- `src/services/callback_handler.py`
+**Files to modify:**
+- `src/handlers/customer/info_commands.py`
+- `src/services/command_router.py`
 
-**Investigation needed:**
+**Changes:**
+1. Rename `handle_my_orders` → `handle_list_my_orders`
+2. Update command router method calls
+3. Keep `/my_orders` as permanent alias in command_router.py
+
+**Validation:**
 ```bash
 grep -r "handle_my_orders" src/ --include="*.py"
+```
+
+**Commit message:**
+```
+refactor: rename my_orders to list_my_orders (keep /my_orders alias)
+
+- Rename handle_my_orders → handle_list_my_orders
+- Update command router references
+- Maintain /my_orders as permanent alias for UX
+- Align method names with /list_my_orders command
+```
+
+---
+
+## Summary
+
+**Completion Status: 0/11 (0%)**
+
+All 11 remaining refactorings are NOT STARTED. The old method names are still in use throughout the codebase.
+
+**Total Refactoring Progress: 12/23 (52%)**
+
+**Next Steps:**
+1. Start with simplest refactorings (fewest occurrences): #13, #15, #20, #21, #23
+2. Then tackle medium complexity: #18, #17
+3. Finally handle complex ones: #19, #16, #14
+4. Follow TDD approach: tests first, implementation second, separate commits
+5. Test each refactoring in test environment before proceeding
+
+**Estimated Effort:**
+- Simple (2-3 occurrences): ~15 min each × 5 = 1.25 hours
+- Medium (5-6 occurrences): ~30 min each × 2 = 1 hour  
+- Complex (7-12 occurrences): ~45 min each × 4 = 3 hours
+- **Total: ~5.25 hours**_orders" src/ --include="*.py"
 ```
 
 **If method is named `handle_my_orders`:**
