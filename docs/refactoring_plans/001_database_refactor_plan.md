@@ -89,16 +89,16 @@ The `DynamoDBService` can be retained temporarily as a facade to maintain backwa
       - `DynamoDBService` delegates order history operations.
       - Datetime conversion utility added for DynamoDB compatibility.
       - Comprehensive unit tests added (7 test cases, all passing).
+    - [x] **Phase 7: Credits**
+      - `CreditRepository` created using TDD.
+      - All credit and transaction operations extracted.
+      - `DynamoDBService` delegates credit operations.
+      - Datetime conversion utilities for CustomerCredit and CreditTransaction.
+      - Comprehensive unit tests added (9 test cases, all passing).
 
 ## Pending Tasks
 
-### Phase 7: Credits (Next)
-- [ ] Create `CreditRepository`.
-- [ ] Move `create_customer_credit`, `get_customer_credit`, `update_customer_credit`.
-- [ ] Move `create_credit_transaction`, `get_credit_transactions_...`.
-- [ ] Update `DynamoDBService`.
-
-### Phase 8: System & Misc
+### Phase 8: System & Misc (Next)
 - [ ] Expand `SystemRepository` or create specific repos for:
     - [ ] `DiscountsTable` -> `DiscountRepository`
     - [ ] `NotificationsTable` -> `NotificationRepository`
