@@ -227,14 +227,14 @@ Phase 3 (Remaining - Alphabetical Batches):
     ✅ order_<offer_id>_<quantity> - COMPLETED
   
   Batch C (Offer/Supplier patterns):
-    ☐ wholesale_select_<offer_id>
-    ☐ custom_wholesale_quantity_<offer_id>
-    ☐ publish_offer_<offer_id>
-    ☐ finalize_import_<offer_id>
-    ☐ offer_details_<offer_id>
-    ☐ offer_orders_<offer_id>
-    ☐ upload_offer_image_<offer_id>
-    ☐ clear_offer_images_<offer_id>
+    ✅ wholesale_select_<offer_id> - COMPLETED
+    ✅ custom_wholesale_quantity_<offer_id> - COMPLETED
+    ✅ publish_offer_<offer_id> - COMPLETED
+    ✅ finalize_import_<offer_id> - COMPLETED
+    ✅ offer_details_<offer_id> - COMPLETED
+    ✅ offer_orders_<offer_id> - COMPLETED
+    ✅ upload_offer_image_<offer_id> - COMPLETED
+    ✅ clear_offer_images_<offer_id> - COMPLETED
   
   Batch D (User/Status patterns):
     ☐ user_orders_select_<customer_id>
