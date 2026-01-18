@@ -439,13 +439,6 @@ class CallbackHandler:
             if parts[1] == 'supplier' and len(parts) == 5 and parts[2] == 'full' and parts[3] == 'name':
                 return self._handle_supplier_edit(chat_id, 'full_name', parts[4])
             
-            # Handle view_offer callback with edit mode
-            if parts[1] == 'offer' and parts[2] == 'details':
-                offer_id = parts[3]
-                edit_mode = len(parts) > 4 and parts[4] == 'edit'
-                args = [offer_id, 'edit'] if edit_mode else [offer_id]
-                return self.handlers['info'].handle_view_offer(chat_id, user_id, args)
-            
             # Standard format: edit_{entity}_{field}_{id}
             entity_type = parts[1]
             field = parts[2]
