@@ -167,16 +167,45 @@ class TestCallbackRouting:
         callback_handler.handle_callback_query(query)
         mock_handlers['customer_order'].handle_order.assert_called_once()
     
-    # Test 7: Confirm Order Callbacks
+    # Test 7: Confirm Order Callbacks (Phase 2)
     @pytest.mark.parametrize("callback_data", [
         'confirm_order_123_2',
         'confirm_order_456_5',
     ])
     def test_confirm_order_callbacks(self, callback_handler, mock_handlers, callback_data):
-        """Test confirm order callbacks route correctly"""
+        """Test confirm order callbacks route correctly (Phase 2)"""
         query = self._create_callback_query(callback_data)
         callback_handler.handle_callback_query(query)
         mock_handlers['customer_order'].handle_confirm_order.assert_called_once()
+    
+    # Test 7a: Cancel Patterns (Phase 2)
+    @pytest.mark.parametrize("callback_data,handler,method", [
+        ('cancel_order_user_select_customer123', 'admin_order', 'handle_cancel_order_user_select'),
+        ('cancel_order_confirm_order456', 'admin_order', 'handle_cancel_order_by_id'),
+        ('cancel_orders_page_customer123_2', 'admin_order', 'handle_cancel_orders_page'),
+        ('cancel_confirmation', None, None),  # Just sends message
+        ('cancel_action', 'admin_commands', 'handle_admin'),
+    ])
+    def test_cancel_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):
+        """Test cancel patterns route correctly (Phase 2)"""
+        query = self._create_callback_query(callback_data, user_id=15005473)
+        callback_handler.handle_callback_query(query)
+        
+        if handler and method:
+            getattr(mock_handlers[handler], method).assert_called_once()
+    
+    # Test 7b: Confirm Patterns (Phase 2)
+    @pytest.mark.parametrize("callback_data,handler,method", [
+        ('confirm_process_wholesale_123_6', 'offer', 'handle_confirm_process_wholesale'),
+        ('confirm_cancel_offer_456', 'offer', 'handle_confirm_cancel_offer'),
+        ('confirm_cancel_order_order789', 'admin_order', 'handle_confirm_cancel'),
+        ('confirm_fulfill_123_12', 'offer', 'handle_confirm_fulfill'),
+    ])
+    def test_confirm_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):
+        """Test confirm patterns route correctly (Phase 2)"""
+        query = self._create_callback_query(callback_data, user_id=15005473)
+        callback_handler.handle_callback_query(query)
+        getattr(mock_handlers[handler], method).assert_called_once()
     
     # Test 8: Wholesale Delivery Callbacks
     @pytest.mark.parametrize("callback_data", [
@@ -223,17 +252,20 @@ class TestCallbackRouting:
         call_args = mock_handlers['admin_order'].handle_export_orders_callback.call_args[0]
         assert call_args[1] == expected_filter
     
-    # Test 11: User Approval Callbacks
+    # Test 11: User Approval Callbacks (Phase 1 & 2)
     @pytest.mark.parametrize("callback_data", [
         'approve_user_customer123',
-        'reject_user_customer456',
+        'approve_user_select_customer456',
+        'reject_user_customer789',
     ])
     def test_user_approval_callbacks(self, callback_handler, mock_handlers, callback_data):
-        """Test user approval/rejection callbacks"""
+        """Test user approval/rejection callbacks (Phase 1 & 2)"""
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         
-        if 'approve' in callback_data:
+        if 'approve_user_select' in callback_data:
+            mock_handlers['user'].handle_approve_user_select.assert_called_once()
+        elif 'approve' in callback_data:
             mock_handlers['user'].handle_approve_user_by_id.assert_called_once()
         else:
             mock_handlers['user'].handle_reject_user_by_id.assert_called_once()
@@ -249,14 +281,7 @@ class TestCallbackRouting:
         callback_handler.handle_callback_query(query)
         mock_handlers['info'].handle_offer_details.assert_called_once()
     
-    # Test 13: Cancel Action Callback
-    def test_cancel_action_returns_to_admin(self, callback_handler, mock_handlers):
-        """Test cancel_action returns to admin panel"""
-        query = self._create_callback_query('cancel_action', user_id=15005473)
-        callback_handler.handle_callback_query(query)
-        mock_handlers['admin_commands'].handle_admin.assert_called_once()
-    
-    # Test 14: Non-Admin Blocked from Admin Callbacks
+# Test 14: Non-Admin Blocked from Admin Callbacks
     def test_non_admin_blocked_from_admin_callbacks(self, callback_handler, mock_handlers):
         """Test that non-admin users cannot access admin callbacks"""
         # Mock both _send_message and _t to avoid translation issues
