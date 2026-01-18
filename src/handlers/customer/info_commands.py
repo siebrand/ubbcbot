@@ -530,7 +530,7 @@ class InfoCommands(BaseHandler):
             if self._is_admin(user_id) and offer.status == OfferStatus.DRAFT.value:
                 keyboard = {
                     "inline_keyboard": [
-                        [{"text": self._t('edit_details'), "callback_data": f"offer_details_{offer_id}_edit"}],
+                        [{"text": self._t('edit_details'), "callback_data": f"view_offer_{offer_id}_edit"}],
                         [{"text": self._t('publish_offer_btn'), "callback_data": f"publish_offer_{offer_id}"}],
                         [{"text": self._t('cancel'), "callback_data": "cancel_action"}]
                     ]
@@ -563,7 +563,7 @@ class InfoCommands(BaseHandler):
                 [{"text": self._t('edit_description'), "callback_data": f"edit_offer_description_{offer.offer_id}"}],
                 [{"text": self._t('upload_image'), "callback_data": f"upload_offer_image_{offer.offer_id}"}],
                 [{"text": self._t('clear_images'), "callback_data": f"clear_offer_images_{offer.offer_id}"}] if offer.images else [],
-                [{"text": self._t('exit_edit_mode'), "callback_data": f"offer_details_{offer.offer_id}"}]
+                [{"text": self._t('exit_edit_mode'), "callback_data": f"view_offer_{offer.offer_id}"}]
             ]
         }
         
@@ -640,7 +640,7 @@ class InfoCommands(BaseHandler):
                             {"text": self._t('order_1'), "callback_data": f"order_{offer.offer_id}_1"},
                             {"text": self._t('order_2'), "callback_data": f"order_{offer.offer_id}_2"}
                         ],
-                        [{"text": self._t('edit_offer_button'), "callback_data": f"offer_details_{offer.offer_id}_edit"}]
+                        [{"text": self._t('edit_offer_button'), "callback_data": f"view_offer_{offer.offer_id}_edit"}]
                     ]
                 }
             else:
@@ -656,7 +656,7 @@ class InfoCommands(BaseHandler):
             # Add edit button for admins on non-active offers
             reply_markup = {
                 "inline_keyboard": [
-                    [{"text": self._t('edit_offer_button'), "callback_data": f"offer_details_{offer.offer_id}_edit"}]
+                    [{"text": self._t('edit_offer_button'), "callback_data": f"view_offer_{offer.offer_id}_edit"}]
                 ]
             }
         

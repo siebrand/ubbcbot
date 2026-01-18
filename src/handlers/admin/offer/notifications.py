@@ -10,7 +10,7 @@ class NotificationHandler(OfferBaseHandler):
     """Handler for offer notifications and announcements"""
     
     def _send_rich_offer_message(self, chat_id: int, offer, preview: bool = False, force_group: bool = False, include_buttons: bool = True):
-        """Send rich offer message using offer_details formatting with optimizations"""
+        """Send rich offer message using view_offer formatting with optimizations"""
 
         if not preview:
             self._send_message(chat_id, self._t('new_offer_available'), force_group=force_group)

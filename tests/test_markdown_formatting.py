@@ -15,10 +15,10 @@ class TestMarkdownFormatting(unittest.TestCase):
         total_capacity = 12
         
         # Generate the markdown link format used in the code
-        link_text = f"🍺 [{offer_id}](https://t.me/{bot_username}?start=offer_details_{offer_id}) {offer_name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
+        link_text = f"🍺 [{offer_id}](https://t.me/{bot_username}?start=view_offer_{offer_id}) {offer_name} €{display_price:.2f} ({total_ordered}/{total_capacity})\n"
         
         # Verify the link format is correct
-        expected_link = "[1](https://t.me/test_bot?start=offer_details_1)"
+        expected_link = "[1](https://t.me/test_bot?start=view_offer_1)"
         self.assertIn(expected_link, link_text)
         
         # Verify no method calls in the string (which caused parsing errors)
@@ -28,7 +28,7 @@ class TestMarkdownFormatting(unittest.TestCase):
         # Verify proper formatting
         self.assertTrue(link_text.startswith("🍺 ["))
         self.assertIn("https://t.me/", link_text)
-        self.assertIn("?start=offer_details_", link_text)
+        self.assertIn("?start=view_offer_", link_text)
         
     def test_bot_username_extraction_prevents_parsing_error(self):
         """Test that extracting bot_username to variable prevents f-string parsing issues"""
@@ -41,10 +41,10 @@ class TestMarkdownFormatting(unittest.TestCase):
         
         # Correct approach: extract to variable first
         bot_username = get_bot_username()
-        safe_link = f"[{offer_id}](https://t.me/{bot_username}?start=offer_details_{offer_id})"
+        safe_link = f"[{offer_id}](https://t.me/{bot_username}?start=view_offer_{offer_id})"
         
         # Verify the safe approach works
-        expected = "[1](https://t.me/test_bot?start=offer_details_1)"
+        expected = "[1](https://t.me/test_bot?start=view_offer_1)"
         self.assertEqual(safe_link, expected)
 
 if __name__ == '__main__':

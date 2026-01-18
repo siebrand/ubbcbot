@@ -133,7 +133,7 @@ class CallbackHandler:
             lambda match, ctx: self.handlers['admin_order'].handle_list_offer_orders_select(ctx['chat_id'], match.group(1))
         )
         self.router.register(
-            r"^offer_details_(\d+)(?:_(edit))?$",
+            r"^view_offer_(\d+)(?:_(edit))?$",
             lambda match, ctx: self.handlers['info'].handle_view_offer(ctx['chat_id'], ctx['user_id'], [match.group(1)] + ([match.group(2)] if match.group(2) else []))
         )
         self.router.register(
@@ -439,7 +439,7 @@ class CallbackHandler:
             if parts[1] == 'supplier' and len(parts) == 5 and parts[2] == 'full' and parts[3] == 'name':
                 return self._handle_supplier_edit(chat_id, 'full_name', parts[4])
             
-            # Handle offer_details callback with edit mode
+            # Handle view_offer callback with edit mode
             if parts[1] == 'offer' and parts[2] == 'details':
                 offer_id = parts[3]
                 edit_mode = len(parts) > 4 and parts[4] == 'edit'

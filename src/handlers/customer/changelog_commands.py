@@ -170,7 +170,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Improved order placement workflow</b> - Better error handling and user feedback for order limits
 • <b>Advanced User Management</b> - Improved user pagination with 20 users per page and enhanced navigation
 • <b>Better user search and filtering</b> - Enhanced user approval process with streamlined edit workflow
-• <b>Offer Management Improvements</b> - Consolidated offer editing interface with full functionality in <code>/offer_details</code>
+• <b>Offer Management Improvements</b> - Consolidated offer editing interface with full functionality in <code>/view_offer</code>
 • <b>Edit Offer button</b> - Direct access from offer details view for quick editing
 • <b>Seamless editing workflow</b> - Return to edit menu after field updates with maintained context
 • <b>System Reliability</b> - Improved HTTP request handling with proper timeouts and better error handling
@@ -179,7 +179,7 @@ class ChangelogCommands(BaseHandler):
             {
                 "title": "Up to 2025-12-25",
                 "content": """<b>User-Facing Updates</b>
-• <b>New /offer_details command</b> - View detailed offer information with images and descriptions
+• <b>New /view_offer command</b> - View detailed offer information with images and descriptions
 • <b>Interactive order buttons</b> - Click buttons to place orders instead of typing commands
 • <b>Rich offer displays</b> - Offers now show images, detailed descriptions, and better formatting
 • <b>Cleaner interface</b> - Simplified offer titles and improved readability

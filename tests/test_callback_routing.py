@@ -272,8 +272,8 @@ class TestCallbackRouting:
     
     # Test 12: Offer Details Callbacks
     @pytest.mark.parametrize("callback_data", [
-        'offer_details_123',
-        'offer_details_456_edit',
+        'view_offer_123',
+        'view_offer_456_edit',
     ])
     def test_offer_details_callbacks(self, callback_handler, mock_handlers, callback_data):
         """Test offer details callbacks"""
@@ -354,7 +354,7 @@ class TestCallbackRouting:
         ('custom_wholesale_quantity_456', 'offer', 'handle_custom_wholesale_quantity'),
         ('publish_offer_789', 'offer', 'handle_publish_offer'),
         ('finalize_import_123', 'import', 'handle_finalize_import'),
-        ('offer_details_456', 'info', 'handle_view_offer'),
+        ('view_offer_456', 'info', 'handle_view_offer'),
         ('offer_orders_123', 'admin_order', 'handle_list_offer_orders_select'),
     ])
     def test_offer_supplier_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):
