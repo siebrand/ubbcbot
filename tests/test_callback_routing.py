@@ -30,7 +30,7 @@ class TestCallbackRouting:
         handlers = {}
         for name in ['info', 'customer_order', 'admin_order', 'supplier', 'offer', 
                      'user', 'discount', 'wholesale_delivery', 'labeling', 
-                     'admin_commands', 'delivery_overview', 'import', 'test']:
+                     'admin_commands', 'delivery_overview', 'import', 'test', 'credit']:
             handlers[name] = Mock()
         return handlers
     
