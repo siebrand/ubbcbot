@@ -220,11 +220,11 @@ Phase 3 (Remaining - Alphabetical Batches):
     ✅ edit_<entity>_<field>_<id> - COMPLETED
   
   Batch B (Order patterns):
-    ☐ order_for_offer_<customer_id>_<offer_id>
-    ☐ order_for_quantity_<customer_id>_<offer_id>_<quantity>
-    ☐ order_for_other_<customer_id>_<offer_id>
-    ☐ order_for_user_select_<customer_id>
-    ☐ order_<offer_id>_<quantity>
+    ✅ order_for_offer_<customer_id>_<offer_id> - COMPLETED
+    ✅ order_for_quantity_<customer_id>_<offer_id>_<quantity> - COMPLETED
+    ✅ order_for_other_<customer_id>_<offer_id> - COMPLETED
+    ✅ order_for_user_select_<customer_id> - COMPLETED
+    ✅ order_<offer_id>_<quantity> - COMPLETED
   
   Batch C (Offer/Supplier patterns):
     ☐ wholesale_select_<offer_id>

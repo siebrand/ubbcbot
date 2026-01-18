@@ -334,7 +334,21 @@ class TestCallbackRouting:
         callback_handler.handle_callback_query(query)
         callback_handler._handle_edit_callbacks.assert_called_once()
     
-    # Test 17: Unknown Callback Handling
+    # Test 17: Order Patterns (Phase 3 Batch B)
+    @pytest.mark.parametrize("callback_data,handler,method", [
+        ('order_for_quantity_cust123_456_5', 'admin_order', 'handle_order_for_quantity_select'),
+        ('order_for_other_cust123_456', 'admin_order', 'handle_order_for_other_quantity'),
+        ('order_for_offer_cust123_456', 'admin_order', 'handle_order_for_offer_select'),
+        ('order_for_user_select_cust123', 'admin_order', 'handle_order_for_user_select'),
+        ('order_123_2', 'customer_order', 'handle_order'),
+    ])
+    def test_order_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):
+        """Test order patterns route correctly (Phase 3 Batch B)"""
+        query = self._create_callback_query(callback_data, user_id=15005473)
+        callback_handler.handle_callback_query(query)
+        getattr(mock_handlers[handler], method).assert_called_once()
+    
+    # Test 18: Unknown Callback Handling
     def test_unknown_callback_returns_status(self, callback_handler):
         """Test that unknown callbacks return unknown_callback status"""
         query = self._create_callback_query('unknown_callback_xyz', user_id=15005473)
