@@ -1,6 +1,6 @@
 import pytest
-from src.repositories.supplier_repository import SupplierRepository
-from src.models.entities import Supplier
+from repositories.supplier_repository import SupplierRepository
+from models.entities import Supplier
 
 @pytest.fixture
 def supplier_repo(dynamodb):

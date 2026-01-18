@@ -4,8 +4,8 @@ Tests for credit service core logic
 import pytest
 from decimal import Decimal
 from datetime import datetime, UTC
-from src.services.credit_service import CreditService
-from src.models.entities import CustomerCredit, CreditTransaction
+from services.credit_service import CreditService
+from models.entities import CustomerCredit, CreditTransaction
 
 
 @pytest.fixture

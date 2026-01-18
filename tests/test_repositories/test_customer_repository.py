@@ -1,26 +1,14 @@
 import pytest
-from src.repositories.customer_repository import CustomerRepository
-from src.repositories.system_repository import SystemRepository
-from src.models.entities import Customer, AuthorizationStatus
+from repositories.customer_repository import CustomerRepository
+from repositories.system_repository import SystemRepository
+from models.entities import Customer, AuthorizationStatus
 
 @pytest.fixture
 def system_repo(dynamodb):
-    dynamodb.create_table(
-        TableName="ubbc-bot-test-counters",
-        KeySchema=[{'AttributeName': 'counter_name', 'KeyType': 'HASH'}],
-        AttributeDefinitions=[{'AttributeName': 'counter_name', 'AttributeType': 'S'}],
-        ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-    )
     return SystemRepository()
 
 @pytest.fixture
 def customer_repo(dynamodb, system_repo):
-    dynamodb.create_table(
-        TableName="ubbc-bot-test-customers",
-        KeySchema=[{'AttributeName': 'customer_id', 'KeyType': 'HASH'}],
-        AttributeDefinitions=[{'AttributeName': 'customer_id', 'AttributeType': 'S'}],
-        ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-    )
     return CustomerRepository(system_repo)
 
 class TestCustomerRepository:

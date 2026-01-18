@@ -998,7 +998,7 @@ class DynamoDBService:
             
             for key, value in updates.items():
                 update_expression += f"#{key} = :{key}, "
-                expression_values[f":{key}"] = value
+                expression_values[f":{key}"] = self._serialize_datetime(value)
                 expression_names[f"#{key}"] = key
             
             update_expression = update_expression.rstrip(", ")

@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from src.repositories.base_repository import BaseRepository
+from repositories.base_repository import BaseRepository
 
 class TestBaseRepository:
     def test_init_sets_table_name(self, dynamodb):

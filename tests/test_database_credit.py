@@ -4,12 +4,12 @@ Tests for credit system database operations
 import pytest
 from decimal import Decimal
 from datetime import datetime, UTC
-from src.models.entities import CustomerCredit, CreditTransaction
-from src.services.database import DatabaseService
+from models.entities import CustomerCredit, CreditTransaction
+from services.database import DatabaseService
 
 
 @pytest.fixture
-def db_service():
+def db_service(dynamodb):
     """Create database service instance"""
     return DatabaseService()
 

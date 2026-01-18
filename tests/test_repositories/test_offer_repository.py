@@ -1,29 +1,17 @@
 import pytest
-from src.repositories.offer_repository import OfferRepository
-from src.repositories.system_repository import SystemRepository
-from src.models.entities import Offer
+from repositories.offer_repository import OfferRepository
+from repositories.system_repository import SystemRepository
+from models.entities import Offer
 from decimal import Decimal
 
 @pytest.fixture
 def system_repo(dynamodb):
-    # Ensure table exists
-    dynamodb.create_table(
-        TableName="ubbc-bot-test-counters",
-        KeySchema=[{'AttributeName': 'counter_name', 'KeyType': 'HASH'}],
-        AttributeDefinitions=[{'AttributeName': 'counter_name', 'AttributeType': 'S'}],
-        ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-    )
+    # Ensure table exists (now handled by conftest.py)
     return SystemRepository()
 
 @pytest.fixture
 def offer_repo(dynamodb, system_repo):
-    # Ensure table exists
-    dynamodb.create_table(
-        TableName="ubbc-bot-test-offers",
-        KeySchema=[{'AttributeName': 'offer_id', 'KeyType': 'HASH'}],
-        AttributeDefinitions=[{'AttributeName': 'offer_id', 'AttributeType': 'N'}],
-        ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-    )
+    # Ensure table exists (now handled by conftest.py)
     return OfferRepository(system_repo)
 
 class TestOfferRepository:
