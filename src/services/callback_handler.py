@@ -291,19 +291,7 @@ class CallbackHandler:
             router_handled = self.router.dispatch(data, context)
             
             # Determine if we should remove the keyboard
-            should_remove_keyboard = True
-            if data.startswith('page_') and not data == 'page_info':
-                should_remove_keyboard = False
-            elif data == 'page_info':  # Keep keyboard for page info display
-                should_remove_keyboard = False
-            elif data.startswith('wd_'):  # Keep keyboard for wholesale delivery navigation
-                should_remove_keyboard = False
-            elif data.startswith('order_'):  # Keep keyboard for order buttons so multiple people can order
-                should_remove_keyboard = False
-            elif data == 'create_supplier_start':  # Keep keyboard for create supplier flow
-                should_remove_keyboard = False
-            
-            if should_remove_keyboard:
+            if self._should_remove_keyboard(data):
                 self._edit_message_remove_keyboard(chat_id, message_id)
             
             # If router handled it, return early
@@ -311,181 +299,17 @@ class CallbackHandler:
                 logger.info(f"Callback handled by router: {data}")
                 return {'status': 'handled_by_router'}
             
-            # Wholesale delivery callbacks
+            # Special handlers for complex patterns
             if data.startswith('wd_'):
                 return self._handle_wholesale_delivery_callbacks(chat_id, user_id, data)
-            
-            # Labeling completion callbacks
             elif data.startswith('lc_'):
                 return self._handle_labeling_completion_callbacks(chat_id, user_id, data)
-            
-            # Export orders callbacks now handled by router
-            
-            # Delivery overview callbacks now handled by router
-            # start_send_overviews callback now handled by router
-            
-            # Labeling completion callbacks
-            # finish_labeling_ callbacks now handled by router
-            
-            # Payment marking callbacks now handled by router
-            # mark_paid_ callbacks now handled by router
-            
-            # Admin panel callbacks
             elif data.startswith('admin'):
                 return self._handle_admin_callbacks(chat_id, user_id, data)
             elif data.startswith('cmd'):
                 return self._handle_command_callbacks(chat_id, user_id, data)
-            # create_supplier_start callback now handled by router
-            
-            # Order callbacks now handled by router
-            # wholesale_select_ callbacks now handled by router
-            # confirm_process_wholesale_ callbacks now handled by router
-            # custom_wholesale_quantity_ callbacks now handled by router
-            # confirm_order_ callbacks now handled by router
-            # cancel_confirmation callback now handled by router
-            
-            # Admin confirmation callbacks
-            # confirm_cancel_offer_ callbacks now handled by router
-            # confirm_fulfill_ callbacks now handled by router
-            # request_cancel_reason_ callbacks now handled by router
-            # confirm_cancel_order_ callbacks now handled by router
-            # approve_user_ callbacks now handled by router
-            # reject_user_ callbacks now handled by router
-            # edit_user_select_ callbacks now handled by router
-            # edit_supplier_select_ callbacks now handled by router
-            # back_to_supplier_list callback now handled by router
-            # user_orders_select_ callbacks now handled by router
-            # cancel_order_ callbacks now handled by router
-            # cancel_orders_page_ callbacks now handled by router
-            # enter_username_orders callback now handled by router
-            # enter_username_cancel callback now handled by router
-            # enter_username_order_for callback now handled by router
-            # approve_user_select_ callbacks now handled by router
-            # order_for_user_select_ callbacks now handled by router
-            # credit_customer_ callbacks now handled by router
-            # user_status_select_ callbacks now handled by router
-
-            # cancel_action callback now handled by router
-            # process_wholesale callback now handled by router
-            
-            # Pagination callbacks
             elif data.startswith('page_'):
-                parts = data.split('_')
-                if len(parts) >= 3:
-                    # Handle list_offers specially (page_list_offers_[filter]_page)
-                    if parts[1] == 'list' and len(parts) >= 4 and parts[2] == 'offers':
-                        if len(parts) == 5:
-                            filter_arg = parts[3]
-                            page = int(parts[4])
-                        else:
-                            filter_arg = None
-                            page = int(parts[3])
-                        args = [filter_arg] if filter_arg else None
-                        return self.handlers['info'].handle_list_offers(chat_id, user_id, args, page)
-                    # Handle process_wholesale pagination
-                    elif parts[1] == 'process' and parts[2] == 'wholesale':
-                        page = int(parts[3])
-                        return self.handlers['offer'].handle_process_wholesale_page(chat_id, page)
-                    # Handle multi-word entity types like process_payment, list_user_orders, and list_my_orders
-                    elif len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'process', 'list', 'user', 'my']:
-                        if parts[1] == 'mark' and parts[2] == 'paid':
-                            # Legacy: page_mark_paid_{page}
-                            entity_type = 'mark_paid'
-                            page = int(parts[3])
-                        elif parts[1] == 'process' and parts[2] == 'payment':
-                            # New: page_process_payment_{page}
-                            entity_type = 'process_payment'
-                            page = int(parts[3])
-                        elif parts[1] == 'list' and parts[2] == 'user' and parts[3] == 'orders':
-                            # New: page_list_user_orders_{customer_id}_{page}
-                            entity_type = f"list_user_orders_{parts[4]}"
-                            page = int(parts[5])
-                        elif parts[1] == 'list' and parts[2] == 'my' and parts[3] == 'orders':
-                            # New: page_list_my_orders_{user_id}_{page}
-                            entity_type = f"list_my_orders_{parts[4]}"
-                            page = int(parts[5])
-                        elif parts[1] == 'user' and parts[2] == 'orders':
-                            # Legacy: page_user_orders_{customer_id}_{page}
-                            entity_type = f"user_orders_{parts[3]}"
-                            page = int(parts[4])
-                        elif parts[1] == 'my' and parts[2] == 'orders':
-                            # Legacy: page_my_orders_{user_id}_{page}
-                            entity_type = f"my_orders_{parts[3]}"
-                            page = int(parts[4])
-                        else:
-                            entity_type = f"{parts[1]}_{parts[2]}"
-                            page = int(parts[3])
-                    else:
-                        entity_type = parts[1]
-                        page = int(parts[2])
-                    
-                    if entity_type == 'suppliers' or entity_type.startswith('suppliers_'):
-                        status_filter = entity_type.split('_', 1)[1] if '_' in entity_type else 'active'
-                        return self.handlers['supplier'].handle_list_suppliers(chat_id, page, status_filter)
-                    elif entity_type == 'boxes' or entity_type.startswith('boxes_'):
-                        filter_part = entity_type.split('_', 1)[1] if '_' in entity_type else 'active'
-                        # Check if filter is offer_id (starts with 'offer_') or status
-                        if filter_part.startswith('offer_'):
-                            offer_id = filter_part.split('_', 1)[1]
-                            return self.handlers['offer'].handle_list_boxes(chat_id, [offer_id, str(page)])
-                        else:
-                            return self.handlers['offer'].handle_list_boxes(chat_id, [filter_part, str(page)])
-                    elif entity_type == 'pending':
-                        return self.handlers['user'].handle_list_pending(chat_id, page)
-                    elif entity_type.startswith('customers_'):
-                        status_filter = entity_type.split('_', 1)[1]
-                        return self.handlers['user'].handle_list_users(chat_id, page, status_filter)
-                    elif entity_type == 'guests':
-                        return self.handlers['user'].handle_list_guests(chat_id, page)
-                    elif entity_type == 'subscribers':
-                        return self.handlers['user'].handle_list_subscribers(chat_id, page)
-                    elif entity_type.startswith('user_orders_') or entity_type.startswith('list_user_orders_'):
-                        # Handle both legacy (user_orders_) and new (list_user_orders_) formats
-                        if entity_type.startswith('list_user_orders_'):
-                            customer_id = entity_type.split('_', 3)[3]
-                        else:
-                            customer_id = entity_type.split('_', 2)[2]
-                        customer = self.db.get_customer(customer_id)
-                        if customer:
-                            return self.handlers['admin_order'].viewing._show_user_orders(chat_id, customer, page)
-                        return {'status': 'customer_not_found'}
-                    elif entity_type == 'changelog':
-                        return self.handlers['changelog'].handle_changelog(chat_id, user_id, page)
-                    elif entity_type == 'mark_paid' or entity_type == 'process_payment':
-                        # Handle both legacy (mark_paid) and new (process_payment) formats
-                        return self.handlers['admin_order'].handle_mark_paid(chat_id, [], page)
-                    elif entity_type.startswith('my_orders_') or entity_type.startswith('list_my_orders_'):
-                        # Handle both legacy (my_orders_) and new (list_my_orders_) formats
-                        if entity_type.startswith('list_my_orders_'):
-                            target_user_id = int(entity_type.split('_', 3)[3])
-                        else:
-                            target_user_id = int(entity_type.split('_', 2)[2])
-                        if user_id == target_user_id:
-                            return self.handlers['info'].handle_my_orders(chat_id, user_id, None, page)
-                        return {'status': 'unauthorized'}
-            elif data == 'page_info':
-                # Do nothing - this is just a display button
-                return {'status': 'page_info', 'no_action': True}
-            
-            # edit_ callbacks now handled by router
-            
-            # Offer management callbacks now handled by router
-            # offer_details_ callbacks now handled by router
-            # upload_offer_image_ callbacks now handled by router
-            # clear_offer_images_ callbacks now handled by router
-            # publish_offer_ callbacks now handled by router
-            
-            # Audit offer callbacks now handled by router
-            # finalize_import_ callbacks now handled by router
-            # offer_orders_page_ callbacks now handled by router
-            # offer_orders_detail_ callbacks now handled by router
-            # offer_orders_ callbacks now handled by router
-            # audit_offers_page_ callbacks now handled by router
-            # audit_fill_boxes_ callbacks now handled by router
-            # audit_fill_create_ callbacks now handled by router
-            # audit_create_boxes_ callbacks now handled by router
-            # audit_cancel_orders_ callbacks now handled by router
-            # audit_offer_ callbacks now handled by router
+                return self._handle_pagination_callbacks(chat_id, user_id, data)
             
             return {'status': 'unknown_callback'}
             
@@ -494,6 +318,104 @@ class CallbackHandler:
             logger.error(f"Callback data was: {callback_query.get('data', 'NO_DATA')}")
             return {'status': 'error', 'error': str(e)}
     
+    def _should_remove_keyboard(self, data: str) -> bool:
+        """Determine if keyboard should be removed after callback"""
+        if data.startswith('page_') and data != 'page_info':
+            return False
+        if data == 'page_info':
+            return False
+        if data.startswith('wd_'):
+            return False
+        if data.startswith('order_'):
+            return False
+        if data == 'create_supplier_start':
+            return False
+        return True
+    
+    def _handle_pagination_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
+        """Handle pagination callbacks"""
+        if data == 'page_info':
+            return {'status': 'page_info', 'no_action': True}
+        
+        parts = data.split('_')
+        if len(parts) < 3:
+            return {'status': 'invalid_pagination'}
+        
+        # Handle list_offers specially
+        if parts[1] == 'list' and len(parts) >= 4 and parts[2] == 'offers':
+            filter_arg = parts[3] if len(parts) == 5 else None
+            page = int(parts[4] if len(parts) == 5 else parts[3])
+            args = [filter_arg] if filter_arg else None
+            return self.handlers['info'].handle_list_offers(chat_id, user_id, args, page)
+        
+        # Handle process_wholesale pagination
+        if parts[1] == 'process' and parts[2] == 'wholesale':
+            return self.handlers['offer'].handle_process_wholesale_page(chat_id, int(parts[3]))
+        
+        # Parse entity type and page
+        entity_type, page = self._parse_pagination_entity(parts)
+        
+        # Route to appropriate handler
+        return self._route_pagination(chat_id, user_id, entity_type, page)
+    
+    def _parse_pagination_entity(self, parts: list) -> tuple:
+        """Parse entity type and page from pagination callback parts"""
+        if len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'process', 'list', 'user', 'my']:
+            if parts[1] == 'mark' and parts[2] == 'paid':
+                return 'mark_paid', int(parts[3])
+            elif parts[1] == 'process' and parts[2] == 'payment':
+                return 'process_payment', int(parts[3])
+            elif parts[1] == 'list' and parts[2] == 'user' and parts[3] == 'orders':
+                return f"list_user_orders_{parts[4]}", int(parts[5])
+            elif parts[1] == 'list' and parts[2] == 'my' and parts[3] == 'orders':
+                return f"list_my_orders_{parts[4]}", int(parts[5])
+            elif parts[1] == 'user' and parts[2] == 'orders':
+                return f"user_orders_{parts[3]}", int(parts[4])
+            elif parts[1] == 'my' and parts[2] == 'orders':
+                return f"my_orders_{parts[3]}", int(parts[4])
+            else:
+                return f"{parts[1]}_{parts[2]}", int(parts[3])
+        else:
+            return parts[1], int(parts[2])
+    
+    def _route_pagination(self, chat_id: int, user_id: int, entity_type: str, page: int) -> Dict[str, Any]:
+        """Route pagination request to appropriate handler"""
+        if entity_type == 'suppliers' or entity_type.startswith('suppliers_'):
+            status_filter = entity_type.split('_', 1)[1] if '_' in entity_type else 'active'
+            return self.handlers['supplier'].handle_list_suppliers(chat_id, page, status_filter)
+        elif entity_type == 'boxes' or entity_type.startswith('boxes_'):
+            filter_part = entity_type.split('_', 1)[1] if '_' in entity_type else 'active'
+            if filter_part.startswith('offer_'):
+                offer_id = filter_part.split('_', 1)[1]
+                return self.handlers['offer'].handle_list_boxes(chat_id, [offer_id, str(page)])
+            else:
+                return self.handlers['offer'].handle_list_boxes(chat_id, [filter_part, str(page)])
+        elif entity_type == 'pending':
+            return self.handlers['user'].handle_list_pending(chat_id, page)
+        elif entity_type.startswith('customers_'):
+            status_filter = entity_type.split('_', 1)[1]
+            return self.handlers['user'].handle_list_users(chat_id, page, status_filter)
+        elif entity_type == 'guests':
+            return self.handlers['user'].handle_list_guests(chat_id, page)
+        elif entity_type == 'subscribers':
+            return self.handlers['user'].handle_list_subscribers(chat_id, page)
+        elif entity_type.startswith('user_orders_') or entity_type.startswith('list_user_orders_'):
+            customer_id = entity_type.split('_', 3)[3] if entity_type.startswith('list_user_orders_') else entity_type.split('_', 2)[2]
+            customer = self.db.get_customer(customer_id)
+            if customer:
+                return self.handlers['admin_order'].viewing._show_user_orders(chat_id, customer, page)
+            return {'status': 'customer_not_found'}
+        elif entity_type == 'changelog':
+            return self.handlers['changelog'].handle_changelog(chat_id, user_id, page)
+        elif entity_type in ['mark_paid', 'process_payment']:
+            return self.handlers['admin_order'].handle_mark_paid(chat_id, [], page)
+        elif entity_type.startswith('my_orders_') or entity_type.startswith('list_my_orders_'):
+            target_user_id = int(entity_type.split('_', 3)[3] if entity_type.startswith('list_my_orders_') else entity_type.split('_', 2)[2])
+            if user_id == target_user_id:
+                return self.handlers['info'].handle_my_orders(chat_id, user_id, None, page)
+            return {'status': 'unauthorized'}
+        
+        return {'status': 'unknown_pagination_type'}
     def _handle_edit_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:
         """Handle edit-related callbacks"""
         parts = data.split('_')
