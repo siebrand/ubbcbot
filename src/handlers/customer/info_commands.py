@@ -468,8 +468,8 @@ class InfoCommands(BaseHandler):
         self._send_message(chat_id, message, parse_mode="HTML")
         return {'status': 'success'}
 
-    def handle_my_orders(self, chat_id: int, user_id: int, args: list = None, page: int = 1) -> Dict[str, Any]:
-        """Handle /my_orders command"""
+    def handle_list_my_orders(self, chat_id: int, user_id: int, args: list = None, page: int = 1) -> Dict[str, Any]:
+        """Handle /list_my_orders command"""
         show_ids = args and len(args) > 0 and args[0].lower() == 'id'
         
         customer = self.db.get_customer_by_telegram_id(user_id)

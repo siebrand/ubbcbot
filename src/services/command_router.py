@@ -99,7 +99,7 @@ class CommandRouter:
         elif command == '/create_order':
             return self.handlers['customer_order'].handle_order(chat_id, user_id, parts[1:])
         elif command == '/list_my_orders':
-            return self.handlers['info'].handle_my_orders(target_chat, user_id, parts[1:])
+            return self.handlers['info'].handle_list_my_orders(target_chat, user_id, parts[1:])
         elif command == '/list_offers':
             return self.handlers['info'].handle_list_offers(target_chat, user_id, parts[1:])
         elif command == '/subscribe':

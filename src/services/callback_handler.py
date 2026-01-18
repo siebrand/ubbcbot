@@ -412,7 +412,7 @@ class CallbackHandler:
         elif entity_type.startswith('my_orders_') or entity_type.startswith('list_my_orders_'):
             target_user_id = int(entity_type.split('_', 3)[3] if entity_type.startswith('list_my_orders_') else entity_type.split('_', 2)[2])
             if user_id == target_user_id:
-                return self.handlers['info'].handle_my_orders(chat_id, user_id, None, page)
+                return self.handlers['info'].handle_list_my_orders(chat_id, user_id, None, page)
             return {'status': 'unauthorized'}
         
         return {'status': 'unknown_pagination_type'}

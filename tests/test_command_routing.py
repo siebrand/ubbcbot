@@ -185,8 +185,8 @@ class TestCommandRouting:
         ('/help', 'info', 'handle_help'),
         ('/create_order 1 2', 'customer_order', 'handle_order'),
         ('/order 1 2', 'customer_order', 'handle_order'),  # Permanent alias
-        ('/list_my_orders', 'info', 'handle_my_orders'),
-        ('/my_orders', 'info', 'handle_my_orders'),  # Permanent alias
+        ('/list_my_orders', 'info', 'handle_list_my_orders'),
+        ('/my_orders', 'info', 'handle_list_my_orders'),  # Permanent alias
         ('/list_offers', 'info', 'handle_list_offers'),
         ('/subscribe', 'info', 'handle_subscribe'),
         ('/unsubscribe', 'info', 'handle_unsubscribe'),
@@ -248,7 +248,7 @@ class TestCommandRouting:
     # Test 20: Permanent Aliases Route Correctly
     @pytest.mark.parametrize("alias,canonical,handler,method,user_id", [
         ('/order 1 2', '/create_order', 'customer_order', 'handle_order', 12345),
-        ('/my_orders', '/list_my_orders', 'info', 'handle_my_orders', 12345),
+        ('/my_orders', '/list_my_orders', 'info', 'handle_list_my_orders', 12345),
         ('/order_for user 1 2', '/create_order_for', 'admin_order', 'handle_create_order_for', 15005473),
     ])
     def test_permanent_aliases(self, router, mock_handlers, alias, canonical, handler, method, user_id):

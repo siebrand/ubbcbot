@@ -4,9 +4,9 @@ This document lists ALL remaining method name refactorings needed to align with 
 
 **Implementation Order:** Tasks ordered from simplest (fewest occurrences) to most complex.
 
-## Status: 16 commands fully refactored ✅, 7 commands remaining ❌
+## Status: 17 commands fully refactored ✅, 6 commands remaining ❌
 
-**Total Progress: 16/23 (70%)**
+**Total Progress: 17/23 (74%)****
 
 ---
 
@@ -126,31 +126,18 @@ grep -r "handle_add_box" src/ --include="*.py"
 
 ---
 
-### 5. list_my_orders (3 occurrences)
-**Status:** ❌ NOT STARTED - Customer command with permanent alias
+### 5. ✅ COMPLETE: list_my_orders (3 occurrences)
+**Status:** ✅ COMPLETE
 
-**Files to modify:**
+**Files modified:**
 - `src/handlers/customer/info_commands.py`
 - `src/services/command_router.py`
+- `src/services/callback_handler.py`
+- `tests/test_command_routing.py`
 
-**Changes:**
-1. Rename `handle_my_orders` → `handle_list_my_orders`
-2. Keep `/my_orders` as permanent alias
-
-**Validation:**
-```bash
-grep -r "handle_my_orders" src/ --include="*.py"
-```
-
-**Commit message:**
-```
-refactor: rename my_orders to list_my_orders (keep /my_orders alias)
-
-- Rename handle_my_orders → handle_list_my_orders
-- Update command router references
-- Maintain /my_orders as permanent alias for UX
-- Align method names with /list_my_orders command
-```
+**Changes completed:**
+1. Renamed `handle_my_orders` → `handle_list_my_orders`
+2. Kept `/my_orders` as permanent alias
 
 ---
 
