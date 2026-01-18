@@ -365,7 +365,7 @@ class BotService:
                 try:
                     quantity = int(text.strip())
                     if 1 <= quantity <= 10:
-                        return self.admin_order_commands.handle_order_for_quantity_select(chat_id, customer_id, offer_id, str(quantity))
+                        return self.admin_order_commands.handle_create_order_for_quantity_select(chat_id, customer_id, offer_id, str(quantity))
                     else:
                         from handlers.base_handler import BaseHandler
                         base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)

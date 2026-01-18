@@ -51,10 +51,10 @@ class TestAdminOrderCommands(unittest.TestCase):
         """Test that all placement methods are properly delegated"""
         methods = [
             'handle_create_order_for',
-            'handle_order_for_user_select',
-            'handle_order_for_offer_select',
-            'handle_order_for_quantity_select',
-            'handle_order_for_other_quantity'
+            'handle_create_order_for_user_select',
+            'handle_create_order_for_offer_select',
+            'handle_create_order_for_quantity_select',
+            'handle_create_order_for_other_quantity'
         ]
         
         for method in methods:

@@ -180,8 +180,8 @@ class OrderPlacement(BaseOrderHandler):
         
         return result
     
-    def handle_order_for_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
-        """Handle user selection from disambiguation for order_for"""
+    def handle_create_order_for_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        """Handle user selection from disambiguation for create_order_for"""
         customer = self.db.get_customer(customer_id)
         
         if not customer:
@@ -190,11 +190,11 @@ class OrderPlacement(BaseOrderHandler):
         
         return self._show_offers_for_order_for(chat_id, customer)
     
-    def handle_order_for_offer_select(self, chat_id: int, customer_id: str, offer_id: str) -> Dict[str, Any]:
-        """Handle offer selection for order_for"""
+    def handle_create_order_for_offer_select(self, chat_id: int, customer_id: str, offer_id: str) -> Dict[str, Any]:
+        """Handle offer selection for create_order_for"""
         import logging
         logger = logging.getLogger()
-        logger.info(f"handle_order_for_offer_select called with customer_id: {customer_id}, offer_id: {offer_id}")
+        logger.info(f"handle_create_order_for_offer_select called with customer_id: {customer_id}, offer_id: {offer_id}")
         
         customer = self.db.get_customer(customer_id)
         logger.info(f"Customer found: {customer is not None}")
@@ -222,8 +222,8 @@ class OrderPlacement(BaseOrderHandler):
         logger.info(f"Proceeding to quantity selection")
         return self._show_quantity_selection_for_order_for(chat_id, customer, offer)
     
-    def handle_order_for_quantity_select(self, chat_id: int, customer_id: str, offer_id: str, quantity: str) -> Dict[str, Any]:
-        """Handle quantity selection for order_for"""
+    def handle_create_order_for_quantity_select(self, chat_id: int, customer_id: str, offer_id: str, quantity: str) -> Dict[str, Any]:
+        """Handle quantity selection for create_order_for"""
         customer = self.db.get_customer(customer_id)
         
         if not customer:
@@ -232,8 +232,8 @@ class OrderPlacement(BaseOrderHandler):
         
         return self._execute_order_for_customer(chat_id, customer, int(offer_id), int(quantity))
     
-    def handle_order_for_other_quantity(self, chat_id: int, customer_id: str, offer_id: str) -> Dict[str, Any]:
-        """Handle 'Other' quantity selection for order_for"""
+    def handle_create_order_for_other_quantity(self, chat_id: int, customer_id: str, offer_id: str) -> Dict[str, Any]:
+        """Handle 'Other' quantity selection for create_order_for"""
         # Store context for text input
         context_data = f"{customer_id}_{offer_id}"
         

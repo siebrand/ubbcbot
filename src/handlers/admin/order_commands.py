@@ -39,17 +39,17 @@ class AdminOrderCommands(BaseHandler):
     def handle_create_order_for(self, chat_id: int, user_id: int, args: list) -> Dict[str, Any]:
         return self.placement.handle_create_order_for(chat_id, user_id, args)
     
-    def handle_order_for_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
-        return self.placement.handle_order_for_user_select(chat_id, customer_id)
+    def handle_create_order_for_user_select(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        return self.placement.handle_create_order_for_user_select(chat_id, customer_id)
     
-    def handle_order_for_offer_select(self, chat_id: int, customer_id: str, offer_id: str) -> Dict[str, Any]:
-        return self.placement.handle_order_for_offer_select(chat_id, customer_id, offer_id)
+    def handle_create_order_for_offer_select(self, chat_id: int, customer_id: str, offer_id: str) -> Dict[str, Any]:
+        return self.placement.handle_create_order_for_offer_select(chat_id, customer_id, offer_id)
     
-    def handle_order_for_quantity_select(self, chat_id: int, customer_id: str, offer_id: str, quantity: str) -> Dict[str, Any]:
-        return self.placement.handle_order_for_quantity_select(chat_id, customer_id, offer_id, quantity)
+    def handle_create_order_for_quantity_select(self, chat_id: int, customer_id: str, offer_id: str, quantity: str) -> Dict[str, Any]:
+        return self.placement.handle_create_order_for_quantity_select(chat_id, customer_id, offer_id, quantity)
     
-    def handle_order_for_other_quantity(self, chat_id: int, customer_id: str, offer_id: str) -> Dict[str, Any]:
-        return self.placement.handle_order_for_other_quantity(chat_id, customer_id, offer_id)
+    def handle_create_order_for_other_quantity(self, chat_id: int, customer_id: str, offer_id: str) -> Dict[str, Any]:
+        return self.placement.handle_create_order_for_other_quantity(chat_id, customer_id, offer_id)
     
     # Order Viewing Methods
     def handle_list_user_orders(self, chat_id: int, args: list) -> Dict[str, Any]:

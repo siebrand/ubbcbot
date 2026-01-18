@@ -100,19 +100,19 @@ class CallbackHandler:
         # Order patterns - most specific first (Phase 3 Batch B)
         self.router.register(
             r"^order_for_quantity_(\w+)_(\d+)_(\d+)$",
-            lambda match, ctx: self.handlers['admin_order'].handle_order_for_quantity_select(ctx['chat_id'], match.group(1), match.group(2), match.group(3))
+            lambda match, ctx: self.handlers['admin_order'].handle_create_order_for_quantity_select(ctx['chat_id'], match.group(1), match.group(2), match.group(3))
         )
         self.router.register(
             r"^order_for_other_(\w+)_(\d+)$",
-            lambda match, ctx: self.handlers['admin_order'].handle_order_for_other_quantity(ctx['chat_id'], match.group(1), match.group(2))
+            lambda match, ctx: self.handlers['admin_order'].handle_create_order_for_other_quantity(ctx['chat_id'], match.group(1), match.group(2))
         )
         self.router.register(
             r"^order_for_offer_(\w+)_(\d+)$",
-            lambda match, ctx: self.handlers['admin_order'].handle_order_for_offer_select(ctx['chat_id'], match.group(1), match.group(2))
+            lambda match, ctx: self.handlers['admin_order'].handle_create_order_for_offer_select(ctx['chat_id'], match.group(1), match.group(2))
         )
         self.router.register(
             r"^order_for_user_select_(.+)$",
-            lambda match, ctx: self.handlers['admin_order'].handle_order_for_user_select(ctx['chat_id'], match.group(1))
+            lambda match, ctx: self.handlers['admin_order'].handle_create_order_for_user_select(ctx['chat_id'], match.group(1))
         )
         self.router.register(
             r"^order_(\d+)_(\d+)$",

@@ -4,44 +4,61 @@ This document lists ALL remaining method name refactorings needed to align with 
 
 **Implementation Order:** Tasks ordered from simplest (fewest occurrences) to most complex.
 
-## Status: 11 commands fully refactored ✅, 1 command partially complete ⚠️, 11 commands remaining ❌
+## Status: 12 commands fully refactored ✅, 11 commands remaining ❌
 
-**Total Progress: 11.5/23 (50%)**
+**Total Progress: 12/23 (52%)**
+
+---
+
+## Testing Instructions
+
+**CRITICAL:** Always run the full test suite before committing changes!
+
+```bash
+# Set up test environment (first time only)
+python3 -m venv test_env
+source test_env/bin/activate
+pip install -r tests/requirements.txt
+
+# Run tests before each commit
+source test_env/bin/activate
+export PYTHONPATH="$(pwd)/src:$PYTHONPATH"
+
+# Run refactoring unit tests
+python -m unittest discover -s tests/handlers/admin -p "test_*.py" -v
+
+# Run legacy tests
+python tests/run_tests.py
+
+# Run pytest tests
+python -m pytest tests/test_command_routing.py tests/test_callback_routing.py tests/test_customer_orders.py tests/test_box_status_manager.py tests/test_box_filtering_helpers.py tests/test_delivered_box_availability.py tests/test_box_deletion_service.py tests/test_mark_paid_pagination.py tests/test_offer_cache.py tests/test_csv_parser.py tests/test_import_handler.py tests/test_credit_service.py tests/test_repositories/ -v
+
+deactivate
+```
 
 ---
 
 ## Tasks in Recommended Implementation Order
 
-### 0. 🔴 PRIORITY: create_order_for callback helpers (13 occurrences)
-**Status:** ⚠️ INCOMPLETE - Main command refactored but callback helpers missed
+### 0. ✅ COMPLETE: create_order_for callback helpers (13 occurrences)
+**Status:** ✅ COMPLETE
 
-**Files to modify:**
+**Files modified:**
 - `src/handlers/admin/order/order_placement.py` (4 method definitions)
 - `src/handlers/admin/order_commands.py` (4 wrapper methods)
 - `src/services/bot_service.py` (1 reference)
 - `src/services/callback_handler.py` (4 references)
 
-**Changes:**
-1. Rename `handle_order_for_user_select` → `handle_create_order_for_user_select`
-2. Rename `handle_order_for_offer_select` → `handle_create_order_for_offer_select`
-3. Rename `handle_order_for_quantity_select` → `handle_create_order_for_quantity_select`
-4. Rename `handle_order_for_other_quantity` → `handle_create_order_for_other_quantity`
+**Changes completed:**
+1. Renamed `handle_order_for_user_select` → `handle_create_order_for_user_select`
+2. Renamed `handle_order_for_offer_select` → `handle_create_order_for_offer_select`
+3. Renamed `handle_order_for_quantity_select` → `handle_create_order_for_quantity_select`
+4. Renamed `handle_order_for_other_quantity` → `handle_create_order_for_other_quantity`
 
 **Validation:**
 ```bash
 grep -r "handle_order_for_" src/ --include="*.py"
-```
-
-**Commit message:**
-```
-refactor: rename order_for callback helpers to create_order_for
-
-- Rename handle_order_for_user_select → handle_create_order_for_user_select
-- Rename handle_order_for_offer_select → handle_create_order_for_offer_select
-- Rename handle_order_for_quantity_select → handle_create_order_for_quantity_select
-- Rename handle_order_for_other_quantity → handle_create_order_for_other_quantity
-- Update 13 references across handlers and services
-- Complete create_order_for refactoring for consistency
+# Returns no results - all references updated
 ```
 
 ---
