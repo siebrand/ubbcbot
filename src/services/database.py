@@ -1058,6 +1058,3 @@ class DynamoDBService:
         except Exception as e:
             print(f"Error getting customers with credit balance: {e}")
             return []
-
-# Alias for backward compatibility and testing
-DatabaseService = DynamoDBService

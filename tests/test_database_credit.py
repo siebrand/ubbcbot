@@ -5,13 +5,13 @@ import pytest
 from decimal import Decimal
 from datetime import datetime, UTC
 from models.entities import CustomerCredit, CreditTransaction
-from services.database import DatabaseService
+from services.database import DynamoDBService
 
 
 @pytest.fixture
 def db_service(dynamodb):
     """Create database service instance"""
-    return DatabaseService()
+    return DynamoDBService()
 
 
 @pytest.fixture
