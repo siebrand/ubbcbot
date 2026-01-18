@@ -314,7 +314,27 @@ class TestCallbackRouting:
         else:
             callback_handler._edit_message_remove_keyboard.assert_called_once()
     
-    # Test 16: Unknown Callback Handling
+    # Test 16: Edit Patterns (Phase 3 Batch A)
+    @pytest.mark.parametrize("callback_data,handler,method", [
+        ('edit_user_select_customer123', 'user', 'handle_edit_user_select'),
+        ('edit_supplier_select_supplier456', 'supplier', 'show_edit_interface_by_id'),
+    ])
+    def test_edit_select_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):
+        """Test edit select patterns route correctly (Phase 3 Batch A)"""
+        query = self._create_callback_query(callback_data, user_id=15005473)
+        callback_handler.handle_callback_query(query)
+        getattr(mock_handlers[handler], method).assert_called_once()
+    
+    # Test 16a: Generic Edit Pattern
+    def test_generic_edit_pattern(self, callback_handler):
+        """Test generic edit pattern delegates to _handle_edit_callbacks"""
+        query = self._create_callback_query('edit_supplier_name_supplier123', user_id=15005473)
+        # Mock the _handle_edit_callbacks method
+        callback_handler._handle_edit_callbacks = Mock(return_value={'status': 'handled'})
+        callback_handler.handle_callback_query(query)
+        callback_handler._handle_edit_callbacks.assert_called_once()
+    
+    # Test 17: Unknown Callback Handling
     def test_unknown_callback_returns_status(self, callback_handler):
         """Test that unknown callbacks return unknown_callback status"""
         query = self._create_callback_query('unknown_callback_xyz', user_id=15005473)
