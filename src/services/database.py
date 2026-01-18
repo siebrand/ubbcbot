@@ -15,6 +15,9 @@ from repositories.box_repository import BoxRepository
 from repositories.order_repository import OrderRepository
 from repositories.order_history_repository import OrderHistoryRepository
 from repositories.credit_repository import CreditRepository
+from repositories.notification_repository import NotificationRepository
+from repositories.discount_repository import DiscountRepository
+from repositories.edit_context_repository import EditContextRepository
 
 class DynamoDBService:
     def __init__(self):
@@ -32,6 +35,9 @@ class DynamoDBService:
         self.order_repo = OrderRepository()
         self.order_history_repo = OrderHistoryRepository()
         self.credit_repo = CreditRepository()
+        self.notification_repo = NotificationRepository()
+        self.discount_repo = DiscountRepository()
+        self.edit_context_repo = EditContextRepository()
         
         # Initialize tables (Legacy - to be removed)
         self.suppliers_table = self.dynamodb.Table(f'{self.table_prefix}-suppliers')
@@ -191,24 +197,7 @@ class DynamoDBService:
         return self.order_repo.get_orders_by_box(box_id)
 
     def get_active_discount(self) -> Optional[DiscountPeriod]:
-        try:
-            from datetime import datetime, UTC
-            now = datetime.now(UTC)
-            response = self.discounts_table.scan(
-                FilterExpression='#status = :status AND start_time <= :now AND (attribute_not_exists(end_time) OR end_time > :now)',
-                ExpressionAttributeNames={'#status': 'status'},
-                ExpressionAttributeValues={
-                    ':status': DiscountStatus.ACTIVE.value,
-                    ':now': now.isoformat()
-                }
-            )
-            items = response.get('Items', [])
-            if items:
-                return DiscountPeriod(**items[0])
-            return None
-        except Exception as e:
-            print(f"Error getting active discount: {e}")
-            return None
+        return self.discount_repo.get_active_discount()
 
     def get_order(self, order_id: str) -> Optional[Order]:
         return self.order_repo.get_order(order_id)
@@ -268,143 +257,30 @@ class DynamoDBService:
 
     # Notification message operations
     def create_notification_message(self, notification) -> bool:
-        try:
-            item = self._prepare_item(notification.__dict__)
-            self.notifications_table.put_item(Item=item)
-            return True
-        except Exception as e:
-            print(f"Error creating notification message: {e}")
-            return False
+        return self.notification_repo.create_notification_message(notification)
 
     def get_notification_messages_by_offer(self, offer_id: int):
-        try:
-            response = self.notifications_table.query(
-                IndexName='offer-index',
-                KeyConditionExpression=Key('offer_id').eq(offer_id)
-            )
-            from models.entities import NotificationMessage
-            return [NotificationMessage(**item) for item in response.get('Items', [])]
-        except Exception as e:
-            print(f"Error getting notification messages: {e}")
-            return []
+        return self.notification_repo.get_notification_messages_by_offer(offer_id)
 
     def delete_notification_message(self, notification_id: str) -> bool:
-        try:
-            self.notifications_table.delete_item(Key={'notification_id': notification_id})
-            return True
-        except Exception as e:
-            print(f"Error deleting notification message: {e}")
-            return False
+        return self.notification_repo.delete_notification_message(notification_id)
     def create_discount(self, discount: DiscountPeriod) -> bool:
-        try:
-            item = self._prepare_item(discount.__dict__)
-            self.discounts_table.put_item(Item=item)
-            return True
-        except Exception as e:
-            print(f"Error creating discount: {e}")
-            return False
+        return self.discount_repo.create_discount(discount)
     
     def update_discount(self, discount_id: str, updates: Dict[str, Any]) -> bool:
-        try:
-            update_expression = "SET "
-            expression_values = {}
-            expression_names = {}
-            
-            for key, value in updates.items():
-                update_expression += f"#{key} = :{key}, "
-                expression_values[f":{key}"] = value
-                expression_names[f"#{key}"] = key
-            
-            update_expression = update_expression.rstrip(", ")
-            
-            self.discounts_table.update_item(
-                Key={'discount_id': discount_id},
-                UpdateExpression=update_expression,
-                ExpressionAttributeNames=expression_names,
-                ExpressionAttributeValues=expression_values
-            )
-            return True
-        except Exception as e:
-            print(f"Error updating discount: {e}")
-            return False
+        return self.discount_repo.update_discount(discount_id, updates)
     
     def create_edit_context(self, context) -> bool:
-        """Create edit context"""
-        try:
-            item = self._prepare_item(context.__dict__)
-            self.edit_contexts_table.put_item(Item=item)
-            return True
-        except Exception as e:
-            print(f"Error creating edit context: {e}")
-            return False
+        return self.edit_context_repo.create_edit_context(context)
     
     def get_edit_context_by_chat_id(self, chat_id: int):
-        """Get edit context by chat ID"""
-        try:
-            response = self.edit_contexts_table.scan(
-                FilterExpression='chat_id = :chat_id',
-                ExpressionAttributeValues={':chat_id': chat_id}
-            )
-            
-            if response['Items']:
-                item = response['Items'][0]
-                from models.entities import EditContext
-                from datetime import datetime
-                return EditContext(
-                    context_id=item['context_id'],
-                    chat_id=item['chat_id'],
-                    edit_type=item['edit_type'],
-                    entity_id=item['entity_id'],
-                    created_at=datetime.fromisoformat(item['created_at'])
-                )
-            return None
-        except Exception as e:
-            print(f"Error getting edit context: {e}")
-            return None
+        return self.edit_context_repo.get_edit_context_by_chat_id(chat_id)
     
     def delete_edit_context(self, context_id: str) -> bool:
-        """Delete edit context"""
-        try:
-            self.edit_contexts_table.delete_item(
-                Key={'context_id': context_id}
-            )
-            return True
-        except Exception as e:
-            print(f"Error deleting edit context: {e}")
-            return False
-    
-    def get_subscribers(self) -> List[Customer]:
-        """Get subscribers with caching"""
-        return self.customer_repo.get_subscribers()
-    
-    def _get_subscribers_uncached(self) -> List[Customer]:
-        """Internal method to get subscribers without caching"""
-        return self.customer_repo._get_subscribers_uncached()
-
-    def get_all_customers(self) -> List[Customer]:
-        """Get all customers with caching"""
-        return self.customer_repo.get_all_customers()
+        return self.edit_context_repo.delete_edit_context(context_id)
 
     def cleanup_old_edit_contexts(self) -> int:
-        """Clean up edit contexts older than 1 hour"""
-        try:
-            from datetime import datetime, UTC, timedelta
-            cutoff_time = datetime.now(UTC) - timedelta(hours=1)
-            
-            response = self.edit_contexts_table.scan(
-                FilterExpression='created_at < :cutoff',
-                ExpressionAttributeValues={':cutoff': cutoff_time.isoformat()}
-            )
-            
-            deleted_count = 0
-            for item in response.get('Items', []):
-                if self.delete_edit_context(item['context_id']):
-                    deleted_count += 1
-            
-            return deleted_count
-        except Exception as e:
-            print(f"Error cleaning up edit contexts: {e}")
-            return 0
+        return self.edit_context_repo.cleanup_old_edit_contexts()
     
     def upload_image_to_s3(self, file_content: bytes, file_name: str, offer_id: int) -> Optional[str]:
         """Upload image to S3 and return URL"""
