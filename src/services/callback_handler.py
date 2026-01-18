@@ -21,7 +21,7 @@ class CallbackHandler:
         self._register_routes()
 
     def _register_routes(self):
-        """Register callback patterns with router (Phase 2: approve, reject, cancel, confirm patterns)"""
+        """Register callback patterns with router (Phase 3 Batch A: add edit patterns)"""
         # Approve user patterns - register more specific pattern first
         self.router.register(
             r"^approve_user_select_(.+)$",
@@ -81,6 +81,21 @@ class CallbackHandler:
             r"^confirm_order_(\d+)_(\d+)$",
             lambda match, ctx: self.handlers['customer_order'].handle_confirm_order(ctx['chat_id'], ctx['user_id'], [match.group(1), match.group(2)])
         )
+        
+        # Edit patterns - most specific first (Phase 3 Batch A)
+        self.router.register(
+            r"^edit_user_select_(.+)$",
+            lambda match, ctx: self.handlers['user'].handle_edit_user_select(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^edit_supplier_select_(.+)$",
+            lambda match, ctx: self.handlers['supplier'].show_edit_interface_by_id(ctx['chat_id'], match.group(1))
+        )
+        # Generic edit pattern: edit_{entity}_{field}_{id} - handled by _handle_edit_callbacks wrapper
+        self.router.register(
+            r"^edit_(.+)$",
+            lambda match, ctx: self._handle_edit_callbacks(ctx['chat_id'], ctx['user_id'], f"edit_{match.group(1)}")
+        )
     
     def _handle_confirm_wholesale_wrapper(self, chat_id: int, offer_id: str, boxes: str) -> Dict[str, Any]:
         """Wrapper for confirm_process_wholesale with error handling"""
@@ -106,7 +121,7 @@ class CallbackHandler:
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
             
-            # Try router first (Phase 2: approve, reject, cancel, confirm patterns)
+            # Try router first (Phase 3 Batch A: includes edit patterns)
             context = {'chat_id': chat_id, 'user_id': user_id, 'message_id': message_id}
             router_handled = self.router.dispatch(data, context)
             
@@ -210,12 +225,8 @@ class CallbackHandler:
             # confirm_cancel_order_ callbacks now handled by router
             # approve_user_ callbacks now handled by router
             # reject_user_ callbacks now handled by router
-            elif data.startswith('edit_user_select_'):
-                customer_id = data.split('_')[3]
-                return self.handlers['user'].handle_edit_user_select(chat_id, customer_id)
-            elif data.startswith('edit_supplier_select_'):
-                supplier_id = data.split('_')[3]
-                return self.handlers['supplier'].show_edit_interface_by_id(chat_id, supplier_id)
+            # edit_user_select_ callbacks now handled by router
+            # edit_supplier_select_ callbacks now handled by router
             elif data == 'back_to_supplier_list':
                 return self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active')
             elif data.startswith('user_orders_select_'):
@@ -344,9 +355,7 @@ class CallbackHandler:
                 # Do nothing - this is just a display button
                 return {'status': 'page_info', 'no_action': True}
             
-            # Edit callbacks
-            elif data.startswith('edit_'):
-                return self._handle_edit_callbacks(chat_id, user_id, data)
+            # edit_ callbacks now handled by router
             
             # Offer management callbacks
             elif data.startswith('offer_details_'):
