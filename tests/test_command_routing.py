@@ -192,8 +192,8 @@ class TestCommandRouting:
         ('/unsubscribe', 'info', 'handle_unsubscribe'),
         ('/view_offer 1', 'info', 'handle_offer_details'),
         ('/confirm_order 1 2', 'customer_order', 'handle_confirm_order'),
-        ('/delete_cancelled_orders', 'customer_order', 'handle_delete_cancelled'),
-        ('/delete_completed_orders', 'customer_order', 'handle_delete_completed'),
+        ('/delete_cancelled_orders', 'customer_order', 'handle_delete_cancelled_orders'),
+        ('/delete_completed_orders', 'customer_order', 'handle_delete_completed_orders'),
         ('/changelog', 'changelog', 'handle_changelog'),
     ])
     def test_customer_command_routing(self, router, mock_handlers, command, handler, method):

@@ -4,9 +4,9 @@ This document lists ALL remaining method name refactorings needed to align with 
 
 **Implementation Order:** Tasks ordered from simplest (fewest occurrences) to most complex.
 
-## Status: 14 commands fully refactored ✅, 9 commands remaining ❌
+## Status: 16 commands fully refactored ✅, 7 commands remaining ❌
 
-**Total Progress: 14/23 (61%)******
+**Total Progress: 16/23 (70%)**
 
 ---
 
@@ -100,55 +100,29 @@ grep -r "handle_add_box" src/ --include="*.py"
 
 ---
 
-### 3. delete_cancelled_orders (3 occurrences)
-**Status:** ❌ NOT STARTED - Customer command
+### 3. ✅ COMPLETE: delete_cancelled_orders (3 occurrences)
+**Status:** ✅ COMPLETE
 
-**Files to modify:**
+**Files modified:**
 - `src/handlers/customer/order_commands.py`
 - `src/services/command_router.py`
+- `tests/test_command_routing.py`
 
-**Changes:**
-1. Rename `handle_delete_cancelled` → `handle_delete_cancelled_orders`
-
-**Validation:**
-```bash
-grep -r "handle_delete_cancelled[^_]" src/ --include="*.py"
-```
-
-**Commit message:**
-```
-refactor: rename delete_cancelled to delete_cancelled_orders
-
-- Rename handle_delete_cancelled → handle_delete_cancelled_orders
-- Update command router references
-- Align method names with /delete_cancelled_orders command
-```
+**Changes completed:**
+1. Renamed `handle_delete_cancelled` → `handle_delete_cancelled_orders`
 
 ---
 
-### 4. delete_completed_orders (3 occurrences)
-**Status:** ❌ NOT STARTED - Customer command
+### 4. ✅ COMPLETE: delete_completed_orders (3 occurrences)
+**Status:** ✅ COMPLETE
 
-**Files to modify:**
+**Files modified:**
 - `src/handlers/customer/order_commands.py`
 - `src/services/command_router.py`
+- `tests/test_command_routing.py`
 
-**Changes:**
-1. Rename `handle_delete_completed` → `handle_delete_completed_orders`
-
-**Validation:**
-```bash
-grep -r "handle_delete_completed[^_]" src/ --include="*.py"
-```
-
-**Commit message:**
-```
-refactor: rename delete_completed to delete_completed_orders
-
-- Rename handle_delete_completed → handle_delete_completed_orders
-- Update command router references
-- Align method names with /delete_completed_orders command
-```
+**Changes completed:**
+1. Renamed `handle_delete_completed` → `handle_delete_completed_orders`
 
 ---
 

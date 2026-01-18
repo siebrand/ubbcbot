@@ -283,8 +283,8 @@ class CustomerOrderCommands(BaseHandler):
         except Exception as e:
             logger.error(f"Error sending group notification: {e}")
             return False
-    def handle_delete_cancelled(self, chat_id: int, user_id: int) -> Dict[str, Any]:
-        """Handle /delete_cancelled command - delete all cancelled orders for user"""
+    def handle_delete_cancelled_orders(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /delete_cancelled_orders command - delete all cancelled orders for user"""
         try:
             # Get customer
             customer = self.db.get_customer_by_telegram_id(user_id)
@@ -313,12 +313,12 @@ class CustomerOrderCommands(BaseHandler):
                 return {'status': 'error'}
                 
         except Exception as e:
-            logger.error(f"Error in handle_delete_cancelled: {e}")
+            logger.error(f"Error in handle_delete_cancelled_orders: {e}")
             self._send_message(chat_id, self._t('failed_delete_cancelled_orders', user_id))
             return {'status': 'error'}
     
-    def handle_delete_completed(self, chat_id: int, user_id: int) -> Dict[str, Any]:
-        """Handle /delete_completed command - delete all completed orders for user"""
+    def handle_delete_completed_orders(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /delete_completed_orders command - delete all completed orders for user"""
         try:
             # Get customer
             customer = self.db.get_customer_by_telegram_id(user_id)
@@ -347,6 +347,6 @@ class CustomerOrderCommands(BaseHandler):
                 return {'status': 'error'}
                 
         except Exception as e:
-            logger.error(f"Error in handle_delete_completed: {e}")
+            logger.error(f"Error in handle_delete_completed_orders: {e}")
             self._send_message(chat_id, self._t('failed_delete_completed_orders', user_id))
             return {'status': 'error'}

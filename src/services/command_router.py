@@ -111,9 +111,9 @@ class CommandRouter:
         elif command == '/confirm_order':
             return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, parts[1:])
         elif command == '/delete_cancelled_orders':
-            return self.handlers['customer_order'].handle_delete_cancelled(target_chat, user_id)
+            return self.handlers['customer_order'].handle_delete_cancelled_orders(target_chat, user_id)
         elif command == '/delete_completed_orders':
-            return self.handlers['customer_order'].handle_delete_completed(target_chat, user_id)
+            return self.handlers['customer_order'].handle_delete_completed_orders(target_chat, user_id)
         elif command == '/changelog':
             return self.handlers['changelog'].handle_changelog(target_chat, user_id, 1)
         elif command == '/cancel':
