@@ -21,7 +21,7 @@ class CallbackHandler:
         self._register_routes()
 
     def _register_routes(self):
-        """Register callback patterns with router (Phase 3 Batch A: add edit patterns)"""
+        """Register callback patterns with router (Phase 3 Batch B: add order patterns)"""
         # Approve user patterns - register more specific pattern first
         self.router.register(
             r"^approve_user_select_(.+)$",
@@ -96,6 +96,28 @@ class CallbackHandler:
             r"^edit_(.+)$",
             lambda match, ctx: self._handle_edit_callbacks(ctx['chat_id'], ctx['user_id'], f"edit_{match.group(1)}")
         )
+        
+        # Order patterns - most specific first (Phase 3 Batch B)
+        self.router.register(
+            r"^order_for_quantity_(\w+)_(\d+)_(\d+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_order_for_quantity_select(ctx['chat_id'], match.group(1), match.group(2), match.group(3))
+        )
+        self.router.register(
+            r"^order_for_other_(\w+)_(\d+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_order_for_other_quantity(ctx['chat_id'], match.group(1), match.group(2))
+        )
+        self.router.register(
+            r"^order_for_offer_(\w+)_(\d+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_order_for_offer_select(ctx['chat_id'], match.group(1), match.group(2))
+        )
+        self.router.register(
+            r"^order_for_user_select_(.+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_order_for_user_select(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^order_(\d+)_(\d+)$",
+            lambda match, ctx: self.handlers['customer_order'].handle_order(ctx['chat_id'], ctx['user_id'], [match.group(1), match.group(2)])
+        )
     
     def _handle_confirm_wholesale_wrapper(self, chat_id: int, offer_id: str, boxes: str) -> Dict[str, Any]:
         """Wrapper for confirm_process_wholesale with error handling"""
@@ -121,7 +143,7 @@ class CallbackHandler:
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
             
-            # Try router first (Phase 3 Batch A: includes edit patterns)
+            # Try router first (Phase 3 Batch B: includes order patterns)
             context = {'chat_id': chat_id, 'user_id': user_id, 'message_id': message_id}
             router_handled = self.router.dispatch(data, context)
             
@@ -181,31 +203,7 @@ class CallbackHandler:
             elif data == 'create_supplier_start':
                 return self._start_add_supplier(chat_id)
             
-            # Order callbacks
-            if data.startswith('order_'):
-                if data.startswith('order_for_offer_'):
-                    parts = data.split('_')
-                    logger.info(f"order_for_offer callback parts: {parts}")
-                    if len(parts) >= 5:
-                        customer_id, offer_id = parts[3], parts[4]
-                        logger.info(f"Parsed customer_id: {customer_id}, offer_id: {offer_id}")
-                        return self.handlers['admin_order'].handle_order_for_offer_select(chat_id, customer_id, offer_id)
-                    else:
-                        logger.error(f"Invalid order_for_offer callback format: {data}, parts: {parts}")
-                        return {'status': 'invalid_format'}
-                elif data.startswith('order_for_quantity_'):
-                    parts = data.split('_')
-                    customer_id, offer_id, quantity = parts[3], parts[4], parts[5]
-                    return self.handlers['admin_order'].handle_order_for_quantity_select(chat_id, customer_id, offer_id, quantity)
-                elif data.startswith('order_for_other_'):
-                    parts = data.split('_')
-                    customer_id, offer_id = parts[3], parts[4]
-                    return self.handlers['admin_order'].handle_order_for_other_quantity(chat_id, customer_id, offer_id)
-                elif len(data.split('_')) >= 3:
-                    parts = data.split('_')
-                    offer_id = parts[1]
-                    quantity = parts[2]
-                    return self.handlers['customer_order'].handle_order(chat_id, user_id, [offer_id, quantity])
+            # Order callbacks now handled by router
             elif data.startswith('wholesale_select_'):
                 offer_id = data.split('_')[2]
                 return self.handlers['offer'].handle_process_wholesale(chat_id, [offer_id])
@@ -241,9 +239,7 @@ class CallbackHandler:
             elif data == 'enter_username_order_for':
                 return self._start_order_for_input(chat_id)
             # approve_user_select_ callbacks now handled by router
-            elif data.startswith('order_for_user_select_'):
-                customer_id = data.split('_')[4]
-                return self.handlers['admin_order'].handle_order_for_user_select(chat_id, customer_id)
+            # order_for_user_select_ callbacks now handled by router
             elif data.startswith('credit_customer_'):
                 customer_id = data.split('_')[2]
                 return self.handlers['credit'].handle_credit_customer_select(chat_id, customer_id)
