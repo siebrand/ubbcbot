@@ -2,13 +2,19 @@
 
 This document lists ALL remaining method name refactorings needed to align with the new command names from COMMAND_NAMING_ANALYSIS.md.
 
-## Status: 12 commands already refactored ✅ VERIFIED, 11 commands remaining (NONE COMPLETED YET)
+## Status: 11 commands fully refactored ✅, 1 command partially complete ⚠️, 11 commands remaining ❌
 
-### Already Completed (from FUNCTION_NAME_REFACTORING_PLAN.md) - ✅ VERIFIED
+**Note:** create_order_for main command is done but callback helpers need renaming for consistency.
+
+### Already Completed (from FUNCTION_NAME_REFACTORING_PLAN.md) - ⚠️ PARTIALLY VERIFIED
 1. ✅ create_supplier (was add_supplier) - VERIFIED: handle_create_supplier exists
 2. ✅ update_supplier (was edit_supplier) - VERIFIED: handle_update_supplier exists
 3. ✅ list_boxes (was box_status) - VERIFIED: handle_list_boxes exists
-4. ✅ create_order_for (was order_for) - VERIFIED: handle_create_order_for exists
+4. ⚠️ create_order_for (was order_for) - INCOMPLETE: Main command done, but 4 callback helpers still use old naming:
+   - `handle_order_for_user_select` → should be `handle_create_order_for_user_select`
+   - `handle_order_for_offer_select` → should be `handle_create_order_for_offer_select`
+   - `handle_order_for_quantity_select` → should be `handle_create_order_for_quantity_select`
+   - `handle_order_for_other_quantity` → should be `handle_create_order_for_other_quantity`
 5. ✅ list_pending (was pending_users) - VERIFIED: handle_list_pending exists
 6. ✅ create_guest (was add_guest) - VERIFIED: handle_create_guest exists
 7. ✅ view_discount (was discount_status) - VERIFIED: handle_view_discount exists
@@ -20,6 +26,44 @@ This document lists ALL remaining method name refactorings needed to align with 
 
 **Verification Date:** 2025-01-18
 **Verification Method:** Checked for absence of old method names and presence of new method definitions in codebase
+**Issue Found:** create_order_for callback helpers still use old `order_for_*` naming instead of `create_order_for_*`
+
+---
+
+## Additional Refactoring Needed
+
+### 0. create_order_for callback helpers (MISSED IN ORIGINAL REFACTORING)
+**Status:** ⚠️ INCOMPLETE - Main command refactored but callback helpers missed
+
+**Files to modify:**
+- `src/handlers/admin/order/order_placement.py` (4 method definitions)
+- `src/handlers/admin/order_commands.py` (4 wrapper methods)
+- `src/services/bot_service.py` (1 reference)
+- `src/services/callback_handler.py` (4 references)
+
+**Changes:**
+1. Rename `handle_order_for_user_select` → `handle_create_order_for_user_select`
+2. Rename `handle_order_for_offer_select` → `handle_create_order_for_offer_select`
+3. Rename `handle_order_for_quantity_select` → `handle_create_order_for_quantity_select`
+4. Rename `handle_order_for_other_quantity` → `handle_create_order_for_other_quantity`
+5. Update all 13 references across files
+
+**Validation:**
+```bash
+grep -r "handle_order_for_" src/ --include="*.py"
+```
+
+**Commit message:**
+```
+refactor: rename order_for callback helpers to create_order_for
+
+- Rename handle_order_for_user_select → handle_create_order_for_user_select
+- Rename handle_order_for_offer_select → handle_create_order_for_offer_select
+- Rename handle_order_for_quantity_select → handle_create_order_for_quantity_select
+- Rename handle_order_for_other_quantity → handle_create_order_for_other_quantity
+- Update 13 references across handlers and services
+- Complete create_order_for refactoring for consistency
+```
 
 ---
 
@@ -355,13 +399,15 @@ refactor: rename my_orders to list_my_orders (keep /my_orders alias)
 
 ## Summary
 
-**Completion Status: 0/11 (0%)**
+**Completion Status:**
+- Fully Complete: 11/12 (92%)
+- Partially Complete: 1/12 (create_order_for - main done, helpers missed)
+- Not Started: 11/12 remaining commands
 
-All 11 remaining refactorings are NOT STARTED. The old method names are still in use throughout the codebase.
-
-**Total Refactoring Progress: 12/23 (52%)**
+**Total Refactoring Progress: 11.5/23 (50%)**
 
 **Next Steps:**
+0. **PRIORITY:** Complete create_order_for callback helpers (13 references)
 1. Start with simplest refactorings (fewest occurrences): #13, #15, #20, #21, #23
 2. Then tackle medium complexity: #18, #17
 3. Finally handle complex ones: #19, #16, #14
@@ -369,10 +415,11 @@ All 11 remaining refactorings are NOT STARTED. The old method names are still in
 5. Test each refactoring in test environment before proceeding
 
 **Estimated Effort:**
+- Complete create_order_for helpers: ~30 min
 - Simple (2-3 occurrences): ~15 min each × 5 = 1.25 hours
 - Medium (5-6 occurrences): ~30 min each × 2 = 1 hour  
 - Complex (7-12 occurrences): ~45 min each × 4 = 3 hours
-- **Total: ~5.25 hours**_orders" src/ --include="*.py"
+- **Total: ~5.75 hours**_orders" src/ --include="*.py"
 ```
 
 **If method is named `handle_my_orders`:**
