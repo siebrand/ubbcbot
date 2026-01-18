@@ -23,7 +23,7 @@
 ```
 /list_offers
 /list_suppliers
-/box_status
+/list_boxes
 ```
 *Expected: Should show 8 active offers with boxes, each having 1/X capacity from admin auto-orders*
 
@@ -38,7 +38,7 @@
 
 ### 2.2 Add Description and Publish
 ```
-/offer_details 1 edit
+/view_offer 1 edit
 ```
 *Click "Edit Description" button, then type:*
 ```
@@ -61,7 +61,7 @@ Premium IPA with citrus notes and floral aroma. Limited edition batch from TestB
 
 ### 3.2 Add Description and Publish
 ```
-/offer_details 2 edit
+/view_offer 2 edit
 ```
 *Click "Edit Description" button, then type:*
 ```
@@ -91,7 +91,7 @@ Rich chocolate stout with coffee undertones. Perfect for cold evenings.
 
 ### 4.3 Verify Box Status
 ```
-/box_status
+/list_boxes
 ```
 *Expected: First offer box should show FULL status*
 
@@ -101,13 +101,13 @@ Rich chocolate stout with coffee undertones. Perfect for cold evenings.
 
 ### 5.1 Admin Orders Wholesale
 ```
-/order_wholesale 1
+/process_wholesale 1
 ```
 *Click "Order 1 boxes wholesale" button*
 
 ### 5.2 Verify Order Status
 ```
-/all_orders ordered
+/export_orders ordered
 ```
 
 ---
@@ -116,7 +116,7 @@ Rich chocolate stout with coffee undertones. Perfect for cold evenings.
 
 ### 6.1 Start Wholesale Delivery
 ```
-/wholesale_delivery
+/process_delivery
 ```
 
 ### 6.2 Select Supplier and Offer
@@ -130,7 +130,7 @@ Rich chocolate stout with coffee undertones. Perfect for cold evenings.
 
 ### 6.4 Complete Labeling
 ```
-/labeling_completed
+/process_labeling
 ```
 *Follow prompts:*
 1. Click "TestBrewery" button
@@ -144,7 +144,7 @@ Rich chocolate stout with coffee undertones. Perfect for cold evenings.
 
 ### 7.1 Send Delivery Overviews
 ```
-/send_overviews
+/send_delivery_overviews
 ```
 
 ### 7.2 Provide Payment Link
@@ -155,7 +155,7 @@ https://payment.example.com/ubbc-test-batch-1
 
 ### 7.3 Mark Customer as Paid
 ```
-/mark_paid
+/process_payment
 ```
 *Click the customer's "Mark Paid" button*
 
@@ -165,8 +165,8 @@ https://payment.example.com/ubbc-test-batch-1
 
 ### 8.1 Verify Final States
 ```
-/all_orders completed
-/box_status
+/export_orders completed
+/list_boxes
 /list_offers
 ```
 

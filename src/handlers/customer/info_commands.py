@@ -522,9 +522,9 @@ class InfoCommands(BaseHandler):
             # Send rich offer details
             if show_as_user:
                 # Show as regular user would see it
-                self._send_rich_offer_details(chat_id, offer, user_id=999999)  # Fake non-admin user ID
+                self._send_offer_view(chat_id, offer, user_id=999999)  # Fake non-admin user ID
             else:
-                self._send_rich_offer_details(chat_id, offer, user_id)
+                self._send_offer_view(chat_id, offer, user_id)
             
             # Add admin action buttons for draft offers
             if self._is_admin(user_id) and offer.status == OfferStatus.DRAFT.value:
@@ -573,7 +573,7 @@ class InfoCommands(BaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
     
-    def _send_rich_offer_details(self, chat_id: int, offer, user_id: int):
+    def _send_offer_view(self, chat_id: int, offer, user_id: int):
         """Send rich offer details with images and description"""
         # Send images as media group if available
         if offer.images:
