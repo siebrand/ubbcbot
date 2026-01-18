@@ -72,16 +72,15 @@ The `DynamoDBService` can be retained temporarily as a facade to maintain backwa
       - `CustomerRepository` created.
       - `UserCache` interaction handled.
       - `DynamoDBService` delegates customer operations.
+    - [x] **Phase 4: Boxes**
+      - `BoxRepository` created.
+      - All box CRUD operations extracted.
+      - `DynamoDBService` delegates box operations.
+      - Comprehensive unit tests added (9 test cases, all passing).
 
 ## Pending Tasks
 
-### Phase 4: Boxes (Next)
-- [ ] Create `BoxRepository`.
-- [ ] Move `create_box`, `get_boxes_by_offer`, `update_box`, `delete_box`, `get_all_boxes`, `get_box`.
-- [ ] Update `DynamoDBService` to delegate.
-- [ ] Add unit tests.
-
-### Phase 5: Orders & History
+### Phase 5: Orders & History (Next)
 - [ ] Create `OrderRepository`.
 - [ ] Move order CRUD operations.
 - [ ] Handle `AuditService` integration (circular dependency risk).

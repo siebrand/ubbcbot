@@ -11,6 +11,7 @@ from repositories.supplier_repository import SupplierRepository
 from repositories.offer_repository import OfferRepository
 from repositories.system_repository import SystemRepository
 from repositories.customer_repository import CustomerRepository
+from repositories.box_repository import BoxRepository
 
 class DynamoDBService:
     def __init__(self):
@@ -24,6 +25,7 @@ class DynamoDBService:
         self.supplier_repo = SupplierRepository()
         self.offer_repo = OfferRepository(self.system_repo)
         self.customer_repo = CustomerRepository(self.system_repo)
+        self.box_repo = BoxRepository()
         
         # Initialize tables (Legacy - to be removed)
         self.suppliers_table = self.dynamodb.Table(f'{self.table_prefix}-suppliers')
@@ -106,12 +108,7 @@ class DynamoDBService:
         return self.offer_repo.append_offer_image(offer_id, image_url)
 
     def delete_box(self, box_id: str) -> bool:
-        try:
-            self.boxes_table.delete_item(Key={'box_id': box_id})
-            return True
-        except Exception as e:
-            print(f"Error deleting box: {e}")
-            return False
+        return self.box_repo.delete_box(box_id)
 
     # Customer operations
     def create_customer(self, customer: Customer) -> Optional[Customer]:
@@ -128,59 +125,13 @@ class DynamoDBService:
 
     # Box operations
     def create_box(self, box: Box) -> Optional[Box]:
-        try:
-            item = self._prepare_item(box.__dict__)
-            self.boxes_table.put_item(Item=item)
-            return box
-        except Exception as e:
-            print(f"Error creating box: {e}")
-            return None
+        return self.box_repo.create_box(box)
 
     def get_boxes_by_offer(self, offer_id: int) -> List[Box]:
-        try:
-            response = self.boxes_table.query(
-                IndexName='offer-index',
-                KeyConditionExpression=Key('offer_id').eq(offer_id)
-            )
-            boxes = []
-            for item in response.get('Items', []):
-                # Convert Decimal fields to appropriate types
-                if 'current_quantity' in item:
-                    item['current_quantity'] = int(item['current_quantity'])
-                if 'max_capacity' in item:
-                    item['max_capacity'] = int(item['max_capacity'])
-                boxes.append(Box(**item))
-            return boxes
-        except Exception as e:
-            print(f"Error getting boxes by offer: {e}")
-            return []
+        return self.box_repo.get_boxes_by_offer(offer_id)
 
     def update_box(self, box_id: str, updates: Dict[str, Any]) -> bool:
-        try:
-            update_expression = "SET "
-            expression_values = {}
-            
-            for key, value in updates.items():
-                update_expression += f"#{key} = :{key}, "
-                expression_values[f":{key}"] = value
-            
-            update_expression = update_expression.rstrip(", ")
-            
-            # Add expression attribute names for reserved keywords
-            expression_names = {}
-            for key in updates.keys():
-                expression_names[f"#{key}"] = key
-            
-            self.boxes_table.update_item(
-                Key={'box_id': box_id},
-                UpdateExpression=update_expression,
-                ExpressionAttributeNames=expression_names,
-                ExpressionAttributeValues=expression_values
-            )
-            return True
-        except Exception as e:
-            print(f"Error updating box: {e}")
-            return False
+        return self.box_repo.update_box(box_id, updates)
 
     # Order operations
     def create_order(self, order: Order, admin_id: int = 0) -> Optional[Order]:
@@ -224,20 +175,7 @@ class DynamoDBService:
     
     def get_all_boxes(self) -> List[Box]:
         """Scan all boxes from DynamoDB with minimal fields for list_offers"""
-        try:
-            response = self.boxes_table.scan(
-                ProjectionExpression='box_id, offer_id, current_quantity, max_capacity, #status',
-                ExpressionAttributeNames={'#status': 'status'}
-            )
-            boxes = []
-            for item in response.get('Items', []):
-                item['current_quantity'] = int(item['current_quantity'])
-                item['max_capacity'] = int(item['max_capacity'])
-                boxes.append(Box(**item))
-            return boxes
-        except Exception as e:
-            print(f"Error getting all boxes: {e}")
-            return []
+        return self.box_repo.get_all_boxes()
     
     def get_all_orders(self, statuses: List[str] = None) -> List[Order]:
         """Scan all orders with minimal fields for list_offers"""
@@ -333,20 +271,7 @@ class DynamoDBService:
         return self.customer_repo.get_customer(customer_id)
 
     def get_box(self, box_id: str) -> Optional[Box]:
-        try:
-            response = self.boxes_table.get_item(Key={'box_id': box_id})
-            if 'Item' in response:
-                item = response['Item']
-                # Convert Decimal fields to appropriate types
-                if 'current_quantity' in item:
-                    item['current_quantity'] = int(item['current_quantity'])
-                if 'max_capacity' in item:
-                    item['max_capacity'] = int(item['max_capacity'])
-                return Box(**item)
-            return None
-        except Exception as e:
-            print(f"Error getting box: {e}")
-            return None
+        return self.box_repo.get_box(box_id)
 
     def delete_order(self, order_id: str) -> bool:
         try:
