@@ -212,6 +212,28 @@ class CallbackHandler:
             r"^audit_offer_(\d+)$",
             lambda match, ctx: self.handlers['offer']._execute_audit_offer(ctx['chat_id'], int(match.group(1)))
         )
+        
+        # Delivery/Export patterns (Phase 3 Batch F)
+        self.router.register(
+            r"^export_orders_(.+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_export_orders_callback(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^start_send_overviews$",
+            lambda match, ctx: self.handlers['delivery_overview'].start_send_overviews(ctx['chat_id'])
+        )
+        self.router.register(
+            r"^finish_labeling_(.+)$",
+            lambda match, ctx: self.handlers['labeling'].handle_finish_labeling(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^mark_paid_(.+)$",
+            lambda match, ctx: self.handlers['delivery_overview'].handle_mark_customer_paid(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^request_cancel_reason_(.+)$",
+            lambda match, ctx: self._request_cancellation_reason(ctx['chat_id'], match.group(1))
+        )
     
     def _handle_confirm_wholesale_wrapper(self, chat_id: int, offer_id: str, boxes: str) -> Dict[str, Any]:
         """Wrapper for confirm_process_wholesale with error handling"""
@@ -250,7 +272,7 @@ class CallbackHandler:
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
             
-            # Try router first (Phase 3 Batch E: includes audit patterns)
+            # Try router first (Phase 3 Batch F: includes delivery/export patterns)
             context = {'chat_id': chat_id, 'user_id': user_id, 'message_id': message_id}
             router_handled = self.router.dispatch(data, context)
             
@@ -283,24 +305,16 @@ class CallbackHandler:
             elif data.startswith('lc_'):
                 return self._handle_labeling_completion_callbacks(chat_id, user_id, data)
             
-            # Export orders callbacks
-            elif data.startswith('export_orders_'):
-                status_filter = data.replace('export_orders_', '')
-                return self.handlers['admin_order'].handle_export_orders_callback(chat_id, status_filter)
+            # Export orders callbacks now handled by router
             
-            # Delivery overview callbacks
-            elif data == 'start_send_overviews':
-                return self.handlers['delivery_overview'].start_send_overviews(chat_id)
+            # Delivery overview callbacks now handled by router
+            # start_send_overviews callback now handled by router
             
             # Labeling completion callbacks
-            elif data.startswith('finish_labeling_'):
-                box_id = data.split('_', 2)[2]
-                return self.handlers['labeling'].handle_finish_labeling(chat_id, box_id)
+            # finish_labeling_ callbacks now handled by router
             
-            # Payment marking callbacks
-            elif data.startswith('mark_paid_'):
-                customer_id = data.split('_', 2)[2]
-                return self.handlers['delivery_overview'].handle_mark_customer_paid(chat_id, customer_id)
+            # Payment marking callbacks now handled by router
+            # mark_paid_ callbacks now handled by router
             
             # Admin panel callbacks
             elif data.startswith('admin'):
@@ -320,9 +334,7 @@ class CallbackHandler:
             # Admin confirmation callbacks
             # confirm_cancel_offer_ callbacks now handled by router
             # confirm_fulfill_ callbacks now handled by router
-            elif data.startswith('request_cancel_reason_'):
-                order_id = data.split('_')[3]
-                return self._request_cancellation_reason(chat_id, order_id)
+            # request_cancel_reason_ callbacks now handled by router
             # confirm_cancel_order_ callbacks now handled by router
             # approve_user_ callbacks now handled by router
             # reject_user_ callbacks now handled by router
