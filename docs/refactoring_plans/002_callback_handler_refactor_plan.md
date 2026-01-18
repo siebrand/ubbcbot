@@ -200,25 +200,70 @@ Phase 1 (Single - Simplest):
   ✅ approve_user_<customer_id> - COMPLETED
   ✅ approve_user_select_<customer_id> - COMPLETED
 
-Phase 2 (Three Patterns):
-  ☐ cancel_<action>
-  ☐ confirm_<action>_<params>
-  ☐ archive_supplier_<supplier_id>
+Phase 2 (User Actions & Confirmations):
+  ✅ reject_user_<customer_id> - COMPLETED
+  ✅ cancel_order_user_select_<customer_id> - COMPLETED
+  ✅ cancel_order_confirm_<order_id> - COMPLETED
+  ✅ cancel_orders_page_<customer_id>_<page> - COMPLETED
+  ✅ cancel_confirmation - COMPLETED
+  ✅ cancel_action - COMPLETED
+  ✅ confirm_process_wholesale_<offer_id>_<boxes> - COMPLETED
+  ✅ confirm_cancel_offer_<offer_id> - COMPLETED
+  ✅ confirm_cancel_order_<order_id> - COMPLETED
+  ✅ confirm_fulfill_<offer_id>_<boxes> - COMPLETED
+  ✅ confirm_order_<offer_id>_<quantity> - COMPLETED
 
 Phase 3 (Remaining - Alphabetical Batches):
-  Batch A:
-    - create_box_<offer_id>
-    - delete_<entity>_<id>
-    - edit_<entity>_<id>
-    - finalize_import_<offer_id>
+  Batch A (Edit patterns):
+    ☐ edit_user_select_<customer_id>
+    ☐ edit_supplier_select_<supplier_id>
+    ☐ edit_<entity>_<field>_<id>
   
-  Batch B:
-    - list_<entity>_<params>
-    - order_for_<params>
-    - page_<entity>_<page_num>_<params>
+  Batch B (Order patterns):
+    ☐ order_for_offer_<customer_id>_<offer_id>
+    ☐ order_for_quantity_<customer_id>_<offer_id>_<quantity>
+    ☐ order_for_other_<customer_id>_<offer_id>
+    ☐ order_for_user_select_<customer_id>
+    ☐ order_<offer_id>_<quantity>
   
-  Batch C:
-    - process_<action>_<params>
+  Batch C (Offer/Supplier patterns):
+    ☐ wholesale_select_<offer_id>
+    ☐ custom_wholesale_quantity_<offer_id>
+    ☐ publish_offer_<offer_id>
+    ☐ finalize_import_<offer_id>
+    ☐ offer_details_<offer_id>
+    ☐ offer_orders_<offer_id>
+    ☐ upload_offer_image_<offer_id>
+    ☐ clear_offer_images_<offer_id>
+  
+  Batch D (User/Status patterns):
+    ☐ user_orders_select_<customer_id>
+    ☐ user_status_select_<customer_id>
+    ☐ credit_customer_<customer_id>
+    ☐ enter_username_<action>
+  
+  Batch E (Audit patterns):
+    ☐ audit_offer_<offer_id>
+    ☐ audit_fill_boxes_<offer_id>_<excess>
+    ☐ audit_fill_create_<offer_id>_<excess>
+    ☐ audit_create_boxes_<offer_id>_<excess>
+    ☐ audit_cancel_orders_<offer_id>_<excess>
+  
+  Batch F (Delivery/Export patterns):
+    ☐ export_orders_<status>
+    ☐ start_send_overviews
+    ☐ finish_labeling_<box_id>
+    ☐ mark_paid_<customer_id>
+    ☐ request_cancel_reason_<order_id>
+  
+  Batch G (Navigation patterns):
+    ☐ back_to_supplier_list
+    ☐ process_wholesale
+    ☐ create_supplier_start
+
+Note: page_, admin, cmd, wd_, and lc_ patterns use different formats (colon-separated)
+and may require separate handling or can remain in dedicated methods.
+```on>_<params>
     - publish_<entity>_<id>
     - reject_<user_id>
   
