@@ -118,6 +118,48 @@ class CallbackHandler:
             r"^order_(\d+)_(\d+)$",
             lambda match, ctx: self.handlers['customer_order'].handle_order(ctx['chat_id'], ctx['user_id'], [match.group(1), match.group(2)])
         )
+        
+        # Offer/Supplier patterns - most specific first (Phase 3 Batch C)
+        self.router.register(
+            r"^offer_orders_detail_(\d+)_(\d+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_list_offer_orders_detail_page(ctx['chat_id'], match.group(1), int(match.group(2)))
+        )
+        self.router.register(
+            r"^offer_orders_page_(\d+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_list_offer_orders_page(ctx['chat_id'], int(match.group(1)))
+        )
+        self.router.register(
+            r"^offer_orders_(\d+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_list_offer_orders_select(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^offer_details_(\d+)(?:_(edit))?$",
+            lambda match, ctx: self.handlers['info'].handle_offer_details(ctx['chat_id'], ctx['user_id'], [match.group(1)] + ([match.group(2)] if match.group(2) else []))
+        )
+        self.router.register(
+            r"^wholesale_select_(\d+)$",
+            lambda match, ctx: self.handlers['offer'].handle_process_wholesale(ctx['chat_id'], [match.group(1)])
+        )
+        self.router.register(
+            r"^custom_wholesale_quantity_(\d+)$",
+            lambda match, ctx: self.handlers['offer'].handle_custom_wholesale_quantity(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^publish_offer_(\d+)$",
+            lambda match, ctx: self.handlers['offer'].handle_publish_offer(ctx['chat_id'], [match.group(1)])
+        )
+        self.router.register(
+            r"^finalize_import_(\d+)$",
+            lambda match, ctx: self.handlers['import'].handle_finalize_import(ctx['chat_id'], [match.group(1)])
+        )
+        self.router.register(
+            r"^upload_offer_image_(\d+)$",
+            lambda match, ctx: self._handle_upload_offer_image(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^clear_offer_images_(\d+)$",
+            lambda match, ctx: self._handle_clear_offer_images(ctx['chat_id'], ctx['user_id'], match.group(1))
+        )
     
     def _handle_confirm_wholesale_wrapper(self, chat_id: int, offer_id: str, boxes: str) -> Dict[str, Any]:
         """Wrapper for confirm_process_wholesale with error handling"""
@@ -128,6 +170,19 @@ class CallbackHandler:
             logger.error(f"Exception in handle_confirm_process_wholesale: {e}")
             self._send_message(chat_id, self._t('invalid_format'))
             return {'status': 'exception'}
+    
+    def _handle_upload_offer_image(self, chat_id: int, offer_id: str) -> Dict[str, Any]:
+        """Wrapper for upload_offer_image"""
+        self._send_message(chat_id, self._t('awaiting_image', offer_id=offer_id))
+        self._store_edit_context(chat_id, 'offer_image_upload', offer_id)
+        return {'status': 'awaiting_image'}
+    
+    def _handle_clear_offer_images(self, chat_id: int, user_id: int, offer_id: str) -> Dict[str, Any]:
+        """Wrapper for clear_offer_images"""
+        result = self.media_handler.handle_clear_offer_images(chat_id, offer_id)
+        if result.get('return_to_edit'):
+            return self.handlers['info'].handle_offer_details(chat_id, user_id, [str(result['offer_id']), 'edit'])
+        return result
     
     def handle_callback_query(self, callback_query: Dict[str, Any]) -> Dict[str, Any]:
         """Handle inline button callbacks"""
@@ -143,7 +198,7 @@ class CallbackHandler:
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
             
-            # Try router first (Phase 3 Batch B: includes order patterns)
+            # Try router first (Phase 3 Batch C: includes offer/supplier patterns)
             context = {'chat_id': chat_id, 'user_id': user_id, 'message_id': message_id}
             router_handled = self.router.dispatch(data, context)
             
@@ -204,13 +259,9 @@ class CallbackHandler:
                 return self._start_add_supplier(chat_id)
             
             # Order callbacks now handled by router
-            elif data.startswith('wholesale_select_'):
-                offer_id = data.split('_')[2]
-                return self.handlers['offer'].handle_process_wholesale(chat_id, [offer_id])
+            # wholesale_select_ callbacks now handled by router
             # confirm_process_wholesale_ callbacks now handled by router
-            elif data.startswith('custom_wholesale_quantity_'):
-                offer_id = data.split('_')[3]
-                return self.handlers['offer'].handle_custom_wholesale_quantity(chat_id, offer_id)
+            # custom_wholesale_quantity_ callbacks now handled by router
             # confirm_order_ callbacks now handled by router
             # cancel_confirmation callback now handled by router
             
@@ -353,44 +404,17 @@ class CallbackHandler:
             
             # edit_ callbacks now handled by router
             
-            # Offer management callbacks
-            elif data.startswith('offer_details_'):
-                parts = data.split('_')
-                if len(parts) >= 3:
-                    offer_id = parts[2]
-                    edit_mode = len(parts) > 3 and parts[3] == 'edit'
-                    args = [offer_id, 'edit'] if edit_mode else [offer_id]
-                    return self.handlers['info'].handle_offer_details(chat_id, user_id, args)
-            elif data.startswith('upload_offer_image_'):
-                offer_id = data.split('_')[3]
-                self._send_message(chat_id, self._t('awaiting_image', offer_id=offer_id))
-                self._store_edit_context(chat_id, 'offer_image_upload', offer_id)
-                return {'status': 'awaiting_image'}
-            elif data.startswith('clear_offer_images_'):
-                offer_id = data.split('_')[3]
-                result = self.media_handler.handle_clear_offer_images(chat_id, offer_id)
-                # Return to edit interface after clearing images
-                if result.get('return_to_edit'):
-                    return self.handlers['info'].handle_offer_details(chat_id, user_id, [str(result['offer_id']), 'edit'])
-                return result
-            elif data.startswith('publish_offer_'):
-                offer_id = data.split('_')[2]
-                return self.handlers['offer'].handle_publish_offer(chat_id, [offer_id])
+            # Offer management callbacks now handled by router
+            # offer_details_ callbacks now handled by router
+            # upload_offer_image_ callbacks now handled by router
+            # clear_offer_images_ callbacks now handled by router
+            # publish_offer_ callbacks now handled by router
             
             # Audit offer callbacks
-            elif data.startswith('finalize_import_'):
-                offer_id = data.split('_')[2]
-                return self.handlers['import'].handle_finalize_import(chat_id, [offer_id])
-            elif data.startswith('offer_orders_page_'):
-                page = int(data.split('_')[3])
-                return self.handlers['admin_order'].handle_list_offer_orders_page(chat_id, page)
-            elif data.startswith('offer_orders_detail_'):
-                parts = data.split('_')
-                offer_id, page = int(parts[3]), int(parts[4])
-                return self.handlers['admin_order'].handle_list_offer_orders_detail_page(chat_id, str(offer_id), page)
-            elif data.startswith('offer_orders_'):
-                offer_id = data.split('_')[2]
-                return self.handlers['admin_order'].handle_list_offer_orders_select(chat_id, offer_id)
+            # finalize_import_ callbacks now handled by router
+            # offer_orders_page_ callbacks now handled by router
+            # offer_orders_detail_ callbacks now handled by router
+            # offer_orders_ callbacks now handled by router
             elif data.startswith('audit_offers_page_'):
                 page = int(data.split('_')[3])
                 return self.handlers['offer']._show_audit_offer_selection(chat_id, page)
