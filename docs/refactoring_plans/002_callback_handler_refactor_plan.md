@@ -11,62 +11,135 @@ Implement a **Callback Router** mechanism to decouple callback parsing from exec
 
 ## Proposed Architecture
 
-### 1. Callback Router
-A class responsible for matching callback data to a handler function.
+### 1. Callback Router with Alias Support
+A class responsible for matching callback data to a handler function, with built-in support for command shortcuts/aliases.
 
 ```python
 class CallbackRouter:
     def __init__(self):
-        self.routes = []
+        self.routes = []  # List of (compiled_regex, handler_func, aliases)
 
-    def register(self, pattern: str, handler_func):
-        # Store regex pattern and handler
-        pass
+    def register(self, pattern: str, handler_func, aliases: list = None):
+        """
+        Register a callback handler.
+        
+        Args:
+            pattern: Regex pattern (e.g., r"^approve_(\d+)$")
+            handler_func: Function to call when matched
+            aliases: Optional list of alternative patterns
+                    (e.g., [r"^appr_(\d+)$", r"^a_(\d+)$"])
+        """
+        compiled = re.compile(pattern)
+        self.routes.append((compiled, handler_func, pattern))
+        
+        # Register aliases pointing to same handler
+        if aliases:
+            for alias in aliases:
+                compiled_alias = re.compile(alias)
+                self.routes.append((compiled_alias, handler_func, alias))
 
     def dispatch(self, callback_data: str, context):
-        # Match data against patterns and call the correct handler
-        pass
+        """
+        Match callback_data against registered patterns.
+        Returns True if handled, False otherwise.
+        """
+        for regex, handler, pattern_str in self.routes:
+            match = regex.match(callback_data)
+            if match:
+                handler(match, context)
+                return True
+        return False
 ```
 
-### 2. Handler Registration
-Handlers (e.g., in `src/handlers/admin/order_commands.py`) should register their interest in specific callback patterns.
+**Alias Benefits:**
+- Shorter callback data = less Telegram API payload
+- Faster typing for power users (if exposed as commands)
+- Backward compatibility when renaming callbacks
+- Example: `approve_123` → `appr_123` → `a_123`
+
+### 2. Handler Registration with Aliases
+Handlers (e.g., in `src/handlers/admin/order_commands.py`) should register their interest in specific callback patterns, optionally with shortcuts.
 
 ```python
 # Example in AdminOrderHandler
-@callback_handler(pattern=r"^order_for_quantity_(\d+)_(\d+)_(\d+)$")
+@callback_handler(
+    pattern=r"^order_for_quantity_(\d+)_(\d+)_(\d+)$",
+    aliases=[
+        r"^ofq_(\d+)_(\d+)_(\d+)$",  # Short form
+        r"^oq_(\d+)_(\d+)_(\d+)$"    # Ultra-short form
+    ]
+)
 def handle_order_quantity(self, match, chat_id, user_id):
     customer_id, offer_id, qty = match.groups()
     # Logic...
 ```
+
+**Alias Strategy:**
+- Start with full names during migration
+- Add aliases in Phase 3 after patterns stabilize
+- Document alias mappings in `docs/callback_aliases.md`
+- Consider Telegram's 64-byte callback_data limit when designing aliases
 
 ### 3. Structured Callback Data
 Standardize callback data format to avoid ad-hoc parsing like `parts[3]`.
 
 ## Refactoring Steps
 
-1.  **Create Router Infrastructure:**
+### Gradual Alphabetical Migration Strategy
+To minimize risk and allow incremental testing, we'll migrate callbacks **alphabetically by prefix**, starting with a single pattern, then expanding to 3, then completing the rest.
+
+**Migration Phases:**
+- **Phase 0:** Infrastructure setup (router + tests)
+- **Phase 1:** Single pattern (e.g., `approve_` callbacks)
+- **Phase 2:** Three patterns (e.g., `approve_`, `cancel_`, `confirm_`)
+- **Phase 3:** Remaining patterns in alphabetical batches
+
+This allows:
+- Testing router in production with minimal risk
+- Rolling back easily if issues arise
+- Learning from early patterns to improve later ones
+
+### Detailed Steps
+
+1.  **Create Router Infrastructure (Phase 0):**
     - Create `src/services/routing/callback_router.py`.
-    - Implement regex-based matching.
+    - Implement regex-based matching with **alias support** (see below).
+    - Add comprehensive unit tests.
 
-2.  **Define Patterns:**
-    Analyze `callback_handler.py` to list all current string patterns (e.g., `wd_`, `page_`, `confirm_process_wholesale_`).
+2.  **Catalog All Patterns:**
+    Analyze `callback_handler.py` to list all current string patterns alphabetically:
+    ```
+    approve_, archive_supplier_, cancel_, confirm_, create_box_,
+    delete_, edit_, finalize_import_, list_, order_for_, page_,
+    process_, publish_, reject_, select_, toggle_, update_, view_, wd_
+    ```
 
-3.  **Iterative Migration:**
-    - **Phase 1: Admin Callbacks**
-      - Move admin-related `elif` blocks to their respective handlers using the new router.
-    - **Phase 2: Order Callbacks**
-      - Move complex order parsing logic to `OrderHandler`.
-    - **Phase 3: Pagination**
-      - Create a generic `PaginationHandler` to handle `page_` callbacks.
+3.  **Phase 1 - Single Pattern Migration:**
+    - Choose simplest pattern: `approve_<user_id>`
+    - Implement handler registration in `AdminUserHandler`
+    - Update `CallbackHandler` to check router first, then fallback to existing logic
+    - Deploy and monitor
 
-4.  **Update Main Handler:**
+4.  **Phase 2 - Three Pattern Migration:**
+    - Add `cancel_<action>` patterns
+    - Add `confirm_<action>` patterns
+    - Test interaction between patterns
+    - Deploy and monitor
+
+5.  **Phase 3 - Batch Migration:**
+    - Migrate remaining patterns in alphabetical groups of 5-7
+    - Each batch: implement → test → deploy → monitor
+    - Final batch removes fallback logic entirely
+
+6.  **Update Main Handler:**
     Replace the giant `if/elif` in `CallbackHandler.handle_callback_query` with:
     ```python
     def handle_callback_query(self, callback_query):
         data = callback_query['data']
         if self.router.dispatch(data, context):
             return
-        # fallback...
+        # fallback to legacy handler (remove after full migration)
+        self._legacy_handler(data, context)
     ```
 
 ## Risk Assessment
@@ -114,3 +187,60 @@ For every block of logic moved from the `if/elif` chain:
 - **Decoupling:** `CallbackHandler` no longer needs to know about every specific feature.
 - **Readability:** Logic is co-located with the feature handler (e.g., order logic stays in `OrderHandler`).
 - **Safety:** Regex matching is more robust than manual string splitting.
+- **Gradual Migration:** Alphabetical phasing allows production testing with minimal risk.
+- **Future-Proof:** Alias support enables command shortening without breaking existing buttons.
+- **Payload Optimization:** Shorter callbacks reduce Telegram API data transfer.
+
+## Alphabetical Pattern Catalog
+
+Based on analysis of `callback_handler.py`, here are all callback prefixes in alphabetical order:
+
+```
+Phase 1 (Single - Simplest):
+  ✓ approve_<user_id>
+
+Phase 2 (Three Patterns):
+  ✓ cancel_<action>
+  ✓ confirm_<action>_<params>
+  ✓ archive_supplier_<supplier_id>
+
+Phase 3 (Remaining - Alphabetical Batches):
+  Batch A:
+    - create_box_<offer_id>
+    - delete_<entity>_<id>
+    - edit_<entity>_<id>
+    - finalize_import_<offer_id>
+  
+  Batch B:
+    - list_<entity>_<params>
+    - order_for_<params>
+    - page_<entity>_<page_num>_<params>
+  
+  Batch C:
+    - process_<action>_<params>
+    - publish_<entity>_<id>
+    - reject_<user_id>
+  
+  Batch D:
+    - select_<entity>_<id>_<params>
+    - toggle_<setting>_<params>
+    - update_<entity>_<id>_<params>
+  
+  Batch E:
+    - view_<entity>_<id>
+    - wd_<offer_id>_<box_id>_<quantity>  (wholesale delivery)
+```
+
+## Migration Checklist Template
+
+For each pattern/batch:
+- [ ] Document current callback format and parameters
+- [ ] Write router registration test
+- [ ] Implement handler with router registration
+- [ ] Add integration test (end-to-end button click)
+- [ ] Deploy to test environment
+- [ ] Verify in test Telegram bot
+- [ ] Deploy to production
+- [ ] Monitor CloudWatch logs for 24-48 hours
+- [ ] (Optional) Add aliases for frequently-used callbacks
+- [ ] Update documentation
