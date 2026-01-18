@@ -197,12 +197,13 @@ Based on analysis of `callback_handler.py`, here are all callback prefixes in al
 
 ```
 Phase 1 (Single - Simplest):
-  ✓ approve_<user_id>
+  ✅ approve_user_<customer_id> - COMPLETED
+  ✅ approve_user_select_<customer_id> - COMPLETED
 
 Phase 2 (Three Patterns):
-  ✓ cancel_<action>
-  ✓ confirm_<action>_<params>
-  ✓ archive_supplier_<supplier_id>
+  ☐ cancel_<action>
+  ☐ confirm_<action>_<params>
+  ☐ archive_supplier_<supplier_id>
 
 Phase 3 (Remaining - Alphabetical Batches):
   Batch A:
@@ -231,6 +232,56 @@ Phase 3 (Remaining - Alphabetical Batches):
     - wd_<offer_id>_<box_id>_<quantity>  (wholesale delivery)
 ```
 
+## Migration Status
+
+### ✅ Phase 0: Infrastructure Setup (COMPLETED)
+**Commits:**
+- `test: add CallbackRouter infrastructure tests (TDD red phase)` - 12d2203
+- `feat: implement CallbackRouter infrastructure (TDD green phase)` - b76ec21
+
+**Deliverables:**
+- `src/services/routing/callback_router.py` - Router implementation
+- `tests/test_callback_router.py` - 10 unit tests
+- Built-in alias support for future command shortcutting
+- All infrastructure tests passing
+
+### ✅ Phase 1: Single Pattern Migration (COMPLETED)
+**Commits:**
+- `test: add approve_user callback migration tests (Phase 1)` - 3bd7ee7
+- `feat: migrate approve_user callbacks to router (Phase 1 complete)` - 4c01271
+
+**Deliverables:**
+- `tests/test_approve_callback_migration.py` - 6 integration tests
+- Router integrated into CallbackHandler
+- Migrated patterns:
+  - `approve_user_<customer_id>` → `handle_approve_user_by_id`
+  - `approve_user_select_<customer_id>` → `handle_approve_user_select`
+- Removed legacy if/elif blocks for approve callbacks
+- All 78 callback tests passing (62 existing + 16 new)
+
+**Key Learnings:**
+- Pattern order matters: register more specific patterns first
+- Use negative character class `[^_]` to prevent overlap (e.g., `approve_user_[^_]+` won't match `approve_user_select_`)
+- Router dispatch must happen after callback answer but before keyboard removal
+- Customer IDs are UUIDs (alphanumeric), not just digits
+
+**Testing in Production:**
+1. Test approve user flow: `/list_pending` → click approve button
+2. Test approve user search: Admin panel → Users → Approve User → enter username → approve
+3. Monitor CloudWatch logs for "Callback handled by router" messages
+
+### ☐ Phase 2: Three Pattern Migration (NEXT)
+**Target Patterns:**
+1. `cancel_<action>` - Various cancellation callbacks
+2. `confirm_<action>_<params>` - Confirmation callbacks  
+3. `archive_supplier_<supplier_id>` - Supplier archival
+
+**Estimated Effort:** 2-3 commits following same TDD pattern
+
+### ☐ Phase 3: Batch Migration (FUTURE)
+**Remaining Patterns:** See catalog above
+**Estimated Effort:** 10-15 commits (2-3 patterns per commit)
+
 ## Migration Checklist Template
 
 For each pattern/batch:
@@ -244,3 +295,12 @@ For each pattern/batch:
 - [ ] Monitor CloudWatch logs for 24-48 hours
 - [ ] (Optional) Add aliases for frequently-used callbacks
 - [ ] Update documentation
+
+## Metrics
+
+| Metric | Before | After Phase 1 | Target (Complete) |
+|--------|--------|---------------|-------------------|
+| Callback patterns in if/elif | ~50 | ~48 | 0 |
+| Callback patterns in router | 0 | 2 | ~50 |
+| Lines in handle_callback_query | ~700 | ~695 | ~100 |
+| Test coverage | 62 tests | 78 tests | ~120 tests |
