@@ -32,8 +32,6 @@
 - reason: str
 - customer_event: str  # Composite for GSI
 - event_date: str  # Composite for GSI
-- credit_transaction_id: Optional[str]  # Links to refunds
-- triggers_refund: bool
 - ttl: int  # 2-year expiry
 ```
 

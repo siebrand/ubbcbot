@@ -539,7 +539,7 @@ def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
    - `get_customers_with_credit(min_amount)`
 
 3. **`src/services/audit_service.py`** - New service:
-   - `log_order_change(order_id, admin_id, field_name, old_value, new_value, reason, credit_transaction_id)`
+   - `log_order_change(order_id, admin_id, field_name, old_value, new_value, reason)`
    - `get_order_history(order_id, limit)`
    - `get_changes_by_admin(admin_id, days)`
 

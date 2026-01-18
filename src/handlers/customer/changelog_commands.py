@@ -34,7 +34,7 @@ class ChangelogCommands(BaseHandler):
 
 <b>Admin-Facing Updates</b>
 • <b>Command Naming Standardization</b> - 23 commands renamed to consistent action-object pattern (create_, list_, view_, update_, process_), permanent aliases for /order, /my_orders, /order_for
-• <b>Order History & Audit Trail</b> - Complete audit system with automatic logging, financial tracking for payments/refunds, 5-year retention, database-level enforcement
+• <b>Order History & Audit Trail</b> - Complete audit system with automatic logging, financial tracking for payments/credits, 5-year retention, database-level enforcement
 • <b>Delivered Box Availability</b> - Smart box prioritization places orders in delivered boxes first, prevents unnecessary box creation, orders automatically marked ready_for_labeling
 • <b>Streamlined Admin Panel</b> - Reduced from 9 to 7 categories with logical grouping, process next offer button for continuous workflows
 • <b>Enhanced Workflows</b> - Return to admin menu after completing all deliveries/labeling/payments, complete help system with discounts/import/system sections

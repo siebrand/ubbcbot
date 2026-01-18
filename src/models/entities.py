@@ -156,10 +156,6 @@ class OrderHistory:
     event_date: str = ""  # Format: "event_type#2024-01-15T10:30:00Z" for event-date-index
     customer_name_event: str = ""  # Format: "customer_name#event_type" for customer-name-event-index
     
-    # Refund linkage
-    credit_transaction_id: Optional[str] = None
-    triggers_refund: bool = False
-    
     # TTL (5 years prod, 90 days test)
     ttl: Optional[int] = None
     

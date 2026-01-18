@@ -64,7 +64,7 @@ class AuditService:
         logger.info(f"Audit: Order cancelled {order.order_id}")
     
     def log_price_change(self, order, old_price: Decimal, new_price: Decimal, 
-                        admin_id: int, reason: str = "", credit_transaction_id: Optional[str] = None):
+                        admin_id: int, reason: str = ""):
         """Log price change (may trigger refund)"""
         history = OrderHistory(
             order_id=order.order_id,
@@ -77,8 +77,6 @@ class AuditService:
             old_value=str(old_price),
             new_value=str(new_price),
             reason=reason or "Price adjusted",
-            credit_transaction_id=credit_transaction_id,
-            triggers_refund=(credit_transaction_id is not None),
             amount=new_price - old_price  # Difference (negative for refunds)
         )
         self.db.create_order_history(history)

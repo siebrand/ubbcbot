@@ -557,7 +557,7 @@ class DynamoDBService:
             return False
     
     def adjust_order_price_with_audit(self, order_id: str, new_price, admin_id: int, 
-                                     reason: str, credit_transaction_id: Optional[str] = None) -> bool:
+                                     reason: str) -> bool:
         """Adjust order price with mandatory audit logging and optional refund linkage"""
         try:
             from services.audit_service import AuditService
@@ -572,7 +572,7 @@ class DynamoDBService:
             
             # Log price change with refund linkage
             audit = AuditService(self)
-            audit.log_price_change(order, old_price, new_price, admin_id, reason, credit_transaction_id)
+            audit.log_price_change(order, old_price, new_price, admin_id, reason)
             
             # Update order (will also log via update_order, but price change already logged above)
             return self.update_order(order_id, {'total_price': new_price}, admin_id, reason)
