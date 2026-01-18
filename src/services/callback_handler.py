@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Any
 import requests
 from utils.edit_context import EditContextManager
+from services.routing.callback_router import CallbackRouter
 
 logger = logging.getLogger()
 
@@ -14,7 +15,23 @@ class CallbackHandler:
         self.handlers = handlers
         self.media_handler = media_handler
         self.edit_context_manager = EditContextManager(db, self._t, self._send_message)
+        
+        # Initialize callback router
+        self.router = CallbackRouter()
+        self._register_routes()
 
+    def _register_routes(self):
+        """Register callback patterns with router (Phase 1: approve patterns only)"""
+        # Approve user patterns - register more specific pattern first
+        self.router.register(
+            r"^approve_user_select_(.+)$",
+            lambda match, ctx: self.handlers['user'].handle_approve_user_select(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^approve_user_([^_]+)$",  # Match approve_user_ but not approve_user_select_
+            lambda match, ctx: self.handlers['user'].handle_approve_user_by_id(ctx['chat_id'], match.group(1))
+        )
+    
     def handle_callback_query(self, callback_query: Dict[str, Any]) -> Dict[str, Any]:
         """Handle inline button callbacks"""
         try:
@@ -28,6 +45,10 @@ class CallbackHandler:
 
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
+            
+            # Try router first (Phase 1: approve patterns)
+            context = {'chat_id': chat_id, 'user_id': user_id, 'message_id': message_id}
+            router_handled = self.router.dispatch(data, context)
             
             # Determine if we should remove the keyboard
             should_remove_keyboard = True
@@ -44,6 +65,11 @@ class CallbackHandler:
             
             if should_remove_keyboard:
                 self._edit_message_remove_keyboard(chat_id, message_id)
+            
+            # If router handled it, return early
+            if router_handled:
+                logger.info(f"Callback handled by router: {data}")
+                return {'status': 'handled_by_router'}
             
             # Wholesale delivery callbacks
             if data.startswith('wd_'):
@@ -156,9 +182,7 @@ class CallbackHandler:
             elif data.startswith('confirm_cancel_order_'):
                 order_id = data.split('_')[3]
                 return self.handlers['admin_order'].handle_confirm_cancel(chat_id, [order_id])
-            elif data.startswith('approve_user_'):
-                customer_id = data.split('_')[2]
-                return self.handlers['user'].handle_approve_user_by_id(chat_id, customer_id)
+            # approve_user_ callbacks now handled by router
             elif data.startswith('reject_user_'):
                 customer_id = data.split('_')[2]
                 return self.handlers['user'].handle_reject_user_by_id(chat_id, customer_id)
@@ -189,9 +213,7 @@ class CallbackHandler:
                 return self._start_cancel_order_input(chat_id)
             elif data == 'enter_username_order_for':
                 return self._start_order_for_input(chat_id)
-            elif data.startswith('approve_user_select_'):
-                customer_id = data.replace('approve_user_select_', '')
-                return self.handlers['user'].handle_approve_user_select(chat_id, customer_id)
+            # approve_user_select_ callbacks now handled by router
             elif data.startswith('order_for_user_select_'):
                 customer_id = data.split('_')[4]
                 return self.handlers['admin_order'].handle_order_for_user_select(chat_id, customer_id)
