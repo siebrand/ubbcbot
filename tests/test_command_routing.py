@@ -104,8 +104,8 @@ class TestCommandRouting:
     def test_deep_link_order(self, router, mock_handlers):
         """Test /start with order deep link routes to order handler"""
         router.route_command(12345, 12345, '/start create_order_123_2')
-        mock_handlers['customer_order'].handle_order.assert_called_once()
-        call_args = mock_handlers['customer_order'].handle_order.call_args[0]
+        mock_handlers['customer_order'].handle_create_order.assert_called_once()
+        call_args = mock_handlers['customer_order'].handle_create_order.call_args[0]
         assert '123' in call_args[2]
         assert '2' in call_args[2]
     
@@ -183,8 +183,8 @@ class TestCommandRouting:
     @pytest.mark.parametrize("command,handler,method", [
         ('/start', 'info', 'handle_start'),
         ('/help', 'info', 'handle_help'),
-        ('/create_order 1 2', 'customer_order', 'handle_order'),
-        ('/order 1 2', 'customer_order', 'handle_order'),  # Permanent alias
+        ('/create_order 1 2', 'customer_order', 'handle_create_order'),
+        ('/order 1 2', 'customer_order', 'handle_create_order'),  # Permanent alias
         ('/list_my_orders', 'info', 'handle_list_my_orders'),
         ('/my_orders', 'info', 'handle_list_my_orders'),  # Permanent alias
         ('/list_offers', 'info', 'handle_list_offers'),
@@ -247,7 +247,7 @@ class TestCommandRouting:
     
     # Test 20: Permanent Aliases Route Correctly
     @pytest.mark.parametrize("alias,canonical,handler,method,user_id", [
-        ('/order 1 2', '/create_order', 'customer_order', 'handle_order', 12345),
+        ('/order 1 2', '/create_order', 'customer_order', 'handle_create_order', 12345),
         ('/my_orders', '/list_my_orders', 'info', 'handle_list_my_orders', 12345),
         ('/order_for user 1 2', '/create_order_for', 'admin_order', 'handle_create_order_for', 15005473),
     ])

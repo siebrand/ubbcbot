@@ -68,7 +68,7 @@ class CommandRouter:
             if parts[1].startswith('create_order_'):
                 try:
                     _, _, offer_id_str, quantity_str = parts[1].split('_')
-                    return self.handlers['customer_order'].handle_order(chat_id, user_id, [offer_id_str, quantity_str])
+                    return self.handlers['customer_order'].handle_create_order(chat_id, user_id, [offer_id_str, quantity_str])
                 except ValueError:
                     pass
             elif parts[1].startswith('confirm_'):
@@ -97,7 +97,7 @@ class CommandRouter:
         elif command == '/help':
             return self.handlers['info'].handle_help(target_chat, user_id, parts[1:])
         elif command == '/create_order':
-            return self.handlers['customer_order'].handle_order(chat_id, user_id, parts[1:])
+            return self.handlers['customer_order'].handle_create_order(chat_id, user_id, parts[1:])
         elif command == '/list_my_orders':
             return self.handlers['info'].handle_list_my_orders(target_chat, user_id, parts[1:])
         elif command == '/list_offers':

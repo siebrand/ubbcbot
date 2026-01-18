@@ -116,7 +116,7 @@ class CallbackHandler:
         )
         self.router.register(
             r"^order_(\d+)_(\d+)$",
-            lambda match, ctx: self.handlers['customer_order'].handle_order(ctx['chat_id'], ctx['user_id'], [match.group(1), match.group(2)])
+            lambda match, ctx: self.handlers['customer_order'].handle_create_order(ctx['chat_id'], ctx['user_id'], [match.group(1), match.group(2)])
         )
         
         # Offer/Supplier patterns - most specific first (Phase 3 Batch C)

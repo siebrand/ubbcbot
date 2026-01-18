@@ -165,7 +165,7 @@ class TestCallbackRouting:
         """Test order callbacks route to customer_order handler"""
         query = self._create_callback_query(callback_data)
         callback_handler.handle_callback_query(query)
-        mock_handlers['customer_order'].handle_order.assert_called_once()
+        mock_handlers['customer_order'].handle_create_order.assert_called_once()
     
     # Test 7: Confirm Order Callbacks (Phase 2)
     @pytest.mark.parametrize("callback_data", [
@@ -340,7 +340,7 @@ class TestCallbackRouting:
         ('order_for_other_cust123_456', 'admin_order', 'handle_create_order_for_other_quantity'),
         ('order_for_offer_cust123_456', 'admin_order', 'handle_create_order_for_offer_select'),
         ('order_for_user_select_cust123', 'admin_order', 'handle_create_order_for_user_select'),
-        ('order_123_2', 'customer_order', 'handle_order'),
+        ('order_123_2', 'customer_order', 'handle_create_order'),
     ])
     def test_order_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):
         """Test order patterns route correctly (Phase 3 Batch B)"""

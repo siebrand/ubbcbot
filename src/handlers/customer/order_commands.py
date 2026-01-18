@@ -11,8 +11,8 @@ class CustomerOrderCommands(BaseHandler):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.box_status_manager = BoxStatusManager(db)
     
-    def handle_order(self, chat_id: int, user_id: int, args: list, skip_duplicate_check: bool = False) -> Dict[str, Any]:
-        """Handle /order command"""
+    def handle_create_order(self, chat_id: int, user_id: int, args: list, skip_duplicate_check: bool = False) -> Dict[str, Any]:
+        """Handle /create_order command"""
         error = self._validate_args(args, 1, 'usage_order', chat_id)
         if error:
             return error
@@ -51,7 +51,7 @@ class CustomerOrderCommands(BaseHandler):
         if error:
             return error
         
-        return self.handle_order(chat_id, user_id, args, skip_duplicate_check=True)
+        return self.handle_create_order(chat_id, user_id, args, skip_duplicate_check=True)
 
     def execute_order(self, chat_id: int, user_id: int, quantity: int, offer, customer, placed_by_admin: bool = False) -> Dict[str, Any]:
         """Execute order placement"""
