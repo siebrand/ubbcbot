@@ -10,14 +10,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from models.entities import Order, Box, OrderStatus, BoxStatus
 from services.wholesaler_delivery import WholesalerDeliveryService
 from services.database import DynamoDBService
+from services.box_status_manager import BoxStatusManager
 
 class TestWholesalerDelivery(unittest.TestCase):
     
     def setUp(self):
         self.mock_db = Mock(spec=DynamoDBService)
+        self.mock_box_status_manager = Mock(spec=BoxStatusManager)
         # Mock the orders_table attribute
         self.mock_db.orders_table = Mock()
-        self.service = WholesalerDeliveryService(self.mock_db)
+        self.service = WholesalerDeliveryService(self.mock_db, self.mock_box_status_manager)
     
     def test_partial_cancelled_delivery(self):
         """Test partial delivery with cancelled units (20 expected, 15 received, isDelayed=False)"""
@@ -48,7 +50,7 @@ class TestWholesalerDelivery(unittest.TestCase):
                 received_quantity=0,
                 unit_price=Decimal('5.00'),
                 total_price=Decimal('40.00'),
-                status=OrderStatus.CONFIRMED.value
+                status=OrderStatus.ORDERED.value
             ),
             Order(
                 order_id="order-2", 
@@ -59,7 +61,7 @@ class TestWholesalerDelivery(unittest.TestCase):
                 received_quantity=0,
                 unit_price=Decimal('5.00'),
                 total_price=Decimal('35.00'),
-                status=OrderStatus.CONFIRMED.value
+                status=OrderStatus.ORDERED.value
             ),
             Order(
                 order_id="order-3",
@@ -70,7 +72,7 @@ class TestWholesalerDelivery(unittest.TestCase):
                 received_quantity=0,
                 unit_price=Decimal('5.00'),
                 total_price=Decimal('25.00'),
-                status=OrderStatus.CONFIRMED.value
+                status=OrderStatus.ORDERED.value
             )
         ]
         
@@ -79,6 +81,7 @@ class TestWholesalerDelivery(unittest.TestCase):
         self.mock_db.get_orders_by_box.return_value = test_orders
         self.mock_db.update_order.return_value = True
         self.mock_db.create_order.return_value = True
+        self.mock_db.cancel_order_with_audit.return_value = True
         
         # Mock notification methods
         with patch.object(self.service, 'notify_customer_of_cancellation') as mock_cancel_notify:
@@ -94,10 +97,13 @@ class TestWholesalerDelivery(unittest.TestCase):
             
             # Verify order updates
             update_calls = self.mock_db.update_order.call_args_list
-            create_calls = self.mock_db.create_order.call_args_list
+            cancel_calls = self.mock_db.cancel_order_with_audit.call_args_list
             
-            # Should have 3 update calls (one for each original order)
-            self.assertEqual(len(update_calls), 3)
+            # Should have 2 update calls (first two orders fully received)
+            self.assertEqual(len(update_calls), 2)
+            
+            # Should have 1 cancel call (third order completely cancelled)
+            self.assertEqual(len(cancel_calls), 1)
             
             # Verify first order (8 units) - fully received
             first_update = update_calls[0]
@@ -111,17 +117,14 @@ class TestWholesalerDelivery(unittest.TestCase):
             self.assertEqual(second_update[0][1]['received_quantity'], 7)
             self.assertEqual(second_update[0][1]['status'], OrderStatus.READY_FOR_LABELING.value)
             
-            # Verify third order (5 units) - no units received, cancelled
-            third_update = update_calls[2]
-            self.assertEqual(third_update[0][0], "order-3")
-            self.assertEqual(third_update[0][1]['received_quantity'], 0)
-            self.assertEqual(third_update[0][1]['status'], OrderStatus.CANCELLED_UNAVAILABLE.value)
+            # Verify third order was cancelled
+            cancel_call = cancel_calls[0]
+            self.assertEqual(cancel_call[0][0], "order-3")
+            self.assertEqual(cancel_call[0][1], self.service.admin_user_id)
+            self.assertEqual(cancel_call[0][2], "Wholesale delivery - units unavailable")
             
             # Verify cancellation notification was called for the cancelled order
             mock_cancel_notify.assert_called_once_with("order-3")
-            
-            # Verify no new orders were created (since third order was completely cancelled)
-            self.assertEqual(len(create_calls), 0)
 
     def test_complete_delivery_button_in_keyboard(self):
         """Test that complete delivery button is added to box keyboard"""

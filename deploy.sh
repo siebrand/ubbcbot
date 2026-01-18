@@ -31,41 +31,10 @@ fi
 # Set PYTHONPATH for imports
 export PYTHONPATH="$(pwd)/src:$PYTHONPATH"
 
-# Run refactoring unit tests
-echo "Running refactoring unit tests..."
-if ! python -m unittest discover -s tests/handlers/admin -p "test_*.py" -v; then
-    echo "❌ Refactoring tests failed! Deployment aborted."
-    deactivate
-    exit 1
-fi
-
-# Run legacy tests
-echo "Running legacy tests..."
+# Run complete test suite
+echo "Running test suite (parallel)..."
 if ! python tests/run_tests.py; then
-    echo "❌ Legacy tests failed! Deployment aborted."
-    deactivate
-    exit 1
-fi
-
-# Run pytest tests
-echo "Running pytest tests..."
-PYTEST_FILES="
-    tests/test_command_routing.py
-    tests/test_callback_routing.py
-    tests/test_customer_orders.py
-    tests/test_box_status_manager.py
-    tests/test_box_filtering_helpers.py
-    tests/test_delivered_box_availability.py
-    tests/test_box_deletion_service.py
-    tests/test_mark_paid_pagination.py
-    tests/test_offer_cache.py
-    tests/test_csv_parser.py
-    tests/test_import_handler.py
-    tests/test_credit_service.py
-    tests/test_repositories/
-"
-if ! python -m pytest $PYTEST_FILES -v; then
-    echo "❌ Pytest tests failed! Deployment aborted."
+    echo "❌ Tests failed! Deployment aborted."
     deactivate
     exit 1
 fi

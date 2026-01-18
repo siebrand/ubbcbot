@@ -159,7 +159,7 @@ def test_language_detection():
     if success:
         print("✅ Language detection working correctly")
     
-    return success
+    assert success, "Language detection tests failed"
 
 def check_translation_structure():
     """Check that translation values are properly formatted strings"""
