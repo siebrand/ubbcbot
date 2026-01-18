@@ -186,6 +186,32 @@ class CallbackHandler:
             r"^enter_username_order_for$",
             lambda match, ctx: self._start_order_for_input(ctx['chat_id'])
         )
+        
+        # Audit patterns (Phase 3 Batch E)
+        self.router.register(
+            r"^audit_fill_boxes_(\d+)_(\d+)$",
+            lambda match, ctx: self.handlers['offer']._execute_fill_boxes(ctx['chat_id'], int(match.group(1)), int(match.group(2)))
+        )
+        self.router.register(
+            r"^audit_fill_create_(\d+)_(\d+)$",
+            lambda match, ctx: self.handlers['offer']._execute_fill_and_create(ctx['chat_id'], int(match.group(1)), int(match.group(2)))
+        )
+        self.router.register(
+            r"^audit_create_boxes_(\d+)_(\d+)$",
+            lambda match, ctx: self.handlers['offer']._execute_create_boxes(ctx['chat_id'], int(match.group(1)), int(match.group(2)))
+        )
+        self.router.register(
+            r"^audit_cancel_orders_(\d+)_(\d+)$",
+            lambda match, ctx: self.handlers['offer']._execute_cancel_orders(ctx['chat_id'], int(match.group(1)), int(match.group(2)))
+        )
+        self.router.register(
+            r"^audit_offers_page_(\d+)$",
+            lambda match, ctx: self.handlers['offer']._show_audit_offer_selection(ctx['chat_id'], int(match.group(1)))
+        )
+        self.router.register(
+            r"^audit_offer_(\d+)$",
+            lambda match, ctx: self.handlers['offer']._execute_audit_offer(ctx['chat_id'], int(match.group(1)))
+        )
     
     def _handle_confirm_wholesale_wrapper(self, chat_id: int, offer_id: str, boxes: str) -> Dict[str, Any]:
         """Wrapper for confirm_process_wholesale with error handling"""
@@ -224,7 +250,7 @@ class CallbackHandler:
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
             
-            # Try router first (Phase 3 Batch D: includes user/status patterns)
+            # Try router first (Phase 3 Batch E: includes audit patterns)
             context = {'chat_id': chat_id, 'user_id': user_id, 'message_id': message_id}
             router_handled = self.router.dispatch(data, context)
             
@@ -427,33 +453,17 @@ class CallbackHandler:
             # clear_offer_images_ callbacks now handled by router
             # publish_offer_ callbacks now handled by router
             
-            # Audit offer callbacks
+            # Audit offer callbacks now handled by router
             # finalize_import_ callbacks now handled by router
             # offer_orders_page_ callbacks now handled by router
             # offer_orders_detail_ callbacks now handled by router
             # offer_orders_ callbacks now handled by router
-            elif data.startswith('audit_offers_page_'):
-                page = int(data.split('_')[3])
-                return self.handlers['offer']._show_audit_offer_selection(chat_id, page)
-            elif data.startswith('audit_fill_boxes_'):
-                parts = data.split('_')
-                offer_id, excess_units = int(parts[3]), int(parts[4])
-                return self.handlers['offer']._execute_fill_boxes(chat_id, offer_id, excess_units)
-            elif data.startswith('audit_fill_create_'):
-                parts = data.split('_')
-                offer_id, excess_units = int(parts[3]), int(parts[4])
-                return self.handlers['offer']._execute_fill_and_create(chat_id, offer_id, excess_units)
-            elif data.startswith('audit_create_boxes_'):
-                parts = data.split('_')
-                offer_id, excess_units = int(parts[3]), int(parts[4])
-                return self.handlers['offer']._execute_create_boxes(chat_id, offer_id, excess_units)
-            elif data.startswith('audit_cancel_orders_'):
-                parts = data.split('_')
-                offer_id, excess_units = int(parts[3]), int(parts[4])
-                return self.handlers['offer']._execute_cancel_orders(chat_id, offer_id, excess_units)
-            elif data.startswith('audit_offer_'):
-                offer_id = data.split('_')[2]
-                return self.handlers['offer']._execute_audit_offer(chat_id, int(offer_id))
+            # audit_offers_page_ callbacks now handled by router
+            # audit_fill_boxes_ callbacks now handled by router
+            # audit_fill_create_ callbacks now handled by router
+            # audit_create_boxes_ callbacks now handled by router
+            # audit_cancel_orders_ callbacks now handled by router
+            # audit_offer_ callbacks now handled by router
             
             return {'status': 'unknown_callback'}
             
