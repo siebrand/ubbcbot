@@ -12,6 +12,7 @@ from repositories.offer_repository import OfferRepository
 from repositories.system_repository import SystemRepository
 from repositories.customer_repository import CustomerRepository
 from repositories.box_repository import BoxRepository
+from repositories.order_repository import OrderRepository
 
 class DynamoDBService:
     def __init__(self):
@@ -26,6 +27,7 @@ class DynamoDBService:
         self.offer_repo = OfferRepository(self.system_repo)
         self.customer_repo = CustomerRepository(self.system_repo)
         self.box_repo = BoxRepository()
+        self.order_repo = OrderRepository()
         
         # Initialize tables (Legacy - to be removed)
         self.suppliers_table = self.dynamodb.Table(f'{self.table_prefix}-suppliers')
@@ -139,39 +141,20 @@ class DynamoDBService:
         try:
             from services.audit_service import AuditService
             
-            item = self._prepare_item(order.__dict__)
-            self.orders_table.put_item(Item=item)
-            
-            # Auto-log order creation
-            audit = AuditService(self)
-            audit.log_order_created(order, admin_id)
-            
-            return order
+            result = self.order_repo.create_order(order)
+            if result:
+                audit = AuditService(self)
+                audit.log_order_created(order, admin_id)
+            return result
         except Exception as e:
             print(f"Error creating order: {e}")
             return None
 
     def get_orders_by_customer(self, customer_id: str) -> List[Order]:
-        try:
-            response = self.orders_table.query(
-                IndexName='customer-index',
-                KeyConditionExpression=Key('customer_id').eq(customer_id)
-            )
-            return [Order(**item) for item in response.get('Items', [])]
-        except Exception as e:
-            print(f"Error getting orders by customer: {e}")
-            return []
+        return self.order_repo.get_orders_by_customer(customer_id)
 
     def get_orders_by_offer(self, offer_id: int) -> List[Order]:
-        try:
-            response = self.orders_table.query(
-                IndexName='offer-index',
-                KeyConditionExpression=Key('offer_id').eq(offer_id)
-            )
-            return [Order(**item) for item in response.get('Items', [])]
-        except Exception as e:
-            print(f"Error getting orders by offer: {e}")
-            return []
+        return self.order_repo.get_orders_by_offer(offer_id)
     
     def get_all_boxes(self) -> List[Box]:
         """Scan all boxes from DynamoDB with minimal fields for list_offers"""
@@ -179,33 +162,7 @@ class DynamoDBService:
     
     def get_all_orders(self, statuses: List[str] = None) -> List[Order]:
         """Scan all orders with minimal fields for list_offers"""
-        try:
-            if statuses:
-                filter_expr = ' OR '.join([f'#status = :status{i}' for i in range(len(statuses))])
-                expr_values = {f':status{i}': status for i, status in enumerate(statuses)}
-                response = self.orders_table.scan(
-                    ProjectionExpression='order_id, offer_id, quantity, #status',
-                    FilterExpression=filter_expr,
-                    ExpressionAttributeNames={'#status': 'status'},
-                    ExpressionAttributeValues=expr_values
-                )
-            else:
-                response = self.orders_table.scan(
-                    ProjectionExpression='order_id, offer_id, quantity, #status',
-                    ExpressionAttributeNames={'#status': 'status'}
-                )
-            # Add default values for required Order fields not fetched
-            orders = []
-            for item in response.get('Items', []):
-                item.setdefault('customer_id', '')
-                item.setdefault('box_id', '')
-                item.setdefault('unit_price', 0)
-                item.setdefault('total_price', 0)
-                orders.append(Order(**item))
-            return orders
-        except Exception as e:
-            print(f"Error getting all orders: {e}")
-            return []
+        return self.order_repo.get_all_orders(statuses)
 
     def get_orders_by_customer_and_offer(self, customer_id: str, offer_id: int) -> List[Order]:
         """Get orders for a specific customer and offer combination"""
@@ -227,15 +184,7 @@ class DynamoDBService:
 
     def get_orders_by_box(self, box_id: str) -> List[Order]:
         """Get all orders for a specific box"""
-        try:
-            response = self.orders_table.scan(
-                FilterExpression='box_id = :box_id',
-                ExpressionAttributeValues={':box_id': box_id}
-            )
-            return [Order(**item) for item in response.get('Items', [])]
-        except Exception as e:
-            print(f"Error getting orders by box: {e}")
-            return []
+        return self.order_repo.get_orders_by_box(box_id)
 
     def get_active_discount(self) -> Optional[DiscountPeriod]:
         try:
@@ -258,14 +207,7 @@ class DynamoDBService:
             return None
 
     def get_order(self, order_id: str) -> Optional[Order]:
-        try:
-            response = self.orders_table.get_item(Key={'order_id': order_id})
-            if 'Item' in response:
-                return Order(**response['Item'])
-            return None
-        except Exception as e:
-            print(f"Error getting order: {e}")
-            return None
+        return self.order_repo.get_order(order_id)
 
     def get_customer(self, customer_id: str) -> Optional[Customer]:
         return self.customer_repo.get_customer(customer_id)
@@ -274,45 +216,19 @@ class DynamoDBService:
         return self.box_repo.get_box(box_id)
 
     def delete_order(self, order_id: str) -> bool:
-        try:
-            self.orders_table.delete_item(Key={'order_id': order_id})
-            return True
-        except Exception as e:
-            print(f"Error deleting order: {e}")
-            return False
+        return self.order_repo.delete_order(order_id)
 
     def update_order(self, order_id: str, updates: Dict[str, Any], admin_id: int = 0, reason: str = "") -> bool:
         """Update order with automatic audit logging"""
         try:
-            from datetime import datetime, UTC
             from services.audit_service import AuditService
             
-            # Get old order for comparison
             old_order = self.get_order(order_id)
             if not old_order:
                 return False
             
-            # Always add update_date to any order update
-            updates = updates.copy()  # Don't modify the original dict
-            updates['update_date'] = datetime.now(UTC).isoformat()
-            
-            update_expression = "SET "
-            expression_values = {}
-            expression_names = {}
-            
-            for key, value in updates.items():
-                update_expression += f"#{key} = :{key}, "
-                expression_values[f":{key}"] = value
-                expression_names[f"#{key}"] = key
-            
-            update_expression = update_expression.rstrip(", ")
-            
-            self.orders_table.update_item(
-                Key={'order_id': order_id},
-                UpdateExpression=update_expression,
-                ExpressionAttributeNames=expression_names,
-                ExpressionAttributeValues=expression_values
-            )
+            if not self.order_repo.update_order(order_id, updates):
+                return False
             
             # Auto-log significant changes
             audit = AuditService(self)

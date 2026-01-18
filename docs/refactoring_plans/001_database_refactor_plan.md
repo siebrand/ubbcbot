@@ -77,24 +77,30 @@ The `DynamoDBService` can be retained temporarily as a facade to maintain backwa
       - All box CRUD operations extracted.
       - `DynamoDBService` delegates box operations.
       - Comprehensive unit tests added (9 test cases, all passing).
+    - [x] **Phase 5: Orders**
+      - `OrderRepository` created using TDD.
+      - Core order CRUD operations extracted.
+      - `DynamoDBService` delegates order operations.
+      - Audit logging preserved in facade layer.
+      - Comprehensive unit tests added (10 test cases, all passing).
 
 ## Pending Tasks
 
-### Phase 5: Orders & History (Next)
-- [ ] Create `OrderRepository`.
-- [ ] Move order CRUD operations.
-- [ ] Handle `AuditService` integration (circular dependency risk).
-- [ ] Create `OrderHistoryRepository` (or include in OrderRepository).
-- [ ] Move `create_order_history`, `get_order_history`, `get_customer_events`, etc.
-- [ ] Update `DynamoDBService`.
+### Phase 6: Order History (Next)
 
-### Phase 6: Credits
+### Phase 6: Order History (Next)
+- [ ] Create `OrderHistoryRepository`.
+- [ ] Move `create_order_history`, `get_order_history`, `get_customer_events`, `get_events_by_type`, `get_history_by_customer_name`.
+- [ ] Update `DynamoDBService`.
+- [ ] Add unit tests.
+
+### Phase 7: Credits
 - [ ] Create `CreditRepository`.
 - [ ] Move `create_customer_credit`, `get_customer_credit`, `update_customer_credit`.
 - [ ] Move `create_credit_transaction`, `get_credit_transactions_...`.
 - [ ] Update `DynamoDBService`.
 
-### Phase 7: System & Misc
+### Phase 8: System & Misc
 - [ ] Expand `SystemRepository` or create specific repos for:
     - [ ] `DiscountsTable` -> `DiscountRepository`
     - [ ] `NotificationsTable` -> `NotificationRepository`
