@@ -394,6 +394,42 @@ For each refactoring:
 
 ---
 
+## Risk Assessment
+
+### 1. Broken Callbacks
+*   **Risk:** Medium. Many of these methods are invoked dynamically via the `CallbackHandler` string parsing. Renaming the method without updating all string references (especially in `callback_handler.py` or where `getattr` is used) will cause runtime `AttributeError`s when users click buttons.
+*   **Mitigation:**
+    *   Thoroughly search for the *exact string name* of the method before renaming.
+    *   Review `callback_handler.py` logic carefully for dynamic dispatch (e.g., `getattr(handler, f"handle_{action}")`).
+    *   Verify string literals in other files that might reference the method name.
+
+### 2. Import Errors
+*   **Risk:** Low. Most of these are instance methods within handler classes, not standalone functions imported elsewhere.
+*   **Mitigation:** Run `grep` for the method name across the entire `src/` directory to catch any direct imports or references.
+
+### 3. Test Failures
+*   **Risk:** Medium. Tests likely call these handler methods directly.
+*   **Mitigation:** Update test files immediately after renaming. Run `pytest` for the specific handler test file to verify.
+
+## TDD Requirements
+
+### 1. Pre-Refactor Verification
+Before renaming any method:
+1.  Identify the relevant test file (e.g., `tests/test_admin_operations.py` or specific handler tests).
+2.  Run the tests to ensure they currently pass.
+
+### 2. Refactor Cycle
+1.  **Rename:** Use IDE refactoring tools or careful find/replace to rename the method definition and known call sites.
+2.  **Test Update:** Update the test files to use the new method name.
+3.  **Run Tests:** Execute the specific test file again.
+    *   If tests fail with `AttributeError`, search for missed references in `callback_handler.py`.
+    *   If tests fail with logic errors, ensure no arguments were dropped during the rename.
+
+### 3. Post-Refactor Validation
+*   Run the "Validation" grep command provided for each item to ensure the old name is completely gone from the codebase (except potentially in changelogs or comments, which should also be updated if confusing).
+
+---
+
 ## Final Validation
 
 After all refactorings are complete, run:
