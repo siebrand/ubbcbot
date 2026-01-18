@@ -275,7 +275,7 @@ class TestCallbackRouting:
         'view_offer_123',
         'view_offer_456_edit',
     ])
-    def test_offer_details_callbacks(self, callback_handler, mock_handlers, callback_data):
+    def test_view_offer_callbacks(self, callback_handler, mock_handlers, callback_data):
         """Test offer details callbacks"""
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)

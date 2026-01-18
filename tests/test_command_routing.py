@@ -123,7 +123,7 @@ class TestCommandRouting:
         assert 'orders' in call_args[2]
     
     # Test 10: Deep Link - Offer Details Deep Link  
-    def test_deep_link_offer_details(self, router, mock_handlers):
+    def test_deep_link_view_offer(self, router, mock_handlers):
         """Test /start with view_offer deep link"""
         router.route_command(12345, 12345, '/start view_offer_123')
         call_args = mock_handlers['info'].handle_view_offer.call_args[0]
