@@ -149,7 +149,7 @@
   "usage_confirm_process_wholesale": "Usage: /confirm_process_wholesale <offer_id> <boxes_ordered>",
   "boxes_must_positive": "❌ Boxes ordered must be positive",
   "order_updated_limited": "⚠️ Your order has been updated due to limited availability:\n\n🍺 {name}\nOriginal: {old_qty} units\nUpdated: {new_qty} units\nNew total: €{total:.2f}\n\nYour order is confirmed and will be delivered.",
-  "order_cancelled_insufficient": "❌ Your order has been cancelled:\n\n🍺 {name}\nQuantity: {quantity} units\nAmount: €{total:.2f}\nReason: Insufficient stock available",
+  "order_cancelled_insufficient": "❌ Your order has been cancelled:\n\n🍺 {name}\nQuantity: {quantity} units\nAmount: €{total:.2f}\nReason: There was more demand than supply.",
   "offer_fulfilled_summary": "✅ Offer {offer_id} fulfilled with {boxes} boxes:\n\n✅ Fulfilled: {fulfilled_orders} orders ({fulfilled_units} units)",
   "order_reduced": "⚠️ Reduced: {customer}'s order from {old_qty} to {new_qty} units",
   "orders_cancelled": "❌ Cancelled: {cancelled_orders} orders ({cancelled_units} units) - {details}",
