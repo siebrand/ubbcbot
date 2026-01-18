@@ -126,7 +126,7 @@ class TestCommandRouting:
     def test_deep_link_offer_details(self, router, mock_handlers):
         """Test /start with view_offer deep link"""
         router.route_command(12345, 12345, '/start view_offer_123')
-        call_args = mock_handlers['info'].handle_offer_details.call_args[0]
+        call_args = mock_handlers['info'].handle_view_offer.call_args[0]
         assert '123' in call_args[2]
     
     # Test 11: Environment - Test Environment Group Handling
@@ -190,7 +190,7 @@ class TestCommandRouting:
         ('/list_offers', 'info', 'handle_list_offers'),
         ('/subscribe', 'info', 'handle_subscribe'),
         ('/unsubscribe', 'info', 'handle_unsubscribe'),
-        ('/view_offer 1', 'info', 'handle_offer_details'),
+        ('/view_offer 1', 'info', 'handle_view_offer'),
         ('/confirm_order 1 2', 'customer_order', 'handle_confirm_order'),
         ('/delete_cancelled_orders', 'customer_order', 'handle_delete_cancelled_orders'),
         ('/delete_completed_orders', 'customer_order', 'handle_delete_completed_orders'),

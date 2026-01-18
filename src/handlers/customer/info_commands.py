@@ -482,7 +482,7 @@ class InfoCommands(BaseHandler):
         base_handler = BaseOrderHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         return base_handler._show_customer_orders(chat_id, customer, page, show_order_ids=show_ids, user_id=user_id)
     
-    def handle_offer_details(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
+    def handle_view_offer(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
         """Handle offer details display and editing from deep link or command"""
         if not args:
             # Return same as list_offers without parameters

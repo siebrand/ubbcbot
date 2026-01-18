@@ -63,7 +63,7 @@ class OfferEditingHandler(OfferBaseHandler):
                 
                 # Return to edit interface
                 updated_offer = self.db.get_offer(offer_id)
-                return self.handlers['info'].handle_offer_details(chat_id, chat_id, [str(offer_id), 'edit'])
+                return self.handlers['info'].handle_view_offer(chat_id, chat_id, [str(offer_id), 'edit'])
             else:
                 self._send_message(chat_id, self._t('failed_update_offer_name'))
                 return {'status': 'error'}
@@ -100,7 +100,7 @@ class OfferEditingHandler(OfferBaseHandler):
                 self._send_message(chat_id, message)
                 
                 # Return to edit interface
-                return self.handlers['info'].handle_offer_details(chat_id, chat_id, [str(offer_id), 'edit'])
+                return self.handlers['info'].handle_view_offer(chat_id, chat_id, [str(offer_id), 'edit'])
             else:
                 self._send_message(chat_id, self._t('failed_update_offer_price'))
                 return {'status': 'error'}
@@ -122,7 +122,7 @@ class OfferEditingHandler(OfferBaseHandler):
             if len(new_description) > 1000:
                 self._send_message(chat_id, self._t('description_too_long'))
                 # Return to edit interface
-                return self.handlers['info'].handle_offer_details(chat_id, chat_id, [str(offer_id), 'edit'])
+                return self.handlers['info'].handle_view_offer(chat_id, chat_id, [str(offer_id), 'edit'])
             
             # Validate HTML in description
             is_valid, error_key = self._validate_html_content(new_description)
@@ -146,7 +146,7 @@ class OfferEditingHandler(OfferBaseHandler):
                 self._send_message(chat_id, message)
                 
                 # Return to edit interface
-                return self.handlers['info'].handle_offer_details(chat_id, chat_id, [str(offer_id), 'edit'])
+                return self.handlers['info'].handle_view_offer(chat_id, chat_id, [str(offer_id), 'edit'])
             else:
                 self._send_message(chat_id, self._t('failed_update_offer_description'))
                 return {'status': 'error'}

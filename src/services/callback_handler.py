@@ -134,7 +134,7 @@ class CallbackHandler:
         )
         self.router.register(
             r"^offer_details_(\d+)(?:_(edit))?$",
-            lambda match, ctx: self.handlers['info'].handle_offer_details(ctx['chat_id'], ctx['user_id'], [match.group(1)] + ([match.group(2)] if match.group(2) else []))
+            lambda match, ctx: self.handlers['info'].handle_view_offer(ctx['chat_id'], ctx['user_id'], [match.group(1)] + ([match.group(2)] if match.group(2) else []))
         )
         self.router.register(
             r"^wholesale_select_(\d+)$",
@@ -269,7 +269,7 @@ class CallbackHandler:
         """Wrapper for clear_offer_images"""
         result = self.media_handler.handle_clear_offer_images(chat_id, offer_id)
         if result.get('return_to_edit'):
-            return self.handlers['info'].handle_offer_details(chat_id, user_id, [str(result['offer_id']), 'edit'])
+            return self.handlers['info'].handle_view_offer(chat_id, user_id, [str(result['offer_id']), 'edit'])
         return result
     
     def handle_callback_query(self, callback_query: Dict[str, Any]) -> Dict[str, Any]:
@@ -444,7 +444,7 @@ class CallbackHandler:
                 offer_id = parts[3]
                 edit_mode = len(parts) > 4 and parts[4] == 'edit'
                 args = [offer_id, 'edit'] if edit_mode else [offer_id]
-                return self.handlers['info'].handle_offer_details(chat_id, user_id, args)
+                return self.handlers['info'].handle_view_offer(chat_id, user_id, args)
             
             # Standard format: edit_{entity}_{field}_{id}
             entity_type = parts[1]

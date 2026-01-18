@@ -85,7 +85,7 @@ class CommandRouter:
                 try:
                     offer_id_str = parts[1][11:]
                     target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
-                    return self.handlers['info'].handle_offer_details(target_chat, user_id, [offer_id_str])
+                    return self.handlers['info'].handle_view_offer(target_chat, user_id, [offer_id_str])
                 except ValueError:
                     pass
         
@@ -107,7 +107,7 @@ class CommandRouter:
         elif command == '/unsubscribe':
             return self.handlers['info'].handle_unsubscribe(target_chat, user_id)
         elif command == '/view_offer':
-            return self.handlers['info'].handle_offer_details(target_chat, user_id, parts[1:])
+            return self.handlers['info'].handle_view_offer(target_chat, user_id, parts[1:])
         elif command == '/confirm_order':
             return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, parts[1:])
         elif command == '/delete_cancelled_orders':
@@ -255,7 +255,7 @@ class CommandRouter:
                 
                 # If canceling image upload, return to edit interface
                 if edit_type == 'offer_image_upload':
-                    return self.handlers['info'].handle_offer_details(chat_id, user_id, [entity_id, 'edit'])
+                    return self.handlers['info'].handle_view_offer(chat_id, user_id, [entity_id, 'edit'])
                 
                 # Use existing info handler instead of creating new BaseHandler
                 return self.handlers['info']._send_success(chat_id, 'operation_cancelled', 'cancelled')

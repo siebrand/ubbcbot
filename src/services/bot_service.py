@@ -301,7 +301,7 @@ class BotService:
             if result.get('return_to_edit'):
                 self.db.delete_edit_context(context.context_id)
                 logger.info(f"Returning to edit interface for offer {result['offer_id']}")
-                return self.info_commands.handle_offer_details(chat_id, user_id, [str(result['offer_id']), 'edit'])
+                return self.info_commands.handle_view_offer(chat_id, user_id, [str(result['offer_id']), 'edit'])
             # For media groups, keep context alive
             return result
         

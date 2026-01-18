@@ -279,7 +279,7 @@ class TestCallbackRouting:
         """Test offer details callbacks"""
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
-        mock_handlers['info'].handle_offer_details.assert_called_once()
+        mock_handlers['info'].handle_view_offer.assert_called_once()
     
 # Test 14: Non-Admin Blocked from Admin Callbacks
     def test_non_admin_blocked_from_admin_callbacks(self, callback_handler, mock_handlers):
@@ -354,7 +354,7 @@ class TestCallbackRouting:
         ('custom_wholesale_quantity_456', 'offer', 'handle_custom_wholesale_quantity'),
         ('publish_offer_789', 'offer', 'handle_publish_offer'),
         ('finalize_import_123', 'import', 'handle_finalize_import'),
-        ('offer_details_456', 'info', 'handle_offer_details'),
+        ('offer_details_456', 'info', 'handle_view_offer'),
         ('offer_orders_123', 'admin_order', 'handle_list_offer_orders_select'),
     ])
     def test_offer_supplier_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):
