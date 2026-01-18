@@ -62,6 +62,7 @@ PYTEST_FILES="
     tests/test_csv_parser.py
     tests/test_import_handler.py
     tests/test_credit_service.py
+    tests/test_repositories/
 "
 if ! python -m pytest $PYTEST_FILES -v; then
     echo "❌ Pytest tests failed! Deployment aborted."
