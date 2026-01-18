@@ -253,11 +253,11 @@ Phase 3 (Remaining - Alphabetical Batches):
     ✅ audit_offers_page_<page> - COMPLETED
   
   Batch F (Delivery/Export patterns):
-    ☐ export_orders_<status>
-    ☐ start_send_overviews
-    ☐ finish_labeling_<box_id>
-    ☐ mark_paid_<customer_id>
-    ☐ request_cancel_reason_<order_id>
+    ✅ export_orders_<status> - COMPLETED
+    ✅ start_send_overviews - COMPLETED
+    ✅ finish_labeling_<box_id> - COMPLETED
+    ✅ mark_paid_<customer_id> - COMPLETED
+    ✅ request_cancel_reason_<order_id> - COMPLETED
   
   Batch G (Navigation patterns):
     ☐ back_to_supplier_list
