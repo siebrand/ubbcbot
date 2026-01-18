@@ -243,7 +243,7 @@ class DynamoDBService:
     
     def _get_customers_by_status_uncached(self, status: str) -> List[Customer]:
         """Internal method to get customers by status without caching"""
-        return self.customer_repo._get_customers_by_by_status_uncached(status)
+        return self.customer_repo._get_customers_by_status_uncached(status)
 
     def get_customer_by_username(self, username: str) -> Optional[Customer]:
         return self.customer_repo.get_customer_by_username(username)
