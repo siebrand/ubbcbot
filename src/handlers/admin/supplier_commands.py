@@ -70,8 +70,8 @@ class SupplierCommands(BaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'success'}
 
-    def handle_retire_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /retire_supplier command"""
+    def handle_archive_supplier(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /archive_supplier command"""
         error = self._validate_args(args, 1, 'usage_archive_supplier', chat_id)
         if error:
             return error

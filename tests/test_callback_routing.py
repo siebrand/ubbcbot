@@ -336,10 +336,10 @@ class TestCallbackRouting:
     
     # Test 17: Order Patterns (Phase 3 Batch B)
     @pytest.mark.parametrize("callback_data,handler,method", [
-        ('order_for_quantity_cust123_456_5', 'admin_order', 'handle_order_for_quantity_select'),
-        ('order_for_other_cust123_456', 'admin_order', 'handle_order_for_other_quantity'),
-        ('order_for_offer_cust123_456', 'admin_order', 'handle_order_for_offer_select'),
-        ('order_for_user_select_cust123', 'admin_order', 'handle_order_for_user_select'),
+        ('order_for_quantity_cust123_456_5', 'admin_order', 'handle_create_order_for_quantity_select'),
+        ('order_for_other_cust123_456', 'admin_order', 'handle_create_order_for_other_quantity'),
+        ('order_for_offer_cust123_456', 'admin_order', 'handle_create_order_for_offer_select'),
+        ('order_for_user_select_cust123', 'admin_order', 'handle_create_order_for_user_select'),
         ('order_123_2', 'customer_order', 'handle_order'),
     ])
     def test_order_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):

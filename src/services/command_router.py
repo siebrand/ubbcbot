@@ -130,7 +130,7 @@ class CommandRouter:
             elif command == '/create_supplier':
                 return self.handlers['supplier'].handle_create_supplier(admin_target_chat, parts[1:])
             elif command == '/archive_supplier':
-                return self.handlers['supplier'].handle_retire_supplier(admin_target_chat, parts[1:])
+                return self.handlers['supplier'].handle_archive_supplier(admin_target_chat, parts[1:])
             elif command == '/list_suppliers':
                 status_filter = parts[1] if len(parts) > 1 and parts[1] in ['active', 'retired', 'all'] else 'active'
                 return self.handlers['supplier'].handle_list_suppliers(admin_target_chat, 1, status_filter)

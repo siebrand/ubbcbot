@@ -4,9 +4,9 @@ This document lists ALL remaining method name refactorings needed to align with 
 
 **Implementation Order:** Tasks ordered from simplest (fewest occurrences) to most complex.
 
-## Status: 12 commands fully refactored ✅, 11 commands remaining ❌
+## Status: 13 commands fully refactored ✅, 10 commands remaining ❌
 
-**Total Progress: 12/23 (52%)**
+**Total Progress: 13/23 (57%)****
 
 ---
 
@@ -63,28 +63,20 @@ grep -r "handle_order_for_" src/ --include="*.py"
 
 ---
 
-### 1. archive_supplier (2 occurrences)
-**Status:** ❌ NOT STARTED
+### 1. ✅ COMPLETE: archive_supplier (2 occurrences)
+**Status:** ✅ COMPLETE
 
-**Files to modify:**
+**Files modified:**
 - `src/handlers/admin/supplier_commands.py`
 - `src/services/command_router.py`
 
-**Changes:**
-1. Rename `handle_retire_supplier` → `handle_archive_supplier`
+**Changes completed:**
+1. Renamed `handle_retire_supplier` → `handle_archive_supplier`
 
 **Validation:**
 ```bash
 grep -r "handle_retire_supplier" src/ --include="*.py"
-```
-
-**Commit message:**
-```
-refactor: rename retire_supplier to archive_supplier
-
-- Rename handle_retire_supplier → handle_archive_supplier
-- Update command router references
-- Align method names with /archive_supplier command
+# Returns no results - all references updated
 ```
 
 ---

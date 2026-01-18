@@ -204,7 +204,7 @@ class TestCommandRouting:
     # Test 19: All Admin Commands Route Correctly
     @pytest.mark.parametrize("command,handler,method", [
         ('/create_supplier Test', 'supplier', 'handle_create_supplier'),
-        ('/archive_supplier Test', 'supplier', 'handle_retire_supplier'),
+        ('/archive_supplier Test', 'supplier', 'handle_archive_supplier'),
         ('/list_suppliers', 'supplier', 'handle_list_suppliers'),
         ('/update_supplier Test', 'supplier', 'handle_update_supplier'),
         ('/create_offer S B 10 12', 'offer', 'handle_create_offer'),
