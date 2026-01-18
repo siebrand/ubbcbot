@@ -33,16 +33,20 @@ Create specific repositories for each domain entity in a new `src/repositories/`
 - `OfferRepository` (will also handle `OfferCache` invalidation)
 - `CustomerRepository`
 - `OrderRepository`
-- `CreditRepository` (for `CustomerCredit`, `CreditTransaction`, `OrderHistory`)
+- `CreditRepository` (for `CustomerCredit`, `CreditTransaction`)
+- `OrderHistoryRepository` (for `OrderHistory` - potentially part of OrderRepository)
 - `BoxRepository`
 - `SystemRepository` (counters, audit logs, etc.)
+- `DiscountRepository`
+- `NotificationRepository`
+- `EditContextRepository`
 
 ### 3. Service Layer Adjustment
 The `DynamoDBService` can be retained temporarily as a facade to maintain backward compatibility, or the application can be updated to inject specific repositories where needed.
 
-## Refactoring Steps
+## Refactoring Steps & Status
 
-1.  **Create Directory Structure:**
+1.  **Create Directory Structure:** [x] Done
     ```
     src/
     ├── repositories/
@@ -53,24 +57,50 @@ The `DynamoDBService` can be retained temporarily as a facade to maintain backwa
     │   └── ...
     ```
 
-2.  **Extract Base Logic:**
-    Move `_prepare_item`, `_serialize_datetime` to `BaseRepository` or a shared utility.
+2.  **Extract Base Logic:** [x] Done
+    - `BaseRepository` implemented with `_prepare_item` and `_serialize_datetime`.
 
 3.  **Iterative Extraction:**
-    Move methods one entity at a time.
-    - **Phase 1: Suppliers** (Low risk, few dependencies)
-      - Move `create_supplier`, `get_supplier`, `update_supplier` to `SupplierRepository`.
-      - Update `DynamoDBService` to delegate to `SupplierRepository`.
-    - **Phase 2: Offers** (Medium risk, cache interaction)
-      - Move offer logic. Ensure `OfferCache` invalidation is preserved.
-    - **Phase 3: Customers & Orders** (High risk, core logic)
-      - Move customer and order logic.
+    - [x] **Phase 1: Suppliers**
+      - `SupplierRepository` created.
+      - `DynamoDBService` delegates supplier operations.
+    - [x] **Phase 2: Offers**
+      - `OfferRepository` created.
+      - `OfferCache` invalidation preserved.
+      - `DynamoDBService` delegates offer operations.
+    - [x] **Phase 3: Customers**
+      - `CustomerRepository` created.
+      - `UserCache` interaction handled.
+      - `DynamoDBService` delegates customer operations.
 
-4.  **Dependency Injection Update:**
-    Update `src/__init__.py` or `src/services/bot_service.py` (wherever the DB is initialized) to instantiate these repositories.
+## Pending Tasks
 
-5.  **Deprecation:**
-    Mark the old methods in `DynamoDBService` as deprecated or remove them once all callers are updated.
+### Phase 4: Boxes (Next)
+- [ ] Create `BoxRepository`.
+- [ ] Move `create_box`, `get_boxes_by_offer`, `update_box`, `delete_box`, `get_all_boxes`, `get_box`.
+- [ ] Update `DynamoDBService` to delegate.
+- [ ] Add unit tests.
+
+### Phase 5: Orders & History
+- [ ] Create `OrderRepository`.
+- [ ] Move order CRUD operations.
+- [ ] Handle `AuditService` integration (circular dependency risk).
+- [ ] Create `OrderHistoryRepository` (or include in OrderRepository).
+- [ ] Move `create_order_history`, `get_order_history`, `get_customer_events`, etc.
+- [ ] Update `DynamoDBService`.
+
+### Phase 6: Credits
+- [ ] Create `CreditRepository`.
+- [ ] Move `create_customer_credit`, `get_customer_credit`, `update_customer_credit`.
+- [ ] Move `create_credit_transaction`, `get_credit_transactions_...`.
+- [ ] Update `DynamoDBService`.
+
+### Phase 7: System & Misc
+- [ ] Expand `SystemRepository` or create specific repos for:
+    - [ ] `DiscountsTable` -> `DiscountRepository`
+    - [ ] `NotificationsTable` -> `NotificationRepository`
+    - [ ] `EditContextsTable` -> `EditContextRepository`
+- [ ] Clean up `DynamoDBService` imports and table initializations.
 
 ## Risk Assessment
 
@@ -91,8 +121,8 @@ The `DynamoDBService` can be retained temporarily as a facade to maintain backwa
 Before writing any production code, the following test infrastructure and procedure must be established:
 
 ### 1. Test Infrastructure (`conftest.py`)
-*   Ensure `moto` is configured to mock DynamoDB interactions.
-*   Create a fixture that initializes the table structure exactly as `DynamoDBService` does.
+*   [x] Ensure `moto` is configured to mock DynamoDB interactions.
+*   [x] Create a fixture that initializes the table structure exactly as `DynamoDBService` does.
 
 ### 2. Development Cycle (For each Entity)
 1.  **Write Parity Test:** Create a test case that:
