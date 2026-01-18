@@ -77,8 +77,8 @@ class AdminOrderCommands(BaseHandler):
         return self.viewing.handle_export_orders_callback(chat_id, status_filter)
     
     # Order Status Management Methods
-    def handle_send_overviews(self, chat_id: int, args: list) -> Dict[str, Any]:
-        return self.status_mgmt.handle_send_overviews(chat_id, args)
+    def handle_send_delivery_overviews(self, chat_id: int, args: list) -> Dict[str, Any]:
+        return self.status_mgmt.handle_send_delivery_overviews(chat_id, args)
     
     def handle_mark_paid(self, chat_id: int, args: list, page: int = 1) -> Dict[str, Any]:
         return self.status_mgmt.handle_mark_paid(chat_id, args, page)

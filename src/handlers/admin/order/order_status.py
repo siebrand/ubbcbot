@@ -6,8 +6,8 @@ from utils.pagination import PaginationUtils
 class OrderStatusManagement(BaseOrderHandler):
     """Handles order status management functionality"""
     
-    def handle_send_overviews(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /send_overviews command"""
+    def handle_send_delivery_overviews(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /send_delivery_overviews command"""
         # Get customers with LABELING_COMPLETED orders
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
         customers_with_ready_orders = []

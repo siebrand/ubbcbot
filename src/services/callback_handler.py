@@ -652,7 +652,7 @@ class CallbackHandler:
             'user_status': lambda: self._start_user_status_input(chat_id),
             'process_delivery': lambda: self.handlers['wholesale_delivery'].handle_wholesale_delivery(chat_id, user_id, []),
             'process_labeling': lambda: self.handlers['labeling'].handle_labeling_completed(chat_id, user_id, []),
-            'send_delivery_overviews': lambda: self.handlers['admin_order'].handle_send_overviews(chat_id, []),
+            'send_delivery_overviews': lambda: self.handlers['admin_order'].handle_send_delivery_overviews(chat_id, []),
             'process_payment': lambda: self.handlers['admin_order'].handle_mark_paid(chat_id, []),
             'create_discount': lambda: self._send_usage_message(chat_id, 'usage_create_discount'),
             'view_discount': lambda: self.handlers['discount'].handle_view_discount(chat_id),

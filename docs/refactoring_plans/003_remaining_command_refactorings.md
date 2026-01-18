@@ -4,9 +4,9 @@ This document lists ALL remaining method name refactorings needed to align with 
 
 **Implementation Order:** Tasks ordered from simplest (fewest occurrences) to most complex.
 
-## Status: 17 commands fully refactored ✅, 6 commands remaining ❌
+## Status: 18 commands fully refactored ✅, 5 commands remaining ❌
 
-**Total Progress: 17/23 (74%)****
+**Total Progress: 18/23 (78%)****
 
 ---
 
@@ -141,32 +141,20 @@ grep -r "handle_add_box" src/ --include="*.py"
 
 ---
 
-### 6. send_delivery_overviews (5 occurrences)
-**Status:** ❌ NOT STARTED
+### 6. ✅ COMPLETE: send_delivery_overviews (5 occurrences)
+**Status:** ✅ COMPLETE
 
-**Files to modify:**
+**Files modified:**
 - `src/handlers/admin/order/order_status.py`
-- `src/handlers/admin/order_commands.py` (2 references)
+- `src/handlers/admin/order_commands.py`
 - `src/services/command_router.py`
 - `src/services/callback_handler.py`
+- `tests/test_command_routing.py`
+- `tests/test_callback_routing.py`
+- `tests/handlers/admin/test_order_commands.py`
 
-**Changes:**
-1. Rename `handle_send_overviews` → `handle_send_delivery_overviews`
-
-**Validation:**
-```bash
-grep -r "handle_send_overviews" src/ --include="*.py"
-```
-
-**Commit message:**
-```
-refactor: rename send_overviews to send_delivery_overviews
-
-- Rename handle_send_overviews → handle_send_delivery_overviews
-- Update 2 internal method calls in order_commands.py
-- Update command router and callback handler references
-- Align method names with /send_delivery_overviews command
-```
+**Changes completed:**
+1. Renamed `handle_send_overviews` → `handle_send_delivery_overviews`
 
 ---
 

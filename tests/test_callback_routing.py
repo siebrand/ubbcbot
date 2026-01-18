@@ -93,7 +93,7 @@ class TestCallbackRouting:
         ('cmd:view_discount', 'discount', 'handle_view_discount'),
         ('cmd:process_delivery', 'wholesale_delivery', 'handle_wholesale_delivery'),
         ('cmd:process_labeling', 'labeling', 'handle_labeling_completed'),
-        ('cmd:send_delivery_overviews', 'admin_order', 'handle_send_overviews'),
+        ('cmd:send_delivery_overviews', 'admin_order', 'handle_send_delivery_overviews'),
         ('cmd:process_payment', 'admin_order', 'handle_mark_paid'),
         ('cmd:delete_old_orders', 'admin_order', 'handle_delete_old_orders'),
     ])

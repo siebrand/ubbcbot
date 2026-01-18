@@ -224,7 +224,7 @@ class CommandRouter:
             elif command == '/process_labeling':
                 return self.handlers['labeling'].handle_labeling_completed(admin_target_chat, user_id, parts[1:])
             elif command == '/send_delivery_overviews':
-                return self.handlers['admin_order'].handle_send_overviews(admin_target_chat, parts[1:])
+                return self.handlers['admin_order'].handle_send_delivery_overviews(admin_target_chat, parts[1:])
             elif command == '/process_payment':
                 return self.handlers['admin_order'].handle_mark_paid(admin_target_chat, parts[1:])
             elif command == '/failed_notifications':

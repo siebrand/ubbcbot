@@ -80,7 +80,7 @@ class TestAdminOrderCommands(unittest.TestCase):
     def test_status_methods_exist(self):
         """Test that all status management methods are properly delegated"""
         methods = [
-            'handle_send_overviews',
+            'handle_send_delivery_overviews',
             'handle_mark_paid',
             'handle_failed_notifications'
         ]
