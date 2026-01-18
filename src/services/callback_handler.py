@@ -234,6 +234,20 @@ class CallbackHandler:
             r"^request_cancel_reason_(.+)$",
             lambda match, ctx: self._request_cancellation_reason(ctx['chat_id'], match.group(1))
         )
+        
+        # Navigation patterns (Phase 3 Batch G - Final)
+        self.router.register(
+            r"^back_to_supplier_list$",
+            lambda match, ctx: self.handlers['supplier'].handle_list_suppliers(ctx['chat_id'], 1, 'active')
+        )
+        self.router.register(
+            r"^process_wholesale$",
+            lambda match, ctx: self.handlers['offer'].handle_process_wholesale(ctx['chat_id'], [])
+        )
+        self.router.register(
+            r"^create_supplier_start$",
+            lambda match, ctx: self._start_add_supplier(ctx['chat_id'])
+        )
     
     def _handle_confirm_wholesale_wrapper(self, chat_id: int, offer_id: str, boxes: str) -> Dict[str, Any]:
         """Wrapper for confirm_process_wholesale with error handling"""
@@ -272,7 +286,7 @@ class CallbackHandler:
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
             
-            # Try router first (Phase 3 Batch F: includes delivery/export patterns)
+            # Try router first (Phase 3 complete: all patterns migrated)
             context = {'chat_id': chat_id, 'user_id': user_id, 'message_id': message_id}
             router_handled = self.router.dispatch(data, context)
             
@@ -321,8 +335,7 @@ class CallbackHandler:
                 return self._handle_admin_callbacks(chat_id, user_id, data)
             elif data.startswith('cmd'):
                 return self._handle_command_callbacks(chat_id, user_id, data)
-            elif data == 'create_supplier_start':
-                return self._start_add_supplier(chat_id)
+            # create_supplier_start callback now handled by router
             
             # Order callbacks now handled by router
             # wholesale_select_ callbacks now handled by router
@@ -340,8 +353,7 @@ class CallbackHandler:
             # reject_user_ callbacks now handled by router
             # edit_user_select_ callbacks now handled by router
             # edit_supplier_select_ callbacks now handled by router
-            elif data == 'back_to_supplier_list':
-                return self.handlers['supplier'].handle_list_suppliers(chat_id, 1, 'active')
+            # back_to_supplier_list callback now handled by router
             # user_orders_select_ callbacks now handled by router
             # cancel_order_ callbacks now handled by router
             # cancel_orders_page_ callbacks now handled by router
@@ -354,9 +366,7 @@ class CallbackHandler:
             # user_status_select_ callbacks now handled by router
 
             # cancel_action callback now handled by router
-            elif data == 'process_wholesale':
-                # Handle process next offer button
-                return self.handlers['offer'].handle_process_wholesale(chat_id, [])
+            # process_wholesale callback now handled by router
             
             # Pagination callbacks
             elif data.startswith('page_'):
