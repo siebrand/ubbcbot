@@ -1,0 +1,11 @@
+{
+  "autoApprovedTools": [
+    "read_file",
+    "write_file",
+    "replace",
+    "run_shell_command",
+    "glob",
+    "search_file_content",
+    "list_directory"
+  ]
+}
