@@ -21,7 +21,7 @@ class CallbackHandler:
         self._register_routes()
 
     def _register_routes(self):
-        """Register callback patterns with router (Phase 1: approve patterns only)"""
+        """Register callback patterns with router (Phase 2: approve, reject, cancel, confirm patterns)"""
         # Approve user patterns - register more specific pattern first
         self.router.register(
             r"^approve_user_select_(.+)$",
@@ -31,6 +31,66 @@ class CallbackHandler:
             r"^approve_user_([^_]+)$",  # Match approve_user_ but not approve_user_select_
             lambda match, ctx: self.handlers['user'].handle_approve_user_by_id(ctx['chat_id'], match.group(1))
         )
+        
+        # Reject user pattern
+        self.router.register(
+            r"^reject_user_(.+)$",
+            lambda match, ctx: self.handlers['user'].handle_reject_user_by_id(ctx['chat_id'], match.group(1))
+        )
+        
+        # Cancel patterns - most specific first
+        self.router.register(
+            r"^cancel_order_user_select_(.+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_cancel_order_user_select(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^cancel_order_confirm_(.+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_cancel_order_by_id(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
+            r"^cancel_orders_page_(\w+)_(\d+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_cancel_orders_page(ctx['chat_id'], match.group(1), int(match.group(2)))
+        )
+        self.router.register(
+            r"^cancel_confirmation$",
+            lambda match, ctx: self._send_message(ctx['chat_id'], self._t('action_cancelled'))
+        )
+        self.router.register(
+            r"^cancel_action$",
+            lambda match, ctx: self.handlers['admin_commands'].handle_admin(ctx['chat_id'], ctx['user_id'])
+        )
+        
+        # Confirm patterns - most specific first
+        self.router.register(
+            r"^confirm_process_wholesale_(\d+)_(\d+)$",
+            lambda match, ctx: self._handle_confirm_wholesale_wrapper(ctx['chat_id'], match.group(1), match.group(2))
+        )
+        self.router.register(
+            r"^confirm_cancel_offer_(\d+)$",
+            lambda match, ctx: self.handlers['offer'].handle_confirm_cancel_offer(ctx['chat_id'], [match.group(1)])
+        )
+        self.router.register(
+            r"^confirm_cancel_order_(.+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_confirm_cancel(ctx['chat_id'], [match.group(1)])
+        )
+        self.router.register(
+            r"^confirm_fulfill_(\d+)_(\d+)$",
+            lambda match, ctx: self.handlers['offer'].handle_confirm_fulfill(ctx['chat_id'], [match.group(1), match.group(2)])
+        )
+        self.router.register(
+            r"^confirm_order_(\d+)_(\d+)$",
+            lambda match, ctx: self.handlers['customer_order'].handle_confirm_order(ctx['chat_id'], ctx['user_id'], [match.group(1), match.group(2)])
+        )
+    
+    def _handle_confirm_wholesale_wrapper(self, chat_id: int, offer_id: str, boxes: str) -> Dict[str, Any]:
+        """Wrapper for confirm_process_wholesale with error handling"""
+        try:
+            logger.info(f"Calling handle_confirm_process_wholesale with offer_id={offer_id}, boxes={boxes}")
+            return self.handlers['offer'].handle_confirm_process_wholesale(chat_id, [offer_id, boxes])
+        except Exception as e:
+            logger.error(f"Exception in handle_confirm_process_wholesale: {e}")
+            self._send_message(chat_id, self._t('invalid_format'))
+            return {'status': 'exception'}
     
     def handle_callback_query(self, callback_query: Dict[str, Any]) -> Dict[str, Any]:
         """Handle inline button callbacks"""
@@ -46,7 +106,7 @@ class CallbackHandler:
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
             
-            # Try router first (Phase 1: approve patterns)
+            # Try router first (Phase 2: approve, reject, cancel, confirm patterns)
             context = {'chat_id': chat_id, 'user_id': user_id, 'message_id': message_id}
             router_handled = self.router.dispatch(data, context)
             
@@ -134,58 +194,22 @@ class CallbackHandler:
             elif data.startswith('wholesale_select_'):
                 offer_id = data.split('_')[2]
                 return self.handlers['offer'].handle_process_wholesale(chat_id, [offer_id])
-            elif data.startswith('confirm_process_wholesale_'):
-                logger.info(f"Matched confirm_process_wholesale_ pattern")
-                parts = data.split('_')
-                logger.info(f"Wholesale callback parts: {parts}")
-                logger.info(f"Parts length: {len(parts)}")
-                if len(parts) >= 5:
-                    offer_id = parts[3]
-                    boxes = parts[4]
-                    logger.info(f"Calling handle_confirm_process_wholesale with offer_id={offer_id}, boxes={boxes}")
-                    try:
-                        return self.handlers['offer'].handle_confirm_process_wholesale(chat_id, [offer_id, boxes])
-                    except Exception as e:
-                        logger.error(f"Exception in handle_confirm_process_wholesale: {e}")
-                        self._send_message(chat_id, self._t('invalid_format'))
-                        return {'status': 'exception'}
-                else:
-                    logger.error(f"Invalid wholesale callback format: {data}, expected at least 5 parts, got {len(parts)}")
-                    self._send_message(chat_id, self._t('invalid_format'))
-                    return {'status': 'invalid_format'}
+            # confirm_process_wholesale_ callbacks now handled by router
             elif data.startswith('custom_wholesale_quantity_'):
                 offer_id = data.split('_')[3]
                 return self.handlers['offer'].handle_custom_wholesale_quantity(chat_id, offer_id)
-            elif data.startswith('confirm_order_'):
-                parts = data.split('_')
-                if len(parts) >= 4:
-                    offer_id = parts[2]
-                    quantity = parts[3]
-                    return self.handlers['customer_order'].handle_confirm_order(chat_id, user_id, [offer_id, quantity])
-            elif data == 'cancel_confirmation':
-                self._send_message(chat_id, self._t('action_cancelled'))
-                return {'status': 'cancelled'}
+            # confirm_order_ callbacks now handled by router
+            # cancel_confirmation callback now handled by router
             
             # Admin confirmation callbacks
-            elif data.startswith('confirm_cancel_offer_'):
-                offer_id = data.split('_')[3]
-                return self.handlers['offer'].handle_confirm_cancel_offer(chat_id, [offer_id])
-            elif data.startswith('confirm_fulfill_'):
-                parts = data.split('_')
-                if len(parts) >= 4:
-                    offer_id = parts[2]
-                    boxes = parts[3]
-                    return self.handlers['offer'].handle_confirm_fulfill(chat_id, [offer_id, boxes])
+            # confirm_cancel_offer_ callbacks now handled by router
+            # confirm_fulfill_ callbacks now handled by router
             elif data.startswith('request_cancel_reason_'):
                 order_id = data.split('_')[3]
                 return self._request_cancellation_reason(chat_id, order_id)
-            elif data.startswith('confirm_cancel_order_'):
-                order_id = data.split('_')[3]
-                return self.handlers['admin_order'].handle_confirm_cancel(chat_id, [order_id])
+            # confirm_cancel_order_ callbacks now handled by router
             # approve_user_ callbacks now handled by router
-            elif data.startswith('reject_user_'):
-                customer_id = data.split('_')[2]
-                return self.handlers['user'].handle_reject_user_by_id(chat_id, customer_id)
+            # reject_user_ callbacks now handled by router
             elif data.startswith('edit_user_select_'):
                 customer_id = data.split('_')[3]
                 return self.handlers['user'].handle_edit_user_select(chat_id, customer_id)
@@ -197,16 +221,8 @@ class CallbackHandler:
             elif data.startswith('user_orders_select_'):
                 customer_id = data.split('_')[3]
                 return self.handlers['admin_order'].handle_list_user_orders_select(chat_id, customer_id)
-            elif data.startswith('cancel_order_user_select_'):
-                customer_id = data.split('_')[4]
-                return self.handlers['admin_order'].handle_cancel_order_user_select(chat_id, customer_id)
-            elif data.startswith('cancel_order_confirm_'):
-                order_id = data.split('_')[3]
-                return self.handlers['admin_order'].handle_cancel_order_by_id(chat_id, order_id)
-            elif data.startswith('cancel_orders_page_'):
-                parts = data.split('_')
-                customer_id, page = parts[3], int(parts[4])
-                return self.handlers['admin_order'].handle_cancel_orders_page(chat_id, customer_id, page)
+            # cancel_order_ callbacks now handled by router
+            # cancel_orders_page_ callbacks now handled by router
             elif data == 'enter_username_orders':
                 return self._start_user_orders_input(chat_id)
             elif data == 'enter_username_cancel':
@@ -224,9 +240,7 @@ class CallbackHandler:
                 customer_id = data.replace('user_status_select_', '')
                 return self.handlers['user'].handle_user_status_select(chat_id, customer_id)
 
-            elif data == 'cancel_action':
-                # Return to admin panel instead of just saying "done"
-                return self.handlers['admin_commands'].handle_admin(chat_id, user_id)
+            # cancel_action callback now handled by router
             elif data == 'process_wholesale':
                 # Handle process next offer button
                 return self.handlers['offer'].handle_process_wholesale(chat_id, [])
