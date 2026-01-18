@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict, Any
-from src.repositories.base_repository import BaseRepository
-from src.models.entities import Supplier
+from repositories.base_repository import BaseRepository
+from models.entities import Supplier
 
 class SupplierRepository(BaseRepository):
     def __init__(self):

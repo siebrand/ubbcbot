@@ -1,8 +1,8 @@
 from typing import List, Optional, Dict, Any
-from src.repositories.base_repository import BaseRepository
-from src.repositories.system_repository import SystemRepository
-from src.models.entities import Customer, AuthorizationStatus
-from src.services.user_cache import UserCache
+from repositories.base_repository import BaseRepository
+from repositories.system_repository import SystemRepository
+from models.entities import Customer, AuthorizationStatus
+from services.user_cache import UserCache
 
 class CustomerRepository(BaseRepository):
     def __init__(self, system_repo: SystemRepository):

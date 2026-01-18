@@ -1,9 +1,9 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, UTC
-from src.repositories.base_repository import BaseRepository
-from src.repositories.system_repository import SystemRepository
-from src.models.entities import Offer
-from src.services.offer_cache import OfferCache
+from repositories.base_repository import BaseRepository
+from repositories.system_repository import SystemRepository
+from models.entities import Offer
+from services.offer_cache import OfferCache
 
 class OfferRepository(BaseRepository):
     def __init__(self, system_repo: SystemRepository):

@@ -1,5 +1,5 @@
 from typing import Optional
-from src.repositories.base_repository import BaseRepository
+from repositories.base_repository import BaseRepository
 
 class SystemRepository(BaseRepository):
     def __init__(self):

@@ -7,10 +7,10 @@ from boto3.dynamodb.conditions import Key
 from models.entities import Supplier, Offer, Customer, Box, Order, DiscountPeriod, DiscountStatus, BoxStatus
 from services.user_cache import UserCache
 from services.offer_cache import OfferCache
-from src.repositories.supplier_repository import SupplierRepository
-from src.repositories.offer_repository import OfferRepository
-from src.repositories.system_repository import SystemRepository
-from src.repositories.customer_repository import CustomerRepository
+from repositories.supplier_repository import SupplierRepository
+from repositories.offer_repository import OfferRepository
+from repositories.system_repository import SystemRepository
+from repositories.customer_repository import CustomerRepository
 
 class DynamoDBService:
     def __init__(self):
