@@ -4,9 +4,9 @@ This document lists ALL remaining method name refactorings needed to align with 
 
 **Implementation Order:** Tasks ordered from simplest (fewest occurrences) to most complex.
 
-## Status: 13 commands fully refactored ✅, 10 commands remaining ❌
+## Status: 14 commands fully refactored ✅, 9 commands remaining ❌
 
-**Total Progress: 13/23 (57%)****
+**Total Progress: 14/23 (61%)******
 
 ---
 
@@ -81,28 +81,21 @@ grep -r "handle_retire_supplier" src/ --include="*.py"
 
 ---
 
-### 2. create_box (2 occurrences)
-**Status:** ❌ NOT STARTED
+### 2. ✅ COMPLETE: create_box (2 occurrences)
+**Status:** ✅ COMPLETE
 
-**Files to modify:**
+**Files modified:**
 - `src/handlers/admin/offer/boxes.py`
 - `src/services/command_router.py`
+- `tests/test_command_routing.py`
 
-**Changes:**
-1. Rename `handle_add_box` → `handle_create_box`
+**Changes completed:**
+1. Renamed `handle_add_box` → `handle_create_box`
 
 **Validation:**
 ```bash
 grep -r "handle_add_box" src/ --include="*.py"
-```
-
-**Commit message:**
-```
-refactor: rename add_box to create_box
-
-- Rename handle_add_box → handle_create_box
-- Update command router references
-- Align method names with /create_box command
+# Returns no results - all references updated
 ```
 
 ---

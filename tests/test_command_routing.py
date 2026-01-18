@@ -211,7 +211,7 @@ class TestCommandRouting:
         ('/publish_offer 1', 'offer', 'handle_publish_offer'),
         ('/cancel_offer 1', 'offer', 'handle_cancel_offer'),
         ('/delete_offer 1', 'offer', 'handle_delete_offer'),
-        ('/create_box 1', 'offer', 'handle_add_box'),
+        ('/create_box 1', 'offer', 'handle_create_box'),
         ('/list_boxes', 'offer', 'handle_list_boxes'),
         ('/audit_offer 1', 'offer', 'handle_audit_offer'),
         ('/process_wholesale 1', 'offer', 'handle_process_wholesale'),

@@ -10,8 +10,8 @@ class BoxManagementHandler(OfferBaseHandler):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.box_status_manager = BoxStatusManager(db)
     
-    def handle_add_box(self, chat_id: int, args: list) -> Dict[str, Any]:
-        """Handle /add_box command"""
+    def handle_create_box(self, chat_id: int, args: list) -> Dict[str, Any]:
+        """Handle /create_box command"""
         error = self._validate_args(args, 1, 'usage_create_box', chat_id)
         if error:
             return error
