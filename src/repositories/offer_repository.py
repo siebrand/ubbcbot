@@ -53,7 +53,7 @@ class OfferRepository(BaseRepository):
     def _list_offers_uncached(self) -> List[Offer]:
         """Internal method to get offers without caching (called by OfferCache)"""
         try:
-            response = self.table.scan()
+            response = self.table.scan(ConsistentRead=True)
             offers = []
             for item in response.get('Items', []):
                 # Convert Decimal fields to appropriate types
@@ -105,7 +105,7 @@ class OfferRepository(BaseRepository):
                 ExpressionAttributeValues=expression_values
             )
             
-            # Invalidate cache
+            # Invalidate cache AFTER successful update
             OfferCache.invalidate_cache()
             
             return True
