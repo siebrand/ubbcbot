@@ -254,6 +254,10 @@ class DynamoDBService:
 
     def update_customer(self, customer_id: str, updates: Dict[str, Any]) -> bool:
         return self.customer_repo.update_customer(customer_id, updates)
+    
+    def get_subscribers(self) -> List[Customer]:
+        """Get subscribers with caching"""
+        return self.customer_repo.get_subscribers()
 
     # Notification message operations
     def create_notification_message(self, notification) -> bool:
