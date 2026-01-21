@@ -294,9 +294,8 @@ class OrderViewing(BaseOrderHandler):
             
             # Alternate diamond icons for better readability
             line_icon = "🔸" if i % 2 == 0 else "🔹"
-            
-            message += f"{line_icon} [{order_date}] {customer_name} {order.quantity}x €{order.total_price:.2f} - {order.order_id[:8]}\n"
-        
+            message += f"{line_icon} [{order_date}] {customer_name} {order.quantity}x €{order.total_price:.2f} {status_emoji} - {order.order_id[:8]}\n"
+
         # Add pagination keyboard if needed
         keyboard_buttons = []
         if total_pages > 1:
