@@ -6,6 +6,23 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2026-01-21",
+                "content": """<b>User-Facing Updates</b>
+• <b>Payment Information Access</b> - New <code>/payment_info</code> command to view payment details for delivered orders
+• <b>Enhanced Delivery Messages</b> - Improved HTML formatting with cleaner link previews and better readability
+• <b>Better Order Status Display</b> - Added status emoji indicators in order lists for quick visual reference
+
+<b>Admin-Facing Updates</b>
+• <b>Admin-to-Customer Messaging</b> - New user client system sends messages from admin's personal account (not bot) enabling direct customer replies
+• <b>Payment Reminder System</b> - New <code>/send_payment_reminder</code> command with paginated customer list, reuses payment links from delivery overviews
+• <b>Async Delivery Overviews</b> - Delivery messages now sent asynchronously from admin account via dedicated MessageSender Lambda (300s timeout, 512MB memory)
+• <b>Smart Labeling Navigation</b> - After completing labeling, automatically shows "Back to boxes" or "Back to offers" based on remaining work
+• <b>Enhanced Workflow Navigation</b> - Alphabetically sorted offers in delivery workflow, improved back navigation with i18n support throughout
+• <b>Consistent Terminology</b> - Standardized terminology across payment workflows
+• <b>Test Suite Optimization</b> - Parallel test execution with pytest-xdist reduces test runtime from 60s to 24s
+• <b>System Reliability</b> - Fixed offer cache consistency issues, JSON serialization errors"""
+            },
+            {
                 "title": "Up to 2026-01-18",
                 "content": """<b>User-Facing Updates</b>
 • <b>Credit System</b> - New <code>/my_credit</code> command for customers to view their account balance
