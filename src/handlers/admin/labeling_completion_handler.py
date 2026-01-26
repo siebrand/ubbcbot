@@ -120,9 +120,35 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
             # Check if offer should be completed (only if sold out and all boxes delivered)
             self._check_and_update_offer_status(offer_id)
             
-            return self._send_message(chat_id, self._t('labeling_completed_success', 
-                                                     box_id=box.box_id[:8], 
-                                                     updated_count=updated_count))
+            # Check if there are more boxes to process
+            remaining_boxes = self.db.get_boxes_by_offer_with_ready_orders(offer_id)
+            
+            if remaining_boxes:
+                # More boxes to process - go back to boxes list
+                keyboard = {
+                    "inline_keyboard": [[
+                        {
+                            "text": self._t('back_to_boxes', user_id=None),
+                            "callback_data": f"lc_back:boxes:{offer_id}:{supplier_id_short}"
+                        }
+                    ]]
+                }
+            else:
+                # No more boxes - go back to supplier offers list
+                keyboard = {
+                    "inline_keyboard": [[
+                        {
+                            "text": self._t('back_to_offers', user_id=None),
+                            "callback_data": f"lc_sup:{supplier_id_short}"
+                        }
+                    ]]
+                }
+            
+            return self._send_message(
+                chat_id, 
+                self._t('labeling_completed_success', box_id=box.box_id[:8], updated_count=updated_count),
+                reply_markup=keyboard
+            )
         else:
             return self._send_message(chat_id, self._t('delivery_processing_failed'))
 
