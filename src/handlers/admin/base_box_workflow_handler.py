@@ -197,5 +197,9 @@ class BaseBoxWorkflowHandler(BaseHandler):
             )
 
     def _edit_message(self, chat_id: int, text: str, reply_markup: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Edit message with new content and keyboard"""
+        """Edit message with new content and keyboard - placeholder that sends new message
+        
+        Note: This is a simplified implementation. For proper message editing,
+        the message_id needs to be passed through the callback context.
+        """
         return self._send_message(chat_id, text, reply_markup=reply_markup)

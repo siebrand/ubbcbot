@@ -74,6 +74,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
             'select_supplier_for_delivery',
             'select_offer_for_delivery', 
             'select_box_for_delivery',
+            'no_ordered_offers_for_supplier',
             *args
         )
 
