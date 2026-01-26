@@ -169,12 +169,17 @@ class DeliveryOverviewHandler(BaseHandler):
             print(f"Error sending delivery overview to customer {customer_data['customer_id']}: {e}")
             return False
     
-    def _build_delivery_message(self, customer, delivered_orders: List, delayed_orders: List, payment_link: str) -> str:
+    def _build_delivery_message(self, customer, delivered_orders: List, delayed_orders: List, payment_link: str, is_reminder: bool = False) -> str:
         """Build delivery/reminder message for customer"""
         delivered_total = sum(order.total_price for order in delivered_orders)
         
-        message = self._t('delivery_ready_title', user_id=customer.telegram_user_id) + "\n\n"
-        message += self._t('delivery_ready_intro', user_id=customer.telegram_user_id) + "\n\n"
+        # Add title based on message type
+        if is_reminder:
+            message = self._t('payment_reminder_title', user_id=customer.telegram_user_id) + "\n\n"
+            message += self._t('payment_reminder_intro', user_id=customer.telegram_user_id) + "\n\n"
+        else:
+            message = self._t('delivery_ready_title', user_id=customer.telegram_user_id) + "\n\n"
+            message += self._t('delivery_ready_intro', user_id=customer.telegram_user_id) + "\n\n"
         
         if delivered_orders:
             message += self._t('order_summary_title', user_id=customer.telegram_user_id) + "\n\n"

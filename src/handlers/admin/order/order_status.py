@@ -207,7 +207,7 @@ class OrderStatusManagement(BaseOrderHandler):
         delivery_handler = DeliveryOverviewHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
-        message = delivery_handler._build_delivery_message(customer, awaiting_payment_orders, [], payment_link)
+        message = delivery_handler._build_delivery_message(customer, awaiting_payment_orders, [], payment_link, is_reminder=True)
         
         # Send to customer or admin (for guests)
         if customer.is_guest:
