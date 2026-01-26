@@ -6,6 +6,17 @@ import json
 import asyncio
 from services.user_client import UserClient
 
+# Module-level event loop for Lambda container reuse
+_loop = None
+
+def get_event_loop():
+    """Get or create event loop for Lambda container"""
+    global _loop
+    if _loop is None or _loop.is_closed():
+        _loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_loop)
+    return _loop
+
 def lambda_handler(event, context):
     """
     Send message from admin account to user
@@ -25,8 +36,9 @@ def lambda_handler(event, context):
         if environment == 'test':
             message = f"TEST - {message}"
         
-        # Run async send
-        asyncio.run(send_message(user_id, message))
+        # Run async send with persistent event loop
+        loop = get_event_loop()
+        loop.run_until_complete(send_message(user_id, message))
         
         return {
             'statusCode': 200,
