@@ -123,11 +123,11 @@ class TestCallbackRouting:
     
     # Test 4: Pagination Callbacks - Legacy Support
     @pytest.mark.parametrize("callback_data,expected_page", [
-        ('page_mark_paid_1', 1),
-        ('page_mark_paid_3', 3),
+        ('page_process_payment_1', 1),
+        ('page_process_payment_3', 3),
     ])
     def test_pagination_mark_paid_legacy(self, callback_handler, mock_handlers, callback_data, expected_page):
-        """Test pagination for mark_paid (legacy 2-word command) still works"""
+        """Test pagination for process_payment (updated from mark_paid)"""
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         mock_handlers['admin_order'].handle_process_payment.assert_called_once()
@@ -395,7 +395,7 @@ class TestCallbackRouting:
         ('export_orders_active', 'admin_order', 'handle_export_orders_callback'),
         ('start_send_overviews', 'delivery_overview', 'start_send_overviews'),
         ('finish_labeling_box123', 'labeling', 'handle_finish_labeling'),
-        ('mark_paid_cust456', 'delivery_overview', 'handle_mark_customer_paid'),
+        ('process_payment_cust456', 'delivery_overview', 'handle_process_customer_paid'),
     ])
     def test_delivery_export_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):
         """Test delivery/export patterns route correctly (Phase 3 Batch F)"""

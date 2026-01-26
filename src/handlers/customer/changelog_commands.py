@@ -14,7 +14,7 @@ class ChangelogCommands(BaseHandler):
 
 <b>Admin-Facing Updates</b>
 • <b>Credit Management</b> - Complete system for issuing credits/charges (<code>/credit</code>) with automatic application to deliveries
-• <b>Process Command Standardization</b> - Renamed workflow commands: <code>/process_payment</code> (was mark_paid), <code>/process_delivery</code> (was wholesale_delivery), and <code>/process_labeling</code> (was labeling_completed)
+• <b>Process Command Standardization</b> - Renamed workflow commands: <code>/process_payment</code> (was process_payment), <code>/process_delivery</code> (was wholesale_delivery), and <code>/process_labeling</code> (was labeling_completed)
 • <b>Callback Router Infrastructure</b> - Replaced monolithic callback handling with modular <code>CallbackRouter</code> (Phases 0-3 complete)
 • <b>Database Architecture</b> - Completed migration to Repository pattern (Phases 4-8), slimming down core DatabaseService
 • <b>Codebase Refactoring</b> - Completed massive refactoring of 23 command handlers and internal routing logic
@@ -53,20 +53,20 @@ class ChangelogCommands(BaseHandler):
 
 <b>Admin-Facing Updates</b>
 • <b>Guest User System</b> - Added /add_guest and /list_guests commands for managing non-Telegram customers
-• <b>Comprehensive Pagination System</b> - Enhanced pagination with first/last/jump buttons for /my_orders, /list_offers, /user_orders, /mark_paid, and /box_status
+• <b>Comprehensive Pagination System</b> - Enhanced pagination with first/last/jump buttons for /my_orders, /list_offers, /user_orders, /process_payment, and /box_status
 • <b>Order Import Feature</b> - New /import_orders command for CSV-based legacy order migration with validation and error reporting
 • <b>Enhanced Box Status</b> - Added offer_id filter, logical sorting (by offer/status/box), and help option to /box_status
 • <b>Offer Management</b> - Streamlined editing UX with auto-return to edit mode, prevented duplicate images on concurrent uploads
 • <b>Performance Optimization</b> - Implemented offer caching with 5-minute TTL and batch loading, reducing queries by over 90%
 • <b>Centralized Services</b> - Created BoxStatusManager and BoxDeletionService for consistent box operations across codebase
 • <b>Improved Order Exports</b> - Added full export option with all fields, normalized CSV format for Google Sheets
-• <b>Better Payment Tracking</b> - Enhanced /mark_paid with pagination, alphabetical sorting, and auto-return to list after confirmation
+• <b>Better Payment Tracking</b> - Enhanced /process_payment with pagination, alphabetical sorting, and auto-return to list after confirmation
 • <b>Delivery Overview Improvements</b> - Guest users processed last with different message format, no failed Telegram attempts
 • <b>Box Status Refinements</b> - Boxes marked ORDERED based on fulfilled orders, not box count, preventing incorrect status
 • <b>HTML Validation</b> - Added HTMLParser validation for offer names and descriptions to prevent Telegram parse errors
 • <b>Code Quality</b> - Refactored order commands into focused modules, eliminated duplicate logic, improved test coverage
 • <b>Internationalization</b> - Fixes i18n for admin UI placeholders, headers, and labels
-• <b>System Reliability</b> - Fixed pagination callback parsing, mark_paid tests, box deletion logic, and offer sold-out detection
+• <b>System Reliability</b> - Fixed pagination callback parsing, process_payment tests, box deletion logic, and offer sold-out detection
 • <b>Workflow Simplification</b> - Removed MINIMUM_REACHED status and breakeven fields, simplified to open→full→ordered→delivered
 • <b>Filter Enhancements</b> - Added status filtering to /list_offers (all, draft, active, soldout, completed, inactive, archived, import)
 • <b>Legacy Support</b> - Added script to update legacy customers with missing location and is_guest fields"""

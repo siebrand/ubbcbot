@@ -176,7 +176,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         return self._send_message(
             chat_id,
             self._t('enter_received_quantity', total_units=total_units),
-            reply_markup={"force_reply": True, "input_field_placeholder": f"Enter number (0-{total_units})"}
+            reply_markup={"force_reply": True, "input_field_placeholder": self._t('placeholder_enter_number_range', max=total_units)}
         )
 
     def _store_delivery_context(self, chat_id: int, box_id: str, total_units: int, offer_id: int, supplier_id: str):

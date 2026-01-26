@@ -76,11 +76,11 @@ class OrderStatusManagement(BaseOrderHandler):
             last_name = customer.last_name or ''
             first_name = customer.first_name or self._t('unknown', user_id=None)
             button_text = f"✓ {last_name}, {first_name} €{total_amount:.2f}".strip()
-            keyboard_rows.append([{"text": button_text, "callback_data": f"mark_paid_{customer.customer_id}"}])
+            keyboard_rows.append([{"text": button_text, "callback_data": f"process_payment_{customer.customer_id}"}])
         
         # Add pagination keyboard if needed
         if total_pages > 1:
-            pagination_keyboard = PaginationUtils.build_pagination_keyboard(page, total_pages, "mark_paid", enhanced=True)
+            pagination_keyboard = PaginationUtils.build_pagination_keyboard(page, total_pages, "process_payment", enhanced=True)
             keyboard_rows.extend(pagination_keyboard["inline_keyboard"])
         
         # Add Done button

@@ -48,7 +48,7 @@ class OrderViewing(BaseOrderHandler):
                     [{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]
                 ]
             }
-            self._send_message(chat_id, "📊 Select order status to export:", reply_markup=keyboard)
+            self._send_message(chat_id, self._t('select_order_status_export', user_id=None), reply_markup=keyboard)
             return {'status': 'selection_shown'}
         
         # Get filter from args

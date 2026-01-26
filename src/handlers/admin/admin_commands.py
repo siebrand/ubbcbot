@@ -51,7 +51,7 @@ class AdminCommandsHandler(BaseHandler):
                 [{"text": self._t('wholesale_delivery_btn', user_id), "callback_data": "cmd:process_delivery"}],
                 [{"text": self._t('labeling_completed_btn', user_id), "callback_data": "cmd:process_labeling"}],
                 [{"text": self._t('send_overviews_btn', user_id), "callback_data": "cmd:send_delivery_overviews"}],
-                [{"text": self._t('mark_paid_btn', user_id), "callback_data": "cmd:process_payment"}],
+                [{"text": self._t('process_payment_btn', user_id), "callback_data": "cmd:process_payment"}],
                 [{"text": self._t('back_to_admin', user_id), "callback_data": "admin:main"}]
             ]
         }

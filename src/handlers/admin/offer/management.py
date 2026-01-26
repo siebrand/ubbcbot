@@ -191,7 +191,7 @@ class OfferManagementHandler(OfferBaseHandler):
                 )
                 self._send_message(customer.telegram_user_id, msg)
         
-        # Get current boxes and mark boxes with fulfilled orders as ORDERED
+        # Get current boxes and update state for boxes with fulfilled orders as ORDERED
         boxes = self.db.get_boxes_by_offer(offer.offer_id)
         boxes_to_mark_ordered = [b.box_id for b in boxes if b.box_id in boxes_with_fulfilled_orders and b.status != BoxStatus.ORDERED.value]
         
@@ -231,7 +231,7 @@ class OfferManagementHandler(OfferBaseHandler):
         
         if not remaining_pending and remaining_capacity == 0:
             self.db.update_offer(offer.offer_id, {'status': 'sold_out'})
-            offer_status_msg = self._t('offer_marked_sold_out', chat_id)
+            offer_status_msg = self._t('offer_is_sold_out', chat_id)
         elif not remaining_pending:
             offer_status_msg = self._t('offer_remains_active_capacity', chat_id, capacity=remaining_capacity, units=units_text)
         else:
