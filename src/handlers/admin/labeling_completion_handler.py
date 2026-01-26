@@ -80,7 +80,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
                 "callback_data": f"lc_action:complete:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{
-                "text": "← Back to Boxes",
+                "text": self._t('back_to_boxes', user_id=None),
                 "callback_data": f"lc_back:boxes:{offer_id}:{supplier_id_short}"
             }]
         ]

@@ -98,7 +98,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
                 "callback_data": f"wd_action:{DeliveryAction.INCOMPLETE.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
             }],
             [{
-                "text": "← Back to Boxes",
+                "text": self._t('back_to_boxes', user_id=None),
                 "callback_data": f"wd_back:boxes:{offer_id}:{supplier_id_short}"
             }]
         ]

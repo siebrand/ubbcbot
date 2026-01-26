@@ -212,7 +212,7 @@ class BaseHandler:
         """Build keyboard with button to return to admin menu"""
         return {
             "inline_keyboard": [[
-                {"text": "🏠 Admin Menu", "callback_data": "admin:main"}
+                {"text": self._t('admin_menu', user_id=None), "callback_data": "admin:main"}
             ]]
         }
     

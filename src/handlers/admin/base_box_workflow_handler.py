@@ -23,6 +23,12 @@ class BaseBoxWorkflowHandler(BaseHandler):
                 "callback_data": f"{callback_prefix}_sup:{supplier.supplier_id[:8]}"
             }])
         
+        # Add back to admin menu button
+        keyboard.append([{
+            "text": self._t('back_to_admin_menu', user_id=None),
+            "callback_data": "admin:main"
+        }])
+        
         return {"inline_keyboard": keyboard}
 
     def _build_offer_keyboard(self, offers: List[Offer], supplier_id_short: str, callback_prefix: str) -> Dict[str, Any]:
@@ -39,7 +45,7 @@ class BaseBoxWorkflowHandler(BaseHandler):
         
         # Add back button
         keyboard.append([{
-            "text": "← Back to Suppliers",
+            "text": self._t('back_to_suppliers', user_id=None),
             "callback_data": f"{callback_prefix}_back:suppliers"
         }])
         
@@ -68,7 +74,7 @@ class BaseBoxWorkflowHandler(BaseHandler):
         
         # Add back button
         keyboard.append([{
-            "text": "← Back to Offers",
+            "text": self._t('back_to_offers', user_id=None),
             "callback_data": f"{callback_prefix}_back:offers:{supplier_id_short}"
         }])
         
