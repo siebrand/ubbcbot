@@ -457,6 +457,7 @@
   "labeling_completed_btn": "🏷️ Labeling Completed",
   "send_overviews_btn": "📧 Send Overviews",
   "process_payment_btn": "💳 Mark Paid",
+  "send_payment_reminder_btn": "🔔 Payment Reminder",
   "create_discount_btn": "➕ Create Discount",
   "discount_status_btn": "ℹ️ Discount Status",
   "cancel_discount_btn": "❌ Cancel Discount",

@@ -651,6 +651,7 @@ class CallbackHandler:
             'process_labeling': lambda: self.handlers['labeling'].handle_process_labeling(chat_id, user_id, []),
             'send_delivery_overviews': lambda: self.handlers['admin_order'].handle_send_delivery_overviews(chat_id, []),
             'process_payment': lambda: self.handlers['admin_order'].handle_process_payment(chat_id, []),
+            'send_payment_reminder': lambda: self.handlers['admin_order'].handle_send_payment_reminder(chat_id, []),
             'create_discount': lambda: self._send_usage_message(chat_id, 'usage_create_discount'),
             'view_discount': lambda: self.handlers['discount'].handle_view_discount(chat_id),
             'cancel_discount': lambda: self.handlers['discount'].handle_cancel_discount(chat_id),
