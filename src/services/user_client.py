@@ -6,47 +6,65 @@ import boto3
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
+# Module-level cache for Lambda container reuse
+_client = None
+_credentials = None
+
 class UserClient:
     def __init__(self):
         self.ssm = boto3.client('ssm')
         self.environment = os.environ.get('ENVIRONMENT', 'test')
-        self.client = None
         
     async def get_client(self):
         """Get or create authenticated Telethon client"""
-        if self.client and self.client.is_connected():
-            return self.client
-            
-        # Get credentials from Parameter Store
-        api_id = self._get_parameter(f'/ubbc-bot/{self.environment}/telegram-api-id')
-        api_hash = self._get_parameter(f'/ubbc-bot/{self.environment}/telegram-api-hash')
-        session_string = self._get_parameter(f'/ubbc-bot/{self.environment}/telegram-session', required=False)
+        global _client, _credentials
         
+        if _client and _client.is_connected():
+            return _client
+            
+        # Get credentials from cache or Parameter Store
+        if not _credentials:
+            _credentials = self._get_credentials()
+            
         # Create client with session
-        self.client = TelegramClient(
-            StringSession(session_string) if session_string else StringSession(),
-            int(api_id),
-            api_hash
+        _client = TelegramClient(
+            StringSession(_credentials['session']) if _credentials['session'] else StringSession(),
+            int(_credentials['api_id']),
+            _credentials['api_hash']
         )
         
-        await self.client.connect()
+        await _client.connect()
         
-        if not await self.client.is_user_authorized():
+        if not await _client.is_user_authorized():
             raise Exception("User client not authorized. Run setup script to authenticate.")
             
-        return self.client
+        return _client
     
     async def send_message(self, user_id: int, message: str):
         """Send message from admin account to user"""
         client = await self.get_client()
         await client.send_message(user_id, message)
     
-    def _get_parameter(self, name: str, required: bool = True):
-        """Get parameter from Parameter Store"""
+    def _get_credentials(self):
+        """Get all credentials in a single batch call"""
+        parameter_names = [
+            f'/ubbc-bot/{self.environment}/telegram-api-id',
+            f'/ubbc-bot/{self.environment}/telegram-api-hash',
+            f'/ubbc-bot/{self.environment}/telegram-session'
+        ]
+        
         try:
-            response = self.ssm.get_parameter(Name=name, WithDecryption=True)
-            return response['Parameter']['Value']
-        except self.ssm.exceptions.ParameterNotFound:
-            if required:
-                raise Exception(f"Required parameter {name} not found in Parameter Store")
-            return None
+            response = self.ssm.get_parameters(
+                Names=parameter_names,
+                WithDecryption=True
+            )
+            
+            params = {p['Name'].split('/')[-1]: p['Value'] for p in response['Parameters']}
+            
+            return {
+                'api_id': params.get('telegram-api-id'),
+                'api_hash': params.get('telegram-api-hash'),
+                'session': params.get('telegram-session')
+            }
+        except Exception as e:
+            raise Exception(f"Failed to retrieve credentials from Parameter Store: {e}")
