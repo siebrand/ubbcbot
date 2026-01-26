@@ -40,10 +40,15 @@ class UserClient:
             
         return _client
     
-    async def send_message(self, user_id: int, message: str):
+    async def send_message(self, user_id: int, message: str, parse_mode: str = None, disable_web_page_preview: bool = False):
         """Send message from admin account to user"""
         client = await self.get_client()
-        await client.send_message(user_id, message)
+        await client.send_message(
+            user_id, 
+            message,
+            parse_mode=parse_mode,
+            link_preview=not disable_web_page_preview
+        )
     
     def _get_credentials(self):
         """Get all credentials in a single batch call"""

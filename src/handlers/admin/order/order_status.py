@@ -237,12 +237,14 @@ class OrderStatusManagement(BaseOrderHandler):
             self._send_message(chat_id, self._t('payment_reminder_failed', user_id=None, customer_name=customer_name) + f" ({error})")
             return {'status': 'error'}
     
-    def _send_user_message(self, user_id: int, message: str) -> Dict[str, Any]:
+    def _send_user_message(self, user_id: int, message: str, parse_mode: str = 'HTML', disable_web_page_preview: bool = True) -> Dict[str, Any]:
         """Send message from admin account via user client Lambda"""
         try:
             payload = {
                 'user_id': int(user_id),
-                'message': str(message)
+                'message': str(message),
+                'parse_mode': parse_mode,
+                'disable_web_page_preview': disable_web_page_preview
             }
             
             response = self.lambda_client.invoke(

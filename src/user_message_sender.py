@@ -24,12 +24,16 @@ def lambda_handler(event, context):
     Event format:
     {
         "user_id": 123456789,
-        "message": "Payment reminder text"
+        "message": "Payment reminder text",
+        "parse_mode": "HTML" (optional),
+        "disable_web_page_preview": true (optional)
     }
     """
     try:
         user_id = event['user_id']
         message = event['message']
+        parse_mode = event.get('parse_mode')
+        disable_web_page_preview = event.get('disable_web_page_preview', False)
         
         # Add TEST prefix in test environment
         environment = os.environ.get('ENVIRONMENT', 'test')
@@ -38,7 +42,7 @@ def lambda_handler(event, context):
         
         # Run async send with persistent event loop
         loop = get_event_loop()
-        loop.run_until_complete(send_message(user_id, message))
+        loop.run_until_complete(send_message(user_id, message, parse_mode, disable_web_page_preview))
         
         return {
             'statusCode': 200,
@@ -51,7 +55,7 @@ def lambda_handler(event, context):
             'body': json.dumps({'error': str(e)})
         }
 
-async def send_message(user_id: int, message: str):
+async def send_message(user_id: int, message: str, parse_mode: str = None, disable_web_page_preview: bool = False):
     """Send message via user client"""
     client = UserClient()
-    await client.send_message(user_id, message)
+    await client.send_message(user_id, message, parse_mode, disable_web_page_preview)
