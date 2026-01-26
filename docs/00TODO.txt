@@ -1,4 +1,4 @@
-- Credit system
+- Complete credit system
 - Give users opportunity to see complete history. Should be query efficient, maybe export option?
 - BIN management
 - Address IDE code remarks
