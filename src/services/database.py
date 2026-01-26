@@ -615,3 +615,12 @@ class DynamoDBService:
     
     def get_customers_with_credit_balance(self, min_amount=None) -> List:
         return self.credit_repo.get_customers_with_credit_balance(min_amount)
+    
+    # Payment link operations
+    def store_payment_link(self, payment_url: str) -> bool:
+        """Store payment link in counters table"""
+        return self.system_repo.store_payment_link(payment_url)
+    
+    def get_payment_link(self) -> Optional[str]:
+        """Get stored payment link from counters table"""
+        return self.system_repo.get_payment_link()

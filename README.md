@@ -190,6 +190,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/process_labeling` - Complete labeling process for delivered orders
 - `/send_delivery_overviews` - Send delivery overviews to customers
 - `/process_payment` - Mark customers as paid
+- `/send_payment_reminder` - Send payment reminder to customers awaiting payment
 - `/failed_notifications` - View orders with failed delivery notifications
 - `/offer_status <offer_id> import` - Change offer status to import (for import workflow)
 - `/import_orders` - Import orders from CSV file

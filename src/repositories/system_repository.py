@@ -28,3 +28,25 @@ class SystemRepository(BaseRepository):
             except Exception:
                 # Concurrency edge case, try update again or return 1
                 return 1
+    
+    def store_payment_link(self, payment_url: str) -> bool:
+        """Store payment link in counters table"""
+        try:
+            self.table.put_item(
+                Item={'counter_name': 'payment_link', 'value': payment_url}
+            )
+            return True
+        except Exception as e:
+            print(f"Error storing payment link: {e}")
+            return False
+    
+    def get_payment_link(self) -> Optional[str]:
+        """Get stored payment link from counters table"""
+        try:
+            response = self.table.get_item(Key={'counter_name': 'payment_link'})
+            if 'Item' in response:
+                return response['Item'].get('value')
+            return None
+        except Exception as e:
+            print(f"Error getting payment link: {e}")
+            return None

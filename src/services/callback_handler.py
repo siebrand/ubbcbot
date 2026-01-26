@@ -231,6 +231,10 @@ class CallbackHandler:
             lambda match, ctx: self.handlers['delivery_overview'].handle_mark_customer_paid(ctx['chat_id'], match.group(1))
         )
         self.router.register(
+            r"^remind_payment_(.+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_send_payment_reminder_to_customer(ctx['chat_id'], match.group(1))
+        )
+        self.router.register(
             r"^request_cancel_reason_(.+)$",
             lambda match, ctx: self._request_cancellation_reason(ctx['chat_id'], match.group(1))
         )
@@ -360,9 +364,11 @@ class CallbackHandler:
     
     def _parse_pagination_entity(self, parts: list) -> tuple:
         """Parse entity type and page from pagination callback parts"""
-        if len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'process', 'list', 'user', 'my']:
+        if len(parts) >= 4 and parts[1] in ['customers', 'suppliers', 'mark', 'process', 'remind', 'list', 'user', 'my']:
             if parts[1] == 'mark' and parts[2] == 'paid':
                 return 'mark_paid', int(parts[3])
+            elif parts[1] == 'remind' and parts[2] == 'payment':
+                return 'remind_payment', int(parts[3])
             elif parts[1] == 'process' and parts[2] == 'payment':
                 return 'process_payment', int(parts[3])
             elif parts[1] == 'list' and parts[2] == 'user' and parts[3] == 'orders':
@@ -407,8 +413,8 @@ class CallbackHandler:
             return {'status': 'customer_not_found'}
         elif entity_type == 'changelog':
             return self.handlers['changelog'].handle_changelog(chat_id, user_id, page)
-        elif entity_type in ['mark_paid', 'process_payment']:
-            return self.handlers['admin_order'].handle_process_payment(chat_id, [], page)
+        elif entity_type in ['mark_paid', 'process_payment', 'remind_payment']:
+            return self.handlers['admin_order'].handle_send_payment_reminder(chat_id, [], page) if entity_type == 'remind_payment' else self.handlers['admin_order'].handle_process_payment(chat_id, [], page)
         elif entity_type.startswith('my_orders_') or entity_type.startswith('list_my_orders_'):
             target_user_id = int(entity_type.split('_', 3)[3] if entity_type.startswith('list_my_orders_') else entity_type.split('_', 2)[2])
             if user_id == target_user_id:

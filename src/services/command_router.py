@@ -227,6 +227,8 @@ class CommandRouter:
                 return self.handlers['admin_order'].handle_send_delivery_overviews(admin_target_chat, parts[1:])
             elif command == '/process_payment':
                 return self.handlers['admin_order'].handle_process_payment(admin_target_chat, parts[1:])
+            elif command == '/send_payment_reminder':
+                return self.handlers['admin_order'].handle_send_payment_reminder(admin_target_chat, parts[1:])
             elif command == '/failed_notifications':
                 return self.handlers['admin_order'].handle_failed_notifications(admin_target_chat, parts[1:])
             elif command == '/delete_old_orders':

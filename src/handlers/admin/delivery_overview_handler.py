@@ -70,6 +70,9 @@ class DeliveryOverviewHandler(BaseHandler):
     def handle_payment_link_input(self, chat_id: int, payment_link: str, batch_str: str) -> Dict[str, Any]:
         """Handle payment link input and send overviews"""
         try:
+            # Store payment link for later use
+            self._store_payment_link(payment_link)
+            
             # Get stored customers data from context
             import json
             context_data = json.loads(batch_str)
@@ -144,71 +147,76 @@ class DeliveryOverviewHandler(BaseHandler):
                 customer_name += f" (@{customer.username})"
             
             # Build message
-            message = self._t('delivery_ready_title', user_id=None) + "\n\n"
-            message += self._t('delivery_ready_intro', user_id=None) + "\n\n"
-            
-            if delivered_orders:
-                message += self._t('order_summary_title', user_id=None) + "\n\n"
-                for order in delivered_orders:
-                    offer = self.db.get_offer(order.offer_id)
-                    offer_name = offer.name if offer else self._t('unknown', user_id=None)
-                    message += f"- {order.quantity}x {offer_name} — €{order.total_price:.2f}\n"
-                
-                message += "\n" + self._t('total_amount_bold', user_id=None, total=delivered_total) + "\n\n"
-                message += self._t('pay_via_tikkie', user_id=None, link=payment_link, total=delivered_total) + "\n"
-                message += "━━━━━━━━━━━━━━━━━━━━\n"
-                message += self._t('pickup_location_bold', user_id=None, location=customer.location) + "\n"
-                message += "━━━━━━━━━━━━━━━━━━━━\n"
-                message += self._t('questions_contact', user_id=None) + "\n\n"
-            
-            if delayed_orders:
-                message += self._t('delayed_items_info', user_id=None) + "\n"
-                for order in delayed_orders:
-                    offer = self.db.get_offer(order.offer_id)
-                    offer_name = offer.name if offer else self._t('unknown', user_id=None)
-                    delayed_qty = order.quantity - (order.received_quantity or 0)
-                    message += f"• {delayed_qty}x {offer_name} - " + self._t('will_arrive_later', user_id=None) + "\n"
-            
-            # Check if guest user
-            is_guest = customer.is_guest
+            message = self._build_delivery_message(customer, delivered_orders, delayed_orders, payment_link)
             
             # Send message to customer only if not a guest
-            if not is_guest:
+            if not customer.is_guest:
                 result = self._send_message(customer.telegram_user_id, message, parse_mode="HTML")
             else:
-                # For guest users, skip sending and mark as success
                 result = {'success': True}
             
-            # Send copy to admin with customer info
-            if is_guest:
-                # For guests, send full message as it needs to be relayed
-                admin_message = f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=customer_name)}\n\n{message}"
-            else:
-                # For regular customers, send spartan summary
-                admin_message = f"✅ {customer_name}\n"
-                for order in delivered_orders:
-                    offer = self.db.get_offer(order.offer_id)
-                    offer_name = offer.name if offer else self._t('unknown', user_id=None)
-                    admin_message += f"{order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
-                admin_message += f"Total: €{delivered_total:.2f}"
+            # Send copy to admin
+            self._send_admin_notification(customer, delivered_orders, delayed_orders, message, result.get('success'), customer_name, delivered_total)
             
             if result.get('success'):
                 # Update orders to AWAITING_PAYMENT
                 for order in delivered_orders:
                     self.db.update_order(order.order_id, {'status': OrderStatus.AWAITING_PAYMENT.value}, admin_id=self.admin_user_id, reason="Delivery overview sent")
-                
-                # Send success notification to admin
-                self._send_message(self.admin_user_id, self._t('admin_overview_sent_success', user_id=None, message=admin_message), parse_mode="HTML")
                 return True
-            else:
-                # Send failure notification to admin
-                error_msg = result.get('error', self._t('unknown', user_id=None))
-                self._send_message(self.admin_user_id, self._t('admin_overview_sent_failed', user_id=None, customer_name=customer_name, error=error_msg, message=admin_message))
-                return False
+            return False
                 
         except Exception as e:
             print(f"Error sending delivery overview to customer {customer_data['customer_id']}: {e}")
             return False
+    
+    def _build_delivery_message(self, customer, delivered_orders: List, delayed_orders: List, payment_link: str) -> str:
+        """Build delivery/reminder message for customer"""
+        delivered_total = sum(order.total_price for order in delivered_orders)
+        
+        message = self._t('delivery_ready_title', user_id=customer.telegram_user_id) + "\n\n"
+        message += self._t('delivery_ready_intro', user_id=customer.telegram_user_id) + "\n\n"
+        
+        if delivered_orders:
+            message += self._t('order_summary_title', user_id=customer.telegram_user_id) + "\n\n"
+            for order in delivered_orders:
+                offer = self.db.get_offer(order.offer_id)
+                offer_name = offer.name if offer else self._t('unknown', user_id=None)
+                message += f"- {order.quantity}x {offer_name} — €{order.total_price:.2f}\n"
+            
+            message += "\n" + self._t('total_amount_bold', user_id=customer.telegram_user_id, total=delivered_total) + "\n\n"
+            message += self._t('pay_via_tikkie', user_id=customer.telegram_user_id, link=payment_link, total=delivered_total) + "\n"
+            message += "━━━━━━━━━━━━━━━━━━━━\n"
+            message += self._t('pickup_location_bold', user_id=customer.telegram_user_id, location=customer.location) + "\n"
+            message += "━━━━━━━━━━━━━━━━━━━━\n"
+            message += self._t('questions_contact', user_id=customer.telegram_user_id) + "\n\n"
+        
+        if delayed_orders:
+            message += self._t('delayed_items_info', user_id=customer.telegram_user_id) + "\n"
+            for order in delayed_orders:
+                offer = self.db.get_offer(order.offer_id)
+                offer_name = offer.name if offer else self._t('unknown', user_id=None)
+                delayed_qty = order.quantity - (order.received_quantity or 0)
+                message += f"• {delayed_qty}x {offer_name} - " + self._t('will_arrive_later', user_id=customer.telegram_user_id) + "\n"
+        
+        return message
+    
+    def _send_admin_notification(self, customer, delivered_orders: List, delayed_orders: List, message: str, success: bool, customer_name: str, delivered_total):
+        """Send admin notification about delivery overview"""
+        if customer.is_guest:
+            admin_message = f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=customer_name)}\n\n{message}"
+        else:
+            admin_message = f"✅ {customer_name}\n"
+            for order in delivered_orders:
+                offer = self.db.get_offer(order.offer_id)
+                offer_name = offer.name if offer else self._t('unknown', user_id=None)
+                admin_message += f"{order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
+            admin_message += f"Total: €{delivered_total:.2f}"
+        
+        if success:
+            self._send_message(self.admin_user_id, self._t('admin_overview_sent_success', user_id=None, message=admin_message), parse_mode="HTML")
+        else:
+            error_msg = self._t('unknown', user_id=None)
+            self._send_message(self.admin_user_id, self._t('admin_overview_sent_failed', user_id=None, customer_name=customer_name, error=error_msg, message=admin_message))
     
     def handle_mark_customer_paid(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
         """Mark a customer's orders as paid"""
@@ -264,3 +272,7 @@ class DeliveryOverviewHandler(BaseHandler):
             entity_id=data
         )
         self.db.create_edit_context(context)
+    
+    def _store_payment_link(self, payment_url: str):
+        """Store payment link for later use"""
+        self.db.store_payment_link(payment_url)

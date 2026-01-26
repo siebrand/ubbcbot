@@ -127,3 +127,98 @@ class OrderStatusManagement(BaseOrderHandler):
         keyboard = {"inline_keyboard": [[{"text": self._t('back_to_admin'), "callback_data": "admin:main"}]]}
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'failed_shown'}
+    
+    def handle_send_payment_reminder(self, chat_id: int, args: list, page: int = 1) -> Dict[str, Any]:
+        """Handle /send_payment_reminder command with pagination"""
+        # Get customers with AWAITING_PAYMENT orders
+        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        customers_awaiting_payment = []
+        
+        for customer in customers:
+            orders = self.db.get_orders_by_customer(customer.customer_id)
+            awaiting_payment_orders = [o for o in orders if o.status == OrderStatus.AWAITING_PAYMENT.value]
+            if awaiting_payment_orders:
+                customers_awaiting_payment.append((customer, awaiting_payment_orders))
+        
+        if not customers_awaiting_payment:
+            self._send_message(
+                chat_id, 
+                self._t('no_customers_awaiting_payment', user_id=None),
+                reply_markup=self._build_admin_menu_keyboard()
+            )
+            return {'status': 'no_customers'}
+        
+        # Sort alphabetically by last name, then first name
+        customers_awaiting_payment.sort(key=lambda x: (x[0].last_name or '', x[0].first_name or ''))
+        
+        # Paginate results
+        page_customers, total_pages = PaginationUtils.paginate_list(customers_awaiting_payment, page, 10)
+        
+        # Show customers with reminder buttons
+        message = f"🔔 Payment Reminders - Page {page}/{total_pages}:\n\n"
+        keyboard_rows = []
+        
+        for customer, orders in page_customers:
+            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
+            total_amount = sum(order.total_price for order in orders)
+            message += f"👤 {customer_name}: €{total_amount:.2f} ({len(orders)} orders)\n"
+            
+            # Button text: 🔔 Last, First €amount
+            last_name = customer.last_name or ''
+            first_name = customer.first_name or self._t('unknown', user_id=None)
+            button_text = f"🔔 {last_name}, {first_name} €{total_amount:.2f}".strip()
+            keyboard_rows.append([{"text": button_text, "callback_data": f"remind_payment_{customer.customer_id}"}])
+        
+        # Add pagination keyboard if needed
+        if total_pages > 1:
+            pagination_keyboard = PaginationUtils.build_pagination_keyboard(page, total_pages, "remind_payment", enhanced=True)
+            keyboard_rows.extend(pagination_keyboard["inline_keyboard"])
+        
+        # Add Done button
+        keyboard_rows.append([{"text": self._t('done_general', user_id=None), "callback_data": "cancel_action"}])
+        
+        keyboard = {"inline_keyboard": keyboard_rows}
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {'status': 'customers_shown'}
+    
+    def handle_send_payment_reminder_to_customer(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+        """Send payment reminder to a specific customer"""
+        customer = self.db.get_customer(customer_id)
+        if not customer:
+            self._send_message(chat_id, self._t('customer_not_found', user_id=None))
+            return {'status': 'customer_not_found'}
+        
+        # Get awaiting payment orders
+        orders = self.db.get_orders_by_customer(customer_id)
+        awaiting_payment_orders = [o for o in orders if o.status == OrderStatus.AWAITING_PAYMENT.value]
+        
+        if not awaiting_payment_orders:
+            self._send_message(chat_id, self._t('no_orders_awaiting_payment', user_id=None, customer_name=customer.first_name))
+            return {'status': 'no_orders'}
+        
+        # Get stored payment link
+        payment_link = self.db.get_payment_link()
+        if not payment_link:
+            self._send_message(chat_id, self._t('no_payment_link_stored', user_id=None))
+            return {'status': 'no_payment_link'}
+        
+        # Build and send reminder using delivery overview helper
+        from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
+        delivery_handler = DeliveryOverviewHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        
+        customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
+        message = delivery_handler._build_delivery_message(customer, awaiting_payment_orders, [], payment_link)
+        
+        # Send to customer or admin (for guests)
+        if customer.is_guest:
+            admin_message = f"🔔 {self._t('payment_reminder_for', user_id=None, customer_name=customer_name)}\n\n{message}"
+            result = self._send_message(self.admin_user_id, admin_message, parse_mode="HTML")
+        else:
+            result = self._send_message(customer.telegram_user_id, message, parse_mode="HTML")
+        
+        if result.get('success'):
+            self._send_message(chat_id, self._t('payment_reminder_sent', user_id=None, customer_name=customer_name))
+            return self.handle_send_payment_reminder(chat_id, [], 1)
+        else:
+            self._send_message(chat_id, self._t('payment_reminder_failed', user_id=None, customer_name=customer_name))
+            return {'status': 'error'}

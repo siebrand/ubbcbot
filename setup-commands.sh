@@ -80,6 +80,7 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {\"command\": \"process_labeling\", \"description\": \"Complete labeling process\"},
          {\"command\": \"send_delivery_overviews\", \"description\": \"Send delivery overviews\"},
          {\"command\": \"process_payment\", \"description\": \"Mark customers as paid\"},
+         {\"command\": \"send_payment_reminder\", \"description\": \"Send payment reminders\"},
          {\"command\": \"failed_notifications\", \"description\": \"View failed delivery notifications\"},
          {\"command\": \"delete_old_orders\", \"description\": \"Delete old cancelled and completed orders (7+ days)\"},
          {\"command\": \"audit_orders\", \"description\": \"Audit orders - add update_date to orders missing it\"},
