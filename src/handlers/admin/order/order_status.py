@@ -1,10 +1,18 @@
 from typing import Dict, Any
+import os
+import json
+import boto3
 from models.entities import AuthorizationStatus, OrderStatus
 from .base_order_handler import BaseOrderHandler
 from utils.pagination import PaginationUtils
 
 class OrderStatusManagement(BaseOrderHandler):
     """Handles order status management functionality"""
+    
+    def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
+        super().__init__(db, admin_user_id, environment, telegram_token)
+        self.lambda_client = boto3.client('lambda')
+        self.user_message_lambda = os.environ.get('USER_MESSAGE_LAMBDA_NAME')
     
     def handle_send_delivery_overviews(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /send_delivery_overviews command"""
@@ -202,23 +210,50 @@ class OrderStatusManagement(BaseOrderHandler):
             self._send_message(chat_id, self._t('no_payment_link_stored', user_id=None))
             return {'status': 'no_payment_link'}
         
-        # Build and send reminder using delivery overview helper
+        # Build reminder message using delivery overview helper
         from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
         delivery_handler = DeliveryOverviewHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         
         customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
         message = delivery_handler._build_delivery_message(customer, awaiting_payment_orders, [], payment_link, is_reminder=True)
         
-        # Send to customer or admin (for guests)
+        # Send from admin account (not bot) for regular customers
         if customer.is_guest:
+            # For guests, send to admin with customer context
             admin_message = f"🔔 {self._t('payment_reminder_for', user_id=None, customer_name=customer_name)}\n\n{message}"
             result = self._send_message(self.admin_user_id, admin_message, parse_mode="HTML")
         else:
-            result = self._send_message(customer.telegram_user_id, message, parse_mode="HTML")
+            # For regular customers, send directly from admin account
+            result = self._send_user_message(customer.telegram_user_id, message)
         
         if result.get('success'):
             self._send_message(chat_id, self._t('payment_reminder_sent', user_id=None, customer_name=customer_name))
             return self.handle_send_payment_reminder(chat_id, [], 1)
         else:
-            self._send_message(chat_id, self._t('payment_reminder_failed', user_id=None, customer_name=customer_name))
+            error = result.get('error', 'Unknown error')
+            self._send_message(chat_id, self._t('payment_reminder_failed', user_id=None, customer_name=customer_name) + f" ({error})")
             return {'status': 'error'}
+    
+    def _send_user_message(self, user_id: int, message: str) -> Dict[str, Any]:
+        """Send message from admin account via user client Lambda"""
+        try:
+            payload = {
+                'user_id': user_id,
+                'message': message
+            }
+            
+            response = self.lambda_client.invoke(
+                FunctionName=self.user_message_lambda,
+                InvocationType='RequestResponse',
+                Payload=json.dumps(payload)
+            )
+            
+            result = json.loads(response['Payload'].read())
+            
+            if result.get('statusCode') == 200:
+                return {'success': True}
+            else:
+                body = json.loads(result.get('body', '{}'))
+                return {'success': False, 'error': body.get('error', 'Unknown error')}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
