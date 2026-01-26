@@ -267,8 +267,21 @@ class DeliveryOverviewHandler(BaseHandler):
         if updated_count > 0:
             self._send_message(chat_id, self._t('payment_confirmed', user_id=None, customer_name=customer_name, updated_count=updated_count, total_amount=total_amount))
             
-            # Notify customer
-            self._send_message(customer.telegram_user_id, self._t('payment_received_notification', customer.telegram_user_id, total_amount=total_amount, location=customer.location), parse_mode="HTML")
+            # Notify customer via message sender (from admin)
+            payload = {
+                'messages': [{
+                    'user_id': int(customer.telegram_user_id),
+                    'message': self._t('payment_received_notification', customer.telegram_user_id, total_amount=total_amount, location=customer.location),
+                    'from_admin': True,
+                    'parse_mode': 'HTML'
+                }],
+                'environment': self.environment
+            }
+            self.lambda_client.invoke(
+                FunctionName=self.message_sender_lambda,
+                InvocationType='Event',
+                Payload=json.dumps(payload)
+            )
             
             # Return to process_payment list
             from handlers.admin.order_commands import AdminOrderCommands
