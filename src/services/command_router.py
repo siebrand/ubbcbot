@@ -129,6 +129,8 @@ class CommandRouter:
             
             if command == '/setup_test_data':
                 return self.handlers['test'].handle_setup_test_data(admin_target_chat)
+            elif command == '/test_user_message':
+                return self.handlers['test'].handle_test_user_message(admin_target_chat, int(parts[1]), ' '.join(parts[2:]))
             elif command == '/create_supplier':
                 return self.handlers['supplier'].handle_create_supplier(admin_target_chat, parts[1:])
             elif command == '/archive_supplier':

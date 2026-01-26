@@ -1,4 +1,7 @@
 import logging
+import os
+import json
+import boto3
 from typing import Dict, Any
 from decimal import Decimal
 from handlers.base_handler import BaseHandler
@@ -11,6 +14,8 @@ class TestCommands(BaseHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.box_status_manager = BoxStatusManager(db)
+        self.lambda_client = boto3.client('lambda')
+        self.user_message_lambda = os.environ.get('USER_MESSAGE_LAMBDA_NAME')
     
     def handle_setup_test_data(self, chat_id: int) -> Dict[str, Any]:
         """Handle /setup_test_data command - creates test suppliers and offers (test environment only)"""
@@ -91,4 +96,34 @@ class TestCommands(BaseHandler):
         except Exception as e:
             logger.error(f"Error setting up test data: {e}")
             self._send_message(chat_id, self._t('test_data_failed'))
+            return {'status': 'error'}
+    
+    def handle_test_user_message(self, chat_id: int, user_id: int, message: str) -> Dict[str, Any]:
+        """Handle /test_user_message command - sends test message from admin account"""
+        try:
+            # Invoke user message sender Lambda
+            payload = {
+                'user_id': user_id,
+                'message': message
+            }
+            
+            response = self.lambda_client.invoke(
+                FunctionName=self.user_message_lambda,
+                InvocationType='RequestResponse',
+                Payload=json.dumps(payload)
+            )
+            
+            result = json.loads(response['Payload'].read())
+            
+            if result.get('statusCode') == 200:
+                self._send_message(chat_id, f"✓ Test message sent to user {user_id}")
+                return {'status': 'success'}
+            else:
+                error = result.get('body', {}).get('error', 'Unknown error')
+                self._send_message(chat_id, f"✗ Failed to send message: {error}")
+                return {'status': 'error'}
+                
+        except Exception as e:
+            logger.error(f"Error sending test user message: {e}")
+            self._send_message(chat_id, f"✗ Error: {str(e)}")
             return {'status': 'error'}

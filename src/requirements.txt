@@ -1,3 +1,4 @@
 boto3==1.42.18
 botocore[crt]>=1.29.0
 requests==2.32.5
+telethon==1.42.0

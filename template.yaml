@@ -92,6 +92,26 @@ Resources:
         - Key: ManagedBy
           Value: sam
 
+  UserMessageSenderLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/ubbc-bot-${Environment}-user-message-sender'
+      RetentionInDays: 7
+      LogGroupClass: STANDARD
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: ubbc-telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
   WebhookHandler:
     Type: AWS::Serverless::Function
     DependsOn: WebhookHandlerLogGroup
@@ -102,6 +122,7 @@ Resources:
       Environment:
         Variables:
           NOTIFICATION_LAMBDA_NAME: !Ref NotificationSender
+          USER_MESSAGE_LAMBDA_NAME: !Ref UserMessageSender
       Events:
         WebhookApi:
           Type: Api
@@ -123,7 +144,9 @@ Resources:
             - Effect: Allow
               Action:
                 - lambda:InvokeFunction
-              Resource: !GetAtt NotificationSender.Arn
+              Resource: 
+                - !GetAtt NotificationSender.Arn
+                - !GetAtt UserMessageSender.Arn
         - CloudWatchLogsFullAccess
       Tags:
         Project: UBBCBot
@@ -153,6 +176,34 @@ Resources:
               Action:
                 - ssm:GetParameter
               Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/*'
+        - CloudWatchLogsFullAccess
+      Tags:
+        Project: UBBCBot
+        Environment: !Ref Environment
+        Owner: siebrand
+        CostCenter: personal
+        Application: ubbc-telegram-bot
+        ManagedBy: sam
+
+  UserMessageSender:
+    Type: AWS::Serverless::Function
+    DependsOn: UserMessageSenderLogGroup
+    Properties:
+      FunctionName: !Sub 'ubbc-bot-${Environment}-user-message-sender'
+      CodeUri: src/
+      Handler: user_message_sender.lambda_handler
+      Timeout: 60
+      MemorySize: 256
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: 
+                - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/telegram-api-id'
+                - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/telegram-api-hash'
+                - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/telegram-session'
         - CloudWatchLogsFullAccess
       Tags:
         Project: UBBCBot
