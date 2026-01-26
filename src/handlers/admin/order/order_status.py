@@ -217,6 +217,9 @@ class OrderStatusManagement(BaseOrderHandler):
         customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
         message = delivery_handler._build_delivery_message(customer, awaiting_payment_orders, [], payment_link, is_reminder=True)
         
+        # Ensure message is a plain string (convert any Decimal formatting)
+        message = str(message)
+        
         # Send from admin account (not bot) for regular customers
         if customer.is_guest:
             # For guests, send to admin with customer context
@@ -238,8 +241,8 @@ class OrderStatusManagement(BaseOrderHandler):
         """Send message from admin account via user client Lambda"""
         try:
             payload = {
-                'user_id': user_id,
-                'message': message
+                'user_id': int(user_id),
+                'message': str(message)
             }
             
             response = self.lambda_client.invoke(
