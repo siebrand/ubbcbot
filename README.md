@@ -210,6 +210,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/list_my_orders [id]` - View personal orders (alias: /my_orders)
 - `/list_offers` - View available offers
 - `/view_offer <offer_id>` - View detailed offer information
+- `/payment_info` - View payment details for pending orders
 - `/subscribe` - Subscribe to new offer notifications
 - `/unsubscribe` - Unsubscribe from offer notifications
 - `/delete_cancelled_orders` - Delete all cancelled orders from personal register

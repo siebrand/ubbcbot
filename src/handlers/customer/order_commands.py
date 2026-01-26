@@ -350,3 +350,35 @@ class CustomerOrderCommands(BaseHandler):
             logger.error(f"Error in handle_delete_completed_orders: {e}")
             self._send_message(chat_id, self._t('failed_delete_completed_orders', user_id))
             return {'status': 'error'}
+    
+    def handle_payment_info(self, chat_id: int, user_id: int) -> Dict[str, Any]:
+        """Handle /payment_info command - show customer their payment details"""
+        try:
+            customer = self.db.get_customer_by_telegram_id(user_id)
+            if not customer:
+                self._send_message(chat_id, self._t('customer_not_found', user_id))
+                return {'status': 'customer_not_found'}
+            
+            orders = self.db.get_orders_by_customer(customer.customer_id)
+            awaiting_payment_orders = [o for o in orders if o.status == OrderStatus.AWAITING_PAYMENT.value]
+            
+            if not awaiting_payment_orders:
+                self._send_message(chat_id, self._t('no_orders_awaiting_payment', user_id, customer_name=customer.first_name))
+                return {'status': 'no_orders'}
+            
+            payment_link = self.db.get_payment_link()
+            if not payment_link:
+                self._send_message(chat_id, self._t('no_payment_link_stored', user_id))
+                return {'status': 'no_payment_link'}
+            
+            from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
+            delivery_handler = DeliveryOverviewHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            message = delivery_handler._build_delivery_message(customer, awaiting_payment_orders, [], payment_link, is_reminder=False)
+            
+            self._send_message(chat_id, message, parse_mode="HTML")
+            return {'status': 'success'}
+            
+        except Exception as e:
+            logger.error(f"Error in handle_payment_info: {e}")
+            self._send_message(chat_id, self._t('order_processing_failed', user_id))
+            return {'status': 'error'}
