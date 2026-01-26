@@ -119,7 +119,8 @@ class TestCommands(BaseHandler):
                 self._send_message(chat_id, f"✓ Test message sent to user {user_id}")
                 return {'status': 'success'}
             else:
-                error = result.get('body', {}).get('error', 'Unknown error')
+                body = json.loads(result.get('body', '{}'))
+                error = body.get('error', 'Unknown error')
                 self._send_message(chat_id, f"✗ Failed to send message: {error}")
                 return {'status': 'error'}
                 
