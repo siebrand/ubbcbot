@@ -65,13 +65,13 @@ The Telegram beer ordering bot with AWS serverless architecture has been success
 - `/fulfill_offer <offer_id>` - Start fulfillment process
 
 **Order Management:**
-- `/order_for <username> <offer_id> [quantity]` - Admin proxy ordering
+- `/create_order_for <username> <offer_id> [quantity]` - Admin proxy ordering
 - `/cancel_order <order_id>` - Cancel order with confirmation
-- `/user_orders <username>` - View user orders
-- `/all_orders [status]` - Download CSV of orders
+- `/list_user_orders <username>` - View user orders
+- `/export_orders [status]` - Download CSV of orders
 
 **User Management:**
-- `/pending_users` - View users awaiting approval (paginated)
+- `/list_pending` - View users awaiting approval (paginated)
 - `/list_users [status] [search]` - View customers (paginated)
 - `/list_subscribers` - View notification subscribers
 - `/approve_user <name_or_username>` - Approve user
