@@ -27,7 +27,7 @@ def test_notification_message_format():
         f"👤 {display_name}",
         f"📱 @{user_data['username']}",
         f"🆔 ID: {user_data['id']}",
-        "Use /pending_users to review."
+        "Use /list_pending to review."
     ]
     
     # Verify all parts are present

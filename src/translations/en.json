@@ -155,7 +155,7 @@
   "orders_cancelled": "❌ Cancelled: {cancelled_orders} orders ({cancelled_units} units) - {details}",
   "total_allocated": "📦 Total units allocated: {allocated}/{available}",
   "cleaned_empty_boxes": "🗑️ Cleaned up {count} empty boxes",
-  "new_user_pending_notification": "🔔 New user authorization pending:\n\n👤 {name}\n📱 @{username}\n🆔 ID: {telegram_user_id}\n\nUse /pending_users to review.",
+  "new_user_pending_notification": "🔔 New user authorization pending:\n\n👤 {name}\n📱 @{username}\n🆔 ID: {telegram_user_id}\n\nUse /list_pending to review.",
   "usage_cancel_offer": "Usage: /cancel_offer [offer_id]",
   "cancel_offer_warning": "⚠️ WARNING: Cancelling offer {offer_id} will:\n\n🍺 Cancel offer: {name}\n📦 Delete all boxes\n❌ Cancel {order_count} active orders\n📧 Notify all affected customers\n\n",
   "confirm_cancel": "✅ Confirm Cancel",

@@ -338,7 +338,7 @@
   "orders_abbrev": "best.",
   "sold_out_offers_title": "🚫 UITVERKOCHT (Laatste 7 dagen):",
   "open_orders_total_label": "📊 Openstaande Bestellingen Totaal: €{total:.2f}",
-  "new_user_pending_notification": "🔔 Nieuwe gebruiker wacht op autorisatie:\n\n👤 {name}\n📱 @{username}\n🆔 ID: {telegram_user_id}\n\nGebruik /pending_users om te beoordelen.",
+  "new_user_pending_notification": "🔔 Nieuwe gebruiker wacht op autorisatie:\n\n👤 {name}\n📱 @{username}\n🆔 ID: {telegram_user_id}\n\nGebruik /list_pending om te beoordelen.",
   "pm_notification_failed": "⚠️ PM notificatie naar {name} mislukt (gebruiker moet eerst /start sturen naar de bot)",
   "no_ordered_offers": "❌ Geen aanbiedingen met BESTELD status gevonden",
   "no_ready_for_labeling_offers": "❌ Geen aanbiedingen met KLAAR_VOOR_LABELING bestellingen gevonden",
