@@ -1,6 +1,7 @@
 """
 Lambda handler for sending messages from admin user account
 """
+import os
 import json
 import asyncio
 from services.user_client import UserClient
@@ -18,6 +19,11 @@ def lambda_handler(event, context):
     try:
         user_id = event['user_id']
         message = event['message']
+        
+        # Add TEST prefix in test environment
+        environment = os.environ.get('ENVIRONMENT', 'test')
+        if environment == 'test':
+            message = f"TEST - {message}"
         
         # Run async send
         asyncio.run(send_message(user_id, message))
