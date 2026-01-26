@@ -12,7 +12,7 @@ class OrderStatusManagement(BaseOrderHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.lambda_client = boto3.client('lambda')
-        self.user_message_lambda = os.environ.get('USER_MESSAGE_LAMBDA_NAME')
+        self.message_sender_lambda = os.environ.get('MESSAGE_SENDER_LAMBDA_NAME')
     
     def handle_send_delivery_overviews(self, chat_id: int, args: list) -> Dict[str, Any]:
         """Handle /send_delivery_overviews command"""
@@ -238,27 +238,32 @@ class OrderStatusManagement(BaseOrderHandler):
             return {'status': 'error'}
     
     def _send_user_message(self, user_id: int, message: str, parse_mode: str = 'HTML', disable_web_page_preview: bool = True) -> Dict[str, Any]:
-        """Send message from admin account via user client Lambda"""
+        """Send message from admin account via MessageSender Lambda"""
         try:
             payload = {
-                'user_id': int(user_id),
-                'message': str(message),
-                'parse_mode': parse_mode,
-                'disable_web_page_preview': disable_web_page_preview
+                'messages': [{
+                    'user_id': int(user_id),
+                    'message': str(message),
+                    'from_admin': True,
+                    'parse_mode': parse_mode,
+                    'disable_web_page_preview': disable_web_page_preview
+                }],
+                'environment': self.environment
             }
             
             response = self.lambda_client.invoke(
-                FunctionName=self.user_message_lambda,
+                FunctionName=self.message_sender_lambda,
                 InvocationType='RequestResponse',
                 Payload=json.dumps(payload)
             )
             
             result = json.loads(response['Payload'].read())
+            body = json.loads(result.get('body', '{}'))
             
-            if result.get('statusCode') == 200:
+            if body.get('success_count', 0) > 0:
                 return {'success': True}
             else:
-                body = json.loads(result.get('body', '{}'))
-                return {'success': False, 'error': body.get('error', 'Unknown error')}
+                error = body.get('results', [{}])[0].get('error', 'Unknown error')
+                return {'success': False, 'error': error}
         except Exception as e:
             return {'success': False, 'error': str(e)}

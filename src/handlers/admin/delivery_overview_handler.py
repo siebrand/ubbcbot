@@ -1,4 +1,7 @@
 from typing import Dict, Any, List, Tuple
+import os
+import json
+import boto3
 from handlers.base_handler import BaseHandler
 from models.entities import OrderStatus, AuthorizationStatus
 from decimal import Decimal
@@ -6,6 +9,8 @@ from decimal import Decimal
 class DeliveryOverviewHandler(BaseHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
+        self.lambda_client = boto3.client('lambda')
+        self.message_sender_lambda = os.environ.get('MESSAGE_SENDER_LAMBDA_NAME')
     
     def start_send_overviews(self, chat_id: int) -> Dict[str, Any]:
         """Start the delivery overview sending process"""
@@ -68,7 +73,7 @@ class DeliveryOverviewHandler(BaseHandler):
         return {'status': 'awaiting_payment_link'}
     
     def handle_payment_link_input(self, chat_id: int, payment_link: str, batch_str: str) -> Dict[str, Any]:
-        """Handle payment link input and send overviews"""
+        """Handle payment link input and invoke async message sender"""
         try:
             # Store payment link for later use
             self._store_payment_link(payment_link)
@@ -83,23 +88,41 @@ class DeliveryOverviewHandler(BaseHandler):
             end_idx = min(start_idx + 50, len(customers_data))
             
             batch_customers = customers_data[start_idx:end_idx]
-            sent_count = 0
             
+            # Build messages for async sending
+            messages = []
             for customer_data in batch_customers:
-                if self._send_delivery_overview(customer_data, payment_link):
-                    sent_count += 1
+                msg = self._build_delivery_message_payload(customer_data, payment_link)
+                if msg:
+                    messages.append(msg)
+            
+            # Invoke message sender Lambda
+            payload = {
+                'messages': messages,
+                'environment': self.environment
+            }
+            
+            response = self.lambda_client.invoke(
+                FunctionName=self.message_sender_lambda,
+                InvocationType='Event',  # Async invocation
+                Payload=json.dumps(payload)
+            )
+            
+            # Update orders to AWAITING_PAYMENT immediately
+            for customer_data in batch_customers:
+                for order_id in customer_data['delivered_order_ids']:
+                    self.db.update_order(order_id, {'status': OrderStatus.AWAITING_PAYMENT.value}, admin_id=self.admin_user_id, reason="Delivery overview queued")
             
             # Update batch counter
             current_batch = batch_index + 1
             
-            message = self._t('batch_completed', user_id=None, 
+            message = self._t('batch_queued', user_id=None, 
                             batch_number=batch_index + 1, 
-                            sent_count=sent_count, 
                             batch_size=len(batch_customers))
             
             # Check if more batches needed
             if current_batch * 50 < len(customers_data):
-                message += "📧 Ready for next batch..."
+                message += "\n📧 Ready for next batch..."
                 self._send_message(chat_id, message)
                 
                 # Update context with new batch number
@@ -107,7 +130,7 @@ class DeliveryOverviewHandler(BaseHandler):
                 
                 return self._request_payment_link(chat_id, customers_data, current_batch)
             else:
-                message += self._t('all_overviews_sent', user_id=None, total_customers=len(customers_data))
+                message += self._t('all_overviews_queued', user_id=None, total_customers=len(customers_data))
                 self._send_message(chat_id, message)
                 
                 return {'status': 'completed'}
@@ -116,25 +139,22 @@ class DeliveryOverviewHandler(BaseHandler):
             self._send_message(chat_id, self._t('error_processing_payment_link', user_id=None, error=str(e)))
             return {'status': 'error'}
     
-    def _send_delivery_overview(self, customer_data: Dict, payment_link: str) -> bool:
-        """Send delivery overview to a customer"""
+    def _build_delivery_message_payload(self, customer_data: Dict, payment_link: str) -> Dict:
+        """Build message payload for async sending"""
         try:
-            # Get customer and orders from IDs
             customer = self.db.get_customer(customer_data['customer_id'])
             if not customer:
-                return False
+                return None
             
             delivered_orders = [self.db.get_order(order_id) for order_id in customer_data['delivered_order_ids']]
             delayed_orders = [self.db.get_order(order_id) for order_id in customer_data['delayed_order_ids']]
             
-            # Filter out None orders
             delivered_orders = [o for o in delivered_orders if o]
             delayed_orders = [o for o in delayed_orders if o]
             
-            # Calculate totals
-            delivered_total = sum(order.total_price for order in delivered_orders)
+            message = self._build_delivery_message(customer, delivered_orders, delayed_orders, payment_link)
             
-            # Build customer name with all available info
+            # Build customer name
             name_parts = []
             if customer.first_name:
                 name_parts.append(customer.first_name)
@@ -142,32 +162,29 @@ class DeliveryOverviewHandler(BaseHandler):
                 name_parts.append(customer.last_name)
             customer_name = " ".join(name_parts) or self._t('unknown', user_id=None)
             
-            # Add nickname if available
-            if customer.username:
-                customer_name += f" (@{customer.username})"
-            
-            # Build message
-            message = self._build_delivery_message(customer, delivered_orders, delayed_orders, payment_link)
-            
-            # Send message to customer only if not a guest
-            if not customer.is_guest:
-                result = self._send_message(customer.telegram_user_id, message, parse_mode="HTML")
+            # For guests, send to admin; for regular customers, send from admin account
+            if customer.is_guest:
+                admin_message = f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=customer_name)}\n\n{message}"
+                return {
+                    'user_id': self.admin_user_id,
+                    'message': admin_message,
+                    'from_admin': False,
+                    'parse_mode': 'HTML',
+                    'disable_web_page_preview': True,
+                    'customer_name': customer_name
+                }
             else:
-                result = {'success': True}
-            
-            # Send copy to admin
-            self._send_admin_notification(customer, delivered_orders, delayed_orders, message, result.get('success'), customer_name, delivered_total)
-            
-            if result.get('success'):
-                # Update orders to AWAITING_PAYMENT
-                for order in delivered_orders:
-                    self.db.update_order(order.order_id, {'status': OrderStatus.AWAITING_PAYMENT.value}, admin_id=self.admin_user_id, reason="Delivery overview sent")
-                return True
-            return False
-                
+                return {
+                    'user_id': customer.telegram_user_id,
+                    'message': message,
+                    'from_admin': True,
+                    'parse_mode': 'HTML',
+                    'disable_web_page_preview': True,
+                    'customer_name': customer_name
+                }
         except Exception as e:
-            print(f"Error sending delivery overview to customer {customer_data['customer_id']}: {e}")
-            return False
+            print(f"Error building message for customer {customer_data['customer_id']}: {e}")
+            return None
     
     def _build_delivery_message(self, customer, delivered_orders: List, delayed_orders: List, payment_link: str, is_reminder: bool = False) -> str:
         """Build delivery/reminder message for customer"""

@@ -15,7 +15,7 @@ class TestCommands(BaseHandler):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.box_status_manager = BoxStatusManager(db)
         self.lambda_client = boto3.client('lambda')
-        self.user_message_lambda = os.environ.get('USER_MESSAGE_LAMBDA_NAME')
+        self.message_sender_lambda = os.environ.get('MESSAGE_SENDER_LAMBDA_NAME')
     
     def handle_setup_test_data(self, chat_id: int) -> Dict[str, Any]:
         """Handle /setup_test_data command - creates test suppliers and offers (test environment only)"""
@@ -101,26 +101,29 @@ class TestCommands(BaseHandler):
     def handle_test_user_message(self, chat_id: int, user_id: int, message: str) -> Dict[str, Any]:
         """Handle /test_user_message command - sends test message from admin account"""
         try:
-            # Invoke user message sender Lambda
             payload = {
-                'user_id': user_id,
-                'message': message
+                'messages': [{
+                    'user_id': user_id,
+                    'message': message,
+                    'from_admin': True
+                }],
+                'environment': self.environment
             }
             
             response = self.lambda_client.invoke(
-                FunctionName=self.user_message_lambda,
+                FunctionName=self.message_sender_lambda,
                 InvocationType='RequestResponse',
                 Payload=json.dumps(payload)
             )
             
             result = json.loads(response['Payload'].read())
+            body = json.loads(result.get('body', '{}'))
             
-            if result.get('statusCode') == 200:
+            if body.get('success_count', 0) > 0:
                 self._send_message(chat_id, f"✓ Test message sent to user {user_id}")
                 return {'status': 'success'}
             else:
-                body = json.loads(result.get('body', '{}'))
-                error = body.get('error', 'Unknown error')
+                error = body.get('results', [{}])[0].get('error', 'Unknown error')
                 self._send_message(chat_id, f"✗ Failed to send message: {error}")
                 return {'status': 'error'}
                 
