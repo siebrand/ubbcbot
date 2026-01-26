@@ -27,8 +27,11 @@ class BaseBoxWorkflowHandler(BaseHandler):
 
     def _build_offer_keyboard(self, offers: List[Offer], supplier_id_short: str, callback_prefix: str) -> Dict[str, Any]:
         """Build inline keyboard for offer selection"""
+        # Sort offers alphabetically by name
+        sorted_offers = sorted(offers, key=lambda o: o.name.lower())
+        
         keyboard = []
-        for offer in offers:
+        for offer in sorted_offers:
             keyboard.append([{
                 "text": f"{offer.name} (€{offer.price_per_unit})",
                 "callback_data": f"{callback_prefix}_off:{offer.offer_id}:{supplier_id_short}"
