@@ -385,7 +385,7 @@
   "payment_confirmed": "✅ Betaling bevestigd voor {customer_name}\n{updated_count} bestellingen gemarkeerd als VOLTOOID\nTotaal: €{total_amount:.2f}",
   "payment_received_notification": "<b>✅ Betaling ontvangen!</b>\n\nDank je wel! Je betaling van €{total_amount:.2f} is in goede orde ontvangen. Je bent helemaal klaar om je bestelling op te halen.\n━━━━━━━━━━━━━━━━━━━━\n📍 Ophaallocatie: {location}\n\n<b>Tot snel! 👋</b>\n\nVragen? Neem gerust contact op met @siebrand.",
   "payment_reminder_title": "<b>🔔 Betalingsherinnering</b>",
-  "payment_reminder_intro": "Goed nieuws: je bieren liggen voor je klaar! Je kunt ze ophalen wanneer het jou uitkomt. We zagen dat de betaling ook nog openstaat, dus vergeet je die niet nog even te regelen? Tot snel!",
+  "payment_reminder_intro": "Goed nieuws: je bieren liggen voor je klaar! We zagen dat de betaling ook nog openstaat, dus vergeet je die niet nog even te regelen? Tot snel!",
   "payment_reminder_for": "Betalingsherinnering voor {customer_name}",
   "payment_reminder_sent": "✅ Betalingsherinnering verzonden naar {customer_name}",
   "payment_reminder_failed": "❌ Kon betalingsherinnering niet verzenden naar {customer_name}",

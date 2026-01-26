@@ -385,7 +385,7 @@
   "payment_confirmed": "✅ Payment confirmed for {customer_name}\n{updated_count} orders marked as COMPLETED\nTotal: €{total_amount:.2f}",
   "payment_received_notification": "<b>✅ Payment Received!</b>\n\nThank you! Your payment of €{total_amount:.2f} has been received in good order. You are all set to pick up your order.\n━━━━━━━━━━━━━━━━━━━━\n📍 Pickup Location: {location}\n\n<b>See you soon! 👋</b>\n\nQuestions? Feel free to reach out to @siebrand.",
   "payment_reminder_title": "<b>🔔 Payment Reminder</b>",
-  "payment_reminder_intro": "Good news: your beers are ready and waiting! You can pick them up whenever it suits you. We noticed your payment is still outstanding, so don't forget to take care of that. See you soon!",
+  "payment_reminder_intro": "Good news: your beers are ready and waiting! We noticed your payment is still outstanding, so don't forget to take care of that. See you soon!",
   "payment_reminder_for": "Payment Reminder for {customer_name}",
   "payment_reminder_sent": "✅ Payment reminder sent to {customer_name}",
   "payment_reminder_failed": "❌ Failed to send payment reminder to {customer_name}",
