@@ -627,6 +627,9 @@ class InfoCommands(BaseHandler):
             message += self._t('supplier_name', name=offer.supplier_name) + "\n"
             message += self._t('status_label', status=offer.status) + "\n"
 
+        if offer.status != OfferStatus.ACTIVE.value and not is_admin:
+            message += f"{self._t('product_cannot_be_ordered')}\n"
+
         message += f"\n{offer.description}\n"
         
         # Add order buttons for active offers

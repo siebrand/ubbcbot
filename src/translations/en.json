@@ -261,6 +261,7 @@
   "select_offer_details": "📝 Select offer to view details:",
   "no_offer_id_provided": "❌ No offer ID provided",
   "offer_not_available": "❌ Offer not available",
+  "product_cannot_be_ordered": "<b>This product can not / no longer be ordered.</b>",
   "edit_offer_details": "📝 Edit Offer Details {offer_id}:\n\nName: {name}\nPrice: €{price:.2f}\nBox Size: {box_size}\nStatus: {status}\nSupplier: {supplier}\nDescription: {description}\nImages: {image_count} uploaded\n\nSelect what to edit:",
   "edit_price": "💰 Edit Price",
   "edit_description": "📝 Edit Description",

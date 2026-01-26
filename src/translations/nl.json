@@ -260,6 +260,7 @@
   "select_offer_details": "📝 Selecteer aanbieding om details te bekijken:",
   "no_offer_id_provided": "❌ Geen aanbieding ID opgegeven",
   "offer_not_available": "❌ Aanbieding niet beschikbaar",
+  "product_cannot_be_ordered": "<b>Dit product kan niet (meer) besteld worden.</b>",
   "edit_offer_details": "📝 Aanbiedingsgegevens bewerken {offer_id}:\n\nNaam: {name}\nPrijs: €{price:.2f}\nAantal per colli: {box_size}\nStatus: {status}\nLeverancier: {supplier}\nBeschrijving: {description}\nAfbeeldingen: {image_count} geüpload\n\nSelecteer wat te bewerken:",
   "edit_price": "💰 Prijs bewerken",
   "edit_description": "📝 Beschrijving  bewerken",
