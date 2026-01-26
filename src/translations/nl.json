@@ -600,7 +600,7 @@
   "select_offer_finalize_import": "📥 Selecteer aanbieding om import af te ronden:",
   "delivery_ready_title": "<b>📦 Je bestelling is klaar!</b>",
   "delivery_ready_intro": "Je bestelling is gelabeld en klaar voor ophalen. Voltooi alsjeblieft de betaling via onderstaande link voordat je langskomt.",
-  "order_summary_title": "<b>Bestellingoverzicht:</b>",
+  "order_summary_title": "<b>Leveringsoverzicht:</b>",
   "total_amount_bold": "<b>💰 Totaalbedrag: €{total:.2f}</b>",
   "pay_via_tikkie": "<b>Betaal via Tikkie:</b> 📲 {link} (Let op: Vul zelf het bedrag van €{total:.2f} in)",
   "pickup_location_bold": "<b>📍 Ophaallocatie:</b> {location}",
