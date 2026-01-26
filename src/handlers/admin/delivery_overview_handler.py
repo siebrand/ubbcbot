@@ -166,21 +166,21 @@ class DeliveryOverviewHandler(BaseHandler):
             if customer.is_guest:
                 admin_message = f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=customer_name)}\n\n{message}"
                 return {
-                    'user_id': self.admin_user_id,
-                    'message': admin_message,
+                    'user_id': int(self.admin_user_id),
+                    'message': str(admin_message),
                     'from_admin': False,
                     'parse_mode': 'HTML',
                     'disable_web_page_preview': True,
-                    'customer_name': customer_name
+                    'customer_name': str(customer_name)
                 }
             else:
                 return {
-                    'user_id': customer.telegram_user_id,
-                    'message': message,
+                    'user_id': int(customer.telegram_user_id),
+                    'message': str(message),
                     'from_admin': True,
                     'parse_mode': 'HTML',
                     'disable_web_page_preview': True,
-                    'customer_name': customer_name
+                    'customer_name': str(customer_name)
                 }
         except Exception as e:
             print(f"Error building message for customer {customer_data['customer_id']}: {e}")
