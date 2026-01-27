@@ -175,7 +175,7 @@ class OrderStatusManagement(BaseOrderHandler):
             last_name = customer.last_name or ''
             first_name = customer.first_name or self._t('unknown', user_id=None)
             button_text = f"🔔 {last_name}, {first_name} €{total_amount:.2f}".strip()
-            keyboard_rows.append([{"text": button_text, "callback_data": f"remind_payment_{customer.customer_id}"}])
+            keyboard_rows.append([{"text": button_text, "callback_data": f"remind_payment_{customer.customer_id}_{page}"}])
         
         # Add pagination keyboard if needed
         if total_pages > 1:
@@ -189,7 +189,7 @@ class OrderStatusManagement(BaseOrderHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {'status': 'customers_shown'}
     
-    def handle_send_payment_reminder_to_customer(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+    def handle_send_payment_reminder_to_customer(self, chat_id: int, customer_id: str, current_page: int = 1) -> Dict[str, Any]:
         """Send payment reminder to a specific customer"""
         customer = self.db.get_customer(customer_id)
         if not customer:
@@ -231,7 +231,7 @@ class OrderStatusManagement(BaseOrderHandler):
         
         if result.get('success'):
             self._send_message(chat_id, self._t('payment_reminder_sent', user_id=None, customer_name=customer_name))
-            return self.handle_send_payment_reminder(chat_id, [], 1)
+            return self.handle_send_payment_reminder(chat_id, [], current_page)
         else:
             error = result.get('error', 'Unknown error')
             self._send_message(chat_id, self._t('payment_reminder_failed', user_id=None, customer_name=customer_name) + f" ({error})")

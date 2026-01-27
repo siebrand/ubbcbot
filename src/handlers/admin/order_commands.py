@@ -86,8 +86,8 @@ class AdminOrderCommands(BaseHandler):
     def handle_send_payment_reminder(self, chat_id: int, args: list, page: int = 1) -> Dict[str, Any]:
         return self.status_mgmt.handle_send_payment_reminder(chat_id, args, page)
     
-    def handle_send_payment_reminder_to_customer(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
-        return self.status_mgmt.handle_send_payment_reminder_to_customer(chat_id, customer_id)
+    def handle_send_payment_reminder_to_customer(self, chat_id: int, customer_id: str, current_page: int = 1) -> Dict[str, Any]:
+        return self.status_mgmt.handle_send_payment_reminder_to_customer(chat_id, customer_id, current_page)
     
     def handle_failed_notifications(self, chat_id: int, args: list) -> Dict[str, Any]:
         return self.status_mgmt.handle_failed_notifications(chat_id, args)

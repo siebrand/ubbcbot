@@ -231,8 +231,8 @@ class CallbackHandler:
             lambda match, ctx: self.handlers['delivery_overview'].handle_process_customer_paid(ctx['chat_id'], match.group(1))
         )
         self.router.register(
-            r"^remind_payment_(.+)$",
-            lambda match, ctx: self.handlers['admin_order'].handle_send_payment_reminder_to_customer(ctx['chat_id'], match.group(1))
+            r"^remind_payment_(.+)_(\d+)$",
+            lambda match, ctx: self.handlers['admin_order'].handle_send_payment_reminder_to_customer(ctx['chat_id'], match.group(1), int(match.group(2)))
         )
         self.router.register(
             r"^request_cancel_reason_(.+)$",
