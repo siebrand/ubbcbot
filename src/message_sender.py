@@ -62,10 +62,10 @@ def lambda_handler(event, context):
         loop = get_event_loop()
         results = loop.run_until_complete(send_messages(messages, environment, bot_token))
         
-        success_count = sum(1 for r in results if r['success'])
+        success_count = sum(1 for r in results if isinstance(r, dict) and r.get('success'))
         error_count = len(results) - success_count
         
-        logger.info(f"Sent {success_count} messages, {error_count} errors")
+        logger.info(f"Sent {success_count} messages, {error_count} errors out of {len(messages)} total")
         
         return {
             'statusCode': 200,
@@ -81,15 +81,29 @@ def lambda_handler(event, context):
         return {'statusCode': 500, 'body': json.dumps({'error': str(e)})}
 
 async def send_messages(messages, environment, bot_token):
-    """Send all messages concurrently"""
-    tasks = []
-    for msg in messages:
-        if msg.get('from_admin'):
-            tasks.append(send_from_admin(msg, environment))
-        else:
-            tasks.append(send_from_bot(msg, environment, bot_token))
+    """Send all messages with controlled concurrency"""
+    # Separate admin and bot messages
+    admin_messages = [msg for msg in messages if msg.get('from_admin')]
+    bot_messages = [msg for msg in messages if not msg.get('from_admin')]
     
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    results = []
+    
+    # Send admin messages with limited concurrency (max 5 at a time)
+    if admin_messages:
+        logger.info(f"Sending {len(admin_messages)} admin messages with concurrency limit")
+        for i in range(0, len(admin_messages), 5):
+            batch = admin_messages[i:i+5]
+            tasks = [send_from_admin(msg, environment) for msg in batch]
+            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+            results.extend(batch_results)
+            logger.info(f"Completed batch {i//5 + 1}, sent {len([r for r in batch_results if isinstance(r, dict) and r.get('success')])} messages")
+    
+    # Send bot messages concurrently (faster, no connection overhead)
+    if bot_messages:
+        logger.info(f"Sending {len(bot_messages)} bot messages")
+        tasks = [send_from_bot(msg, environment, bot_token) for msg in bot_messages]
+        bot_results = await asyncio.gather(*tasks, return_exceptions=True)
+        results.extend(bot_results)
     
     # Notify admin of failures
     failures = [r for r in results if isinstance(r, dict) and not r.get('success')]
