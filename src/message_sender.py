@@ -7,6 +7,7 @@ import json
 import asyncio
 import logging
 import boto3
+import requests
 from services.database import DynamoDBService
 from services.user_client import UserClient
 
@@ -124,8 +125,6 @@ async def send_from_admin(msg, environment):
 async def send_from_bot(msg, environment, bot_token):
     """Send message from bot account"""
     try:
-        import requests
-        
         user_id = msg['user_id']
         message = msg['message']
         parse_mode = msg.get('parse_mode')
