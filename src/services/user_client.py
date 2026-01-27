@@ -43,6 +43,14 @@ class UserClient:
     async def send_message(self, user_id: int, message: str, parse_mode: str = None, disable_web_page_preview: bool = False):
         """Send message from admin account to user"""
         client = await self.get_client()
+        
+        # Get entity to ensure user is resolved (needed when session cache is empty)
+        try:
+            entity = await client.get_entity(user_id)
+        except Exception as e:
+            # If get_entity fails, try sending directly (might work if user is cached)
+            pass
+        
         await client.send_message(
             user_id, 
             message,
