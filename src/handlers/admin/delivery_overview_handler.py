@@ -240,7 +240,7 @@ class DeliveryOverviewHandler(BaseHandler):
             error_msg = self._t('unknown', user_id=None)
             self._send_message(self.admin_user_id, self._t('admin_overview_sent_failed', user_id=None, customer_name=customer_name, error=error_msg, message=admin_message))
     
-    def handle_process_customer_paid(self, chat_id: int, customer_id: str) -> Dict[str, Any]:
+    def handle_process_customer_paid(self, chat_id: int, customer_id: str, current_page: int = 1) -> Dict[str, Any]:
         """Set a customer's orders as paid"""
         customer = self.db.get_customer(customer_id)
         if not customer:
@@ -286,7 +286,7 @@ class DeliveryOverviewHandler(BaseHandler):
             # Return to process_payment list
             from handlers.admin.order_commands import AdminOrderCommands
             order_commands = AdminOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
-            return order_commands.handle_process_payment(chat_id, [], 1)
+            return order_commands.handle_process_payment(chat_id, [], current_page)
         else:
             self._send_message(chat_id, self._t('failed_update_orders_customer', user_id=None, customer_name=customer_name))
             return {'status': 'error'}

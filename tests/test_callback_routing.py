@@ -395,7 +395,7 @@ class TestCallbackRouting:
         ('export_orders_active', 'admin_order', 'handle_export_orders_callback'),
         ('start_send_overviews', 'delivery_overview', 'start_send_overviews'),
         ('finish_labeling_box123', 'labeling', 'handle_finish_labeling'),
-        ('process_payment_cust456', 'delivery_overview', 'handle_process_customer_paid'),
+        ('process_payment_cust456_1', 'delivery_overview', 'handle_process_customer_paid'),
     ])
     def test_delivery_export_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):
         """Test delivery/export patterns route correctly (Phase 3 Batch F)"""

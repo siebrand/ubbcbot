@@ -227,8 +227,8 @@ class CallbackHandler:
             lambda match, ctx: self.handlers['labeling'].handle_finish_labeling(ctx['chat_id'], match.group(1))
         )
         self.router.register(
-            r"^process_payment_(.+)$",
-            lambda match, ctx: self.handlers['delivery_overview'].handle_process_customer_paid(ctx['chat_id'], match.group(1))
+            r"^process_payment_(.+)_(\d+)$",
+            lambda match, ctx: self.handlers['delivery_overview'].handle_process_customer_paid(ctx['chat_id'], match.group(1), int(match.group(2)))
         )
         self.router.register(
             r"^remind_payment_(.+)_(\d+)$",
