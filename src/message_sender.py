@@ -113,7 +113,7 @@ async def send_messages(messages, environment, bot_token):
     return results
 
 async def send_from_admin(msg, environment):
-    """Send message from admin account via Telethon"""
+    """Send message from admin account via Telethon, fallback to bot on error"""
     global _user_client
     
     try:
@@ -133,8 +133,14 @@ async def send_from_admin(msg, environment):
         
         return {'success': True, 'user_id': user_id}
     except Exception as e:
-        logger.error(f"Error sending from admin to {msg.get('user_id')}: {e}")
-        return {'success': False, 'user_id': msg.get('user_id'), 'error': str(e), 'customer_name': msg.get('customer_name')}
+        error_msg = str(e)
+        logger.error(f"Error sending from admin to {msg.get('user_id')}: {error_msg}")
+        
+        # If entity not found, return error (don't fallback - admin needs to interact with user first)
+        if 'Could not find the input entity' in error_msg:
+            return {'success': False, 'user_id': msg.get('user_id'), 'error': 'User not in admin contacts', 'customer_name': msg.get('customer_name')}
+        
+        return {'success': False, 'user_id': msg.get('user_id'), 'error': error_msg, 'customer_name': msg.get('customer_name')}
 
 async def send_from_bot(msg, environment, bot_token):
     """Send message from bot account"""
@@ -175,6 +181,8 @@ async def send_from_bot(msg, environment, bot_token):
 async def notify_admin_of_failures(failures, environment, bot_token):
     """Notify admin of failed message deliveries"""
     try:
+        import requests as req  # Import locally to ensure it's available
+        
         admin_user_id = int(os.environ.get('ADMIN_USER_ID', '15005473'))
         
         message = "⚠️ Failed to send messages:\n\n"
@@ -191,7 +199,7 @@ async def notify_admin_of_failures(failures, environment, bot_token):
         payload = {'chat_id': admin_user_id, 'text': message}
         
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, lambda: requests.post(url, json=payload))
+        await loop.run_in_executor(None, lambda: req.post(url, json=payload))
         
     except Exception as e:
         logger.error(f"Failed to notify admin of failures: {e}")
