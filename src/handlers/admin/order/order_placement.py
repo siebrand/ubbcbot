@@ -174,7 +174,7 @@ class OrderPlacement(BaseOrderHandler):
             # Confirm to admin with PM status
             display_name = customer.first_name or self._t('unknown', user_id=None)
             admin_message = self._t('order_placed_for_user', name=display_name)
-            if not pm_result.get('success') and not pm_result.get('skipped_guest'):
+            if not customer.is_guest and not pm_result.get('success'):
                 admin_message += "\n" + self._t('pm_notification_failed', user_id=None, name=display_name)
             self._send_message(chat_id, admin_message)
         
