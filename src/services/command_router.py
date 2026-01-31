@@ -203,7 +203,7 @@ class CommandRouter:
                 search_string = None
                 
                 if len(parts) > 1:
-                    if parts[1] in ['approved', 'unauthorized', 'rejected', 'all']:
+                    if parts[1] in ['approved', 'unauthorized', 'rejected', 'all', 'subscribers']:
                         status_filter = parts[1]
                         if len(parts) > 2:
                             search_string = ' '.join(parts[2:])

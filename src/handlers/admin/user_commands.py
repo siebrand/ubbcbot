@@ -223,7 +223,9 @@ class UserCommands(BaseHandler):
     def handle_list_users(self, chat_id: int, page: int = 1, status_filter: str = "all", search_string: str = None) -> Dict[str, Any]:
         """Handle /list_users command with pagination, filtering, and optional search"""
         # Get customers based on filter using cache
-        if status_filter == "all":
+        if status_filter == "subscribers":
+            customers = self.db.get_subscribers()
+        elif status_filter == "all":
             customers = UserCache.get_all_customers(self.db)
         else:
             customers = self.db.get_customers_by_status(status_filter)
@@ -251,12 +253,14 @@ class UserCommands(BaseHandler):
             if customer.last_name:
                 display_name += f" {self._escape_html(customer.last_name)}"
 
+            # Add subscriber indicator
+            subscriber_indicator = " 🔔" if customer.subscribed_to_offers else ""
             # Add guest indicator
             guest_indicator = " 🎫" if customer.is_guest else ""
             username_part = f" (@{self._escape_html(customer.username)})" if customer.username and not customer.is_guest else (f" ({customer.username})" if customer.is_guest else "")
             status_emoji = self.STATUS_EMOJIS.get(customer.authorization_status, "❓")
 
-            message += f"{status_emoji} {display_name}{username_part}{guest_indicator}\n"
+            message += f"{status_emoji} {display_name}{username_part}{subscriber_indicator}{guest_indicator}\n"
 
         # Add pagination keyboard if needed
         keyboard = None
