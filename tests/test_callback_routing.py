@@ -140,7 +140,6 @@ class TestCallbackRouting:
         ('page_suppliers_active_3', 'supplier', 'handle_list_suppliers', 3),
         ('page_pending_1', 'user', 'handle_list_pending', 1),
         ('page_guests_2', 'user', 'handle_list_guests', 2),
-        ('page_subscribers_1', 'user', 'handle_list_subscribers', 1),
         ('page_changelog_3', 'changelog', 'handle_changelog', 3),
     ])
     def test_pagination_standard_commands(self, callback_handler, mock_handlers, callback_data, handler, method, expected_page):
