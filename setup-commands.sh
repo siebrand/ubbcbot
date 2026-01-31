@@ -20,6 +20,21 @@ TELEGRAM_TOKEN=$(aws ssm get-parameter \
     --query 'Parameter.Value' \
     --output text)
 
+# Get default group ID for command scope
+if [ "$ENVIRONMENT" = "test" ]; then
+    DEFAULT_GROUP_ID="-1003399818858"
+else
+    DEFAULT_GROUP_ID="-1001662432692"
+fi
+
+echo "🗑️  Removing group commands..."
+curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/deleteMyCommands" \
+     -H "Content-Type: application/json" \
+     -d "{
+       \"scope\": {\"type\": \"chat_administrators\", \"chat_id\": \"$DEFAULT_GROUP_ID\"}
+     }" | jq .
+
+echo ""
 echo "👥 Setting customer commands..."
 curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
      -H "Content-Type: application/json" \
