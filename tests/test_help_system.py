@@ -96,11 +96,10 @@ def test_command_descriptions():
         "/create_supplier": "Create supplier",
         "/list_suppliers": "View all suppliers",
         "/create_offer": "Create offer",
-        "/list_users": "View all customers",
-        "/list_subscribers": "View subscribers"
+        "/list_users": "View all customers"
     }
     
-    assert "/list_subscribers" in admin_commands
+    assert "/create_supplier" in admin_commands
     print("✅ Admin commands defined")
 
 def test_help_message_formatting():

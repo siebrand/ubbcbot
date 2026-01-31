@@ -153,7 +153,6 @@ This document provides a comprehensive analysis of all 90+ commands in the UBBC 
 |---------|----------|--------|----------|
 | `/pending_users` | `/list_pending` | Shorter, clearer - context implies pending users | Medium |
 | `/list_users` | `/list_users` | ✅ Already follows convention | Keep |
-| `/list_subscribers` | `/list_subscribers` | ✅ Already follows convention | Keep |
 | `/add_guest` | `/create_guest` | Consistency with `create_` pattern | Medium |
 | `/list_guests` | `/list_guests` | ✅ Already follows convention | Keep |
 | `/approve_user` | `/approve_user` | ✅ Already follows convention | Keep |
