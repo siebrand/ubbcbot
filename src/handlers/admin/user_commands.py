@@ -254,13 +254,16 @@ class UserCommands(BaseHandler):
                 display_name += f" {self._escape_html(customer.last_name)}"
 
             # Add subscriber indicator
-            subscriber_indicator = " 🔔" if customer.subscribed_to_offers else ""
+            subscriber_indicator = "🔔" if customer.subscribed_to_offers else ""
             # Add guest indicator
-            guest_indicator = " 🎫" if customer.is_guest else ""
+            guest_indicator = "🎫" if customer.is_guest else ""
             username_part = f" (@{self._escape_html(customer.username)})" if customer.username and not customer.is_guest else (f" ({customer.username})" if customer.is_guest else "")
             status_emoji = self.STATUS_EMOJIS.get(customer.authorization_status, "❓")
 
-            message += f"{status_emoji} {display_name}{username_part}{subscriber_indicator}{guest_indicator}\n"
+            # Build line and clean up multiple spaces
+            line = f"{status_emoji} {display_name}{username_part} {subscriber_indicator}{guest_indicator}"
+            line = ' '.join(line.split())  # Remove multiple spaces
+            message += f"{line}\n"
 
         # Add pagination keyboard if needed
         keyboard = None
