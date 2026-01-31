@@ -43,44 +43,6 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/delet
      }" | jq .
 
 echo ""
-echo "👑 Setting admin commands (private chat)..."
-curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "commands": [
-         {"command": "start", "description": "Register and view help"},
-         {"command": "help", "description": "Show help for specific section"},
-         {"command": "admin", "description": "Admin panel with buttons"},
-         {"command": "order", "description": "Place order: /order <offer_id> [quantity]"},
-         {"command": "my_orders", "description": "View your orders"},
-         {"command": "list_offers", "description": "View available offers"},
-         {"command": "view_offer", "description": "View offer details"},
-         {"command": "setup_test_data", "description": "Setup test data (test env only)"},
-         {"command": "create_supplier", "description": "Create supplier"},
-         {"command": "list_suppliers", "description": "View all suppliers"},
-         {"command": "create_offer", "description": "Create draft offer"},
-         {"command": "publish_offer", "description": "Publish draft offer"},
-         {"command": "list_boxes", "description": "View box status"},
-         {"command": "process_wholesale", "description": "Start wholesale ordering"},
-         {"command": "order_for", "description": "Place order for user"},
-         {"command": "cancel_order", "description": "Cancel order"},
-         {"command": "export_orders", "description": "Download orders CSV"},
-         {"command": "list_pending", "description": "View users awaiting approval"},
-         {"command": "list_users", "description": "View all customers"},
-         {"command": "create_guest", "description": "Add guest user"},
-         {"command": "list_guests", "description": "View guest users"},
-         {"command": "process_delivery", "description": "Process wholesale deliveries"},
-         {"command": "process_labeling", "description": "Complete labeling process"},
-         {"command": "send_delivery_overviews", "description": "Send delivery overviews"},
-         {"command": "process_payment", "description": "Mark customers as paid"},
-         {"command": "create_discount", "description": "Create discount"},
-         {"command": "view_discount", "description": "View discount status"},
-         {"command": "cancel", "description": "Cancel pending operation"}
-       ],
-       "scope": {"type": "chat_member", "chat_id": 15005473, "user_id": 15005473}
-     }' | jq .
-
-echo ""
 echo "👥 Setting customer commands..."
 curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMyCommands" \
      -H "Content-Type: application/json" \
