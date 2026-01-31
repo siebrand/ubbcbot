@@ -211,8 +211,6 @@ class CommandRouter:
                         search_string = ' '.join(parts[1:])
                 
                 return self.handlers['user'].handle_list_users(admin_target_chat, 1, status_filter, search_string)
-            elif command == '/list_subscribers':
-                return self.handlers['user'].handle_list_subscribers(admin_target_chat)
             elif command == '/create_guest':
                 return self.handlers['user'].handle_create_guest(admin_target_chat, parts[1:])
             elif command == '/list_guests':

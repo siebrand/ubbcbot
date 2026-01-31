@@ -132,10 +132,7 @@ class AdminCommandsHandler(BaseHandler):
         keyboard = {
             "inline_keyboard": [
                 [{"text": self._t('pending_users_btn', user_id), "callback_data": "cmd:list_pending"}],
-                [
-                    {"text": self._t('list_users_btn', user_id), "callback_data": "cmd:list_users"},
-                    {"text": self._t('list_subscribers_btn', user_id), "callback_data": "cmd:list_subscribers"}
-                ],
+                [{"text": self._t('list_users_btn', user_id), "callback_data": "cmd:list_users"}],
                 [
                     {"text": self._t('add_guest_btn', user_id), "callback_data": "cmd:create_guest"},
                     {"text": self._t('list_guests_btn', user_id), "callback_data": "cmd:list_guests"}
