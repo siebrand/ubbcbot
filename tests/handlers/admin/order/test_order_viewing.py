@@ -59,6 +59,7 @@ class TestOrderViewing(unittest.TestCase):
         mock_customer = Mock()
         mock_customer.first_name = "John"
         mock_customer.last_name = "Doe"
+        mock_customer.location = "Venster, Berlijnplein 520"
         
         mock_order = Mock()
         mock_order.offer_id = 1
@@ -81,7 +82,7 @@ class TestOrderViewing(unittest.TestCase):
         
         # Check header
         header = lines[0]
-        expected_headers = ['Naam', 'Product', 'Prijs']
+        expected_headers = ['Naam', 'Product', 'Prijs', 'Locatie']
         self.assertEqual(header, ','.join(expected_headers))
         
         # Check data rows (should be 2 identical rows for quantity=2)
@@ -90,6 +91,35 @@ class TestOrderViewing(unittest.TestCase):
             self.assertIn('"John Doe"', data_row)
             self.assertIn('"Test Beer"', data_row)
             self.assertIn('€10.50', data_row)
+            self.assertIn('"Venst"', data_row)
+    
+    def test_generate_pick_list_csv_weer_prefix(self):
+        """Test CSV generation with Weer location prefix"""
+        # Mock customer with Weer location
+        mock_customer = Mock()
+        mock_customer.first_name = "Jane"
+        mock_customer.last_name = "Smith"
+        mock_customer.location = "Weerschijnvlinder 16"
+        
+        mock_order = Mock()
+        mock_order.offer_id = 1
+        mock_order.quantity = 1
+        mock_order.unit_price = Decimal('12.00')
+        mock_order.status = 'pending'
+        
+        mock_offer = Mock()
+        mock_offer.name = "Test Beer"
+        self.mock_db.get_offer.return_value = mock_offer
+        
+        orders_data = [(mock_customer, mock_order)]
+        
+        csv_content = self.handler._generate_pick_list_csv(orders_data)
+        
+        # Check that name is prefixed with "-"
+        lines = csv_content.strip().split('\n')
+        data_row = lines[1]
+        self.assertIn('"-Jane Smith"', data_row)
+        self.assertIn('"Weers"', data_row)
     
     @patch.object(OrderViewing, '_export_orders_by_status')
     def test_handle_export_orders_with_filter(self, mock_export):

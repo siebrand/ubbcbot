@@ -113,7 +113,7 @@ class OrderViewing(BaseOrderHandler):
     def _generate_pick_list_csv(self, orders_data: list) -> str:
         """Generate pick list CSV content with normalized quantities (1 unit per row)"""
         # CSV headers
-        headers = ['Naam', 'Product', 'Prijs']
+        headers = ['Naam', 'Product', 'Prijs', 'Locatie']
         
         csv_content = ','.join(headers) + '\n'
         
@@ -130,10 +130,14 @@ class OrderViewing(BaseOrderHandler):
             for customer, order in customer_orders[customer_name]:
                 offer = self.db.get_offer(order.offer_id)
                 offer_name = offer.name if offer else self._t('unknown', user_id=None)
+                location_prefix = (customer.location or '')[:5]
+                
+                # Prefix name with "-" if location starts with "Weer"
+                display_name = f"-{customer_name}" if (customer.location or '').startswith('Weer') else customer_name
                 
                 # Expand order quantity to individual rows
                 for _ in range(int(order.quantity)):
-                    csv_content += f'"{customer_name}","{offer_name}",€{order.unit_price:.2f}\n'
+                    csv_content += f'"{display_name}","{offer_name}",€{order.unit_price:.2f},"{location_prefix}"\n'
         
         return csv_content
     
