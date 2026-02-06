@@ -225,7 +225,10 @@ class CustomerOrderCommands(BaseHandler):
             status=order.status))
         
         if not placed_by_admin:
-            self._notify_channel_order(customer, offer, quantity)
+            message = self._build_order_notification_message(customer, offer, quantity)
+            if message:
+                self._send_order_notification_to_group(message)
+                self._send_message(self.admin_user_id, message, parse_mode="HTML")
     
     def _get_public_name(self, customer):
         """Get customer's public display name (Firstname L)"""
@@ -237,19 +240,9 @@ class CustomerOrderCommands(BaseHandler):
         
         return ' '.join(name_parts) if name_parts else customer.username or self._t('unknown', user_id=None)
     
-    def _notify_channel_order(self, customer, offer, quantity):
-        """Send order notification to default group"""
-        import os
+    def _build_order_notification_message(self, customer, offer, quantity):
+        """Build order notification message"""
         try:
-            group_id = os.environ.get('DEFAULT_GROUP_ID')
-            if not group_id:
-                return False
-            
-            # Only send notifications for non-guest orders
-            if customer.is_guest:
-                logger.info("Skipping message to guest user")
-                return False
-            
             bot_username = self._get_bot_username()
             
             # Check if offer is now sold out and calculate remaining availability
@@ -267,7 +260,6 @@ class CustomerOrderCommands(BaseHandler):
                     availability_text = f" ({self._t('sufficient_available', force_group_lang=True)})"
                 elif total_available > 0:
                     availability_text = f" ({self._t('units_available', force_group_lang=True, count=total_available)})"
-                # If total_available == 0 and not sold out, show nothing
             
             # Format offer name as link
             offer_link = f"<a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{self._escape_html(offer.name)}</a>"
@@ -278,14 +270,26 @@ class CustomerOrderCommands(BaseHandler):
                             quantity=quantity, 
                             offer_name=offer_link, 
                             availability=availability_text)
+            return message
+        except Exception as e:
+            logger.error(f"Error building order notification message: {e}")
+            return None
+    
+    def _send_order_notification_to_group(self, message):
+        """Send order notification message to default group"""
+        import os
+        try:
+            group_id = os.environ.get('DEFAULT_GROUP_ID')
+            if not group_id:
+                return False
             
+            # Only send notifications for non-guest orders
             result = self._send_message(int(group_id), message, parse_mode="HTML", force_group=True)
-            success = result.get('success', False)
-            return success
-            
+            return result.get('success', False)
         except Exception as e:
             logger.error(f"Error sending group notification: {e}")
             return False
+
     def handle_delete_cancelled_orders(self, chat_id: int, user_id: int) -> Dict[str, Any]:
         """Handle /delete_cancelled_orders command - delete all cancelled orders for user"""
         try:
