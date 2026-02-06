@@ -202,12 +202,15 @@ class CustomerOrderCommands(BaseHandler):
         # Update order with box_id and status
         if box.status == BoxStatus.DELIVERED.value:
             final_status = OrderStatus.READY_FOR_LABELING.value
+            self.db.update_order(created_order.order_id, {'box_id': box.box_id, 'status': final_status, 'received_quantity': quantity}, admin_id=0)
+            created_order.received_quantity = quantity
         elif box.status == BoxStatus.ORDERED.value:
-            final_status = 'ordered'
+            final_status = OrderStatus.ORDERED.value
+            self.db.update_order(created_order.order_id, {'box_id': box.box_id, 'status': final_status}, admin_id=0)
         else:
-            final_status = 'pending'
+            final_status = OrderStatus.PENDING.value
+            self.db.update_order(created_order.order_id, {'box_id': box.box_id, 'status': final_status}, admin_id=0)
         
-        self.db.update_order(created_order.order_id, {'box_id': box.box_id, 'status': final_status}, admin_id=0)
         created_order.status = final_status
         
         return created_order
