@@ -520,6 +520,9 @@ class OfferManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('offer_cannot_delete', status=self._t(f'status_{offer.status}')))
             return {'status': 'invalid_status'}
         
+        # Delete all boxes first
+        self._delete_offer_boxes(offer.offer_id)
+        
         # Delete the offer
         if self.db.delete_offer(offer.offer_id):
             self._send_message(chat_id, self._t('offer_deleted', offer_id=offer.offer_id, name=offer.name))
