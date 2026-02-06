@@ -227,8 +227,12 @@ class CustomerOrderCommands(BaseHandler):
         if not placed_by_admin:
             message = self._build_order_notification_message(customer, offer, quantity)
             if message:
-                self._send_order_notification_to_group(message)
+                # Admin ALWAYS receives notification
                 self._send_message(self.admin_user_id, message, parse_mode="HTML")
+                
+                # Group receives notification only on milestones
+                if self._should_send_group_notification(offer.offer_id, quantity):
+                    self._send_order_notification_to_group(message)
     
     def _get_public_name(self, customer):
         """Get customer's public display name (Firstname L)"""
@@ -274,6 +278,58 @@ class CustomerOrderCommands(BaseHandler):
         except Exception as e:
             logger.error(f"Error building order notification message: {e}")
             return None
+    
+    def _should_send_group_notification(self, offer_id: int, quantity: int) -> bool:
+        """Determine if group notification should be sent based on milestones"""
+        try:
+            # Get all orders for this offer
+            all_orders = self.db.get_orders_by_offer(offer_id)
+            active_orders = [o for o in all_orders if o.status not in ['cancelled']]
+            order_count = len(active_orders)
+            
+            # Get offer and boxes for capacity calculation
+            offer = self.db.get_offer(offer_id)
+            if not offer:
+                return False
+            
+            boxes = self.db.get_boxes_by_offer(offer_id)
+            total_capacity = sum(box.max_capacity for box in boxes)
+            total_ordered = sum(box.current_quantity for box in boxes)
+            remaining = total_capacity - total_ordered
+            
+            # Special case: Small boxes (1-4 units) - only odd orders (50% reduction)
+            if total_capacity <= 4:
+                return order_count % 2 == 1
+            
+            # Milestone 1: First order
+            if order_count == 1:
+                return True
+            
+            # Milestone 2: 25% capacity drops (check if we just crossed a threshold)
+            if total_capacity > 0:
+                previous_remaining = remaining + quantity
+                capacity_thresholds = [0.75, 0.50, 0.25]  # 75%, 50%, 25% remaining
+                
+                for threshold in capacity_thresholds:
+                    threshold_units = int(total_capacity * threshold)
+                    # Check if we just crossed this threshold
+                    if previous_remaining > threshold_units >= remaining:
+                        return True
+            
+            # Milestone 3: Last 5 units
+            if 0 < remaining <= 5 and remaining + quantity > 5:
+                return True
+            
+            # Milestone 4: Sold out (remaining == 0)
+            if remaining == 0:
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error in _should_send_group_notification: {e}")
+            # On error, default to sending notification (fail-safe)
+            return True
     
     def _send_order_notification_to_group(self, message):
         """Send order notification message to default group"""

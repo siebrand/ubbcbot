@@ -168,8 +168,15 @@ class OrderPlacement(BaseOrderHandler):
                                      status=order_status)
             pm_result = self._send_message(customer.telegram_user_id, customer_message)
             
-            # Send notification to default group (admin orders don't trigger this automatically)
-            order_handler._notify_channel_order(customer, offer, quantity)
+            # Send notification to admin and conditionally to group (admin orders don't trigger this automatically)
+            message = order_handler._build_order_notification_message(customer, offer, quantity)
+            if message:
+                # Admin ALWAYS receives notification
+                order_handler._send_message(self.admin_user_id, message, parse_mode="HTML")
+                
+                # Group receives notification only on milestones
+                if order_handler._should_send_group_notification(offer.offer_id, quantity):
+                    order_handler._send_order_notification_to_group(message)
             
             # Confirm to admin with PM status
             display_name = customer.first_name or self._t('unknown', user_id=None)
