@@ -119,10 +119,12 @@ async def send_from_admin(msg, environment):
     global _user_client
     
     try:
-        if _user_client is None:
-            _user_client = UserClient()
-        
         user_id = msg['user_id']
+        
+        # Skip invalid user IDs (e.g., guest users with -1)
+        if user_id == -1:
+            return {'success': False, 'user_id': user_id, 'error': 'Invalid user ID (guest user)', 'customer_name': msg.get('customer_name')}
+        
         message = msg['message']
         parse_mode = msg.get('parse_mode')
         disable_web_page_preview = msg.get('disable_web_page_preview', False)
@@ -130,6 +132,9 @@ async def send_from_admin(msg, environment):
         # Add TEST prefix in test environment
         if environment == 'test':
             message = f"TEST - {message}"
+        
+        if _user_client is None:
+            _user_client = UserClient()
         
         await _user_client.send_message(user_id, message, parse_mode, disable_web_page_preview)
         

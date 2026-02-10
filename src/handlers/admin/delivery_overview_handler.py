@@ -160,7 +160,7 @@ class DeliveryOverviewHandler(BaseHandler):
                 name_parts.append(customer.first_name)
             if customer.last_name:
                 name_parts.append(customer.last_name)
-            customer_name = " ".join(name_parts) or self._t('unknown', user_id=None)
+            customer_name = " ".join(name_parts) if name_parts else self._t('unknown', user_id=None)
             
             # For guests, send to admin; for regular customers, send from admin account
             if customer.is_guest:
@@ -267,21 +267,22 @@ class DeliveryOverviewHandler(BaseHandler):
         if updated_count > 0:
             self._send_message(chat_id, self._t('payment_confirmed', user_id=None, customer_name=customer_name, updated_count=updated_count, total_amount=total_amount))
             
-            # Notify customer via message sender (from admin)
-            payload = {
-                'messages': [{
-                    'user_id': int(customer.telegram_user_id),
-                    'message': self._t('payment_received_notification', customer.telegram_user_id, total_amount=total_amount, location=customer.location),
-                    'from_admin': True,
-                    'parse_mode': 'HTML'
-                }],
-                'environment': self.environment
-            }
-            self.lambda_client.invoke(
-                FunctionName=self.message_sender_lambda,
-                InvocationType='Event',
-                Payload=json.dumps(payload)
-            )
+            # Notify customer via message sender (from admin) - skip for guest users
+            if not customer.is_guest:
+                payload = {
+                    'messages': [{
+                        'user_id': int(customer.telegram_user_id),
+                        'message': self._t('payment_received_notification', customer.telegram_user_id, total_amount=total_amount, location=customer.location),
+                        'from_admin': True,
+                        'parse_mode': 'HTML'
+                    }],
+                    'environment': self.environment
+                }
+                self.lambda_client.invoke(
+                    FunctionName=self.message_sender_lambda,
+                    InvocationType='Event',
+                    Payload=json.dumps(payload)
+                )
             
             # Return to process_payment list
             from handlers.admin.order_commands import AdminOrderCommands
