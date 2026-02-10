@@ -97,7 +97,9 @@ async def send_messages(messages, environment, bot_token):
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
             results.extend(batch_results)
             logger.info(f"Completed batch {i//5 + 1}, sent {len([r for r in batch_results if isinstance(r, dict) and r.get('success')])} messages")
-    
+            import time
+            time.sleep(0.5)
+
     # Send bot messages concurrently (faster, no connection overhead)
     if bot_messages:
         logger.info(f"Sending {len(bot_messages)} bot messages")
