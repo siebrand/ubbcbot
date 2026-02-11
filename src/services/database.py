@@ -237,6 +237,22 @@ class DynamoDBService:
             print(f"Error updating order: {e}")
             return False
 
+    def batch_update_order_status(self, order_ids: List[str], status: str, admin_id: int = 0) -> int:
+        """Batch update order status with audit logging. Returns count of successful updates."""
+        from services.audit_service import AuditService
+        
+        # Batch fetch orders before update for audit trail
+        orders = self.order_repo.batch_get_orders(order_ids)
+        
+        updated_count = self.order_repo.batch_update_order_status(order_ids, status)
+        
+        if updated_count > 0 and orders:
+            audit = AuditService(self)
+            # Batch audit logging instead of looping
+            audit.log_batch_status_change(orders[:updated_count], orders[0].status, status, admin_id, 'Delivery overview queued')
+        
+        return updated_count
+
     def get_customers_by_status(self, status: str) -> List[Customer]:
         """Get customers by status with caching"""
         return self.customer_repo.get_customers_by_status(status)

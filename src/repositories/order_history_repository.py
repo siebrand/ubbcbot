@@ -23,6 +23,27 @@ class OrderHistoryRepository(BaseRepository):
             print(f"Error creating order history: {e}")
             return False
 
+    def batch_create_order_history(self, histories: List[OrderHistory]) -> int:
+        """Batch create order history records. Returns count of successful writes."""
+        try:
+            import boto3
+            dynamodb = boto3.resource('dynamodb')
+            created_count = 0
+            
+            # Process in batches of 25 (DynamoDB batch_write limit)
+            for i in range(0, len(histories), 25):
+                batch = histories[i:i + 25]
+                with self.table.batch_writer() as writer:
+                    for history in batch:
+                        item = self._prepare_item(history.__dict__)
+                        writer.put_item(Item=item)
+                        created_count += 1
+            
+            return created_count
+        except Exception as e:
+            print(f"Error batch creating order history: {e}")
+            return 0
+
     def get_order_history(self, order_id: str, limit: int = 50) -> List[OrderHistory]:
         try:
             response = self.table.query(

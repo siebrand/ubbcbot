@@ -130,6 +130,38 @@ class AuditService:
         self.db.create_order_history(history)
         logger.info(f"Audit: Status changed {order.order_id}: {old_status} -> {new_status}")
     
+    def log_batch_status_change(self, orders: List, old_status: str, new_status: str,
+                               admin_id: int = 0, reason: str = ""):
+        """Log status change for multiple orders in batch"""
+        # Determine event type
+        if new_status == "completed" and old_status == "awaiting_payment":
+            event_type = "PAYMENT_RECEIVED"
+        elif new_status == "cancelled":
+            event_type = "ORDER_CANCELLED"
+        else:
+            event_type = "STATUS_CHANGED"
+        
+        histories = []
+        for order in orders:
+            amount = order.total_price if event_type == "PAYMENT_RECEIVED" else None
+            history = OrderHistory(
+                order_id=order.order_id,
+                customer_id=order.customer_id,
+                customer_name=self._get_customer_name(order.customer_id),
+                offer_name=self._get_offer_name(order.offer_id),
+                event_type=event_type,
+                changed_by=admin_id,
+                field_name="status",
+                old_value=old_status,
+                new_value=new_status,
+                reason=reason or f"Status changed to {new_status}",
+                amount=amount
+            )
+            histories.append(history)
+        
+        created_count = self.db.order_history_repo.batch_create_order_history(histories)
+        logger.info(f"Audit: Batch status change - {created_count} orders: {old_status} -> {new_status}")
+    
     def get_order_history(self, order_id: str, limit: int = 50) -> List[OrderHistory]:
         """Get complete history for an order"""
         return self.db.get_order_history(order_id, limit)

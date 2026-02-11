@@ -80,6 +80,9 @@ class DeliveryOverviewHandler(BaseHandler):
             
             # Get stored customers data from context
             import json
+            import logging
+            logger = logging.getLogger()
+            
             context_data = json.loads(batch_str)
             customers_data = context_data['customers_data']
             
@@ -108,10 +111,20 @@ class DeliveryOverviewHandler(BaseHandler):
                 Payload=json.dumps(payload)
             )
             
-            # Update orders to AWAITING_PAYMENT immediately
+            # Collect all order IDs for batch update
+            all_order_ids = []
             for customer_data in batch_customers:
-                for order_id in customer_data['delivered_order_ids']:
-                    self.db.update_order(order_id, {'status': OrderStatus.AWAITING_PAYMENT.value}, admin_id=self.admin_user_id, reason="Delivery overview queued")
+                all_order_ids.extend(customer_data['delivered_order_ids'])
+            
+            # Batch update orders to AWAITING_PAYMENT
+            if all_order_ids:
+                logger.info(f"Batch updating {len(all_order_ids)} orders to AWAITING_PAYMENT")
+                updated_count = self.db.batch_update_order_status(
+                    all_order_ids, 
+                    OrderStatus.AWAITING_PAYMENT.value,
+                    admin_id=self.admin_user_id
+                )
+                logger.info(f"Successfully updated {updated_count}/{len(all_order_ids)} orders")
             
             # Update batch counter
             current_batch = batch_index + 1

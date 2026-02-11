@@ -115,3 +115,65 @@ class OrderRepository(BaseRepository):
         except Exception as e:
             print(f"Error deleting order: {e}")
             return False
+
+    def batch_get_orders(self, order_ids: List[str]) -> List[Order]:
+        """Batch fetch orders using batch_get_item. Returns list of orders."""
+        try:
+            import boto3
+            dynamodb = boto3.resource('dynamodb')
+            orders = []
+            
+            # Process in batches of 100 (DynamoDB limit)
+            for i in range(0, len(order_ids), 100):
+                batch = order_ids[i:i + 100]
+                response = dynamodb.batch_get_item(
+                    RequestItems={
+                        self.table.name: {
+                            'Keys': [{'order_id': oid} for oid in batch]
+                        }
+                    }
+                )
+                items = response.get('Responses', {}).get(self.table.name, [])
+                orders.extend([Order(**item) for item in items])
+            
+            return orders
+        except Exception as e:
+            print(f"Error batch getting orders: {e}")
+            return []
+
+    def batch_update_order_status(self, order_ids: List[str], status: str) -> int:
+        """Batch update order status using UpdateExpression. Returns count of successful updates."""
+        try:
+            from datetime import datetime, UTC
+            
+            updated_count = 0
+            update_date = datetime.now(UTC).isoformat()
+            
+            # Process in smaller batches to avoid throttling
+            for i in range(0, len(order_ids), 10):
+                batch = order_ids[i:i + 10]
+                
+                try:
+                    # Use individual updates but in rapid succession
+                    # This is safer than put_item as it only updates specific fields
+                    for order_id in batch:
+                        self.table.update_item(
+                            Key={'order_id': order_id},
+                            UpdateExpression='SET #status = :status, #update_date = :update_date',
+                            ExpressionAttributeNames={
+                                '#status': 'status',
+                                '#update_date': 'update_date'
+                            },
+                            ExpressionAttributeValues={
+                                ':status': status,
+                                ':update_date': update_date
+                            }
+                        )
+                        updated_count += 1
+                except Exception as batch_error:
+                    print(f"Batch update error: {batch_error}")
+            
+            return updated_count
+        except Exception as e:
+            print(f"Error in batch update: {e}")
+            return 0
