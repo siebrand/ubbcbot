@@ -153,10 +153,8 @@ class OrderRepository(BaseRepository):
             for i in range(0, len(order_ids), 10):
                 batch = order_ids[i:i + 10]
                 
-                try:
-                    # Use individual updates but in rapid succession
-                    # This is safer than put_item as it only updates specific fields
-                    for order_id in batch:
+                for order_id in batch:
+                    try:
                         self.table.update_item(
                             Key={'order_id': order_id},
                             UpdateExpression='SET #status = :status, #update_date = :update_date',
@@ -170,8 +168,8 @@ class OrderRepository(BaseRepository):
                             }
                         )
                         updated_count += 1
-                except Exception as batch_error:
-                    print(f"Batch update error: {batch_error}")
+                    except Exception as batch_error:
+                        print(f"Batch update error for {order_id}: {batch_error}")
             
             return updated_count
         except Exception as e:
