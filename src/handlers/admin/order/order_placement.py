@@ -60,7 +60,7 @@ class OrderPlacement(BaseOrderHandler):
     
     def _show_offers_for_order_for(self, chat_id: int, customer) -> Dict[str, Any]:
         """Show active offers for order_for workflow"""
-        offers = [o for o in self.db.list_offers() if o.status == OfferStatus.ACTIVE.value]
+        offers = [o for o in self.db.list_offers() if o.status in (OfferStatus.ACTIVE.value, OfferStatus.IMPORT.value)]
         
         if not offers:
             self._send_message(chat_id, self._t('no_offers_available'))
@@ -114,7 +114,7 @@ class OrderPlacement(BaseOrderHandler):
             self._send_message(chat_id, self._t('offer_sold_out_named', user_id=None, offer_name=offer.name))
             return {'status': 'sold_out'}
         
-        if offer.status != OfferStatus.ACTIVE.value:
+        if offer.status not in (OfferStatus.ACTIVE.value, OfferStatus.IMPORT.value):
             self._send_message(chat_id, self._t('offer_not_found_inactive'))
             return {'status': 'offer_not_found'}
 
