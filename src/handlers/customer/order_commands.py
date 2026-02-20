@@ -93,7 +93,7 @@ class CustomerOrderCommands(BaseHandler):
             self._send_message(chat_id, self._t('offer_sold_out_named', user_id, offer_name=offer.name))
             return None, None
         
-        if offer.status != OfferStatus.ACTIVE.value:
+        if offer.status not in (OfferStatus.ACTIVE.value, OfferStatus.IMPORT.value):
             self._send_message(chat_id, self._t('offer_not_found', user_id))
             return None, None
         
@@ -159,7 +159,7 @@ class CustomerOrderCommands(BaseHandler):
         has_delivered_boxes = len(self.box_status_manager.get_delivered_boxes(boxes)) > 0
         
         # Cannot create new boxes if delivered boxes exist
-        if offer.status == OfferStatus.ACTIVE.value and not has_ordered_boxes and not has_delivered_boxes:
+        if offer.status in (OfferStatus.ACTIVE.value, OfferStatus.IMPORT.value) and not has_ordered_boxes and not has_delivered_boxes:
             new_box = Box(offer_id=offer_id, max_capacity=offer.wholesale_box_size)
             suitable_box = self.db.create_box(new_box)
             if not suitable_box:
