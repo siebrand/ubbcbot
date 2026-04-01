@@ -6,6 +6,30 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2026-04-01",
+                "content": """<b>User-Facing Updates</b>
+• <b>Fairer Offer Notifications</b> - Subscribers are now notified in random order when a new offer is published, so the same people are no longer always first
+• <b>Order Notifications in Group</b> - Every order is now announced in the group chat, keeping everyone informed in real time
+
+<b>Admin-Facing Updates</b>
+• <b>Import Offer Orders</b> - Orders can now be placed on offers with IMPORT status, both by admins (<code>/order_for</code>) and via the customer order flow
+• <b>Batch Payment Processing</b> - Payment link processing now uses batch DynamoDB operations, reducing execution time from ~30s to ~3-5s and fixing timeouts for large order sets
+• <b>Guest User Message Safety</b> - Messages are no longer attempted to guest users without a Telegram account; admin is notified of any failures instead
+• <b>Message Throttling</b> - Added 0.5s delay between message batches to stay within Telegram rate limits
+• <b>Subscriber Management Consolidated</b> - <code>/list_subscribers</code> retired; subscribed users now shown in <code>/list_users subscribers</code> with a 🔔 indicator
+• <b>Group Command Cleanup</b> - All bot commands removed from group chats; all interactions now happen in private chat
+• <b>Payment Workflow Navigation</b> - Pagination position is preserved after processing a payment or sending a payment reminder
+• <b>Payment Reminder in Workflow Menu</b> - <code>/send_payment_reminder</code> added to the workflow admin menu after process payment
+• <b>Payment Notifications via Admin Account</b> - Payment received confirmations are now sent from the admin's personal account for consistency with delivery messages
+• <b>Reliable Admin Messaging</b> - Fixed Telethon "entity not found" errors by resolving users before sending; improved error messages when admin has not interacted with a user
+• <b>Concurrent Message Sending</b> - Admin messages now processed in batches of 5 to prevent Lambda timeouts for large deliveries
+• <b>Order Export Enhancement</b> - Added location column (first 5 characters) to order export CSV for delivery planning
+• <b>Box Cleanup on Offer Deletion</b> - All related boxes are now deleted when an offer is deleted, preventing orphaned data
+• <b>Order Data Consistency</b> - <code>received_quantity</code> now correctly set on delivery; <code>OrderStatus</code> enum used consistently throughout order creation
+• <b>Resilient Batch Updates</b> - A single failure in a batch order status update no longer aborts the remaining orders in the batch
+• <b>User List Display Fix</b> - Removed double spaces in user list entries"""
+            },
+            {
                 "title": "Up to 2026-01-21",
                 "content": """<b>User-Facing Updates</b>
 • <b>Payment Information Access</b> - New <code>/payment_info</code> command to view payment details for delivered orders
