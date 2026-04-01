@@ -64,6 +64,8 @@ class NotificationSender(BaseHandler):
     
     def send_bulk_notifications(self, subscribers, offer):
         """Send notifications to all subscribers"""
+        import random
+        random.shuffle(subscribers)
         # Pre-generate presigned URLs for images
         presigned_images = []
         if offer.images:

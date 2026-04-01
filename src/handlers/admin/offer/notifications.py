@@ -85,6 +85,8 @@ class NotificationHandler(OfferBaseHandler):
     
     def _send_notifications_sync_optimized(self, subscribers, offer):
         """Send notifications synchronously with optimizations for small groups"""
+        import random
+        random.shuffle(subscribers)
         # Pre-generate presigned URLs for images to avoid repeated S3 calls
         presigned_images = []
         if offer.images:
