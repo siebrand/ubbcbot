@@ -28,7 +28,7 @@ class WholesalerDeliveryService:
                 return False
             
             # Get all orders for this box
-            orders = self._get_orders_by_box(box_id)
+            orders = [o for o in self._get_orders_by_box(box_id) if o.status == OrderStatus.ORDERED.value]
             if not orders:
                 return False
             
