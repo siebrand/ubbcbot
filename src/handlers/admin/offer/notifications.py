@@ -12,9 +12,6 @@ class NotificationHandler(OfferBaseHandler):
     def _send_rich_offer_message(self, chat_id: int, offer, preview: bool = False, force_group: bool = False, include_buttons: bool = True):
         """Send rich offer message using view_offer formatting with optimizations"""
 
-        if not preview:
-            self._send_message(chat_id, self._t('new_offer_available'), force_group=force_group)
-        
         # Pre-generate presigned URLs to avoid repeated S3 calls
         presigned_images = []
         if offer.images:
@@ -179,8 +176,7 @@ class NotificationHandler(OfferBaseHandler):
         bot_username = self._get_bot_username()
         
         # Combine header and offer details in single message
-        message = self._t('new_offer_available') + "\n\n"
-        message += f"<b><a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
+        message = f"<b><a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}  ({available}/{total_capacity})</b>\n\n"
         message += f"{offer.description}\n"
         
         # Add order buttons
@@ -198,8 +194,7 @@ class NotificationHandler(OfferBaseHandler):
         # Get bot username for linking
         bot_username = self._get_bot_username()
         
-        message = self._t('new_offer_available') + "\n\n"
-        message += f"<b><a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f} </b>\n\n"
+        message = f"<b><a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f} </b>\n\n"
         message += f"{offer.description}\n\n"
         message += self._t('order_with_command', offer_id=offer.offer_id)
         

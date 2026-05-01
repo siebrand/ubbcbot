@@ -118,8 +118,7 @@ class NotificationSender(BaseHandler):
         bot_username = self._get_bot_username()
         
         # Combine header and offer details in single message
-        message = self._t('new_offer_available', customer.telegram_user_id) + "\n\n"
-        message += f"<b><a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
+        message = f"<b><a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{offer.offer_id}</a>. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
         message += f"{offer.description}\n"
         
         # Add order buttons
