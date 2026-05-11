@@ -568,7 +568,7 @@
   "offer_remains_active_pending": "Offer remains ACTIVE ({pending_count} pending orders remaining)",
   "usage_offer_status": "Usage: /offer_status <offer_id> <import|active|soldout|completed>",
   "offer_status_must_be_draft": "❌ Offer must have DRAFT status (current: {current_status})",
-  "offer_status_changed": "✅ Offer {offer_id} '{name}' status changed to {status}",
+  "offer_status_changed": "✅ Offer {offer_id} '{name}' status changed to {new_status}",
   "failed_update_offer_status": "❌ Failed to update offer status",
   "invalid_offer_status": "❌ Invalid status: {status}. Supported: import, active, soldout, completed.",
   "import_offers": "📥 IMPORT OFFERS:",

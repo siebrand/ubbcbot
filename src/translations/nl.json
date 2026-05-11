@@ -568,7 +568,7 @@
   "offer_remains_active_pending": "Aanbieding blijft ACTIEF ({pending_count} wachtende bestellingen over)",
   "usage_offer_status": "Gebruik: /offer_status <aanbieding_id> <import|active|soldout|completed>",
   "offer_status_must_be_draft": "❌ Aanbieding moet CONCEPT status hebben (huidige: {current_status})",
-  "offer_status_changed": "✅ Aanbieding {offer_id} '{name}' status gewijzigd naar {status}",
+  "offer_status_changed": "✅ Aanbieding {offer_id} '{name}' status gewijzigd naar {new_status}",
   "failed_update_offer_status": "❌ Kon aanbiedingsstatus niet bijwerken",
   "invalid_offer_status": "❌ Ongeldige status: {status}. Ondersteund: import, active, soldout, completed.",
   "import_offers": "📥 IMPORT:",

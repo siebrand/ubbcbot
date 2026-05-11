@@ -39,7 +39,7 @@ class OfferEditingHandler(OfferBaseHandler):
 
         if self.db.update_offer(offer.offer_id, {'status': target_status.value}):
             return self._send_success(chat_id, 'offer_status_changed', 'success',
-                                      offer_id=offer.offer_id, name=offer.name, status=target_status.value)
+                                      offer_id=offer.offer_id, name=offer.name, new_status=target_status.value)
         else:
             return self._send_error(chat_id, 'failed_update_offer_status', 'error')
 
