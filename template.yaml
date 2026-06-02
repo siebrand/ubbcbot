@@ -40,7 +40,7 @@ Resources:
       Name: !Sub 'ubbc-bot-${Environment}-api'
       StageName: !Ref Environment
       Cors:
-        AllowMethods: "'POST'"
+        AllowMethods: "'GET,POST'"
         AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
         AllowOrigin: "'*'"
       Tags:
@@ -52,6 +52,26 @@ Resources:
         ManagedBy: sam
 
   # Lambda Functions
+  OffersApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/ubbc-bot-${Environment}-offers-api'
+      RetentionInDays: 7
+      LogGroupClass: STANDARD
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: ubbc-telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
   WebhookHandlerLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -111,6 +131,45 @@ Resources:
           Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
+
+  OffersApiHandler:
+    Type: AWS::Serverless::Function
+    DependsOn: OffersApiLogGroup
+    Properties:
+      FunctionName: !Sub 'ubbc-bot-${Environment}-offers-api'
+      CodeUri: src/
+      Handler: handlers.api.offers.handler
+      Timeout: 10
+      Events:
+        GetOffers:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BotApi
+            Path: /offers
+            Method: get
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+              Resource: !GetAtt OffersTable.Arn
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource: !Sub '${BoxesTable.Arn}/index/offer-index'
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: !GetAtt CountersTable.Arn
+      Tags:
+        Project: UBBCBot
+        Environment: !Ref Environment
+        Owner: siebrand
+        CostCenter: personal
+        Application: ubbc-telegram-bot
+        ManagedBy: sam
 
   WebhookHandler:
     Type: AWS::Serverless::Function
@@ -662,3 +721,7 @@ Outputs:
   ApiGatewayId:
     Description: API Gateway ID
     Value: !Ref BotApi
+
+  OffersApiUrl:
+    Description: Public API URL for active offers
+    Value: !Sub 'https://${BotApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/offers'
