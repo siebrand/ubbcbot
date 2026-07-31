@@ -165,7 +165,8 @@ class OrderPlacement(BaseOrderHandler):
                                      product=offer.name,
                                      quantity=quantity,
                                      total=offer.price_per_unit * quantity,
-                                     status=order_status)
+                                     order_id=latest_order.order_id[:8] if latest_order else '',
+                                     status=self._t(f'status_{order_status}', customer.telegram_user_id))
             pm_result = self._send_message(customer.telegram_user_id, customer_message)
             
             # Send notification to default group (admin orders don't trigger this automatically)

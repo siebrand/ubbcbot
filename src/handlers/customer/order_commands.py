@@ -217,12 +217,14 @@ class CustomerOrderCommands(BaseHandler):
     
     def _send_order_confirmation(self, chat_id: int, user_id: int, order, offer, quantity: int, placed_by_admin: bool, customer):
         """Send order confirmation and notifications"""
+        display_name = f"{customer.first_name} {customer.last_name}".strip() if customer else ''
         self._send_message(chat_id, self._t('order_placed_single', user_id,
-            order_id=order.order_id,
+            name=display_name,
+            order_id=order.order_id[:8],
             product=offer.name,
             quantity=quantity,
             total=float(order.total_price),
-            status=order.status))
+            status=self._t(f'status_{order.status}', user_id)))
         
         if not placed_by_admin:
             message = self._build_order_notification_message(customer, offer, quantity)
