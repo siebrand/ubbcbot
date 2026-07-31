@@ -547,7 +547,7 @@
   "order_not_found_full_id": "❌ Order not found: {order_id}",
   "order_already_cancelled_full_id": "⚠️ Order {order_id} is already cancelled",
   "customer_not_found_for_order": "❌ Customer not found for order {order_id}",
-  "usage_delete_offer": "Usage: /delete_offer <offer_id>",
+  "usage_delete_offer": "Usage: /delete_offer <offer_id> [offer_id ...] (max 100)",
   "offer_cannot_delete": "❌ Offer cannot be deleted (status: {status}). Only COMPLETED or INACTIVE offers can be deleted.",
   "offer_deleted": "✅ Offer {offer_id} '{name}' deleted successfully",
   "failed_delete_offer": "❌ Failed to delete offer",

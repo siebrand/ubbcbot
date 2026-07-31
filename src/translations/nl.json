@@ -547,7 +547,7 @@
   "order_not_found_full_id": "❌ Bestelling niet gevonden: {order_id}",
   "order_already_cancelled_full_id": "⚠️ Bestelling {order_id} is al geannuleerd",
   "customer_not_found_for_order": "❌ Klant niet gevonden voor bestelling {order_id}",
-  "usage_delete_offer": "Gebruik: /delete_offer <aanbieding_id>",
+  "usage_delete_offer": "Gebruik: /delete_offer <aanbieding_id> [aanbieding_id ...] (max 100)",
   "offer_cannot_delete": "❌ Aanbieding kan niet verwijderd worden (status: {status}). Alleen VOLTOOID of INACTIEF aanbiedingen kunnen verwijderd worden.",
   "offer_deleted": "✅ Aanbieding {offer_id} '{name}' succesvol verwijderd",
   "failed_delete_offer": "❌ Kon aanbieding niet verwijderen",
