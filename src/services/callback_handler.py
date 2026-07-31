@@ -241,6 +241,14 @@ class CallbackHandler:
         
         # Navigation patterns (Phase 3 Batch G - Final)
         self.router.register(
+            r"^fomo_user_select_(.+)$",
+            lambda match, ctx: (
+                self.handlers['info']._show_fomo(ctx['chat_id'], ctx['user_id'], c)
+                if (c := self.db.get_customer(match.group(1)))
+                else self._send_message(ctx['chat_id'], self._t('customer_not_found'))
+            )
+        )
+        self.router.register(
             r"^back_to_supplier_list$",
             lambda match, ctx: self.handlers['supplier'].handle_list_suppliers(ctx['chat_id'], 1, 'active')
         )

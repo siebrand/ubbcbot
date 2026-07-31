@@ -1,7 +1,7 @@
 from typing import Dict, Any
 from decimal import Decimal
 from handlers.base_handler import BaseHandler
-from models.entities import OfferStatus
+from models.entities import OfferStatus, OrderStatus
 from services.user_cache import UserCache
 from services.box_status_manager import BoxStatusManager
 from utils.pagination import PaginationUtils
@@ -177,6 +177,48 @@ class InfoCommands(BaseHandler):
             return None, {'status': 'not_registered'}
         return customer, None
     
+    def handle_fomo(self, chat_id: int, user_id: int, args=None) -> Dict[str, Any]:
+        """Handle /fomo command"""
+        if args and self._is_admin(user_id):
+            identifier = ' '.join(args)
+            customer = self._find_customer_with_disambiguation(identifier, chat_id, 'fomo_user_select')
+            if customer is None:
+                return {'status': 'disambiguation_or_not_found'}
+            return self._show_fomo(chat_id, user_id, customer)
+
+        customer, error = self._validate_customer(chat_id, user_id)
+        if error:
+            return error
+        return self._show_fomo(chat_id, user_id, customer)
+
+    def _show_fomo(self, chat_id: int, caller_user_id: int, customer) -> Dict[str, Any]:
+        """Show active offers the customer hasn't ordered yet"""
+        active_offers = [o for o in self.db.list_offers() if o.status == OfferStatus.ACTIVE.value]
+        orders = self.db.get_orders_by_customer(customer.customer_id)
+        ordered_offer_ids = {o.offer_id for o in orders if o.status != OrderStatus.CANCELLED.value}
+        unordered = sorted(
+            [o for o in active_offers if o.offer_id not in ordered_offer_ids],
+            key=lambda o: o.name.lower()
+        )
+
+        is_self = customer.telegram_user_id == caller_user_id
+        customer_name = f"{customer.first_name} {customer.last_name or ''}".strip()
+
+        if not unordered:
+            key = 'fomo_none' if is_self else 'fomo_none_for_user'
+            self._send_message(chat_id, self._t(key, caller_user_id, name=customer_name))
+            return {'status': 'success'}
+
+        active_discount = self.db.get_active_discount()
+        header_key = 'fomo_header' if is_self else 'fomo_header_for_user'
+        message = self._t(header_key, caller_user_id, name=customer_name) + '\n\n'
+        for offer in unordered:
+            offer_display = self._apply_discount_to_offer(offer, active_discount)
+            message += self._format_offer_line(offer_display, '🍺', caller_user_id)
+
+        self._send_message(chat_id, message, parse_mode='HTML')
+        return {'status': 'success'}
+
     def handle_subscribe(self, chat_id: int, user_id: int) -> Dict[str, Any]:
         """Handle /subscribe command"""
         customer, error = self._validate_customer(chat_id, user_id)

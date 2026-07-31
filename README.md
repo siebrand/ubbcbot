@@ -204,6 +204,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/start` - Register and view help
 - `/help [section]` - Show help for specific section (general, orders)
 - `/cancel` - Cancel pending operation (e.g., text input prompts)
+- `/fomo` - View active offers you haven't ordered yet
 - `/create_order <offer_id> [quantity]` - Place order (alias: /order)
 - `/confirm_order <offer_id> <quantity>` - Confirm duplicate order
 - `/list_my_orders [id]` - View personal orders (alias: /my_orders)
