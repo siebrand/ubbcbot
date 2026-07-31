@@ -130,7 +130,7 @@ class WholesalerDeliveryService:
                     received_quantity=0,
                     unit_price=order.unit_price,
                     total_price=order.unit_price * (order.quantity - remaining_to_allocate),
-                    status=OrderStatus.CANCELLED_UNAVAILABLE.value,
+                    status=OrderStatus.CANCELLED.value,
                     placed_by_admin=order.placed_by_admin
                 )
                 self.db.create_order(cancelled_order, admin_id=self.admin_user_id)

@@ -353,7 +353,7 @@
   "box_delivery_triage": "📦 Box {box_id} Delivery Triage\n\n📊 Total Units: {total_units}\n📋 Orders: {order_count}\n\nChoose delivery status:",
   "full_delivery_processed": "✅ Full delivery processed for box {box_id}\nAll orders set to READY_FOR_LABELING",
   "delayed_delivery_processed": "⏳ Delayed delivery processed for box {box_id}\nAll orders set to RECEIVED_PARTIAL_DELAYED\nCustomers will be notified",
-  "cancelled_delivery_processed": "❌ Cancelled delivery processed for box {box_id}\nAll orders set to CANCELLED_UNAVAILABLE\nCustomers will be notified",
+  "cancelled_delivery_processed": "❌ Cancelled delivery processed for box {box_id}\nAll orders set to CANCELLED\nCustomers will be notified",
   "delivery_processing_failed": "❌ Delivery processing failed",
   "enter_received_quantity": "📝 Enter number of units received (max {total_units}):",
   "invalid_quantity_range": "❌ Invalid quantity. Must be between 0 and {max_units}",

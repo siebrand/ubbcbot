@@ -25,7 +25,6 @@ class OrderStatus(Enum):
     PENDING = "pending"
     ORDERED = "ordered"
     RECEIVED_PARTIAL_DELAYED = "received_partial_delayed"
-    CANCELLED_UNAVAILABLE = "cancelled_unavailable"
     READY_FOR_LABELING = "ready_for_labeling"
     LABELING_COMPLETED = "labeling_completed"
     AWAITING_PAYMENT = "awaiting_payment"

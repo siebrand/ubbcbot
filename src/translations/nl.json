@@ -353,7 +353,7 @@
   "box_delivery_triage": "📦 colli {box_id} Levering Triage\n\n📊 Totaal Eenheden: {total_units}\n📋 Bestellingen: {order_count}\n\nKies leveringsstatus:",
   "full_delivery_processed": "✅ Volledige levering verwerkt voor colli {box_id}\nAlle bestellingen ingesteld op KLAAR_VOOR_LABELING",
   "delayed_delivery_processed": "⏳ Vertraagde levering verwerkt voor colli {box_id}\nAlle bestellingen ingesteld op ONTVANGEN_GEDEELTELIJK_VERTRAAGD\nKlanten worden geïnformeerd",
-  "cancelled_delivery_processed": "❌ Geannuleerde levering verwerkt voor colli {box_id}\nAlle bestellingen ingesteld op GEANNULEERD_NIET_BESCHIKBAAR\nKlanten worden geïnformeerd",
+  "cancelled_delivery_processed": "❌ Geannuleerde levering verwerkt voor colli {box_id}\nAlle bestellingen ingesteld op GEANNULEERD\nKlanten worden geïnformeerd",
   "delivery_processing_failed": "❌ Leveringsverwerking mislukt",
   "enter_received_quantity": "📝 Voer aantal ontvangen eenheden in (max {total_units}):",
   "invalid_quantity_range": "❌ Ongeldig aantal. Moet tussen 0 en {max_units} zijn",
