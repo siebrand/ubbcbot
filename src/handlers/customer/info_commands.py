@@ -181,8 +181,8 @@ class InfoCommands(BaseHandler):
         """Handle /fomo command"""
         if args and self._is_admin(user_id):
             identifier = ' '.join(args)
-            customer = self._find_customer_with_disambiguation(identifier, chat_id, 'fomo_user_select')
-            if customer is None:
+            customer, error = self._find_customer_with_disambiguation(identifier, chat_id, 'fomo_user_select')
+            if error:
                 return {'status': 'disambiguation_or_not_found'}
             return self._show_fomo(chat_id, user_id, customer)
 
