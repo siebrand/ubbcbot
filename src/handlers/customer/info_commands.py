@@ -568,17 +568,6 @@ class InfoCommands(BaseHandler):
             else:
                 self._send_offer_view(chat_id, offer, user_id)
             
-            # Add admin action buttons for draft offers
-            if self._is_admin(user_id) and offer.status == OfferStatus.DRAFT.value:
-                keyboard = {
-                    "inline_keyboard": [
-                        [{"text": self._t('edit_details'), "callback_data": f"view_offer_{offer_id}_edit"}],
-                        [{"text": self._t('publish_offer_btn'), "callback_data": f"publish_offer_{offer_id}"}],
-                        [{"text": self._t('cancel'), "callback_data": "cancel_action"}]
-                    ]
-                }
-                self._send_message(chat_id, self._t('choose_action'), reply_markup=keyboard)
-            
             return {'status': 'success'}
             
         except ValueError:
@@ -697,6 +686,14 @@ class InfoCommands(BaseHandler):
                         ]
                     ]
                 }
+        elif is_admin and offer.status == OfferStatus.DRAFT.value:
+            # Draft preview: single message with the distinct draft actions
+            reply_markup = {
+                "inline_keyboard": [
+                    [{"text": self._t('edit_details'), "callback_data": f"view_offer_{offer.offer_id}_edit"}],
+                    [{"text": self._t('publish_offer_btn'), "callback_data": f"publish_offer_{offer.offer_id}"}]
+                ]
+            }
         elif is_admin:
             # Add edit button for admins on non-active offers
             reply_markup = {
