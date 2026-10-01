@@ -1,4 +1,5 @@
 from typing import Optional, List, Dict, Any
+from datetime import datetime
 from boto3.dynamodb.conditions import Key
 from repositories.base_repository import BaseRepository
 from models.entities import Box
@@ -44,10 +45,21 @@ class BoxRepository(BaseRepository):
                 if 'max_capacity' in item:
                     item['max_capacity'] = int(item['max_capacity'])
                 boxes.append(Box(**item))
+            # Always return boxes in creation-time ascending order.
+            # created_at is stored as an ISO 8601 string (lexicographically
+            # sortable); normalize to string so a mix of str/datetime is safe.
+            boxes.sort(key=lambda b: self._created_at_sort_key(b.created_at))
             return boxes
         except Exception as e:
             print(f"Error getting boxes by offer: {e}")
             return []
+
+    @staticmethod
+    def _created_at_sort_key(created_at: Any) -> str:
+        """Normalize created_at (str or datetime) to a sortable ISO string."""
+        if isinstance(created_at, datetime):
+            return created_at.isoformat()
+        return str(created_at) if created_at is not None else ""
 
     def get_all_boxes(self) -> List[Box]:
         """Scan all boxes with minimal fields"""

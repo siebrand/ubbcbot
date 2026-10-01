@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from datetime import datetime
 from models.entities import Box, BoxStatus, OfferStatus
 from .base import OfferBaseHandler
 from services.box_status_manager import BoxStatusManager
@@ -114,9 +115,18 @@ class BoxManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t('no_boxes_found', chat_id, status=status_filter))
             return {'status': 'no_boxes'}
         
-        # Sort: by offer_id, then by status priority (ordered > full > open), then by box_id
+        # Sort: by offer_id, then by status priority (ordered > full > open), then by creation time ascending.
+        # created_at is stored as an ISO 8601 string (lexicographically sortable); normalize to a string
+        # so a mix of str/datetime values sorts safely.
         status_priority = {BoxStatus.ORDERED.value: 0, BoxStatus.FULL.value: 1, BoxStatus.OPEN.value: 2, BoxStatus.DELIVERED.value: 3}
-        offer_boxes.sort(key=lambda x: (x[0].offer_id, status_priority.get(x[1].status, 99), x[1].box_id))
+
+        def _created_at_key(b):
+            created_at = b.created_at
+            if isinstance(created_at, datetime):
+                return created_at.isoformat()
+            return str(created_at) if created_at is not None else ""
+
+        offer_boxes.sort(key=lambda x: (x[0].offer_id, status_priority.get(x[1].status, 99), _created_at_key(x[1])))
         
         # Paginate results
         page_items, total_pages = self._paginate_list(offer_boxes, page, 10)
