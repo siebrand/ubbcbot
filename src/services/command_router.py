@@ -23,7 +23,7 @@ class CommandRouter:
         """Check if user is admin"""
         return user_id == self.admin_user_id
 
-    def route_command(self, chat_id: int, user_id: int, text: str) -> Dict[str, Any]:
+    def route_command(self, chat_id: int, user_id: int, text: str, message_id: int = None) -> Dict[str, Any]:
         """Route commands to appropriate handlers"""
         parts = text.split()
         command = parts[0].lower()
@@ -39,9 +39,10 @@ class CommandRouter:
         if command_name in self.PERMANENT_ALIASES:
             command = '/' + self.PERMANENT_ALIASES[command_name]
         
-        # In production, redirect group commands to PM (except group-specific ones)
+        # In production, redirect group commands to PM (except group-specific ones).
+        # /fomo is handled specially for groups below (react 👍 + reply in 1:1).
         is_group_chat = chat_id < 0
-        group_allowed_commands = {'/start', '/order', '/confirm_order'}
+        group_allowed_commands = {'/start', '/order', '/confirm_order', '/fomo'}
         
         if (self.environment == 'prod' and is_group_chat and 
             command not in group_allowed_commands):
@@ -62,6 +63,13 @@ class CommandRouter:
                     target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
                     base_handler._send_message(target_chat, base_handler._t('unauthorized'))
                     return {'status': 'unauthorized'}
+
+        # /fomo in a group (by a registered, approved user): react 👍 on the
+        # triggering message and send the fomo output to the user in 1:1.
+        if command == '/fomo' and is_group_chat:
+            if message_id is not None:
+                self.handlers['info']._set_message_reaction(chat_id, message_id, '👍')
+            return self.handlers['info'].handle_fomo(user_id, user_id, parts[1:] or None)
 
         # Handle deep link start parameters
         if command == '/start' and len(parts) > 1:

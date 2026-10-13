@@ -201,6 +201,27 @@ class TestCommandRouting:
         router.route_command(12345, 12345, command)
         getattr(mock_handlers[handler], method).assert_called_once()
     
+    def test_fomo_in_group_reacts_and_routes_to_pm(self, router, mock_handlers):
+        """/fomo in a group reacts 👍 on the message and sends fomo to the user in 1:1"""
+        group_chat_id = -1001234567890
+        user_id = 12345
+        message_id = 777
+
+        router.route_command(group_chat_id, user_id, '/fomo', message_id)
+
+        # Reaction set on the triggering message in the group
+        mock_handlers['info']._set_message_reaction.assert_called_once_with(group_chat_id, message_id, '👍')
+        # fomo output routed to the user's 1:1 chat (chat_id == user_id)
+        mock_handlers['info'].handle_fomo.assert_called_once_with(user_id, user_id, None)
+
+    def test_fomo_in_private_chat_no_reaction(self, router, mock_handlers):
+        """/fomo in a private chat does not set a reaction and routes normally"""
+        private_chat_id = 12345
+        router.route_command(private_chat_id, 12345, '/fomo', 999)
+
+        mock_handlers['info']._set_message_reaction.assert_not_called()
+        mock_handlers['info'].handle_fomo.assert_called_once()
+    
     # Test 19: All Admin Commands Route Correctly
     @pytest.mark.parametrize("command,handler,method", [
         ('/create_supplier Test', 'supplier', 'handle_create_supplier'),

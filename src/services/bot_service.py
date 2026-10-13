@@ -149,6 +149,7 @@ class BotService:
             message = update['message']
             chat_id = message['chat']['id']
             user_id = message['from']['id']
+            message_id = message.get('message_id')
             text = message.get('text', '')
             username = message['from'].get('username', 'N/A')
             first_name = message['from'].get('first_name', 'N/A')
@@ -171,7 +172,7 @@ class BotService:
 
             # Handle commands
             if text.startswith('/'):
-                return self.command_router.route_command(chat_id, user_id, text)
+                return self.command_router.route_command(chat_id, user_id, text, message_id)
             
             # Handle edit replies (when user responds to force reply)
             context = self.db.get_edit_context_by_chat_id(chat_id)

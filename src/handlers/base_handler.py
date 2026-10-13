@@ -161,6 +161,28 @@ class BaseHandler:
             logger.error(f"Error deleting message: {e}")
             return False
 
+    def _set_message_reaction(self, chat_id: int, message_id: int, emoji: str = "👍") -> bool:
+        """Set an emoji reaction on a Telegram message (e.g. 👍). Returns success."""
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
+            return False
+
+        url = f"https://api.telegram.org/bot{self.telegram_token}/setMessageReaction"
+        data = {
+            'chat_id': chat_id,
+            'message_id': message_id,
+            'reaction': [{'type': 'emoji', 'emoji': emoji}]
+        }
+
+        try:
+            response = requests.post(url, json=data, timeout=20)
+            if response.status_code != 200:
+                logger.error(f"Failed to set reaction: status {response.status_code}, response {response.text}")
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Error setting message reaction: {e}")
+            return False
+
     def _send_message_simple(self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False) -> bool:
         """Send message and return simple boolean for backward compatibility"""
         result = self._send_message(chat_id, text, parse_mode, reply_markup, force_group)
