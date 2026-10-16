@@ -20,11 +20,13 @@ updates:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
     groups:
-      # One grouped PR for routine minor/patch bumps to reduce noise;
-      # major version bumps still get individual PRs for careful review.
-      python-minor-patch:
+      # Single grouped PR covering all dependency updates for this ecosystem.
+      src-dependencies:
         applies-to: version-updates
+        patterns:
+          - "*"
         update-types:
+          - "major"
           - "minor"
           - "patch"
 
@@ -45,9 +47,12 @@ updates:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
     groups:
-      test-minor-patch:
+      test-dependencies:
         applies-to: version-updates
+        patterns:
+          - "*"
         update-types:
+          - "major"
           - "minor"
           - "patch"
 
@@ -67,9 +72,12 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
-      scripts-minor-patch:
+      scripts-dependencies:
         applies-to: version-updates
+        patterns:
+          - "*"
         update-types:
+          - "major"
           - "minor"
           - "patch"
 
@@ -90,6 +98,9 @@ updates:
     groups:
       github-actions:
         applies-to: version-updates
+        patterns:
+          - "*"
         update-types:
+          - "major"
           - "minor"
           - "patch"
