@@ -303,7 +303,11 @@ class CallbackHandler:
             router_handled = self.router.dispatch(data, context)
             
             # Determine if we should remove the keyboard
-            if self._should_remove_keyboard(data):
+            if data.startswith('process_payment_'):
+                # Payment name-button click: remove the stale list message entirely
+                # (text + buttons), since the handler re-renders a fresh list below.
+                self._delete_message(chat_id, message_id)
+            elif self._should_remove_keyboard(data):
                 self._edit_message_remove_keyboard(chat_id, message_id)
             
             # If router handled it, return early
@@ -502,6 +506,20 @@ class CallbackHandler:
             return response.status_code == 200
         except Exception as e:
             logger.error(f"Error removing keyboard: {e}")
+            return False
+
+    def _delete_message(self, chat_id: int, message_id: int) -> bool:
+        """Delete a message entirely (both text and keyboard)"""
+        try:
+            url = f"https://api.telegram.org/bot{self.telegram_token}/deleteMessage"
+            data = {
+                'chat_id': chat_id,
+                'message_id': message_id
+            }
+            response = requests.post(url, json=data, timeout=20)
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Error deleting message: {e}")
             return False
     
     def _handle_process_delivery_callbacks(self, chat_id: int, user_id: int, data: str) -> Dict[str, Any]:

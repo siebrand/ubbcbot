@@ -5,40 +5,41 @@ Tests the ACTUAL CallbackHandler code - callback parsing, authorization, and rou
 Complements test_command_routing.py for comprehensive coverage.
 """
 
-import sys
 import os
+import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from services.callback_handler import CallbackHandler
 
 
 class TestCallbackRouting:
     """Test actual callback routing logic"""
-    
+
     @pytest.fixture
     def mock_db(self):
         """Mock database"""
         db = Mock()
         db.get_edit_context_by_chat_id.return_value = None
         return db
-    
+
     @pytest.fixture
     def mock_handlers(self):
         """Mock handlers - track which handler methods are called"""
         handlers = {}
-        for name in ['info', 'customer_order', 'admin_order', 'supplier', 'offer', 
-                     'user', 'discount', 'wholesale_delivery', 'labeling', 
+        for name in ['info', 'customer_order', 'admin_order', 'supplier', 'offer',
+                     'user', 'discount', 'wholesale_delivery', 'labeling',
                      'admin_commands', 'delivery_overview', 'import', 'test', 'credit']:
             handlers[name] = Mock()
         return handlers
-    
+
     @pytest.fixture
     def mock_media_handler(self):
         """Mock media handler"""
         return Mock()
-    
+
     @pytest.fixture
     def callback_handler(self, mock_db, mock_handlers, mock_media_handler):
         """Create actual CallbackHandler instance"""
@@ -50,7 +51,7 @@ class TestCallbackRouting:
             handlers=mock_handlers,
             media_handler=mock_media_handler
         )
-    
+
     def _create_callback_query(self, data: str, user_id: int = 12345, chat_id: int = 12345):
         """Helper to create callback query dict"""
         return {
@@ -59,7 +60,7 @@ class TestCallbackRouting:
             'message': {'chat': {'id': chat_id}, 'message_id': 456},
             'data': data
         }
-    
+
     # Test 1: Admin Panel Callbacks
     @pytest.mark.parametrize("callback_data,expected_method", [
         ('admin:main', 'handle_admin'),
@@ -76,7 +77,7 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         getattr(mock_handlers['admin_commands'], expected_method).assert_called_once()
-    
+
     # Test 2: Command Callbacks with New Names
     @pytest.mark.parametrize("callback_data,handler,method", [
         ('cmd:create_supplier', 'supplier', 'handle_create_supplier'),
@@ -101,13 +102,13 @@ class TestCallbackRouting:
         """Test command callbacks with new command names route correctly"""
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
-        
+
         if method == '_start_user_orders_input' or method == '_send_usage_message':
             # These are internal methods on callback_handler, not handlers
             assert True  # Just verify no exception
         else:
             getattr(mock_handlers[handler], method).assert_called()
-    
+
     # Test 3: Pagination Callbacks - New Multi-Word Commands
     @pytest.mark.parametrize("callback_data,expected_page", [
         ('page_process_payment_2', 2),
@@ -120,7 +121,7 @@ class TestCallbackRouting:
         mock_handlers['admin_order'].handle_process_payment.assert_called_once()
         call_args = mock_handlers['admin_order'].handle_process_payment.call_args[0]
         assert call_args[2] == expected_page
-    
+
     # Test 4: Pagination Callbacks - Legacy Support
     @pytest.mark.parametrize("callback_data,expected_page", [
         ('page_process_payment_1', 1),
@@ -133,7 +134,7 @@ class TestCallbackRouting:
         mock_handlers['admin_order'].handle_process_payment.assert_called_once()
         call_args = mock_handlers['admin_order'].handle_process_payment.call_args[0]
         assert call_args[2] == expected_page
-    
+
     # Test 5: Pagination - Standard Single-Word Commands
     @pytest.mark.parametrize("callback_data,handler,method,expected_page", [
         ('page_suppliers_2', 'supplier', 'handle_list_suppliers', 2),
@@ -142,11 +143,12 @@ class TestCallbackRouting:
         ('page_guests_2', 'user', 'handle_list_guests', 2),
         ('page_changelog_3', 'changelog', 'handle_changelog', 3),
     ])
-    def test_pagination_standard_commands(self, callback_handler, mock_handlers, callback_data, handler, method, expected_page):
+    def test_pagination_standard_commands(self, callback_handler, mock_handlers, callback_data, handler, method,
+                                          expected_page):
         """Test pagination for standard single-word commands"""
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
-        
+
         if handler == 'changelog':
             # Changelog not in mock_handlers, skip
             pass
@@ -154,7 +156,7 @@ class TestCallbackRouting:
             getattr(mock_handlers[handler], method).assert_called()
             call_args = getattr(mock_handlers[handler], method).call_args[0]
             assert call_args[1] == expected_page
-    
+
     # Test 6: Order Callbacks
     @pytest.mark.parametrize("callback_data", [
         'order_123_2',
@@ -165,7 +167,7 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data)
         callback_handler.handle_callback_query(query)
         mock_handlers['customer_order'].handle_create_order.assert_called_once()
-    
+
     # Test 7: Confirm Order Callbacks (Phase 2)
     @pytest.mark.parametrize("callback_data", [
         'confirm_order_123_2',
@@ -176,7 +178,7 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data)
         callback_handler.handle_callback_query(query)
         mock_handlers['customer_order'].handle_confirm_order.assert_called_once()
-    
+
     # Test 7a: Cancel Patterns (Phase 2)
     @pytest.mark.parametrize("callback_data,handler,method", [
         ('cancel_order_user_select_customer123', 'admin_order', 'handle_cancel_order_user_select'),
@@ -189,10 +191,10 @@ class TestCallbackRouting:
         """Test cancel patterns route correctly (Phase 2)"""
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
-        
+
         if handler and method:
             getattr(mock_handlers[handler], method).assert_called_once()
-    
+
     # Test 7b: Confirm Patterns (Phase 2)
     @pytest.mark.parametrize("callback_data,handler,method", [
         ('confirm_process_wholesale_123_6', 'offer', 'handle_confirm_process_wholesale'),
@@ -205,7 +207,7 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         getattr(mock_handlers[handler], method).assert_called_once()
-    
+
     # Test 8: Wholesale Delivery Callbacks
     @pytest.mark.parametrize("callback_data", [
         'wd_sup:supplier123',
@@ -220,7 +222,7 @@ class TestCallbackRouting:
         assert mock_handlers['wholesale_delivery'].handle_supplier_selection.called or \
                mock_handlers['wholesale_delivery'].handle_offer_selection.called or \
                mock_handlers['wholesale_delivery'].handle_box_selection.called
-    
+
     # Test 9: Labeling Completion Callbacks
     @pytest.mark.parametrize("callback_data", [
         'lc_sup:supplier123',
@@ -235,7 +237,7 @@ class TestCallbackRouting:
         assert mock_handlers['labeling'].handle_supplier_selection.called or \
                mock_handlers['labeling'].handle_offer_selection.called or \
                mock_handlers['labeling'].handle_box_selection.called
-    
+
     # Test 10: Export Orders Callbacks
     @pytest.mark.parametrize("callback_data,expected_filter", [
         ('export_orders_active', 'active'),
@@ -250,7 +252,7 @@ class TestCallbackRouting:
         mock_handlers['admin_order'].handle_export_orders_callback.assert_called_once()
         call_args = mock_handlers['admin_order'].handle_export_orders_callback.call_args[0]
         assert call_args[1] == expected_filter
-    
+
     # Test 11: User Approval Callbacks (Phase 1 & 2)
     @pytest.mark.parametrize("callback_data", [
         'approve_user_customer123',
@@ -261,14 +263,14 @@ class TestCallbackRouting:
         """Test user approval/rejection callbacks (Phase 1 & 2)"""
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
-        
+
         if 'approve_user_select' in callback_data:
             mock_handlers['user'].handle_approve_user_select.assert_called_once()
         elif 'approve' in callback_data:
             mock_handlers['user'].handle_approve_user_by_id.assert_called_once()
         else:
             mock_handlers['user'].handle_reject_user_by_id.assert_called_once()
-    
+
     # Test 12: Offer Details Callbacks
     @pytest.mark.parametrize("callback_data", [
         'view_offer_123',
@@ -279,18 +281,18 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         mock_handlers['info'].handle_view_offer.assert_called_once()
-    
-# Test 14: Non-Admin Blocked from Admin Callbacks
+
+    # Test 14: Non-Admin Blocked from Admin Callbacks
     def test_non_admin_blocked_from_admin_callbacks(self, callback_handler, mock_handlers):
         """Test that non-admin users cannot access admin callbacks"""
         # Mock both _send_message and _t to avoid translation issues
         callback_handler._send_message = Mock(return_value={'status': 'sent'})
         callback_handler._t = Mock(return_value='Admin only')
-        
+
         query = self._create_callback_query('admin:main', user_id=12345)
         result = callback_handler.handle_callback_query(query)
         assert result['status'] == 'unauthorized'
-    
+
     # Test 15: Keyboard Removal Logic
     @pytest.mark.parametrize("callback_data,should_keep_keyboard", [
         ('page_suppliers_2', True),  # Pagination keeps keyboard
@@ -305,14 +307,14 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         # Mock the _edit_message_remove_keyboard method to track calls
         callback_handler._edit_message_remove_keyboard = Mock(return_value=True)
-        
+
         callback_handler.handle_callback_query(query)
-        
+
         if should_keep_keyboard:
             callback_handler._edit_message_remove_keyboard.assert_not_called()
         else:
             callback_handler._edit_message_remove_keyboard.assert_called_once()
-    
+
     # Test 16: Edit Patterns (Phase 3 Batch A)
     @pytest.mark.parametrize("callback_data,handler,method", [
         ('edit_user_select_customer123', 'user', 'handle_edit_user_select'),
@@ -323,7 +325,7 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         getattr(mock_handlers[handler], method).assert_called_once()
-    
+
     # Test 16a: Generic Edit Pattern
     def test_generic_edit_pattern(self, callback_handler):
         """Test generic edit pattern delegates to _handle_edit_callbacks"""
@@ -332,7 +334,7 @@ class TestCallbackRouting:
         callback_handler._handle_edit_callbacks = Mock(return_value={'status': 'handled'})
         callback_handler.handle_callback_query(query)
         callback_handler._handle_edit_callbacks.assert_called_once()
-    
+
     # Test 17: Order Patterns (Phase 3 Batch B)
     @pytest.mark.parametrize("callback_data,handler,method", [
         ('order_for_quantity_cust123_456_5', 'admin_order', 'handle_create_order_for_quantity_select'),
@@ -346,7 +348,7 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         getattr(mock_handlers[handler], method).assert_called_once()
-    
+
     # Test 18: Offer/Supplier Patterns (Phase 3 Batch C)
     @pytest.mark.parametrize("callback_data,handler,method", [
         ('wholesale_select_123', 'offer', 'handle_process_wholesale'),
@@ -361,7 +363,7 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         getattr(mock_handlers[handler], method).assert_called_once()
-    
+
     # Test 19: User/Status Patterns (Phase 3 Batch D)
     @pytest.mark.parametrize("callback_data,handler,method", [
         ('user_orders_select_cust123', 'admin_order', 'handle_list_user_orders_select'),
@@ -373,7 +375,7 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         getattr(mock_handlers[handler], method).assert_called_once()
-    
+
     # Test 20: Audit Patterns (Phase 3 Batch E)
     @pytest.mark.parametrize("callback_data,method", [
         ('audit_offer_123', '_execute_audit_offer'),
@@ -388,7 +390,7 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         getattr(mock_handlers['offer'], method).assert_called_once()
-    
+
     # Test 21: Delivery/Export Patterns (Phase 3 Batch F)
     @pytest.mark.parametrize("callback_data,handler,method", [
         ('export_orders_active', 'admin_order', 'handle_export_orders_callback'),
@@ -401,7 +403,30 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         getattr(mock_handlers[handler], method).assert_called_once()
-    
+
+    def test_process_payment_click_deletes_message(self, callback_handler, mock_handlers):
+        """Clicking a payment name button deletes the stale list message (text + keyboard)"""
+        callback_handler._delete_message = Mock(return_value=True)
+        callback_handler._edit_message_remove_keyboard = Mock(return_value=True)
+
+        query = self._create_callback_query('process_payment_cust456_1', user_id=15005473)
+        callback_handler.handle_callback_query(query)
+
+        # Original list message is deleted, not just stripped of its keyboard
+        callback_handler._delete_message.assert_called_once_with(12345, 456)
+        callback_handler._edit_message_remove_keyboard.assert_not_called()
+
+    def test_non_payment_callback_strips_keyboard(self, callback_handler, mock_handlers):
+        """Non-payment callbacks still only remove the keyboard, not the message"""
+        callback_handler._delete_message = Mock(return_value=True)
+        callback_handler._edit_message_remove_keyboard = Mock(return_value=True)
+
+        query = self._create_callback_query('cmd:process_payment', user_id=15005473)
+        callback_handler.handle_callback_query(query)
+
+        callback_handler._edit_message_remove_keyboard.assert_called_once_with(12345, 456)
+        callback_handler._delete_message.assert_not_called()
+
     # Test 22: Navigation Patterns (Phase 3 Batch G - FINAL)
     @pytest.mark.parametrize("callback_data,handler,method", [
         ('back_to_supplier_list', 'supplier', 'handle_list_suppliers'),
@@ -412,7 +437,7 @@ class TestCallbackRouting:
         query = self._create_callback_query(callback_data, user_id=15005473)
         callback_handler.handle_callback_query(query)
         getattr(mock_handlers[handler], method).assert_called_once()
-    
+
     # Test 23: Unknown Callback Handling
     def test_unknown_callback_returns_status(self, callback_handler):
         """Test that unknown callbacks return unknown_callback status"""
