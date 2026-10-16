@@ -219,7 +219,7 @@ class DeliveryOverviewHandler(BaseHandler):
                 message += f"- {order.quantity}x {offer_name} — €{order.total_price:.2f}\n"
             
             message += "\n" + self._t('total_amount_bold', user_id=customer.telegram_user_id, total=delivered_total) + "\n\n"
-            message += self._t('pay_via_tikkie', user_id=customer.telegram_user_id, link=payment_link, total=delivered_total) + "\n"
+            message += self._t('pay_via_payment_request', user_id=customer.telegram_user_id, link=payment_link, total=delivered_total) + "\n"
             message += "━━━━━━━━━━━━━━━━━━━━\n"
             message += self._t('pickup_location_bold', user_id=customer.telegram_user_id, location=customer.location) + "\n"
             message += "━━━━━━━━━━━━━━━━━━━━\n"

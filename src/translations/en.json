@@ -603,7 +603,7 @@
   "delivery_ready_intro": "Your order is labeled and ready for pickup. Please complete the payment via the link below before heading over.",
   "order_summary_title": "<b>Order Summary:</b>",
   "total_amount_bold": "<b>💰 Total Amount: €{total:.2f}</b>",
-  "pay_via_tikkie": "<b>Pay via Tikkie:</b> 📲 {link} (Note: Please manually enter the amount of €{total:.2f})",
+  "pay_via_payment_request": "<b>Pay via payment request:</b> 📲 {link} (Note: Please manually enter the amount of €{total:.2f})",
   "pickup_location_bold": "<b>📍 Pickup Location:</b> {location}",
   "questions_contact": "Any questions? Feel free to reach out to me.",
   "credit_issued_success": "✅ Credit issued: €{amount:.2f} to {customer_name}",
