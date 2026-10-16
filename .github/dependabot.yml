@@ -1,5 +1,6 @@
 # Dependabot configuration for UBBC Bot
 # Keeps Python dependencies and GitHub Actions up to date.
+# Updates are grouped into a single PR per ecosystem (see groups: below).
 # Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
 
