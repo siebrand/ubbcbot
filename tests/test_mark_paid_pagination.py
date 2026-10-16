@@ -23,7 +23,13 @@ class TestMarkPaidPagination:
             telegram_token='test_token'
         )
         handler._send_message = Mock()
-        handler._t = Mock(side_effect=lambda key, **kwargs: key)
+
+        def fake_t(key, user_id=None, **kwargs):
+            if key == 'customers_awaiting_payment_title':
+                return f"Customers Awaiting Payment - Page {kwargs.get('page')}/{kwargs.get('total_pages')}:"
+            return key
+
+        handler._t = Mock(side_effect=fake_t)
         return handler
     
     def test_mark_paid_no_customers(self, handler, mock_db):
@@ -75,16 +81,14 @@ class TestMarkPaidPagination:
         reply_markup = call_args[1]['reply_markup']
         
         assert 'Page 1/1' in message
-        for i in range(5):
-            assert f'First{i}' in message
-        
-        # Verify button text format: ✓ Last, First €amount
+
+        # Verify button text format: ✓ Last, First €amount (N)
         buttons = reply_markup['inline_keyboard']
         # 5 customer buttons + 1 Done button
         assert len(buttons) == 6
         for i in range(5):
             button_text = buttons[i][0]['text']
-            assert button_text == f'✓ Last{i}, First{i} €20.00'
+            assert button_text == f'✓ Last{i}, First{i} €20.00 (1)'
         # Verify Done button
         assert buttons[5][0]['callback_data'] == 'cancel_action'
     
@@ -127,12 +131,13 @@ class TestMarkPaidPagination:
         reply_markup = call_args[1]['reply_markup']
         
         assert 'Page 1/3' in message
-        # Should show first 10 customers (00-09)
+        # Should show first 10 customers (00-09) on buttons
+        button_texts = ' '.join(row[0]['text'] for row in reply_markup['inline_keyboard'])
         for i in range(10):
-            assert f'First{i:02d}' in message
+            assert f'First{i:02d}' in button_texts
         # Should not show customer 10+
-        assert 'First10' not in message
-        
+        assert 'First10' not in button_texts
+
         # Verify pagination keyboard exists
         assert 'inline_keyboard' in reply_markup
         # 10 customer buttons + pagination row + Done button
@@ -171,14 +176,16 @@ class TestMarkPaidPagination:
         
         call_args = handler._send_message.call_args
         message = call_args[0][1]
-        
+        reply_markup = call_args[1]['reply_markup']
+
         assert 'Page 2/3' in message
-        # Should show customers 10-19
+        # Should show customers 10-19 on buttons
+        button_texts = ' '.join(row[0]['text'] for row in reply_markup['inline_keyboard'])
         for i in range(10, 20):
-            assert f'First{i:02d}' in message
+            assert f'First{i:02d}' in button_texts
         # Should not show customers 0-9 or 20+
-        assert 'First09' not in message
-        assert 'First20' not in message
+        assert 'First09' not in button_texts
+        assert 'First20' not in button_texts
     
     def test_mark_paid_with_multiple_orders(self, handler, mock_db):
         """Test mark_paid calculates total correctly for multiple orders"""
@@ -217,13 +224,8 @@ class TestMarkPaidPagination:
         result = handler.handle_process_payment(123, [], page=1)
         
         call_args = handler._send_message.call_args
-        message = call_args[0][1]
         reply_markup = call_args[1]['reply_markup']
-        
-        # Should show total of both orders
-        assert '€50.00' in message
-        assert '(2 orders)' in message
-        
-        # Verify button text format
+
+        # Button shows the combined total and order count
         button_text = reply_markup['inline_keyboard'][0][0]['text']
-        assert button_text == '✓ Doe, John €50.00'
+        assert button_text == '✓ Doe, John €50.00 (2)'

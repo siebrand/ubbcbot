@@ -382,6 +382,7 @@
   "all_overviews_sent": "🎉 All delivery overviews sent!\nTotal customers notified: {total_customers}",
   "all_overviews_queued": "🎉 All delivery overviews queued!\nTotal customers: {total_customers}\n\nMessages will be sent shortly. You'll be notified of any failures.",
   "customers_awaiting_payment": "💳 Customers Awaiting Payment:\n\n",
+  "customers_awaiting_payment_title": "💳 Customers Awaiting Payment - Page {page}/{total_pages}:",
   "payment_confirmed": "✅ Payment confirmed for {customer_name}\n{updated_count} orders marked as COMPLETED\nTotal: €{total_amount:.2f}",
   "payment_received_notification": "<b>✅ Payment Received!</b>\n\nThank you! Your payment of €{total_amount:.2f} has been received in good order. You are all set to pick up your order.\n━━━━━━━━━━━━━━━━━━━━\n📍 Pickup Location: {location}\n\n<b>See you soon! 👋</b>\n\nQuestions? Feel free to reach out to me.",
   "payment_reminder_title": "<b>🔔 Payment Reminder</b>",

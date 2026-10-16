@@ -71,19 +71,17 @@ class OrderStatusManagement(BaseOrderHandler):
         # Paginate results
         page_customers, total_pages = PaginationUtils.paginate_list(customers_awaiting_payment, page, 10)
         
-        # Show customers with payment buttons
-        message = f"💳 Customers Awaiting Payment - Page {page}/{total_pages}:\n\n"
+        # Show customers as buttons only (name + amount + order count on the button itself)
+        message = self._t('customers_awaiting_payment_title', user_id=None, page=page, total_pages=total_pages)
         keyboard_rows = []
         
         for customer, orders in page_customers:
-            customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t('unknown', user_id=None)
             total_amount = sum(order.total_price for order in orders)
-            message += f"👤 {customer_name}: €{total_amount:.2f} ({len(orders)} orders)\n"
             
-            # Button text: ✓ Last, First €amount
+            # Button text: ✓ Last, First €amount (N)
             last_name = customer.last_name or ''
             first_name = customer.first_name or self._t('unknown', user_id=None)
-            button_text = f"✓ {last_name}, {first_name} €{total_amount:.2f}".strip()
+            button_text = f"✓ {last_name}, {first_name} €{total_amount:.2f} ({len(orders)})".strip()
             keyboard_rows.append([{"text": button_text, "callback_data": f"process_payment_{customer.customer_id}_{page}"}])
         
         # Add pagination keyboard if needed
