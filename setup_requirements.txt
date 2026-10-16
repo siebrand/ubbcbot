@@ -1,3 +1,3 @@
-boto3==1.42.18
-botocore[crt]>=1.29.0
-telethon==1.42.0
+boto3==1.43.113
+botocore[crt]==1.43.114
+telethon==1.45.0
