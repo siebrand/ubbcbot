@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any
 from handlers.base_handler import BaseHandler
-from models.entities import Order, Box, BoxStatus, OfferStatus, OrderStatus
+from models.entities import Order, Box, BoxStatus, OfferStatus, OrderStatus, AuthorizationStatus
 from services.box_status_manager import BoxStatusManager
 
 logger = logging.getLogger()
@@ -101,7 +101,12 @@ class CustomerOrderCommands(BaseHandler):
         if not customer:
             self._send_message(chat_id, self._t('customer_not_found', user_id))
             return None, None
-        
+
+        # Every entry point (command, deep link, button) must respect authorization
+        if not self._is_admin(user_id) and customer.authorization_status != AuthorizationStatus.APPROVED.value:
+            self._send_message(user_id, self._t('unauthorized', user_id))
+            return None, None
+
         return offer, customer
     
     def _check_order_limits(self, chat_id: int, customer_id: str, offer_id: int, quantity: int) -> bool:

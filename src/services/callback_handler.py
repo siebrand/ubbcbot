@@ -1,10 +1,26 @@
 import logging
-from typing import Dict, Any
+import re
+from typing import Dict, Any, Optional
 import requests
+from models.entities import AuthorizationStatus
 from utils.edit_context import EditContextManager
 from services.routing.callback_router import CallbackRouter
 
 logger = logging.getLogger()
+
+# Callbacks an approved customer may trigger. Every other callback is admin-only.
+# Callback data is client-supplied, so this allowlist is the authorization boundary.
+CUSTOMER_CALLBACK_PATTERN = re.compile(
+    r"^(?:order_\d+_\d+"
+    r"|confirm_order_\d+_\d+"
+    r"|view_offer_\d+(?:_edit)?"  # edit mode is gated by _is_admin in handle_view_offer
+    r"|cancel_confirmation"
+    r"|page_info"
+    r"|page_list_offers(?:_\w+)?_\d+"
+    r"|page_changelog_\d+"
+    r"|page_(?:list_)?my_orders_\d+_\d+"  # target user is checked in _route_pagination
+    r")$"
+)
 
 class CallbackHandler:
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str, handlers: Dict[str, Any], media_handler):
@@ -297,7 +313,12 @@ class CallbackHandler:
 
             # Answer the callback query to remove loading state
             self._answer_callback_query(query_id)
-            
+
+            # Authorize before routing or touching the keyboard of the clicked message
+            denied = self._authorize_callback(user_id, data)
+            if denied:
+                return denied
+
             # Try router first (Phase 3 complete: all patterns migrated)
             context = {'chat_id': chat_id, 'user_id': user_id, 'message_id': message_id}
             router_handled = self.router.dispatch(data, context)
@@ -334,6 +355,24 @@ class CallbackHandler:
             logger.error(f"Callback data was: {callback_query.get('data', 'NO_DATA')}")
             return {'status': 'error', 'error': str(e)}
     
+    def _authorize_callback(self, user_id: int, data: str) -> Optional[Dict[str, Any]]:
+        """Return an error result if user may not trigger this callback, None if allowed"""
+        if self._is_admin(user_id):
+            return None
+
+        if not CUSTOMER_CALLBACK_PATTERN.match(data):
+            logger.warning(f"Blocked admin-only callback from non-admin user {user_id}: {data}")
+            self._send_message(user_id, self._t('admin_only', user_id))
+            return {'status': 'unauthorized'}
+
+        customer = self.db.get_customer_by_telegram_id(user_id)
+        if not customer or customer.authorization_status != AuthorizationStatus.APPROVED.value:
+            logger.info(f"Blocked callback from unapproved user {user_id}: {data}")
+            self._send_message(user_id, self._t('unauthorized', user_id))
+            return {'status': 'unauthorized'}
+
+        return None
+
     def _should_remove_keyboard(self, data: str) -> bool:
         """Determine if keyboard should be removed after callback"""
         if data.startswith('page_') and data != 'page_info':
@@ -725,11 +764,11 @@ class CallbackHandler:
         self._send_message(chat_id, self._t(usage_key))
         return {'status': 'usage_sent'}
     
-    def _t(self, key: str, **params) -> str:
+    def _t(self, key: str, user_id: int = None, **params) -> str:
         """Translation helper for EditContextManager"""
         from handlers.base_handler import BaseHandler
         base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        return base_handler._t(key, **params)
+        return base_handler._t(key, user_id, **params)
     
     def _send_message(self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False) -> dict:
         """Send message helper for EditContextManager"""

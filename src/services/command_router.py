@@ -257,8 +257,8 @@ class CommandRouter:
     def _handle_cancel_command(self, chat_id: int, user_id: int) -> Dict[str, Any]:
         """Handle /cancel command to clear any pending edit contexts"""
         try:
-            # Check if user has any pending edit contexts
-            context = self.db.get_edit_context_by_chat_id(chat_id)
+            # Check if user has any pending edit contexts (only admin flows create them)
+            context = self.db.get_edit_context_by_chat_id(chat_id) if self._is_admin(user_id) else None
             if context:
                 # Store context info before deleting
                 edit_type = context.edit_type

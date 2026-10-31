@@ -96,6 +96,8 @@ aws ssm put-parameter \
     --type "SecureString"
 ```
 
+The webhook secret (`/ubbc-bot/{environment}/telegram-webhook-secret`) is generated automatically by `deploy.sh` on first deploy and passed to Telegram as `secret_token`. The webhook Lambda rejects (403) every request without a matching `X-Telegram-Bot-Api-Secret-Token` header. To rotate it, delete the parameter and redeploy.
+
 3. ✅**Deploy to test environment:**
 ```bash
 ./deploy.sh test
