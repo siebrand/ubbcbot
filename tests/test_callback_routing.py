@@ -23,6 +23,7 @@ class TestCallbackRouting:
         """Mock database"""
         db = Mock()
         db.get_edit_context_by_chat_id.return_value = None
+        db.get_customer_by_telegram_id.return_value = Mock(authorization_status='approved', language='nl')
         return db
 
     @pytest.fixture
@@ -444,6 +445,84 @@ class TestCallbackRouting:
         query = self._create_callback_query('unknown_callback_xyz', user_id=15005473)
         result = callback_handler.handle_callback_query(query)
         assert result['status'] == 'unknown_callback'
+
+    # Test 24: Admin-only callbacks are rejected for non-admins, before routing
+    @pytest.mark.parametrize("callback_data,handler,method", [
+        ('approve_user_customer123', 'user', 'handle_approve_user_by_id'),
+        ('reject_user_customer123', 'user', 'handle_reject_user_by_id'),
+        ('cancel_order_confirm_order456', 'admin_order', 'handle_cancel_order_by_id'),
+        ('confirm_cancel_offer_123', 'offer', 'handle_confirm_cancel_offer'),
+        ('order_for_quantity_customer123_42_3', 'admin_order', 'handle_create_order_for_quantity_select'),
+        ('export_orders_all', 'admin_order', 'handle_export_orders_callback'),
+        ('publish_offer_123', 'offer', 'handle_publish_offer'),
+        ('page_pending_1', 'user', 'handle_list_pending'),
+        ('page_customers_all_2', 'user', 'handle_list_users'),
+        ('wd_sup:abc', 'wholesale_delivery', 'handle_supplier_selection'),
+        ('cmd:list_users', 'user', 'handle_list_users'),
+    ])
+    def test_admin_callbacks_blocked_for_non_admin(self, callback_handler, mock_handlers, callback_data, handler, method):
+        """Callback data is client-supplied: approved customers must not reach admin handlers"""
+        callback_handler._answer_callback_query = Mock(return_value=True)
+        callback_handler._send_message = Mock(return_value={'success': True})
+        callback_handler._edit_message_remove_keyboard = Mock(return_value=True)
+        callback_handler._delete_message = Mock(return_value=True)
+
+        query = self._create_callback_query(callback_data, user_id=12345, chat_id=-100123)
+        result = callback_handler.handle_callback_query(query)
+
+        assert result['status'] == 'unauthorized'
+        getattr(mock_handlers[handler], method).assert_not_called()
+        # The clicked message (possibly the admin's, in a group) must be left untouched
+        callback_handler._edit_message_remove_keyboard.assert_not_called()
+        callback_handler._delete_message.assert_not_called()
+        # Rejection goes to the user privately, not to the group
+        callback_handler._send_message.assert_called_once()
+        assert callback_handler._send_message.call_args[0][0] == 12345
+
+    # Test 25: Unapproved users cannot use customer callbacks either
+    @pytest.mark.parametrize("status", ['unauthorized', 'rejected'])
+    @pytest.mark.parametrize("callback_data,method", [
+        ('order_123_2', 'handle_create_order'),
+        ('confirm_order_123_2', 'handle_confirm_order'),
+    ])
+    def test_customer_callbacks_blocked_for_unapproved(self, callback_handler, mock_db, mock_handlers, status, callback_data, method):
+        """Order buttons in group notifications must not bypass user approval"""
+        callback_handler._answer_callback_query = Mock(return_value=True)
+        callback_handler._send_message = Mock(return_value={'success': True})
+        mock_db.get_customer_by_telegram_id.return_value = Mock(authorization_status=status, language='nl')
+
+        result = callback_handler.handle_callback_query(self._create_callback_query(callback_data))
+
+        assert result['status'] == 'unauthorized'
+        getattr(mock_handlers['customer_order'], method).assert_not_called()
+
+    def test_customer_callbacks_blocked_for_unknown_user(self, callback_handler, mock_db, mock_handlers):
+        """A user without a customer record cannot order via buttons"""
+        callback_handler._answer_callback_query = Mock(return_value=True)
+        callback_handler._send_message = Mock(return_value={'success': True})
+        mock_db.get_customer_by_telegram_id.return_value = None
+
+        result = callback_handler.handle_callback_query(self._create_callback_query('order_123_2'))
+
+        assert result['status'] == 'unauthorized'
+        mock_handlers['customer_order'].handle_create_order.assert_not_called()
+
+    # Test 26: Customer callbacks still work for approved customers
+    @pytest.mark.parametrize("callback_data,handler,method", [
+        ('view_offer_123', 'info', 'handle_view_offer'),
+        ('page_list_offers_2', 'info', 'handle_list_offers'),
+        ('page_list_offers_soldout_2', 'info', 'handle_list_offers'),
+        ('page_changelog_3', 'changelog', 'handle_changelog'),
+        ('page_my_orders_12345_2', 'info', 'handle_list_my_orders'),
+    ])
+    def test_customer_callbacks_allowed_for_approved(self, callback_handler, mock_handlers, callback_data, handler, method):
+        """Allowlisted customer callbacks route normally for approved customers"""
+        mock_handlers.setdefault('changelog', Mock())
+        callback_handler._answer_callback_query = Mock(return_value=True)
+
+        callback_handler.handle_callback_query(self._create_callback_query(callback_data))
+
+        getattr(mock_handlers[handler], method).assert_called_once()
 
 
 if __name__ == '__main__':

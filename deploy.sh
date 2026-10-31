@@ -52,6 +52,16 @@ if ! aws ssm get-parameter --name "/ubbc-bot/$ENVIRONMENT/telegram-bot-token" --
     exit 1
 fi
 
+# Ensure webhook secret exists (Telegram sends it in X-Telegram-Bot-Api-Secret-Token; the Lambda rejects requests without it)
+WEBHOOK_SECRET_PARAM="/ubbc-bot/$ENVIRONMENT/telegram-webhook-secret"
+if ! aws ssm get-parameter --name "$WEBHOOK_SECRET_PARAM" --with-decryption >/dev/null 2>&1; then
+    echo "🔐 Generating webhook secret in Parameter Store: $WEBHOOK_SECRET_PARAM"
+    aws ssm put-parameter \
+        --name "$WEBHOOK_SECRET_PARAM" \
+        --value "$(openssl rand -hex 32)" \
+        --type "SecureString" >/dev/null
+fi
+
 # Build and deploy
 echo "📦 Building SAM application..."
 sam build
@@ -75,12 +85,24 @@ TELEGRAM_TOKEN=$(aws ssm get-parameter \
     --query 'Parameter.Value' \
     --output text)
 
+WEBHOOK_SECRET=$(aws ssm get-parameter \
+    --name "$WEBHOOK_SECRET_PARAM" \
+    --with-decryption \
+    --query 'Parameter.Value' \
+    --output text)
+
 echo "✅ Deployment complete!"
 echo "📡 Webhook URL: $WEBHOOK_URL"
 echo ""
 echo "🔗 Setting Telegram webhook..."
-curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setWebhook" \
-     -d "url=$WEBHOOK_URL" | jq .
+SET_WEBHOOK_RESPONSE=$(curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setWebhook" \
+     -d "url=$WEBHOOK_URL" \
+     -d "secret_token=$WEBHOOK_SECRET")
+echo "$SET_WEBHOOK_RESPONSE" | jq .
+if [ "$(echo "$SET_WEBHOOK_RESPONSE" | jq -r .ok)" != "true" ]; then
+    echo "❌ setWebhook failed. The bot rejects updates without the secret token, so it is unreachable until this succeeds."
+    exit 1
+fi
 
 echo ""
 echo "🤖 Setting up bot commands..."

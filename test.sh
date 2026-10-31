@@ -23,10 +23,17 @@ WEBHOOK_URL=$(aws cloudformation describe-stacks \
 
 echo "🔗 Webhook URL: $WEBHOOK_URL"
 
-# Test with sample update
+WEBHOOK_SECRET=$(aws ssm get-parameter \
+    --name "/ubbc-bot/$ENVIRONMENT/telegram-webhook-secret" \
+    --with-decryption \
+    --query 'Parameter.Value' \
+    --output text)
+
+# Test with sample update (requests without the secret token are rejected with 403)
 echo "📤 Testing webhook endpoint..."
 curl -X POST "$WEBHOOK_URL" \
     -H "Content-Type: application/json" \
+    -H "X-Telegram-Bot-Api-Secret-Token: $WEBHOOK_SECRET" \
     -d '{
         "update_id": 123,
         "message": {
