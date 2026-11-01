@@ -8,6 +8,33 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2026-11-01",
+                "content": """<b>User-Facing Updates</b>
+• <b>New /fomo Command</b> - See the active offers you haven't ordered yet; in the group it reacts 👍 and sends your list in a private chat
+• <b>More Reliable Ordering</b> - Each order is now saved together with its box update in one atomic step, so a failed order can't leave the stock count out of sync
+• <b>No Accidental Overfilling</b> - A box can no longer be pushed past capacity when several people order at the same moment
+• <b>No Duplicate Orders on Retry</b> - If Telegram re-sends the same action after a hiccup, it's processed only once
+• <b>Clearer Order Confirmations</b> - Improved confirmation messages when an admin orders on your behalf
+• <b>Consistent Cancelled Status</b> - Cancelled orders now use a single, clearer status
+• <b>Less Noise</b> - Trimmed overly verbose messages
+
+<b>Admin-Facing Updates</b>
+• <b>Faster Offer Editing</b> - The edit menu now opens immediately after creating an offer, with the draft view consolidated into one action menu
+• <b>Bulk Offer Deletion</b> - <code>/delete_offer</code> now accepts multiple offer IDs at once
+• <b>More Offer Status Options</b> - <code>/offer_status</code> now supports active, soldout and completed
+• <b>Button-Based Payments</b> - <code>/process_payment</code> now shows customers as buttons, and the stale list message is cleared after marking someone paid
+• <b>Accurate Wholesale Delivery</b> - Cancelled orders are excluded from wholesale delivery processing
+• <b>Accurate Credit Balances</b> - Credit adjustments are applied atomically so simultaneous changes can't overwrite each other
+• <b>Boxes in Order</b> - Boxes are now listed by creation time (oldest first)
+• <b>Discounts Removed</b> - The unused, incomplete discount feature and its commands (<code>/create_discount</code>, <code>/cancel_discount</code>, <code>/view_discount</code>) and admin menu have been removed
+
+<b>Behind the Scenes</b>
+• <b>Security Hardening</b> - Incoming webhooks are verified as genuinely from Telegram, admin/approval checks are enforced on inline buttons, and image links are host-validated before use
+• <b>Public Offers API</b> - New read-only <code>GET /offers</code> endpoint (1-hour cached) for listing active offers
+• <b>Least-Privilege Access</b> - Tightened the bot's AWS permissions (logs and database scoped per function)
+• <b>Reliability & Maintenance</b> - Warm-start reuse for faster handling, consistent error logging, pinned dependencies with automated updates, CI with automated testing and linting, and a cleaned-up codebase""",
+            },
+            {
                 "title": "Up to 2026-04-01",
                 "content": """<b>User-Facing Updates</b>
 • <b>Fairer Offer Notifications</b> - Subscribers are now notified in random order when a new offer is published, so the same people are no longer always first
