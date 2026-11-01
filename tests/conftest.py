@@ -1,10 +1,12 @@
-import pytest
 import os
-import boto3
 import sys
+
+import boto3
+import pytest
 from moto import mock_aws
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
+
 
 @pytest.fixture(scope="function")
 def aws_credentials():
@@ -15,204 +17,213 @@ def aws_credentials():
     os.environ["AWS_SESSION_TOKEN"] = "testing"
     os.environ["AWS_DEFAULT_REGION"] = "eu-west-1"
 
+
 @pytest.fixture(scope="function")
 def dynamodb(aws_credentials):
     """Mocked DynamoDB client."""
     with mock_aws():
         dynamodb = boto3.resource("dynamodb", region_name="eu-west-1")
-        
+
         # Create suppliers table
         dynamodb.create_table(
             TableName="ubbc-bot-test-suppliers",
-            KeySchema=[{'AttributeName': 'supplier_id', 'KeyType': 'HASH'}],
-            AttributeDefinitions=[{'AttributeName': 'supplier_id', 'AttributeType': 'S'}],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+            KeySchema=[{"AttributeName": "supplier_id", "KeyType": "HASH"}],
+            AttributeDefinitions=[{"AttributeName": "supplier_id", "AttributeType": "S"}],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-        
+
         # Create customers table
         dynamodb.create_table(
             TableName="ubbc-bot-test-customers",
-            KeySchema=[{'AttributeName': 'customer_id', 'KeyType': 'HASH'}],
+            KeySchema=[{"AttributeName": "customer_id", "KeyType": "HASH"}],
             AttributeDefinitions=[
-                {'AttributeName': 'customer_id', 'AttributeType': 'S'},
-                {'AttributeName': 'telegram_user_id', 'AttributeType': 'N'}
+                {"AttributeName": "customer_id", "AttributeType": "S"},
+                {"AttributeName": "telegram_user_id", "AttributeType": "N"},
             ],
-            GlobalSecondaryIndexes=[{
-                'IndexName': 'telegram-user-index',
-                'KeySchema': [{'AttributeName': 'telegram_user_id', 'KeyType': 'HASH'}],
-                'Projection': {'ProjectionType': 'ALL'},
-                'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-            }],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "telegram-user-index",
+                    "KeySchema": [{"AttributeName": "telegram_user_id", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                }
+            ],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-        
+
         # Create offers table
         dynamodb.create_table(
             TableName="ubbc-bot-test-offers",
-            KeySchema=[{'AttributeName': 'offer_id', 'KeyType': 'HASH'}],
-            AttributeDefinitions=[{'AttributeName': 'offer_id', 'AttributeType': 'N'}],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+            KeySchema=[{"AttributeName": "offer_id", "KeyType": "HASH"}],
+            AttributeDefinitions=[{"AttributeName": "offer_id", "AttributeType": "N"}],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-        
+
         # Create orders table
         dynamodb.create_table(
             TableName="ubbc-bot-test-orders",
-            KeySchema=[{'AttributeName': 'order_id', 'KeyType': 'HASH'}],
+            KeySchema=[{"AttributeName": "order_id", "KeyType": "HASH"}],
             AttributeDefinitions=[
-                {'AttributeName': 'order_id', 'AttributeType': 'S'},
-                {'AttributeName': 'customer_id', 'AttributeType': 'S'},
-                {'AttributeName': 'offer_id', 'AttributeType': 'N'}
+                {"AttributeName": "order_id", "AttributeType": "S"},
+                {"AttributeName": "customer_id", "AttributeType": "S"},
+                {"AttributeName": "offer_id", "AttributeType": "N"},
             ],
             GlobalSecondaryIndexes=[
                 {
-                    'IndexName': 'customer-index',
-                    'KeySchema': [{'AttributeName': 'customer_id', 'KeyType': 'HASH'}],
-                    'Projection': {'ProjectionType': 'ALL'},
-                    'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+                    "IndexName": "customer-index",
+                    "KeySchema": [{"AttributeName": "customer_id", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
                 },
                 {
-                    'IndexName': 'offer-index',
-                    'KeySchema': [{'AttributeName': 'offer_id', 'KeyType': 'HASH'}],
-                    'Projection': {'ProjectionType': 'ALL'},
-                    'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-                }
+                    "IndexName": "offer-index",
+                    "KeySchema": [{"AttributeName": "offer_id", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
             ],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-        
+
         # Create boxes table
         dynamodb.create_table(
             TableName="ubbc-bot-test-boxes",
-            KeySchema=[{'AttributeName': 'box_id', 'KeyType': 'HASH'}],
+            KeySchema=[{"AttributeName": "box_id", "KeyType": "HASH"}],
             AttributeDefinitions=[
-                {'AttributeName': 'box_id', 'AttributeType': 'S'},
-                {'AttributeName': 'offer_id', 'AttributeType': 'N'}
-            ],
-            GlobalSecondaryIndexes=[{
-                'IndexName': 'offer-index',
-                'KeySchema': [{'AttributeName': 'offer_id', 'KeyType': 'HASH'}],
-                'Projection': {'ProjectionType': 'ALL'},
-                'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-            }],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-        )
-        
-        # Create counters table
-        dynamodb.create_table(
-            TableName="ubbc-bot-test-counters",
-            KeySchema=[{'AttributeName': 'counter_name', 'KeyType': 'HASH'}],
-            AttributeDefinitions=[{'AttributeName': 'counter_name', 'AttributeType': 'S'}],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-        )
-        
-        # Create customer credits table
-        dynamodb.create_table(
-            TableName="ubbc-bot-test-customer-credits",
-            KeySchema=[{'AttributeName': 'customer_id', 'KeyType': 'HASH'}],
-            AttributeDefinitions=[{'AttributeName': 'customer_id', 'AttributeType': 'S'}],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-        )
-        
-        # Create credit transactions table
-        dynamodb.create_table(
-            TableName="ubbc-bot-test-credit-transactions",
-            KeySchema=[{'AttributeName': 'transaction_id', 'KeyType': 'HASH'}],
-            AttributeDefinitions=[
-                {'AttributeName': 'transaction_id', 'AttributeType': 'S'},
-                {'AttributeName': 'customer_id', 'AttributeType': 'S'}
-            ],
-            GlobalSecondaryIndexes=[{
-                'IndexName': 'customer-index',
-                'KeySchema': [{'AttributeName': 'customer_id', 'KeyType': 'HASH'}],
-                'Projection': {'ProjectionType': 'ALL'},
-                'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-            }],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-        )
-        
-        # Create order history table
-        dynamodb.create_table(
-            TableName="ubbc-bot-test-order-history",
-            KeySchema=[{'AttributeName': 'history_id', 'KeyType': 'HASH'}],
-            AttributeDefinitions=[
-                {'AttributeName': 'history_id', 'AttributeType': 'S'},
-                {'AttributeName': 'order_id', 'AttributeType': 'S'},
-                {'AttributeName': 'customer_event', 'AttributeType': 'S'},
-                {'AttributeName': 'changed_at', 'AttributeType': 'S'},
-                {'AttributeName': 'event_date', 'AttributeType': 'S'},
-                {'AttributeName': 'customer_name_event', 'AttributeType': 'S'}
+                {"AttributeName": "box_id", "AttributeType": "S"},
+                {"AttributeName": "offer_id", "AttributeType": "N"},
             ],
             GlobalSecondaryIndexes=[
                 {
-                    'IndexName': 'order-index',
-                    'KeySchema': [{'AttributeName': 'order_id', 'KeyType': 'HASH'}],
-                    'Projection': {'ProjectionType': 'ALL'},
-                    'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-                },
-                {
-                    'IndexName': 'customer-event-index',
-                    'KeySchema': [
-                        {'AttributeName': 'customer_event', 'KeyType': 'HASH'},
-                        {'AttributeName': 'changed_at', 'KeyType': 'RANGE'}
-                    ],
-                    'Projection': {'ProjectionType': 'ALL'},
-                    'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-                },
-                {
-                    'IndexName': 'event-date-index',
-                    'KeySchema': [{'AttributeName': 'event_date', 'KeyType': 'HASH'}],
-                    'Projection': {'ProjectionType': 'ALL'},
-                    'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-                },
-                {
-                    'IndexName': 'customer-name-event-index',
-                    'KeySchema': [{'AttributeName': 'customer_name_event', 'KeyType': 'HASH'}],
-                    'Projection': {'ProjectionType': 'ALL'},
-                    'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+                    "IndexName": "offer-index",
+                    "KeySchema": [{"AttributeName": "offer_id", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
                 }
             ],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-        
+
+        # Create counters table
+        dynamodb.create_table(
+            TableName="ubbc-bot-test-counters",
+            KeySchema=[{"AttributeName": "counter_name", "KeyType": "HASH"}],
+            AttributeDefinitions=[{"AttributeName": "counter_name", "AttributeType": "S"}],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+        )
+
+        # Create customer credits table
+        dynamodb.create_table(
+            TableName="ubbc-bot-test-customer-credits",
+            KeySchema=[{"AttributeName": "customer_id", "KeyType": "HASH"}],
+            AttributeDefinitions=[{"AttributeName": "customer_id", "AttributeType": "S"}],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+        )
+
+        # Create credit transactions table
+        dynamodb.create_table(
+            TableName="ubbc-bot-test-credit-transactions",
+            KeySchema=[{"AttributeName": "transaction_id", "KeyType": "HASH"}],
+            AttributeDefinitions=[
+                {"AttributeName": "transaction_id", "AttributeType": "S"},
+                {"AttributeName": "customer_id", "AttributeType": "S"},
+            ],
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "customer-index",
+                    "KeySchema": [{"AttributeName": "customer_id", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                }
+            ],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+        )
+
+        # Create order history table
+        dynamodb.create_table(
+            TableName="ubbc-bot-test-order-history",
+            KeySchema=[{"AttributeName": "history_id", "KeyType": "HASH"}],
+            AttributeDefinitions=[
+                {"AttributeName": "history_id", "AttributeType": "S"},
+                {"AttributeName": "order_id", "AttributeType": "S"},
+                {"AttributeName": "customer_event", "AttributeType": "S"},
+                {"AttributeName": "changed_at", "AttributeType": "S"},
+                {"AttributeName": "event_date", "AttributeType": "S"},
+                {"AttributeName": "customer_name_event", "AttributeType": "S"},
+            ],
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "order-index",
+                    "KeySchema": [{"AttributeName": "order_id", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
+                {
+                    "IndexName": "customer-event-index",
+                    "KeySchema": [
+                        {"AttributeName": "customer_event", "KeyType": "HASH"},
+                        {"AttributeName": "changed_at", "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
+                {
+                    "IndexName": "event-date-index",
+                    "KeySchema": [{"AttributeName": "event_date", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
+                {
+                    "IndexName": "customer-name-event-index",
+                    "KeySchema": [{"AttributeName": "customer_name_event", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
+            ],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+        )
+
         # Create notifications table
         dynamodb.create_table(
             TableName="ubbc-bot-test-notifications",
-            KeySchema=[{'AttributeName': 'notification_id', 'KeyType': 'HASH'}],
+            KeySchema=[{"AttributeName": "notification_id", "KeyType": "HASH"}],
             AttributeDefinitions=[
-                {'AttributeName': 'notification_id', 'AttributeType': 'S'},
-                {'AttributeName': 'offer_id', 'AttributeType': 'N'}
+                {"AttributeName": "notification_id", "AttributeType": "S"},
+                {"AttributeName": "offer_id", "AttributeType": "N"},
             ],
-            GlobalSecondaryIndexes=[{
-                'IndexName': 'offer-index',
-                'KeySchema': [{'AttributeName': 'offer_id', 'KeyType': 'HASH'}],
-                'Projection': {'ProjectionType': 'ALL'},
-                'ProvisionedThroughput': {'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-            }],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "offer-index",
+                    "KeySchema": [{"AttributeName": "offer_id", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                }
+            ],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-        
+
         # Create discounts table
         dynamodb.create_table(
             TableName="ubbc-bot-test-discounts",
-            KeySchema=[{'AttributeName': 'discount_id', 'KeyType': 'HASH'}],
-            AttributeDefinitions=[{'AttributeName': 'discount_id', 'AttributeType': 'S'}],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+            KeySchema=[{"AttributeName": "discount_id", "KeyType": "HASH"}],
+            AttributeDefinitions=[{"AttributeName": "discount_id", "AttributeType": "S"}],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-        
+
         # Create edit contexts table
         dynamodb.create_table(
             TableName="ubbc-bot-test-edit-contexts",
-            KeySchema=[{'AttributeName': 'context_id', 'KeyType': 'HASH'}],
-            AttributeDefinitions=[{'AttributeName': 'context_id', 'AttributeType': 'S'}],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+            KeySchema=[{"AttributeName": "context_id", "KeyType": "HASH"}],
+            AttributeDefinitions=[{"AttributeName": "context_id", "AttributeType": "S"}],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
 
         # Create processed-updates table (idempotency dedup)
         dynamodb.create_table(
             TableName="ubbc-bot-test-processed-updates",
-            KeySchema=[{'AttributeName': 'update_id', 'KeyType': 'HASH'}],
-            AttributeDefinitions=[{'AttributeName': 'update_id', 'AttributeType': 'S'}],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+            KeySchema=[{"AttributeName": "update_id", "KeyType": "HASH"}],
+            AttributeDefinitions=[{"AttributeName": "update_id", "AttributeType": "S"}],
+            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
-        
+
         yield dynamodb

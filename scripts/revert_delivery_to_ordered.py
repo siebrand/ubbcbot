@@ -18,12 +18,13 @@ USAGE:
 NOTE: Requires AWS credentials configured for DynamoDB access.
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+import sys
 
-from services.database import DynamoDBService
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+
 from models.entities import BoxStatus, OrderStatus
+from services.database import DynamoDBService
 
 
 def revert_delivery(offer_id: int, dry_run=True):
@@ -51,7 +52,7 @@ def revert_delivery(offer_id: int, dry_run=True):
         action = "Would update" if dry_run else "Updating"
         print(f"  {action} order {order.order_id[:8]} (qty: {order.quantity}, received: {order.received_quantity} → 0)")
         if not dry_run:
-            if db.update_order(order.order_id, {'status': OrderStatus.ORDERED.value, 'received_quantity': 0}):
+            if db.update_order(order.order_id, {"status": OrderStatus.ORDERED.value, "received_quantity": 0}):
                 order_count += 1
             else:
                 print(f"    ERROR: Failed to update order {order.order_id[:8]}")
@@ -64,7 +65,7 @@ def revert_delivery(offer_id: int, dry_run=True):
         action = "Would update" if dry_run else "Updating"
         print(f"  {action} box {box.box_id[:8]} (delivered → ordered)")
         if not dry_run:
-            if db.update_box(box.box_id, {'status': BoxStatus.ORDERED.value}):
+            if db.update_box(box.box_id, {"status": BoxStatus.ORDERED.value}):
                 box_count += 1
             else:
                 print(f"    ERROR: Failed to update box {box.box_id[:8]}")
@@ -76,20 +77,20 @@ def revert_delivery(offer_id: int, dry_run=True):
     return order_count + box_count
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python3 scripts/revert_delivery_to_ordered.py <offer_id> [environment]")
         sys.exit(1)
 
     offer_id = int(sys.argv[1])
-    environment = sys.argv[2] if len(sys.argv) > 2 else 'test'
+    environment = sys.argv[2] if len(sys.argv) > 2 else "test"
 
-    if environment not in ['test', 'prod']:
+    if environment not in ["test", "prod"]:
         print("Error: Environment must be 'test' or 'prod'")
         sys.exit(1)
 
-    os.environ['ENVIRONMENT'] = environment
-    os.environ['DYNAMODB_TABLE_PREFIX'] = f'ubbc-bot-{environment}'
+    os.environ["ENVIRONMENT"] = environment
+    os.environ["DYNAMODB_TABLE_PREFIX"] = f"ubbc-bot-{environment}"
 
     print("=" * 60)
     print(f"Revert Delivery to Ordered - {environment.upper()} Environment")
@@ -104,7 +105,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     response = input("\nApply changes? (yes/no): ")
-    if response.lower() != 'yes':
+    if response.lower() != "yes":
         print("Aborted.")
         sys.exit(0)
 

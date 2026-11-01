@@ -1,4 +1,5 @@
 """Tests for update_id idempotency (ProcessedUpdateRepository)."""
+
 import pytest
 
 from repositories.processed_update_repository import ProcessedUpdateRepository
@@ -24,6 +25,6 @@ class TestProcessedUpdateRepository:
 
     def test_sets_ttl_attribute(self, repo):
         repo.mark_processed(4004)
-        item = repo.table.get_item(Key={'update_id': '4004'})['Item']
-        assert 'ttl' in item
-        assert int(item['ttl']) > 0
+        item = repo.table.get_item(Key={"update_id": "4004"})["Item"]
+        assert "ttl" in item
+        assert int(item["ttl"]) > 0

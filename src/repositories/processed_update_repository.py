@@ -1,6 +1,8 @@
 import logging
 import time
+
 from botocore.exceptions import ClientError
+
 from repositories.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -28,12 +30,12 @@ class ProcessedUpdateRepository(BaseRepository):
         """
         try:
             self.table.put_item(
-                Item={'update_id': str(update_id), 'ttl': int(time.time()) + _RETENTION_SECONDS},
-                ConditionExpression='attribute_not_exists(update_id)',
+                Item={"update_id": str(update_id), "ttl": int(time.time()) + _RETENTION_SECONDS},
+                ConditionExpression="attribute_not_exists(update_id)",
             )
             return True
         except ClientError as e:
-            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
                 logger.info(f"Duplicate update_id {update_id} ignored")
                 return False
             logger.error(f"Error marking update {update_id} processed: {e}")

@@ -1,2 +1,2 @@
-# Import the modular offer commands
-from .offer import OfferCommands
+# Re-export the modular offer commands as the public OfferCommands symbol.
+from .offer import OfferCommands as OfferCommands

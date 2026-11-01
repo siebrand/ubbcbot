@@ -2,6 +2,7 @@ import logging
 from unittest.mock import patch
 
 import pytest
+
 from models.entities import Box
 from repositories.box_repository import BoxRepository
 
@@ -162,12 +163,11 @@ class TestBoxRepository:
         Guards the print()->logger.error() conversion so errors stay visible in
         CloudWatch with a level instead of being written to stdout.
         """
-        with patch.object(box_repo.table, 'get_item', side_effect=RuntimeError("boom")):
-            with caplog.at_level(logging.ERROR, logger="repositories.box_repository"):
-                result = box_repo.get_box("box-err")
+        with (
+            patch.object(box_repo.table, "get_item", side_effect=RuntimeError("boom")),
+            caplog.at_level(logging.ERROR, logger="repositories.box_repository"),
+        ):
+            result = box_repo.get_box("box-err")
 
         assert result is None
-        assert any(
-            record.levelno == logging.ERROR and "boom" in record.getMessage()
-            for record in caplog.records
-        )
+        assert any(record.levelno == logging.ERROR and "boom" in record.getMessage() for record in caplog.records)

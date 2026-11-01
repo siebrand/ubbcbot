@@ -1,5 +1,7 @@
-from typing import Dict, Any
+from typing import Any
+
 from handlers.base_handler import BaseHandler
+
 
 class ChangelogCommands(BaseHandler):
     def __init__(self, *args, **kwargs):
@@ -27,7 +29,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Box Cleanup on Offer Deletion</b> - All related boxes are now deleted when an offer is deleted, preventing orphaned data
 • <b>Order Data Consistency</b> - <code>received_quantity</code> now correctly set on delivery; <code>OrderStatus</code> enum used consistently throughout order creation
 • <b>Resilient Batch Updates</b> - A single failure in a batch order status update no longer aborts the remaining orders in the batch
-• <b>User List Display Fix</b> - Removed double spaces in user list entries"""
+• <b>User List Display Fix</b> - Removed double spaces in user list entries""",
             },
             {
                 "title": "Up to 2026-01-21",
@@ -44,7 +46,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Enhanced Workflow Navigation</b> - Alphabetically sorted offers in delivery workflow, improved back navigation with i18n support throughout
 • <b>Consistent Terminology</b> - Standardized terminology across payment workflows
 • <b>Test Suite Optimization</b> - Parallel test execution with pytest-xdist reduces test runtime from 60s to 24s
-• <b>System Reliability</b> - Fixed offer cache consistency issues, JSON serialization errors"""
+• <b>System Reliability</b> - Fixed offer cache consistency issues, JSON serialization errors""",
             },
             {
                 "title": "Up to 2026-01-18",
@@ -60,7 +62,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Database Architecture</b> - Completed migration to Repository pattern (Phases 4-8), slimming down core DatabaseService
 • <b>Codebase Refactoring</b> - Completed massive refactoring of 23 command handlers and internal routing logic
 • <b>Enhanced Wholesale</b> - Added pagination and alphabetical sorting to <code>/process_wholesale</code>
-• <b>Legacy Cleanup</b> - Removed deprecated methods and updated test suites (179+ routing tests passing)"""
+• <b>Legacy Cleanup</b> - Removed deprecated methods and updated test suites (179+ routing tests passing)""",
             },
             {
                 "title": "Up to 2025-01-13",
@@ -82,7 +84,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Centralized Configuration</b> - Admin user ID from environment variable (no hardcoding)
 • <b>Order Display Consolidation</b> - Unified my_orders and user_orders logic reduces duplication
 • <b>Data Correction Tools</b> - Script to fix import order status bugs, removed CONFIRMED status (simplified to pending → ordered → ready_for_labeling)
-• <b>Improved Automatic Testing</b> - 212 passing tests (151 routing + 61 integration) with TDD approach for newly implemented features"""
+• <b>Improved Automatic Testing</b> - 212 passing tests (151 routing + 61 integration) with TDD approach for newly implemented features""",
             },
             {
                 "title": "Up to 2025-01-12",
@@ -110,7 +112,7 @@ class ChangelogCommands(BaseHandler):
 • <b>System Reliability</b> - Fixed pagination callback parsing, process_payment tests, box deletion logic, and offer sold-out detection
 • <b>Workflow Simplification</b> - Removed MINIMUM_REACHED status and breakeven fields, simplified to open→full→ordered→delivered
 • <b>Filter Enhancements</b> - Added status filtering to /list_offers (all, draft, active, soldout, completed, inactive, archived, import)
-• <b>Legacy Support</b> - Added script to update legacy customers with missing location and is_guest fields"""
+• <b>Legacy Support</b> - Added script to update legacy customers with missing location and is_guest fields""",
             },
             {
                 "title": "Up to 2025-01-08",
@@ -140,7 +142,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Improved Internationalization</b> - Replaced hardcoded "Unknown" strings with i18n translation
 • <b>Enhanced Debugging</b> - Detailed logging for Telegram token retrieval and SSM parameter access
 • <b>Customer Management Tool</b> - New script to check customers against group members
-• <b>Better Status Consistency</b> - Orders added to wholesale-ordered boxes now correctly show 'ordered' status"""
+• <b>Better Status Consistency</b> - Orders added to wholesale-ordered boxes now correctly show 'ordered' status""",
             },
             {
                 "title": "Up to 2025-01-05",
@@ -164,7 +166,7 @@ class ChangelogCommands(BaseHandler):
 • <b>System Reliability</b> - Fixed parameter handling in notifications, customer lookup errors, database method calls, and callback validation
 • <b>Better Admin Interface</b> - Enhanced admin panel with 🔄 Workflow button grouping core business process commands
 • <b>Enhanced Offer Management</b> - New /delete_offer command for removing completed/inactive offers with proper status ordering
-• <b>Improved Error Handling</b> - Fixed decimal conversion issues, missing translation keys, and parameter validation across all commands"""
+• <b>Improved Error Handling</b> - Fixed decimal conversion issues, missing translation keys, and parameter validation across all commands""",
             },
             {
                 "title": "Up to 2025-12-31",
@@ -190,7 +192,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Flexible Quantity Input</b> - Added "Other" quantity option with text input for /order_for command
 • <b>Enhanced User Management</b> - Improved user disambiguation and filtering for approve_user command
 • <b>Comprehensive Admin Panel</b> - Enhanced interactive workflows with supplier full name support
-• <b>System Reliability</b> - Automatic order update_date setting, better database consistency, and duplicate string removal"""
+• <b>System Reliability</b> - Automatic order update_date setting, better database consistency, and duplicate string removal""",
             },
             {
                 "title": "Up to 2025-12-29",
@@ -209,7 +211,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Better Delivery Management</b> - Enhanced wholesale delivery and labeling completion workflows
 • <b>Improved Box Status Tracking</b> - Better status transitions and capacity management
 • <b>Enhanced CSV Exports</b> - Improved order exports with better formatting and status filtering
-• <b>Comprehensive Help System</b> - Organized help sections with detailed command documentation"""
+• <b>Comprehensive Help System</b> - Organized help sections with detailed command documentation""",
             },
             {
                 "title": "Up to 2025-12-26",
@@ -231,7 +233,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Edit Offer button</b> - Direct access from offer details view for quick editing
 • <b>Seamless editing workflow</b> - Return to edit menu after field updates with maintained context
 • <b>System Reliability</b> - Improved HTTP request handling with proper timeouts and better error handling
-• <b>Modular service architecture</b> - Better maintainability with reduced code duplication and improved callback handling"""
+• <b>Modular service architecture</b> - Better maintainability with reduced code duplication and improved callback handling""",
             },
             {
                 "title": "Up to 2025-12-25",
@@ -250,30 +252,30 @@ class ChangelogCommands(BaseHandler):
 • <b>Continue editing buttons</b> - Seamless workflow after uploading images or updating descriptions
 • <b>User search functionality</b> - Search users by name in /list_users command
 • <b>Draft offer management</b> - Select and preview draft offers before publishing
-• <b>Improved offer editing</b> - Interactive buttons for editing offer details"""
-            }
+• <b>Improved offer editing</b> - Interactive buttons for editing offer details""",
+            },
         ]
-    
-    def handle_changelog(self, chat_id: int, user_id: int, page: int = 1) -> Dict[str, Any]:
+
+    def handle_changelog(self, chat_id: int, user_id: int, page: int = 1) -> dict[str, Any]:
         """Handle /changelog command with pagination"""
         if not self.changelog_entries:
             self._send_message(chat_id, "No changelog entries available.")
-            return {'status': 'no_entries'}
-        
+            return {"status": "no_entries"}
+
         # Paginate entries (1 entry per page for readability)
         page_entries, total_pages = self._paginate_list(self.changelog_entries, page, 1)
-        
+
         if not page_entries:
             self._send_message(chat_id, "Invalid page number.")
-            return {'status': 'invalid_page'}
-        
+            return {"status": "invalid_page"}
+
         entry = page_entries[0]
         message = f"📋 <b>UBBC Bot Changelog</b>\n\n<b>{entry['title']}</b>\n\n{entry['content']}"
-        
+
         # Add pagination keyboard if needed
         keyboard = None
         if total_pages > 1:
             keyboard = self._build_pagination_keyboard(page, total_pages, "changelog")
-        
+
         self._send_message(chat_id, message, parse_mode="HTML", reply_markup=keyboard)
-        return {'status': 'success'}
+        return {"status": "success"}

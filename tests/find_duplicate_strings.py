@@ -2,7 +2,7 @@
 import json
 from collections import defaultdict
 
-with open('src/translations/en.json', 'r') as f:
+with open("src/translations/en.json") as f:
     data = json.load(f)
 
 duplicates = defaultdict(list)

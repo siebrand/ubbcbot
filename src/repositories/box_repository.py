@@ -1,8 +1,9 @@
 import logging
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any
 
 from boto3.dynamodb.conditions import Key
+
 from models.entities import Box
 from repositories.base_repository import BaseRepository
 
@@ -13,7 +14,7 @@ class BoxRepository(BaseRepository):
     def __init__(self):
         super().__init__("boxes")
 
-    def create_box(self, box: Box) -> Optional[Box]:
+    def create_box(self, box: Box) -> Box | None:
         try:
             item = self._prepare_item(box.__dict__)
             self.table.put_item(Item=item)
@@ -22,33 +23,30 @@ class BoxRepository(BaseRepository):
             logger.error(f"Error creating box: {e}")
             return None
 
-    def get_box(self, box_id: str) -> Optional[Box]:
+    def get_box(self, box_id: str) -> Box | None:
         try:
-            response = self.table.get_item(Key={'box_id': box_id})
-            if 'Item' in response:
-                item = response['Item']
-                if 'current_quantity' in item:
-                    item['current_quantity'] = int(item['current_quantity'])
-                if 'max_capacity' in item:
-                    item['max_capacity'] = int(item['max_capacity'])
+            response = self.table.get_item(Key={"box_id": box_id})
+            if "Item" in response:
+                item = response["Item"]
+                if "current_quantity" in item:
+                    item["current_quantity"] = int(item["current_quantity"])
+                if "max_capacity" in item:
+                    item["max_capacity"] = int(item["max_capacity"])
                 return Box(**item)
             return None
         except Exception as e:
             logger.error(f"Error getting box: {e}")
             return None
 
-    def get_boxes_by_offer(self, offer_id: int) -> List[Box]:
+    def get_boxes_by_offer(self, offer_id: int) -> list[Box]:
         try:
-            response = self.table.query(
-                IndexName='offer-index',
-                KeyConditionExpression=Key('offer_id').eq(offer_id)
-            )
+            response = self.table.query(IndexName="offer-index", KeyConditionExpression=Key("offer_id").eq(offer_id))
             boxes = []
-            for item in response.get('Items', []):
-                if 'current_quantity' in item:
-                    item['current_quantity'] = int(item['current_quantity'])
-                if 'max_capacity' in item:
-                    item['max_capacity'] = int(item['max_capacity'])
+            for item in response.get("Items", []):
+                if "current_quantity" in item:
+                    item["current_quantity"] = int(item["current_quantity"])
+                if "max_capacity" in item:
+                    item["max_capacity"] = int(item["max_capacity"])
                 boxes.append(Box(**item))
             # Always return boxes in creation-time ascending order.
             # created_at is stored as an ISO 8601 string (lexicographically
@@ -66,17 +64,17 @@ class BoxRepository(BaseRepository):
             return created_at.isoformat()
         return str(created_at) if created_at is not None else ""
 
-    def get_all_boxes(self) -> List[Box]:
+    def get_all_boxes(self) -> list[Box]:
         """Scan all boxes with minimal fields"""
         try:
             response = self.table.scan(
-                ProjectionExpression='box_id, offer_id, current_quantity, max_capacity, #status',
-                ExpressionAttributeNames={'#status': 'status'}
+                ProjectionExpression="box_id, offer_id, current_quantity, max_capacity, #status",
+                ExpressionAttributeNames={"#status": "status"},
             )
             boxes = []
-            for item in response.get('Items', []):
-                item['current_quantity'] = int(item['current_quantity'])
-                item['max_capacity'] = int(item['max_capacity'])
+            for item in response.get("Items", []):
+                item["current_quantity"] = int(item["current_quantity"])
+                item["max_capacity"] = int(item["max_capacity"])
                 boxes.append(Box(**item))
             return boxes
         except Exception as e:
@@ -93,20 +91,21 @@ class BoxRepository(BaseRepository):
         Returns True on success, False if the condition failed (would overfill) or on error.
         """
         from botocore.exceptions import ClientError
+
         try:
             # DynamoDB condition expressions cannot do arithmetic, so compute the
             # threshold in Python: current_quantity must be <= max_capacity - delta
             # for the post-increment value to stay within capacity. For a negative
             # delta (cancellation) the threshold grows, making the guard a no-op.
             self.table.update_item(
-                Key={'box_id': box_id},
+                Key={"box_id": box_id},
                 UpdateExpression="ADD current_quantity :delta",
                 ConditionExpression="attribute_exists(box_id) AND current_quantity <= :threshold",
-                ExpressionAttributeValues={':delta': delta, ':threshold': max_capacity - delta},
+                ExpressionAttributeValues={":delta": delta, ":threshold": max_capacity - delta},
             )
             return True
         except ClientError as e:
-            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
                 logger.warning(f"Box {box_id} increment by {delta} rejected: would exceed capacity {max_capacity}")
                 return False
             logger.error(f"Error incrementing box {box_id}: {e}")
@@ -115,7 +114,7 @@ class BoxRepository(BaseRepository):
             logger.error(f"Error incrementing box {box_id}: {e}")
             return False
 
-    def update_box(self, box_id: str, updates: Dict[str, Any]) -> bool:
+    def update_box(self, box_id: str, updates: dict[str, Any]) -> bool:
         try:
             update_expression = "SET "
             expression_values = {}
@@ -129,10 +128,10 @@ class BoxRepository(BaseRepository):
             update_expression = update_expression.rstrip(", ")
 
             self.table.update_item(
-                Key={'box_id': box_id},
+                Key={"box_id": box_id},
                 UpdateExpression=update_expression,
                 ExpressionAttributeNames=expression_names,
-                ExpressionAttributeValues=expression_values
+                ExpressionAttributeValues=expression_values,
             )
             return True
         except Exception as e:
@@ -141,7 +140,7 @@ class BoxRepository(BaseRepository):
 
     def delete_box(self, box_id: str) -> bool:
         try:
-            self.table.delete_item(Key={'box_id': box_id})
+            self.table.delete_item(Key={"box_id": box_id})
             return True
         except Exception as e:
             logger.error(f"Error deleting box: {e}")

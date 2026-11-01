@@ -1,38 +1,36 @@
+import json
 import logging
 import os
-import json
-import boto3
-from typing import Dict, Any
 from decimal import Decimal
+from typing import Any
+
+import boto3
+
 from handlers.base_handler import BaseHandler
-from models.entities import Supplier, Offer, Box, Order, BoxStatus
+from models.entities import Box, Offer, Order, Supplier
 from services.box_status_manager import BoxStatusManager
 
 logger = logging.getLogger()
+
 
 class TestCommands(BaseHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.box_status_manager = BoxStatusManager(db)
-        self.lambda_client = boto3.client('lambda')
-        self.message_sender_lambda = os.environ.get('MESSAGE_SENDER_LAMBDA_NAME')
-    
-    def handle_setup_test_data(self, chat_id: int) -> Dict[str, Any]:
+        self.lambda_client = boto3.client("lambda")
+        self.message_sender_lambda = os.environ.get("MESSAGE_SENDER_LAMBDA_NAME")
+
+    def handle_setup_test_data(self, chat_id: int) -> dict[str, Any]:
         """Handle /setup_test_data command - creates test suppliers and offers (test environment only)"""
         # Only allow in test environment
-        if self.environment != 'test':
-            self._send_message(chat_id, self._t('test_env_only'))
-            return {'status': 'environment_restricted'}
-            
+        if self.environment != "test":
+            self._send_message(chat_id, self._t("test_env_only"))
+            return {"status": "environment_restricted"}
+
         try:
             # Test suppliers
-            suppliers = [
-                {"name": "HD"},
-                {"name": "DK"}, 
-                {"name": "BW"},
-                {"name": "DM"}
-            ]
-            
+            suppliers = [{"name": "HD"}, {"name": "DK"}, {"name": "BW"}, {"name": "DM"}]
+
             # Create suppliers
             created_suppliers = 0
             for supplier_data in suppliers:
@@ -40,7 +38,7 @@ class TestCommands(BaseHandler):
                     supplier = Supplier(name=supplier_data["name"])
                     if self.db.create_supplier(supplier):
                         created_suppliers += 1
-            
+
             # Test offers
             offers = [
                 {"supplier": "HD", "name": "Hopduvel Tripel", "price": 4.50, "box_size": 12},
@@ -50,9 +48,9 @@ class TestCommands(BaseHandler):
                 {"supplier": "HD", "name": "Hopduvel Saison", "price": 4.20, "box_size": 12},
                 {"supplier": "BW", "name": "Hazy IPA", "price": 5.50, "box_size": 6},
                 {"supplier": "HD", "name": "Limited Edition Barrel Aged", "price": 25.00, "box_size": 1},
-                {"supplier": "DK", "name": "Vintage Reserve", "price": 18.50, "box_size": 2}
+                {"supplier": "DK", "name": "Vintage Reserve", "price": 18.50, "box_size": 2},
             ]
-            
+
             # Create offers
             created_offers = 0
             for offer_data in offers:
@@ -61,19 +59,16 @@ class TestCommands(BaseHandler):
                     name=offer_data["name"],
                     price_per_unit=Decimal(str(offer_data["price"])),
                     wholesale_box_size=offer_data["box_size"],
-                    status='active'
+                    status="active",
                 )
-                
+
                 if self.db.create_offer(offer):
                     created_offers += 1
-                    
+
                     # Create initial box
-                    box = Box(
-                        offer_id=offer.offer_id,
-                        max_capacity=offer_data["box_size"]
-                    )
+                    box = Box(offer_id=offer.offer_id, max_capacity=offer_data["box_size"])
                     self.db.create_box(box)
-                    
+
                     # Auto-order 1 unit for admin
                     admin_customer = self.db.get_customer_by_telegram_id(self.admin_user_id)
                     if admin_customer:
@@ -83,51 +78,47 @@ class TestCommands(BaseHandler):
                             offer_id=offer.offer_id,
                             quantity=1,
                             unit_price=Decimal(str(offer_data["price"])),
-                            total_price=Decimal(str(offer_data["price"]))
+                            total_price=Decimal(str(offer_data["price"])),
                         )
                         self.db.create_order(admin_order)
-                        
+
                         # Update box quantity via service
                         self.box_status_manager.update_box_after_order_placement(box.box_id, 1)
-            
-            self._send_message(chat_id, self._t('test_data_success', suppliers=created_suppliers, offers=created_offers))
-            return {'status': 'success'}
-            
+
+            self._send_message(
+                chat_id, self._t("test_data_success", suppliers=created_suppliers, offers=created_offers)
+            )
+            return {"status": "success"}
+
         except Exception as e:
             logger.error(f"Error setting up test data: {e}")
-            self._send_message(chat_id, self._t('test_data_failed'))
-            return {'status': 'error'}
-    
-    def handle_test_user_message(self, chat_id: int, user_id: int, message: str) -> Dict[str, Any]:
+            self._send_message(chat_id, self._t("test_data_failed"))
+            return {"status": "error"}
+
+    def handle_test_user_message(self, chat_id: int, user_id: int, message: str) -> dict[str, Any]:
         """Handle /test_user_message command - sends test message from admin account"""
         try:
             payload = {
-                'messages': [{
-                    'user_id': user_id,
-                    'message': message,
-                    'from_admin': True
-                }],
-                'environment': self.environment
+                "messages": [{"user_id": user_id, "message": message, "from_admin": True}],
+                "environment": self.environment,
             }
-            
+
             response = self.lambda_client.invoke(
-                FunctionName=self.message_sender_lambda,
-                InvocationType='RequestResponse',
-                Payload=json.dumps(payload)
+                FunctionName=self.message_sender_lambda, InvocationType="RequestResponse", Payload=json.dumps(payload)
             )
-            
-            result = json.loads(response['Payload'].read())
-            body = json.loads(result.get('body', '{}'))
-            
-            if body.get('success_count', 0) > 0:
+
+            result = json.loads(response["Payload"].read())
+            body = json.loads(result.get("body", "{}"))
+
+            if body.get("success_count", 0) > 0:
                 self._send_message(chat_id, f"✓ Test message sent to user {user_id}")
-                return {'status': 'success'}
+                return {"status": "success"}
             else:
-                error = body.get('results', [{}])[0].get('error', 'Unknown error')
+                error = body.get("results", [{}])[0].get("error", "Unknown error")
                 self._send_message(chat_id, f"✗ Failed to send message: {error}")
-                return {'status': 'error'}
-                
+                return {"status": "error"}
+
         except Exception as e:
             logger.error(f"Error sending test user message: {e}")
             self._send_message(chat_id, f"✗ Error: {str(e)}")
-            return {'status': 'error'}
+            return {"status": "error"}

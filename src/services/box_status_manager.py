@@ -1,5 +1,4 @@
 import logging
-from typing import Optional, List
 
 from models.entities import Box, BoxStatus, OfferStatus
 
@@ -12,11 +11,11 @@ class BoxStatusManager:
     def __init__(self, db):
         self.db = db
 
-    def get_delivered_boxes(self, boxes: List[Box]) -> List[Box]:
+    def get_delivered_boxes(self, boxes: list[Box]) -> list[Box]:
         """Filter boxes to only delivered status"""
         return [box for box in boxes if box.status == BoxStatus.DELIVERED.value]
 
-    def get_available_capacity_in_delivered(self, boxes: List[Box]) -> int:
+    def get_available_capacity_in_delivered(self, boxes: list[Box]) -> int:
         """Calculate total available capacity in delivered boxes"""
         delivered_boxes = self.get_delivered_boxes(boxes)
         return sum(
@@ -25,13 +24,9 @@ class BoxStatusManager:
             if box.current_quantity < box.max_capacity
         )
 
-    def get_available_capacity_for_orders(self, boxes: List[Box]) -> int:
+    def get_available_capacity_for_orders(self, boxes: list[Box]) -> int:
         """Calculate total available capacity in all boxes (any box under capacity can accept orders)"""
-        return sum(
-            box.max_capacity - box.current_quantity
-            for box in boxes
-            if box.current_quantity < box.max_capacity
-        )
+        return sum(box.max_capacity - box.current_quantity for box in boxes if box.current_quantity < box.max_capacity)
 
     def update_box_after_order_placement(self, box_id: str, quantity_added: int) -> bool:
         """Atomically add quantity to a box, rejecting if it would exceed capacity.
@@ -51,7 +46,7 @@ class BoxStatusManager:
 
         # Status follow-up: mark FULL once at/over capacity (unless already ORDERED).
         if box.status != BoxStatus.ORDERED.value and box.current_quantity + quantity_added >= box.max_capacity:
-            self.db.update_box(box_id, {'status': BoxStatus.FULL.value})
+            self.db.update_box(box_id, {"status": BoxStatus.FULL.value})
 
         return True
 
@@ -73,7 +68,7 @@ class BoxStatusManager:
 
         # Status follow-up: reopen the box once it drops below capacity (unless ORDERED).
         if box.status != BoxStatus.ORDERED.value and box.current_quantity - quantity_removed < box.max_capacity:
-            self.db.update_box(box_id, {'status': BoxStatus.OPEN.value})
+            self.db.update_box(box_id, {"status": BoxStatus.OPEN.value})
 
         return True
 
@@ -81,26 +76,29 @@ class BoxStatusManager:
         """Mark multiple boxes as ORDERED, returns list of updated box objects"""
         updated_boxes = []
         for box_id in box_ids:
-            if self.db.update_box(box_id, {'status': BoxStatus.ORDERED.value}):
+            if self.db.update_box(box_id, {"status": BoxStatus.ORDERED.value}):
                 box = self.db.get_box(box_id)
                 if box:
                     updated_boxes.append(box)
         return updated_boxes
 
-    def mark_box_as_delivered(self, box_id: str) -> Optional[Box]:
+    def mark_box_as_delivered(self, box_id: str) -> Box | None:
         """Mark box as DELIVERED, returns updated box object or None"""
-        if self.db.update_box(box_id, {'status': BoxStatus.DELIVERED.value}):
+        if self.db.update_box(box_id, {"status": BoxStatus.DELIVERED.value}):
             return self.db.get_box(box_id)
         return None
 
-    def update_offer_status_after_change(self, offer_id: int) -> Optional[str]:
+    def update_offer_status_after_change(self, offer_id: int) -> str | None:
         """
         Check and update offer status based on box states
         Returns: new status if changed, None otherwise
         """
         offer = self.db.get_offer(offer_id)
-        if not offer or offer.status not in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value,
-                                             OfferStatus.IMPORT.value]:
+        if not offer or offer.status not in [
+            OfferStatus.ACTIVE.value,
+            OfferStatus.SOLD_OUT.value,
+            OfferStatus.IMPORT.value,
+        ]:
             return None
 
         boxes = self.db.get_boxes_by_offer(offer_id)
@@ -118,12 +116,12 @@ class BoxStatusManager:
             if capacity == 0:
                 # All delivered boxes full -> SOLD_OUT
                 if offer.status != OfferStatus.SOLD_OUT.value:
-                    self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
+                    self.db.update_offer(offer_id, {"status": OfferStatus.SOLD_OUT.value})
                     new_status = OfferStatus.SOLD_OUT.value
             else:
                 # Delivered boxes have space -> ACTIVE
                 if offer.status != OfferStatus.ACTIVE.value:
-                    self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
+                    self.db.update_offer(offer_id, {"status": OfferStatus.ACTIVE.value})
                     new_status = OfferStatus.ACTIVE.value
         else:
             # No delivered boxes: fall back to existing logic
@@ -132,11 +130,11 @@ class BoxStatusManager:
 
             if has_ordered_boxes and not has_available_space:
                 if offer.status != OfferStatus.SOLD_OUT.value:
-                    self.db.update_offer(offer_id, {'status': OfferStatus.SOLD_OUT.value})
+                    self.db.update_offer(offer_id, {"status": OfferStatus.SOLD_OUT.value})
                     new_status = OfferStatus.SOLD_OUT.value
             else:
                 if offer.status != OfferStatus.ACTIVE.value:
-                    self.db.update_offer(offer_id, {'status': OfferStatus.ACTIVE.value})
+                    self.db.update_offer(offer_id, {"status": OfferStatus.ACTIVE.value})
                     new_status = OfferStatus.ACTIVE.value
 
         return new_status
