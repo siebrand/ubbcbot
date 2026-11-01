@@ -5,6 +5,7 @@ from handlers.base_handler import BaseHandler
 from models.entities import OfferStatus, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from utils.pagination import PaginationUtils
+from utils.s3_url import is_s3_url
 
 logger = logging.getLogger(__name__)
 
@@ -658,7 +659,7 @@ class InfoCommands(BaseHandler):
                 # Single image
                 try:
                     image_url = offer.images[0]
-                    if "s3.amazonaws.com" in image_url:
+                    if is_s3_url(image_url):
                         presigned_url = self.db.get_presigned_url(image_url)
                         if presigned_url:
                             image_url = presigned_url
@@ -670,7 +671,7 @@ class InfoCommands(BaseHandler):
                 media_group = []
                 for image_url in offer.images[:10]:  # Telegram limit is 10 images per group
                     try:
-                        if "s3.amazonaws.com" in image_url:
+                        if is_s3_url(image_url):
                             presigned_url = self.db.get_presigned_url(image_url)
                             if presigned_url:
                                 image_url = presigned_url

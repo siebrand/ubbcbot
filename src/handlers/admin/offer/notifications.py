@@ -2,6 +2,7 @@ import logging
 import os
 
 from models.entities import AuthorizationStatus
+from utils.s3_url import is_s3_url
 
 from .base import OfferBaseHandler
 
@@ -21,7 +22,7 @@ class NotificationHandler(OfferBaseHandler):
         if offer.images:
             for image_url in offer.images[:10]:
                 try:
-                    if "s3.amazonaws.com" in image_url:
+                    if is_s3_url(image_url):
                         presigned_url = self.db.get_presigned_url(image_url)
                         presigned_images.append(presigned_url if presigned_url else image_url)
                     else:
@@ -96,7 +97,7 @@ class NotificationHandler(OfferBaseHandler):
         if offer.images:
             for image_url in offer.images[:10]:
                 try:
-                    if "s3.amazonaws.com" in image_url:
+                    if is_s3_url(image_url):
                         presigned_url = self.db.get_presigned_url(image_url)
                         presigned_images.append(presigned_url if presigned_url else image_url)
                     else:

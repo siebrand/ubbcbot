@@ -18,6 +18,7 @@ from repositories.processed_update_repository import ProcessedUpdateRepository
 from repositories.supplier_repository import SupplierRepository
 from repositories.system_repository import SystemRepository
 from services.offer_cache import OfferCache
+from utils.s3_url import extract_s3_key
 
 logger = logging.getLogger(__name__)
 
@@ -388,10 +389,9 @@ class DynamoDBService:
     def get_presigned_url(self, s3_url: str, expiration: int = 3600) -> str | None:
         """Generate presigned URL for S3 object"""
         try:
-            # Extract key from S3 URL
-            if ".s3.amazonaws.com/" in s3_url:
-                key = s3_url.split(".s3.amazonaws.com/")[1]
-            else:
+            # Extract key from S3 URL (host-validated, not a substring match)
+            key = extract_s3_key(s3_url)
+            if key is None:
                 return None
 
             presigned_url = self.s3.generate_presigned_url(

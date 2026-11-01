@@ -3,6 +3,7 @@ import logging
 
 from handlers.base_handler import BaseHandler
 from services.database import DynamoDBService
+from utils.s3_url import is_s3_url
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -71,7 +72,7 @@ class NotificationSender(BaseHandler):
         if offer.images:
             for image_url in offer.images[:10]:
                 try:
-                    if "s3.amazonaws.com" in image_url:
+                    if is_s3_url(image_url):
                         presigned_url = self.db.get_presigned_url(image_url)
                         presigned_images.append(presigned_url if presigned_url else image_url)
                     else:
