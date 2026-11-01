@@ -189,8 +189,38 @@ Resources:
             Path: /webhook
             Method: post
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Sub 'ubbc-bot-${Environment}-*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:BatchGetItem
+                - dynamodb:BatchWriteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+                - dynamodb:ConditionCheckItem
+              Resource:
+                - !GetAtt CountersTable.Arn
+                - !GetAtt OffersTable.Arn
+                - !GetAtt CustomersTable.Arn
+                - !Sub '${CustomersTable.Arn}/index/*'
+                - !GetAtt OrdersTable.Arn
+                - !Sub '${OrdersTable.Arn}/index/*'
+                - !GetAtt BoxesTable.Arn
+                - !Sub '${BoxesTable.Arn}/index/*'
+                - !GetAtt SuppliersTable.Arn
+                - !GetAtt DiscountsTable.Arn
+                - !GetAtt NotificationsTable.Arn
+                - !Sub '${NotificationsTable.Arn}/index/*'
+                - !GetAtt EditContextsTable.Arn
+                - !GetAtt OrderHistoryTable.Arn
+                - !Sub '${OrderHistoryTable.Arn}/index/*'
+                - !GetAtt CustomerCreditsTable.Arn
+                - !GetAtt CreditTransactionsTable.Arn
+                - !Sub '${CreditTransactionsTable.Arn}/index/*'
         - S3CrudPolicy:
             BucketName: !Ref ImageBucket
         - Version: '2012-10-17'
@@ -227,8 +257,17 @@ Resources:
       Timeout: 300
       MemorySize: 256
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Sub 'ubbc-bot-${Environment}-*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt OffersTable.Arn
+                - !GetAtt CustomersTable.Arn
+                - !Sub '${CustomersTable.Arn}/index/*'
         - S3CrudPolicy:
             BucketName: !Ref ImageBucket
         - Version: '2012-10-17'
