@@ -6,24 +6,35 @@ DynamoDBService but stub the low-level client's transact_write_items to assert
 (a) the exact single-transaction payload we send and (b) how the method
 handles success vs a cancelled transaction. The payload shape is what makes the
 order Put and the capacity-guarded box Update atomic on real DynamoDB.
+
+The method uses a dedicated boto3.client("dynamodb") rather than the resource's
+client (the resource client would double-serialize the already-serialized
+items, which DynamoDB rejects with a ValidationException), so the tests patch
+boto3.client in the database module.
 """
 
 from decimal import Decimal
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from botocore.exceptions import ClientError
 
+import services.database as database_module
 from models.entities import Order, OrderStatus
 from services.database import DynamoDBService
 
 
 @pytest.fixture
+def txn_client(dynamodb):
+    """Stub only the dedicated transaction client; everything else uses moto."""
+    client = MagicMock()
+    with patch.object(database_module.boto3, "client", return_value=client):
+        yield client
+
+
+@pytest.fixture
 def db(dynamodb):
-    service = DynamoDBService()
-    # Stub only the transaction call; everything else uses moto.
-    service.dynamodb.meta.client.transact_write_items = MagicMock()
-    return service
+    return DynamoDBService()
 
 
 def _order():
@@ -39,14 +50,14 @@ def _order():
 
 
 class TestCreateOrderWithBoxIncrement:
-    def test_sends_single_atomic_transaction(self, db):
+    def test_sends_single_atomic_transaction(self, db, txn_client):
         order = _order()
 
         result = db.create_order_with_box_increment(order, "tb-1", 2, 12)
 
         assert result is order
-        db.dynamodb.meta.client.transact_write_items.assert_called_once()
-        items = db.dynamodb.meta.client.transact_write_items.call_args.kwargs["TransactItems"]
+        txn_client.transact_write_items.assert_called_once()
+        items = txn_client.transact_write_items.call_args.kwargs["TransactItems"]
 
         # Exactly two items in one transaction: order Put + box Update.
         assert len(items) == 2
@@ -67,8 +78,8 @@ class TestCreateOrderWithBoxIncrement:
         # threshold = max_capacity - quantity = 12 - 2
         assert update["ExpressionAttributeValues"][":threshold"]["N"] == "10"
 
-    def test_cancelled_transaction_returns_none(self, db):
-        db.dynamodb.meta.client.transact_write_items.side_effect = ClientError(
+    def test_cancelled_transaction_returns_none(self, db, txn_client):
+        txn_client.transact_write_items.side_effect = ClientError(
             {"Error": {"Code": "TransactionCanceledException", "Message": "cancelled"}},
             "TransactWriteItems",
         )
@@ -77,11 +88,11 @@ class TestCreateOrderWithBoxIncrement:
 
         assert result is None
 
-    def test_threshold_tracks_quantity(self, db):
+    def test_threshold_tracks_quantity(self, db, txn_client):
         """A larger order lowers the capacity threshold accordingly."""
         db.create_order_with_box_increment(_order(), "tb-1", 5, 12)
 
-        items = db.dynamodb.meta.client.transact_write_items.call_args.kwargs["TransactItems"]
+        items = txn_client.transact_write_items.call_args.kwargs["TransactItems"]
         update = items[1]["Update"]
         assert update["ExpressionAttributeValues"][":delta"]["N"] == "5"
         assert update["ExpressionAttributeValues"][":threshold"]["N"] == "7"  # 12 - 5

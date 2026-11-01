@@ -189,8 +189,12 @@ class DynamoDBService:
         order_item = {k: serializer.serialize(v) for k, v in self.order_repo._prepare_item(order.__dict__).items()}
         threshold = max_capacity - quantity
 
+        # Use a plain low-level client: the resource's client applies its own
+        # (de)serialization, which would double-wrap our already-serialized items.
+        client = boto3.client("dynamodb")
+
         try:
-            self.dynamodb.meta.client.transact_write_items(
+            client.transact_write_items(
                 TransactItems=[
                     {
                         "Put": {
