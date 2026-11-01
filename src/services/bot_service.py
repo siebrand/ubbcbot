@@ -32,7 +32,23 @@ logger = logging.getLogger()
 class BotService:
     _cached_token = None
     _cached_environment = None
-    
+    _instance = None
+
+    @classmethod
+    def get_instance(cls) -> "BotService":
+        """Return a per-container cached BotService, rebuilding only on env change.
+
+        The Lambda execution environment is reused across warm invocations, so
+        building all handlers and services once per container (instead of once
+        per request) avoids repeated object allocation. The instance holds no
+        per-request state: every request's chat_id/user_id stays local to
+        process_update, so sharing the instance is safe.
+        """
+        environment = os.environ.get('ENVIRONMENT', 'test')
+        if cls._instance is None or cls._instance.environment != environment:
+            cls._instance = cls()
+        return cls._instance
+
     def __init__(self):
         self.db = DynamoDBService()
         self.admin_user_id = ADMIN_USER_ID

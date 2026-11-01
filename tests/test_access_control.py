@@ -58,7 +58,7 @@ class TestWebhookSecretToken:
             response = webhook.handler(self._event({header_name: SECRET}), None)
 
         assert response['statusCode'] == 200
-        bot_service.return_value.process_update.assert_called_once_with({'update_id': 1})
+        bot_service.get_instance.return_value.process_update.assert_called_once_with({'update_id': 1})
 
     def test_fails_closed_when_secret_unavailable(self):
         """If the secret cannot be loaded, nothing is processed (even an empty header)"""

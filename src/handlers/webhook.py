@@ -51,8 +51,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Parse webhook data
         body = json.loads(event.get('body', '{}'))
 
-        # Initialize bot service
-        bot_service = BotService()
+        # Initialize bot service (reused across warm Lambda invocations)
+        bot_service = BotService.get_instance()
 
         # Process update
         response = bot_service.process_update(body)
