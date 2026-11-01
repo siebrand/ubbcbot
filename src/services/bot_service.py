@@ -8,7 +8,7 @@ from services.media_handler import MediaHandler
 from services.callback_handler import CallbackHandler
 from models.entities import Customer, AuthorizationStatus
 
-        # Import handlers
+# Import handlers
 from handlers.admin.supplier_commands import SupplierCommands
 from handlers.admin.offer_commands import OfferCommands
 from handlers.admin.order_commands import AdminOrderCommands
