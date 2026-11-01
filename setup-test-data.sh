@@ -9,10 +9,10 @@ echo "🚀 Generating test data commands for $ENVIRONMENT environment..."
 
 # Create commands file
 cat > test-commands.txt << 'EOF'
-/add_supplier HD
-/add_supplier DK
-/add_supplier BW
-/add_supplier DM
+/create_supplier HD
+/create_supplier DK
+/create_supplier BW
+/create_supplier DM
 /create_offer HD Hopduvel Tripel 4.50 12
 /create_offer DK De Koninck Bolleke 2.80 24
 /create_offer BW West Coast IPA 5.20 6
