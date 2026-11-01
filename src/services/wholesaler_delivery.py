@@ -1,7 +1,10 @@
+import logging
 from typing import List, Optional
 from models.entities import Order, Box, OrderStatus, BoxStatus
 from services.database import DynamoDBService
 from services.box_status_manager import BoxStatusManager
+
+logger = logging.getLogger(__name__)
 
 class WholesalerDeliveryService:
     def __init__(self, db_service: DynamoDBService, box_status_manager: BoxStatusManager, admin_user_id: int = 15005473):
@@ -49,7 +52,7 @@ class WholesalerDeliveryService:
             return True
             
         except Exception as e:
-            print(f"Error processing wholesaler delivery: {e}")
+            logger.error(f"Error processing wholesaler delivery: {e}")
             return False
     
     def _get_orders_by_box(self, box_id: str) -> List[Order]:
@@ -142,8 +145,8 @@ class WholesalerDeliveryService:
     
     def notify_customer_of_delay(self, order_id: str):
         """Stub method for notifying customer of delay"""
-        print(f"STUB: Notifying customer of delay for order {order_id}")
+        logger.info(f"STUB: Notifying customer of delay for order {order_id}")
     
     def notify_customer_of_cancellation(self, order_id: str):
         """Stub method for notifying customer of cancellation"""
-        print(f"STUB: Notifying customer of cancellation for order {order_id}")
+        logger.info(f"STUB: Notifying customer of cancellation for order {order_id}")

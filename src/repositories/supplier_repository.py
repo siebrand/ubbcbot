@@ -1,6 +1,9 @@
+import logging
 from typing import Optional, List, Dict, Any
 from repositories.base_repository import BaseRepository
 from models.entities import Supplier
+
+logger = logging.getLogger(__name__)
 
 class SupplierRepository(BaseRepository):
     def __init__(self):
@@ -17,7 +20,7 @@ class SupplierRepository(BaseRepository):
             self.table.put_item(Item=item)
             return True
         except Exception as e:
-            print(f"Error creating supplier: {e}")
+            logger.error(f"Error creating supplier: {e}")
             return False
 
     def get_supplier(self, supplier_id: str) -> Optional[Supplier]:
@@ -27,7 +30,7 @@ class SupplierRepository(BaseRepository):
                 return Supplier(**response['Item'])
             return None
         except Exception as e:
-            print(f"Error getting supplier: {e}")
+            logger.error(f"Error getting supplier: {e}")
             return None
 
     def get_supplier_by_name(self, name: str) -> Optional[Supplier]:
@@ -42,7 +45,7 @@ class SupplierRepository(BaseRepository):
                 return Supplier(**items[0])
             return None
         except Exception as e:
-            print(f"Error getting supplier by name: {e}")
+            logger.error(f"Error getting supplier by name: {e}")
             return None
 
     def update_supplier(self, supplier_id: str, updates: Dict[str, Any]) -> bool:
@@ -66,7 +69,7 @@ class SupplierRepository(BaseRepository):
             )
             return True
         except Exception as e:
-            print(f"Error updating supplier: {e}")
+            logger.error(f"Error updating supplier: {e}")
             return False
 
     def list_suppliers(self) -> List[Supplier]:
@@ -74,5 +77,5 @@ class SupplierRepository(BaseRepository):
             response = self.table.scan()
             return [Supplier(**item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error listing suppliers: {e}")
+            logger.error(f"Error listing suppliers: {e}")
             return []

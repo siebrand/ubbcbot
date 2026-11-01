@@ -1,5 +1,8 @@
+import logging
 from typing import Optional
 from repositories.base_repository import BaseRepository
+
+logger = logging.getLogger(__name__)
 
 class SystemRepository(BaseRepository):
     def __init__(self):
@@ -17,7 +20,7 @@ class SystemRepository(BaseRepository):
             )
             return int(response['Attributes']['value'])
         except Exception as e:
-            print(f"Error getting next ID for {counter_name}: {e}")
+            logger.error(f"Error getting next ID for {counter_name}: {e}")
             # Initialize counter if it doesn't exist
             try:
                 self.table.put_item(
@@ -37,7 +40,7 @@ class SystemRepository(BaseRepository):
             )
             return True
         except Exception as e:
-            print(f"Error storing payment link: {e}")
+            logger.error(f"Error storing payment link: {e}")
             return False
     
     def get_payment_link(self) -> Optional[str]:
@@ -48,5 +51,5 @@ class SystemRepository(BaseRepository):
                 return response['Item'].get('value')
             return None
         except Exception as e:
-            print(f"Error getting payment link: {e}")
+            logger.error(f"Error getting payment link: {e}")
             return None

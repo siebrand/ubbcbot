@@ -1,9 +1,12 @@
+import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, UTC
 from repositories.base_repository import BaseRepository
 from repositories.system_repository import SystemRepository
 from models.entities import Offer
 from services.offer_cache import OfferCache
+
+logger = logging.getLogger(__name__)
 
 class OfferRepository(BaseRepository):
     def __init__(self, system_repo: SystemRepository):
@@ -24,7 +27,7 @@ class OfferRepository(BaseRepository):
             
             return True
         except Exception as e:
-            print(f"Error creating offer: {e}")
+            logger.error(f"Error creating offer: {e}")
             return False
 
     def get_offer(self, offer_id: int) -> Optional[Offer]:
@@ -42,7 +45,7 @@ class OfferRepository(BaseRepository):
                 return Offer(**item)
             return None
         except Exception as e:
-            print(f"Error getting offer: {e}")
+            logger.error(f"Error getting offer: {e}")
             return None
 
     def list_offers(self) -> List[Offer]:
@@ -64,7 +67,7 @@ class OfferRepository(BaseRepository):
                 offers.append(Offer(**item))
             return offers
         except Exception as e:
-            print(f"Error listing offers: {e}")
+            logger.error(f"Error listing offers: {e}")
             return []
     
     def list_sold_out_offers_recent(self, days: int = 7) -> List[Offer]:
@@ -82,7 +85,7 @@ class OfferRepository(BaseRepository):
             )
             return [Offer(**item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error listing recent sold out offers: {e}")
+            logger.error(f"Error listing recent sold out offers: {e}")
             return []
 
     def update_offer(self, offer_id: int, updates: Dict[str, Any]) -> bool:
@@ -110,7 +113,7 @@ class OfferRepository(BaseRepository):
             
             return True
         except Exception as e:
-            print(f"Error updating offer: {e}")
+            logger.error(f"Error updating offer: {e}")
             return False
     
     def append_offer_image(self, offer_id: int, image_url: str) -> bool:
@@ -130,5 +133,5 @@ class OfferRepository(BaseRepository):
             
             return True
         except Exception as e:
-            print(f"Error appending image to offer: {e}")
+            logger.error(f"Error appending image to offer: {e}")
             return False

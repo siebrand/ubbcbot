@@ -1,7 +1,10 @@
+import logging
 from typing import Optional
 from datetime import datetime, UTC, timedelta
 from repositories.base_repository import BaseRepository
 from models.entities import EditContext
+
+logger = logging.getLogger(__name__)
 
 class EditContextRepository(BaseRepository):
     def __init__(self):
@@ -13,7 +16,7 @@ class EditContextRepository(BaseRepository):
             self.table.put_item(Item=item)
             return True
         except Exception as e:
-            print(f"Error creating edit context: {e}")
+            logger.error(f"Error creating edit context: {e}")
             return False
 
     def get_edit_context_by_chat_id(self, chat_id: int) -> Optional[EditContext]:
@@ -30,7 +33,7 @@ class EditContextRepository(BaseRepository):
                 return EditContext(**item)
             return None
         except Exception as e:
-            print(f"Error getting edit context: {e}")
+            logger.error(f"Error getting edit context: {e}")
             return None
 
     def delete_edit_context(self, context_id: str) -> bool:
@@ -38,7 +41,7 @@ class EditContextRepository(BaseRepository):
             self.table.delete_item(Key={'context_id': context_id})
             return True
         except Exception as e:
-            print(f"Error deleting edit context: {e}")
+            logger.error(f"Error deleting edit context: {e}")
             return False
 
     def cleanup_old_edit_contexts(self) -> int:
@@ -57,5 +60,5 @@ class EditContextRepository(BaseRepository):
             
             return deleted_count
         except Exception as e:
-            print(f"Error cleaning up edit contexts: {e}")
+            logger.error(f"Error cleaning up edit contexts: {e}")
             return 0

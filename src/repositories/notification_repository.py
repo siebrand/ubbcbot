@@ -1,7 +1,10 @@
+import logging
 from typing import List
 from boto3.dynamodb.conditions import Key
 from repositories.base_repository import BaseRepository
 from models.entities import NotificationMessage
+
+logger = logging.getLogger(__name__)
 
 class NotificationRepository(BaseRepository):
     def __init__(self):
@@ -13,7 +16,7 @@ class NotificationRepository(BaseRepository):
             self.table.put_item(Item=item)
             return True
         except Exception as e:
-            print(f"Error creating notification message: {e}")
+            logger.error(f"Error creating notification message: {e}")
             return False
 
     def get_notification_messages_by_offer(self, offer_id: int) -> List[NotificationMessage]:
@@ -24,7 +27,7 @@ class NotificationRepository(BaseRepository):
             )
             return [NotificationMessage(**item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting notification messages: {e}")
+            logger.error(f"Error getting notification messages: {e}")
             return []
 
     def delete_notification_message(self, notification_id: str) -> bool:
@@ -32,5 +35,5 @@ class NotificationRepository(BaseRepository):
             self.table.delete_item(Key={'notification_id': notification_id})
             return True
         except Exception as e:
-            print(f"Error deleting notification message: {e}")
+            logger.error(f"Error deleting notification message: {e}")
             return False

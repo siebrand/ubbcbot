@@ -1,8 +1,11 @@
+import logging
 from typing import List, Optional
 from datetime import datetime, UTC, timedelta
 from boto3.dynamodb.conditions import Key
 from repositories.base_repository import BaseRepository
 from models.entities import OrderHistory
+
+logger = logging.getLogger(__name__)
 
 class OrderHistoryRepository(BaseRepository):
     def __init__(self):
@@ -20,7 +23,7 @@ class OrderHistoryRepository(BaseRepository):
             self.table.put_item(Item=item)
             return True
         except Exception as e:
-            print(f"Error creating order history: {e}")
+            logger.error(f"Error creating order history: {e}")
             return False
 
     def batch_create_order_history(self, histories: List[OrderHistory]) -> int:
@@ -41,7 +44,7 @@ class OrderHistoryRepository(BaseRepository):
             
             return created_count
         except Exception as e:
-            print(f"Error batch creating order history: {e}")
+            logger.error(f"Error batch creating order history: {e}")
             return 0
 
     def get_order_history(self, order_id: str, limit: int = 50) -> List[OrderHistory]:
@@ -54,7 +57,7 @@ class OrderHistoryRepository(BaseRepository):
             )
             return [self._item_to_history(item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting order history: {e}")
+            logger.error(f"Error getting order history: {e}")
             return []
 
     def get_customer_events(self, customer_id: str, event_type: Optional[str] = None, days: int = 30) -> List[OrderHistory]:
@@ -78,7 +81,7 @@ class OrderHistoryRepository(BaseRepository):
             
             return [self._item_to_history(item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting customer events: {e}")
+            logger.error(f"Error getting customer events: {e}")
             return []
 
     def get_events_by_type(self, event_type: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[OrderHistory]:
@@ -98,7 +101,7 @@ class OrderHistoryRepository(BaseRepository):
             
             return [self._item_to_history(item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting events by type: {e}")
+            logger.error(f"Error getting events by type: {e}")
             return []
 
     def get_history_by_customer_name(self, customer_name: str, event_type: Optional[str] = None, limit: int = 50) -> List[OrderHistory]:
@@ -121,5 +124,5 @@ class OrderHistoryRepository(BaseRepository):
             
             return [self._item_to_history(item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting history by customer name: {e}")
+            logger.error(f"Error getting history by customer name: {e}")
             return []

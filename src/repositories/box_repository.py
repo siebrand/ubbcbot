@@ -1,8 +1,11 @@
+import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from boto3.dynamodb.conditions import Key
 from repositories.base_repository import BaseRepository
 from models.entities import Box
+
+logger = logging.getLogger(__name__)
 
 class BoxRepository(BaseRepository):
     def __init__(self):
@@ -14,7 +17,7 @@ class BoxRepository(BaseRepository):
             self.table.put_item(Item=item)
             return box
         except Exception as e:
-            print(f"Error creating box: {e}")
+            logger.error(f"Error creating box: {e}")
             return None
 
     def get_box(self, box_id: str) -> Optional[Box]:
@@ -29,7 +32,7 @@ class BoxRepository(BaseRepository):
                 return Box(**item)
             return None
         except Exception as e:
-            print(f"Error getting box: {e}")
+            logger.error(f"Error getting box: {e}")
             return None
 
     def get_boxes_by_offer(self, offer_id: int) -> List[Box]:
@@ -51,7 +54,7 @@ class BoxRepository(BaseRepository):
             boxes.sort(key=lambda b: self._created_at_sort_key(b.created_at))
             return boxes
         except Exception as e:
-            print(f"Error getting boxes by offer: {e}")
+            logger.error(f"Error getting boxes by offer: {e}")
             return []
 
     @staticmethod
@@ -75,7 +78,7 @@ class BoxRepository(BaseRepository):
                 boxes.append(Box(**item))
             return boxes
         except Exception as e:
-            print(f"Error getting all boxes: {e}")
+            logger.error(f"Error getting all boxes: {e}")
             return []
 
     def update_box(self, box_id: str, updates: Dict[str, Any]) -> bool:
@@ -99,7 +102,7 @@ class BoxRepository(BaseRepository):
             )
             return True
         except Exception as e:
-            print(f"Error updating box: {e}")
+            logger.error(f"Error updating box: {e}")
             return False
 
     def delete_box(self, box_id: str) -> bool:
@@ -107,5 +110,5 @@ class BoxRepository(BaseRepository):
             self.table.delete_item(Key={'box_id': box_id})
             return True
         except Exception as e:
-            print(f"Error deleting box: {e}")
+            logger.error(f"Error deleting box: {e}")
             return False

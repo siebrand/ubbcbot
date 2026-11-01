@@ -1,8 +1,11 @@
+import logging
 from typing import List, Optional, Dict, Any
 from repositories.base_repository import BaseRepository
 from repositories.system_repository import SystemRepository
 from models.entities import Customer, AuthorizationStatus
 from services.user_cache import UserCache
+
+logger = logging.getLogger(__name__)
 
 class CustomerRepository(BaseRepository):
     def __init__(self, system_repo: SystemRepository):
@@ -32,7 +35,7 @@ class CustomerRepository(BaseRepository):
             
             return customer
         except Exception as e:
-            print(f"Error creating customer: {e}")
+            logger.error(f"Error creating customer: {e}")
             return None
 
     def get_customer(self, customer_id: str) -> Optional[Customer]:
@@ -42,7 +45,7 @@ class CustomerRepository(BaseRepository):
                 return Customer(**response['Item'])
             return None
         except Exception as e:
-            print(f"Error getting customer: {e}")
+            logger.error(f"Error getting customer: {e}")
             return None
 
     def update_customer(self, customer_id: str, updates: Dict[str, Any]) -> bool:
@@ -90,7 +93,7 @@ class CustomerRepository(BaseRepository):
             
             return True
         except Exception as e:
-            print(f"Error updating customer: {e}")
+            logger.error(f"Error updating customer: {e}")
             return False
 
     def get_customer_by_telegram_id(self, telegram_user_id: int) -> Optional[Customer]:
@@ -109,7 +112,7 @@ class CustomerRepository(BaseRepository):
                 return Customer(**items[0])
             return None
         except Exception as e:
-            print(f"Error getting customer by telegram ID: {e}")
+            logger.error(f"Error getting customer by telegram ID: {e}")
             return None
 
     def get_customers_by_status(self, status: str) -> List[Customer]:
@@ -125,7 +128,7 @@ class CustomerRepository(BaseRepository):
             )
             return [Customer(**item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting customers by status: {e}")
+            logger.error(f"Error getting customers by status: {e}")
             return []
     
     def get_subscribers(self) -> List[Customer]:
@@ -149,7 +152,7 @@ class CustomerRepository(BaseRepository):
                 customers.append(Customer(**item))
             return customers
         except Exception as e:
-            print(f"Error getting subscribers: {e}")
+            logger.error(f"Error getting subscribers: {e}")
             return []
 
     def get_all_customers(self) -> List[Customer]:
@@ -168,7 +171,7 @@ class CustomerRepository(BaseRepository):
                 return Customer(**items[0])
             return None
         except Exception as e:
-            print(f"Error getting customer by username: {e}")
+            logger.error(f"Error getting customer by username: {e}")
             return None
 
     def get_customer_by_name(self, name: str) -> Optional[Customer]:
@@ -187,5 +190,5 @@ class CustomerRepository(BaseRepository):
                     return customer
             return None
         except Exception as e:
-            print(f"Error getting customer by name: {e}")
+            logger.error(f"Error getting customer by name: {e}")
             return None

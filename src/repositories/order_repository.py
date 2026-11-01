@@ -1,7 +1,10 @@
+import logging
 from typing import Optional, List, Dict, Any
 from boto3.dynamodb.conditions import Key
 from repositories.base_repository import BaseRepository
 from models.entities import Order
+
+logger = logging.getLogger(__name__)
 
 class OrderRepository(BaseRepository):
     def __init__(self):
@@ -13,7 +16,7 @@ class OrderRepository(BaseRepository):
             self.table.put_item(Item=item)
             return order
         except Exception as e:
-            print(f"Error creating order: {e}")
+            logger.error(f"Error creating order: {e}")
             return None
 
     def get_order(self, order_id: str) -> Optional[Order]:
@@ -23,7 +26,7 @@ class OrderRepository(BaseRepository):
                 return Order(**response['Item'])
             return None
         except Exception as e:
-            print(f"Error getting order: {e}")
+            logger.error(f"Error getting order: {e}")
             return None
 
     def get_orders_by_customer(self, customer_id: str) -> List[Order]:
@@ -34,7 +37,7 @@ class OrderRepository(BaseRepository):
             )
             return [Order(**item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting orders by customer: {e}")
+            logger.error(f"Error getting orders by customer: {e}")
             return []
 
     def get_orders_by_offer(self, offer_id: int) -> List[Order]:
@@ -45,7 +48,7 @@ class OrderRepository(BaseRepository):
             )
             return [Order(**item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting orders by offer: {e}")
+            logger.error(f"Error getting orders by offer: {e}")
             return []
 
     def get_orders_by_box(self, box_id: str) -> List[Order]:
@@ -56,7 +59,7 @@ class OrderRepository(BaseRepository):
             )
             return [Order(**item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting orders by box: {e}")
+            logger.error(f"Error getting orders by box: {e}")
             return []
 
     def get_all_orders(self, statuses: List[str] = None) -> List[Order]:
@@ -77,7 +80,7 @@ class OrderRepository(BaseRepository):
                 )
             return [Order(**item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting all orders: {e}")
+            logger.error(f"Error getting all orders: {e}")
             return []
 
     def update_order(self, order_id: str, updates: Dict[str, Any]) -> bool:
@@ -105,7 +108,7 @@ class OrderRepository(BaseRepository):
             )
             return True
         except Exception as e:
-            print(f"Error updating order: {e}")
+            logger.error(f"Error updating order: {e}")
             return False
 
     def delete_order(self, order_id: str) -> bool:
@@ -113,7 +116,7 @@ class OrderRepository(BaseRepository):
             self.table.delete_item(Key={'order_id': order_id})
             return True
         except Exception as e:
-            print(f"Error deleting order: {e}")
+            logger.error(f"Error deleting order: {e}")
             return False
 
     def batch_get_orders(self, order_ids: List[str]) -> List[Order]:
@@ -138,7 +141,7 @@ class OrderRepository(BaseRepository):
             
             return orders
         except Exception as e:
-            print(f"Error batch getting orders: {e}")
+            logger.error(f"Error batch getting orders: {e}")
             return []
 
     def batch_update_order_status(self, order_ids: List[str], status: str) -> int:
@@ -169,9 +172,9 @@ class OrderRepository(BaseRepository):
                         )
                         updated_count += 1
                     except Exception as batch_error:
-                        print(f"Batch update error for {order_id}: {batch_error}")
+                        logger.error(f"Batch update error for {order_id}: {batch_error}")
             
             return updated_count
         except Exception as e:
-            print(f"Error in batch update: {e}")
+            logger.error(f"Error in batch update: {e}")
             return 0

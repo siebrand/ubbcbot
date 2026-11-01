@@ -1,6 +1,7 @@
 import boto3
 import os
 import json
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from boto3.dynamodb.conditions import Key
@@ -18,6 +19,8 @@ from repositories.credit_repository import CreditRepository
 from repositories.notification_repository import NotificationRepository
 from repositories.discount_repository import DiscountRepository
 from repositories.edit_context_repository import EditContextRepository
+
+logger = logging.getLogger(__name__)
 
 class DynamoDBService:
     def __init__(self):
@@ -157,7 +160,7 @@ class DynamoDBService:
                 audit.log_order_created(order, admin_id)
             return result
         except Exception as e:
-            print(f"Error creating order: {e}")
+            logger.error(f"Error creating order: {e}")
             return None
 
     def get_orders_by_customer(self, customer_id: str) -> List[Order]:
@@ -180,7 +183,7 @@ class DynamoDBService:
             orders = self.get_orders_by_offer(offer_id)
             return [order for order in orders if order.customer_id == customer_id]
         except Exception as e:
-            print(f"Error getting orders by customer and offer: {e}")
+            logger.error(f"Error getting orders by customer and offer: {e}")
             return []
 
     def get_orders_by_customer_and_status(self, customer_id: str, status: str) -> List[Order]:
@@ -189,7 +192,7 @@ class DynamoDBService:
             orders = self.get_orders_by_customer(customer_id)
             return [order for order in orders if order.status == status]
         except Exception as e:
-            print(f"Error getting orders by customer and status: {e}")
+            logger.error(f"Error getting orders by customer and status: {e}")
             return []
 
     def get_orders_by_box(self, box_id: str) -> List[Order]:
@@ -234,7 +237,7 @@ class DynamoDBService:
             
             return True
         except Exception as e:
-            print(f"Error updating order: {e}")
+            logger.error(f"Error updating order: {e}")
             return False
 
     def batch_update_order_status(self, order_ids: List[str], status: str, admin_id: int = 0) -> int:
@@ -314,7 +317,7 @@ class DynamoDBService:
             )
             return f"https://{self.s3_bucket}.s3.amazonaws.com/{key}"
         except Exception as e:
-            print(f"Error uploading image to S3: {e}")
+            logger.error(f"Error uploading image to S3: {e}")
             return None
     
     def get_presigned_url(self, s3_url: str, expiration: int = 3600) -> Optional[str]:
@@ -333,7 +336,7 @@ class DynamoDBService:
             )
             return presigned_url
         except Exception as e:
-            print(f"Error generating presigned URL: {e}")
+            logger.error(f"Error generating presigned URL: {e}")
             return None
     
     def get_suppliers_with_boxes_by_status(self, box_status: str) -> List[Supplier]:
@@ -367,7 +370,7 @@ class DynamoDBService:
             
             return suppliers
         except Exception as e:
-            print(f"Error getting suppliers with {box_status} boxes: {e}")
+            logger.error(f"Error getting suppliers with {box_status} boxes: {e}")
             return []
 
     def get_offers_by_supplier_and_box_status(self, supplier_name: str, box_status: str) -> List[Offer]:
@@ -394,7 +397,7 @@ class DynamoDBService:
             
             return offers
         except Exception as e:
-            print(f"Error getting {box_status} offers by supplier: {e}")
+            logger.error(f"Error getting {box_status} offers by supplier: {e}")
             return []
 
     def get_suppliers_with_ordered_offers(self) -> List[Supplier]:
@@ -418,7 +421,7 @@ class DynamoDBService:
             
             return boxes_with_orders
         except Exception as e:
-            print(f"Error getting boxes with orders: {e}")
+            logger.error(f"Error getting boxes with orders: {e}")
             return []
 
     def get_suppliers_with_ready_for_labeling_offers(self) -> List[Supplier]:
@@ -464,7 +467,7 @@ class DynamoDBService:
             
             return suppliers
         except Exception as e:
-            print(f"Error getting suppliers with {order_status} orders: {e}")
+            logger.error(f"Error getting suppliers with {order_status} orders: {e}")
             return []
 
     def get_offers_by_supplier_and_order_status(self, supplier_name: str, order_status: str) -> List[Offer]:
@@ -491,7 +494,7 @@ class DynamoDBService:
             
             return offers
         except Exception as e:
-            print(f"Error getting {order_status} offers by supplier: {e}")
+            logger.error(f"Error getting {order_status} offers by supplier: {e}")
             return []
 
     def get_boxes_by_offer_with_order_status(self, offer_id: int, order_status: str) -> List[Box]:
@@ -508,7 +511,7 @@ class DynamoDBService:
             
             return boxes_with_status_orders
         except Exception as e:
-            print(f"Error getting boxes with {order_status} orders: {e}")
+            logger.error(f"Error getting boxes with {order_status} orders: {e}")
             return []
 
     def delete_offer(self, offer_id: int) -> bool:
@@ -520,7 +523,7 @@ class DynamoDBService:
             
             return True
         except Exception as e:
-            print(f"Error deleting offer: {e}")
+            logger.error(f"Error deleting offer: {e}")
             return False
 
     def delete_offer_images(self, offer_id: int) -> bool:
@@ -537,7 +540,7 @@ class DynamoDBService:
                 )
             return True
         except Exception as e:
-            print(f"Error deleting offer images: {e}")
+            logger.error(f"Error deleting offer images: {e}")
             return False
     
     # Order History operations
@@ -573,7 +576,7 @@ class DynamoDBService:
             # Then update order (will also log status change via update_order)
             return self.update_order(order_id, {'status': 'cancelled'}, admin_id, reason)
         except Exception as e:
-            print(f"Error cancelling order with audit: {e}")
+            logger.error(f"Error cancelling order with audit: {e}")
             return False
     
     def adjust_order_price_with_audit(self, order_id: str, new_price, admin_id: int, 
@@ -597,7 +600,7 @@ class DynamoDBService:
             # Update order (will also log via update_order, but price change already logged above)
             return self.update_order(order_id, {'total_price': new_price}, admin_id, reason)
         except Exception as e:
-            print(f"Error adjusting order price with audit: {e}")
+            logger.error(f"Error adjusting order price with audit: {e}")
             return False
     
     def mark_order_paid_with_audit(self, order_id: str, admin_id: int) -> bool:
@@ -610,7 +613,7 @@ class DynamoDBService:
             # Update order status (audit logging handled by update_order)
             return self.update_order(order_id, {'status': 'completed'}, admin_id, "Payment received")
         except Exception as e:
-            print(f"Error marking order paid with audit: {e}")
+            logger.error(f"Error marking order paid with audit: {e}")
             return False
     
     # Credit system operations

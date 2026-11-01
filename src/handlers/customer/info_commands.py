@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Any
 from decimal import Decimal
 from handlers.base_handler import BaseHandler
@@ -5,6 +6,8 @@ from models.entities import OfferStatus, OrderStatus
 from services.user_cache import UserCache
 from services.box_status_manager import BoxStatusManager
 from utils.pagination import PaginationUtils
+
+logger = logging.getLogger(__name__)
 
 class InfoCommands(BaseHandler):
     def handle_start(self, chat_id: int, user_id: int, args: list = None) -> Dict[str, Any]:
@@ -618,7 +621,7 @@ class InfoCommands(BaseHandler):
                             image_url = presigned_url
                     self._send_photo(chat_id, image_url)
                 except Exception as e:
-                    print(f"Failed to send image {image_url}: {e}")
+                    logger.error(f"Failed to send image {image_url}: {e}")
             else:
                 # Multiple images as media group
                 media_group = []
@@ -630,7 +633,7 @@ class InfoCommands(BaseHandler):
                                 image_url = presigned_url
                         media_group.append({"type": "photo", "media": image_url})
                     except Exception as e:
-                        print(f"Failed to prepare image {image_url}: {e}")
+                        logger.error(f"Failed to prepare image {image_url}: {e}")
                 
                 if media_group:
                     self._send_media_group(chat_id, media_group)

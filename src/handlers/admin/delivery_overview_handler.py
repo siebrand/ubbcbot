@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Any, List, Tuple
 import os
 import json
@@ -5,6 +6,8 @@ import boto3
 from handlers.base_handler import BaseHandler
 from models.entities import OrderStatus, AuthorizationStatus
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 class DeliveryOverviewHandler(BaseHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
@@ -196,7 +199,7 @@ class DeliveryOverviewHandler(BaseHandler):
                     'customer_name': str(customer_name)
                 }
         except Exception as e:
-            print(f"Error building message for customer {customer_data['customer_id']}: {e}")
+            logger.error(f"Error building message for customer {customer_data['customer_id']}: {e}")
             return None
     
     def _build_delivery_message(self, customer, delivered_orders: List, delayed_orders: List, payment_link: str, is_reminder: bool = False) -> str:

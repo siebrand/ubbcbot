@@ -1,3 +1,6 @@
+import logging
+from unittest.mock import patch
+
 import pytest
 from repositories.box_repository import BoxRepository
 from models.entities import Box
@@ -110,3 +113,19 @@ class TestBoxRepository:
         assert isinstance(retrieved.max_capacity, int)
         assert retrieved.current_quantity == 7
         assert retrieved.max_capacity == 24
+
+    def test_errors_are_logged_not_printed(self, box_repo, caplog):
+        """Repository failures must go through the logger and return a safe fallback.
+
+        Guards the print()->logger.error() conversion so errors stay visible in
+        CloudWatch with a level instead of being written to stdout.
+        """
+        with patch.object(box_repo.table, 'get_item', side_effect=RuntimeError("boom")):
+            with caplog.at_level(logging.ERROR, logger="repositories.box_repository"):
+                result = box_repo.get_box("box-err")
+
+        assert result is None
+        assert any(
+            record.levelno == logging.ERROR and "boom" in record.getMessage()
+            for record in caplog.records
+        )

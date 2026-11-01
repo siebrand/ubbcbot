@@ -1,9 +1,12 @@
+import logging
 from typing import List, Optional, Dict, Any
 from decimal import Decimal
 from datetime import datetime
 from boto3.dynamodb.conditions import Key
 from repositories.base_repository import BaseRepository
 from models.entities import CustomerCredit, CreditTransaction
+
+logger = logging.getLogger(__name__)
 
 class CreditRepository(BaseRepository):
     def __init__(self):
@@ -29,7 +32,7 @@ class CreditRepository(BaseRepository):
             self.table.put_item(Item=item)
             return True
         except Exception as e:
-            print(f"Error creating customer credit: {e}")
+            logger.error(f"Error creating customer credit: {e}")
             return False
 
     def get_customer_credit(self, customer_id: str) -> Optional[CustomerCredit]:
@@ -39,7 +42,7 @@ class CreditRepository(BaseRepository):
                 return self._item_to_credit(response['Item'])
             return None
         except Exception as e:
-            print(f"Error getting customer credit: {e}")
+            logger.error(f"Error getting customer credit: {e}")
             return None
 
     def update_customer_credit(self, customer_id: str, updates: Dict[str, Any]) -> bool:
@@ -63,7 +66,7 @@ class CreditRepository(BaseRepository):
             )
             return True
         except Exception as e:
-            print(f"Error updating customer credit: {e}")
+            logger.error(f"Error updating customer credit: {e}")
             return False
 
     def create_credit_transaction(self, transaction: CreditTransaction) -> bool:
@@ -72,7 +75,7 @@ class CreditRepository(BaseRepository):
             self.transactions_table.put_item(Item=item)
             return True
         except Exception as e:
-            print(f"Error creating credit transaction: {e}")
+            logger.error(f"Error creating credit transaction: {e}")
             return False
 
     def get_credit_transactions_by_customer(self, customer_id: str, limit: int = 50) -> List[CreditTransaction]:
@@ -85,7 +88,7 @@ class CreditRepository(BaseRepository):
             )
             return [self._item_to_transaction(item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting credit transactions: {e}")
+            logger.error(f"Error getting credit transactions: {e}")
             return []
 
     def get_customers_with_credit_balance(self, min_amount: Optional[Decimal] = None) -> List[CustomerCredit]:
@@ -100,5 +103,5 @@ class CreditRepository(BaseRepository):
             
             return [self._item_to_credit(item) for item in response.get('Items', [])]
         except Exception as e:
-            print(f"Error getting customers with credit balance: {e}")
+            logger.error(f"Error getting customers with credit balance: {e}")
             return []

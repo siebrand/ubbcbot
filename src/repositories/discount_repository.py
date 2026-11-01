@@ -1,7 +1,10 @@
+import logging
 from typing import Optional, Dict, Any
 from datetime import datetime, UTC
 from repositories.base_repository import BaseRepository
 from models.entities import DiscountPeriod, DiscountStatus
+
+logger = logging.getLogger(__name__)
 
 class DiscountRepository(BaseRepository):
     def __init__(self):
@@ -13,7 +16,7 @@ class DiscountRepository(BaseRepository):
             self.table.put_item(Item=item)
             return True
         except Exception as e:
-            print(f"Error creating discount: {e}")
+            logger.error(f"Error creating discount: {e}")
             return False
 
     def get_active_discount(self) -> Optional[DiscountPeriod]:
@@ -32,7 +35,7 @@ class DiscountRepository(BaseRepository):
                 return DiscountPeriod(**items[0])
             return None
         except Exception as e:
-            print(f"Error getting active discount: {e}")
+            logger.error(f"Error getting active discount: {e}")
             return None
 
     def update_discount(self, discount_id: str, updates: Dict[str, Any]) -> bool:
@@ -56,5 +59,5 @@ class DiscountRepository(BaseRepository):
             )
             return True
         except Exception as e:
-            print(f"Error updating discount: {e}")
+            logger.error(f"Error updating discount: {e}")
             return False
