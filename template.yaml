@@ -6,13 +6,13 @@ Parameters:
   Environment:
     Type: String
     Default: test
-    AllowedValues: [test, prod]
+    AllowedValues: [ test, prod ]
   AdminUserId:
     Type: String
     Description: Telegram user ID of the bot administrator
 
 Conditions:
-  IsTestEnvironment: !Equals [!Ref Environment, test]
+  IsTestEnvironment: !Equals [ !Ref Environment, test ]
 
 Globals:
   Function:
@@ -27,7 +27,7 @@ Globals:
         DYNAMODB_TABLE_PREFIX: !Sub 'ubbc-bot-${Environment}'
         S3_BUCKET_NAME: !Ref ImageBucket
         ADMIN_USER_ID: !Ref AdminUserId
-        DEFAULT_GROUP_ID: !If 
+        DEFAULT_GROUP_ID: !If
           - IsTestEnvironment
           - '-1003399818858'
           - '-1001662432692'
@@ -173,7 +173,6 @@ Resources:
 
   WebhookHandler:
     Type: AWS::Serverless::Function
-    DependsOn: WebhookHandlerLogGroup
     Properties:
       FunctionName: !Sub 'ubbc-bot-${Environment}-webhook-handler'
       CodeUri: src/
@@ -203,10 +202,14 @@ Resources:
             - Effect: Allow
               Action:
                 - lambda:InvokeFunction
-              Resource: 
+              Resource:
                 - !GetAtt NotificationSender.Arn
                 - !GetAtt MessageSender.Arn
-        - CloudWatchLogsFullAccess
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !GetAtt WebhookHandlerLogGroup.Arn
       Tags:
         Project: UBBCBot
         Environment: !Ref Environment
@@ -217,7 +220,6 @@ Resources:
 
   NotificationSender:
     Type: AWS::Serverless::Function
-    DependsOn: NotificationSenderLogGroup
     Properties:
       FunctionName: !Sub 'ubbc-bot-${Environment}-notification-sender'
       CodeUri: src/
@@ -235,7 +237,11 @@ Resources:
               Action:
                 - ssm:GetParameter
               Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/*'
-        - CloudWatchLogsFullAccess
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !GetAtt NotificationSenderLogGroup.Arn
       Tags:
         Project: UBBCBot
         Environment: !Ref Environment
@@ -246,7 +252,6 @@ Resources:
 
   MessageSender:
     Type: AWS::Serverless::Function
-    DependsOn: MessageSenderLogGroup
     Properties:
       FunctionName: !Sub 'ubbc-bot-${Environment}-message-sender'
       CodeUri: src/
@@ -260,12 +265,16 @@ Resources:
               Action:
                 - ssm:GetParameter
                 - ssm:GetParameters
-              Resource: 
+              Resource:
                 - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/telegram-bot-token'
                 - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/telegram-api-id'
                 - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/telegram-api-hash'
                 - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/telegram-session'
-        - CloudWatchLogsFullAccess
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !GetAtt MessageSenderLogGroup.Arn
       Tags:
         Project: UBBCBot
         Environment: !Ref Environment
