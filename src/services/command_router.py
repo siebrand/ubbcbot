@@ -18,6 +18,15 @@ class CommandRouter:
         self.admin_user_id = admin_user_id
         self.environment = environment
         self.handlers = handlers
+        self._base_handler = None
+
+    @property
+    def base_handler(self):
+        """Lazily-created shared BaseHandler for messaging/translation helpers"""
+        if self._base_handler is None:
+            from handlers.base_handler import BaseHandler
+            self._base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, "")
+        return self._base_handler
 
     def _is_admin(self, user_id: int) -> bool:
         """Check if user is admin"""
@@ -46,8 +55,7 @@ class CommandRouter:
         
         if (self.environment == 'prod' and is_group_chat and 
             command not in group_allowed_commands):
-            from handlers.base_handler import BaseHandler
-            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, "")
+            base_handler = self.base_handler
             base_handler._send_message(user_id, base_handler._t('redirected_to_pm', command=command))
             return {'status': 'redirected_to_pm'}
 
@@ -58,8 +66,7 @@ class CommandRouter:
                 if command == '/start':
                     return self.handlers['auth'].handle_unauthorized_start(chat_id if not is_group_chat or self.environment == 'test' else user_id)
                 else:
-                    from handlers.base_handler import BaseHandler
-                    base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, "")
+                    base_handler = self.base_handler
                     target_chat = chat_id if not is_group_chat or self.environment == 'test' else user_id
                     base_handler._send_message(target_chat, base_handler._t('unauthorized'))
                     return {'status': 'unauthorized'}

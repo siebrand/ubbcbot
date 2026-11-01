@@ -6,6 +6,7 @@ from services.database import DynamoDBService
 from services.command_router import CommandRouter
 from services.media_handler import MediaHandler
 from services.callback_handler import CallbackHandler
+from handlers.base_handler import BaseHandler
 from models.entities import Customer, AuthorizationStatus
 
 # Import handlers
@@ -152,6 +153,9 @@ class BotService:
         self.media_handler = MediaHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.callback_handler = CallbackHandler(self.db, self.admin_user_id, self.environment, self.telegram_token, handlers, self.media_handler)
 
+        # Shared BaseHandler for ad-hoc messaging/translation helpers in this service
+        self.base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+
     def process_update(self, update: Dict[str, Any]) -> Dict[str, Any]:
         """Process incoming Telegram update"""
         try:
@@ -251,8 +255,7 @@ class BotService:
     def _notify_admin_new_user_pending(self, user_data: Dict[str, Any], created_customer):
         """Send notification to admin when new user registration is pending"""
         try:
-            from handlers.base_handler import BaseHandler
-            base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+            base_handler = self.base_handler
             
             first_name = user_data.get('first_name', base_handler._t('unknown', user_id=None))
             last_name = user_data.get('last_name', '')
@@ -386,14 +389,10 @@ class BotService:
                     if 1 <= quantity <= 10:
                         return self.admin_order_commands.handle_create_order_for_quantity_select(chat_id, customer_id, offer_id, str(quantity))
                     else:
-                        from handlers.base_handler import BaseHandler
-                        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                        base_handler._send_message(chat_id, base_handler._t('quantity_must_be_1_to_10', chat_id))
+                        self.base_handler._send_message(chat_id, self.base_handler._t('quantity_must_be_1_to_10', chat_id))
                         return {'status': 'invalid_quantity'}
                 except ValueError:
-                    from handlers.base_handler import BaseHandler
-                    base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                    base_handler._send_message(chat_id, base_handler._t('enter_valid_number', chat_id))
+                    self.base_handler._send_message(chat_id, self.base_handler._t('enter_valid_number', chat_id))
                     return {'status': 'invalid_format'}
             return {'status': 'invalid_context'}
         elif edit_type == 'payment_link_input':
@@ -404,14 +403,10 @@ class BotService:
                 if boxes > 0:
                     return self.offer_commands.handle_confirm_process_wholesale(chat_id, [entity_id, str(boxes)])
                 else:
-                    from handlers.base_handler import BaseHandler
-                    base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                    base_handler._send_message(chat_id, base_handler._t('boxes_must_positive'))
+                    self.base_handler._send_message(chat_id, self.base_handler._t('boxes_must_positive'))
                     return {'status': 'invalid_quantity'}
             except ValueError:
-                from handlers.base_handler import BaseHandler
-                base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-                base_handler._send_message(chat_id, base_handler._t('invalid_format'))
+                self.base_handler._send_message(chat_id, self.base_handler._t('invalid_format'))
                 return {'status': 'invalid_format'}
         elif edit_type == 'cancel_order_reason':
             # Handle cancellation reason input

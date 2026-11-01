@@ -11,6 +11,15 @@ class MediaHandler:
         self.admin_user_id = admin_user_id
         self.environment = environment
         self.telegram_token = telegram_token
+        self._base_handler = None
+
+    @property
+    def base_handler(self):
+        """Lazily-created shared BaseHandler for messaging/translation helpers"""
+        if self._base_handler is None:
+            from handlers.base_handler import BaseHandler
+            self._base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        return self._base_handler
 
     def handle_media_group_image(self, chat_id: int, offer_id: str, message: Dict[str, Any]) -> Dict[str, Any]:
         """Handle image from media group (multiple images)"""
@@ -22,8 +31,7 @@ class MediaHandler:
     
     def handle_offer_image_upload(self, chat_id: int, offer_id: str, photos: list) -> Dict[str, Any]:
         """Handle image upload for offer"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        base_handler = self.base_handler
         
         try:
             offer_id_int = int(offer_id)
@@ -78,8 +86,7 @@ class MediaHandler:
     
     def handle_clear_offer_images(self, chat_id: int, offer_id: str) -> Dict[str, Any]:
         """Handle clearing all images for an offer"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        base_handler = self.base_handler
         
         try:
             offer_id_int = int(offer_id)

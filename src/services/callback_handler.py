@@ -30,6 +30,7 @@ class CallbackHandler:
         self.telegram_token = telegram_token
         self.handlers = handlers
         self.media_handler = media_handler
+        self._base_handler = None
         self.edit_context_manager = EditContextManager(db, self._t, self._send_message)
         
         # Initialize callback router
@@ -764,17 +765,21 @@ class CallbackHandler:
         self._send_message(chat_id, self._t(usage_key))
         return {'status': 'usage_sent'}
     
+    @property
+    def base_handler(self):
+        """Lazily-created shared BaseHandler for messaging/translation helpers"""
+        if self._base_handler is None:
+            from handlers.base_handler import BaseHandler
+            self._base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        return self._base_handler
+
     def _t(self, key: str, user_id: int = None, **params) -> str:
         """Translation helper for EditContextManager"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        return base_handler._t(key, user_id, **params)
+        return self.base_handler._t(key, user_id, **params)
     
     def _send_message(self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False) -> dict:
         """Send message helper for EditContextManager"""
-        from handlers.base_handler import BaseHandler
-        base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        return base_handler._send_message(chat_id, text, parse_mode, reply_markup, force_group)
+        return self.base_handler._send_message(chat_id, text, parse_mode, reply_markup, force_group)
     
     def _request_cancellation_reason(self, chat_id: int, order_id: str) -> Dict[str, Any]:
         """Request cancellation reason from admin"""
