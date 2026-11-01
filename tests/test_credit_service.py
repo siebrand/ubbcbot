@@ -86,95 +86,96 @@ class TestUpdateCustomerCreditBalance:
     """Test updating customer credit balance"""
     
     def test_update_balance_existing_customer(self, credit_service, mocker):
-        """Test updating balance for existing customer"""
+        """Test updating balance for existing customer applies the balance delta"""
         customer_id = "test-customer-123"
         new_balance = Decimal('75.00')
-        
+
         existing_credit = CustomerCredit(
             customer_id=customer_id,
             current_balance=Decimal('50.00'),
             total_credits_issued=Decimal('100.00'),
             total_credits_used=Decimal('50.00')
         )
-        
+
         credit_service.db.get_customer_credit = mocker.Mock(return_value=existing_credit)
-        credit_service.db.update_customer_credit = mocker.Mock(return_value=True)
-        
+        credit_service.db.increment_customer_credit = mocker.Mock(return_value=True)
+
         result = credit_service._update_customer_credit_balance(customer_id, new_balance)
-        
+
         assert result is True
-        credit_service.db.update_customer_credit.assert_called_once()
-        
-        # Verify update includes new balance and timestamp
-        call_args = credit_service.db.update_customer_credit.call_args
-        assert call_args[0][0] == customer_id
-        assert call_args[0][1]['current_balance'] == new_balance
-        assert 'last_updated' in call_args[0][1]
-    
+        credit_service.db.increment_customer_credit.assert_called_once()
+
+        # Verify the delta (75 - 50 = +25) and timestamp are passed, not an absolute value
+        args, kwargs = credit_service.db.increment_customer_credit.call_args
+        assert args[0] == customer_id
+        assert args[1] == Decimal('25.00')  # balance_delta
+        assert kwargs['last_updated']
+
     def test_update_balance_new_customer_creates_record(self, credit_service, mocker):
-        """Test updating balance for new customer creates credit record"""
+        """Test updating balance for a new customer upserts via the atomic increment"""
         customer_id = "test-customer-new"
         new_balance = Decimal('25.00')
-        
+
         credit_service.db.get_customer_credit = mocker.Mock(return_value=None)
-        credit_service.db.create_customer_credit = mocker.Mock(return_value=True)
-        
+        credit_service.db.increment_customer_credit = mocker.Mock(return_value=True)
+
         result = credit_service._update_customer_credit_balance(customer_id, new_balance)
-        
+
         assert result is True
-        credit_service.db.create_customer_credit.assert_called_once()
-        
-        # Verify created credit has correct balance
-        call_args = credit_service.db.create_customer_credit.call_args
-        created_credit = call_args[0][0]
-        assert created_credit.customer_id == customer_id
-        assert created_credit.current_balance == new_balance
-    
+        credit_service.db.increment_customer_credit.assert_called_once()
+
+        # No prior record -> delta equals the full new balance (ADD upserts from 0)
+        args, _ = credit_service.db.increment_customer_credit.call_args
+        assert args[0] == customer_id
+        assert args[1] == Decimal('25.00')  # balance_delta
+        assert args[2] == Decimal('25.00')  # issued_delta (is_credit default True)
+
     def test_update_balance_updates_totals_on_credit(self, credit_service, mocker):
-        """Test that updating balance also updates total_credits_issued when adding credit"""
+        """Adding credit records the increase as issued_delta"""
         customer_id = "test-customer-123"
         old_balance = Decimal('50.00')
         new_balance = Decimal('70.00')  # Adding 20
-        
+
         existing_credit = CustomerCredit(
             customer_id=customer_id,
             current_balance=old_balance,
             total_credits_issued=Decimal('100.00'),
             total_credits_used=Decimal('50.00')
         )
-        
+
         credit_service.db.get_customer_credit = mocker.Mock(return_value=existing_credit)
-        credit_service.db.update_customer_credit = mocker.Mock(return_value=True)
-        
+        credit_service.db.increment_customer_credit = mocker.Mock(return_value=True)
+
         credit_service._update_customer_credit_balance(customer_id, new_balance, is_credit=True)
-        
-        # Verify total_credits_issued was updated
-        call_args = credit_service.db.update_customer_credit.call_args
-        updates = call_args[0][1]
-        assert updates['total_credits_issued'] == Decimal('120.00')  # 100 + 20
-    
+
+        args, _ = credit_service.db.increment_customer_credit.call_args
+        # balance_delta, issued_delta, used_delta
+        assert args[1] == Decimal('20.00')
+        assert args[2] == Decimal('20.00')
+        assert args[3] == Decimal('0.0')
+
     def test_update_balance_updates_totals_on_usage(self, credit_service, mocker):
-        """Test that updating balance also updates total_credits_used when using credit"""
+        """Using credit records the decrease as used_delta"""
         customer_id = "test-customer-123"
         old_balance = Decimal('50.00')
         new_balance = Decimal('30.00')  # Using 20
-        
+
         existing_credit = CustomerCredit(
             customer_id=customer_id,
             current_balance=old_balance,
             total_credits_issued=Decimal('100.00'),
             total_credits_used=Decimal('50.00')
         )
-        
+
         credit_service.db.get_customer_credit = mocker.Mock(return_value=existing_credit)
-        credit_service.db.update_customer_credit = mocker.Mock(return_value=True)
-        
+        credit_service.db.increment_customer_credit = mocker.Mock(return_value=True)
+
         credit_service._update_customer_credit_balance(customer_id, new_balance, is_credit=False)
-        
-        # Verify total_credits_used was updated
-        call_args = credit_service.db.update_customer_credit.call_args
-        updates = call_args[0][1]
-        assert updates['total_credits_used'] == Decimal('70.00')  # 50 + 20
+
+        args, _ = credit_service.db.increment_customer_credit.call_args
+        # balance_delta negative, used_delta is its absolute value
+        assert args[1] == Decimal('-20.00')
+        assert args[3] == Decimal('20.00')
 
 
 class TestIssueCredit:
