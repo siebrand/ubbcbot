@@ -206,5 +206,13 @@ def dynamodb(aws_credentials):
             AttributeDefinitions=[{'AttributeName': 'context_id', 'AttributeType': 'S'}],
             ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
         )
+
+        # Create processed-updates table (idempotency dedup)
+        dynamodb.create_table(
+            TableName="ubbc-bot-test-processed-updates",
+            KeySchema=[{'AttributeName': 'update_id', 'KeyType': 'HASH'}],
+            AttributeDefinitions=[{'AttributeName': 'update_id', 'AttributeType': 'S'}],
+            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+        )
         
         yield dynamodb

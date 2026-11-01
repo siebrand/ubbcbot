@@ -42,7 +42,7 @@ class TestWebhookSecretToken:
     ])
     def test_rejects_missing_or_invalid_token(self, headers):
         with patch.object(webhook, '_get_webhook_secret', return_value=SECRET), \
-             patch.object(webhook, 'BotService') as bot_service:
+                patch.object(webhook, 'BotService') as bot_service:
             response = webhook.handler(self._event(headers), None)
 
         assert response['statusCode'] == 403
@@ -54,7 +54,7 @@ class TestWebhookSecretToken:
     ])
     def test_accepts_valid_token_case_insensitive(self, header_name):
         with patch.object(webhook, '_get_webhook_secret', return_value=SECRET), \
-             patch.object(webhook, 'BotService') as bot_service:
+                patch.object(webhook, 'BotService') as bot_service:
             response = webhook.handler(self._event({header_name: SECRET}), None)
 
         assert response['statusCode'] == 200
@@ -63,7 +63,7 @@ class TestWebhookSecretToken:
     def test_fails_closed_when_secret_unavailable(self):
         """If the secret cannot be loaded, nothing is processed (even an empty header)"""
         with patch.object(webhook, '_get_webhook_secret', return_value=None), \
-             patch.object(webhook, 'BotService') as bot_service:
+                patch.object(webhook, 'BotService') as bot_service:
             response = webhook.handler(self._event({'X-Telegram-Bot-Api-Secret-Token': ''}), None)
 
         assert response['statusCode'] == 403
@@ -106,6 +106,48 @@ class TestEditReplyAccess:
 
         assert result == {'status': 'handled'}
         bot_service._handle_edit_reply.assert_called_once()
+
+
+class TestUpdateDeduplication:
+    """A re-delivered update_id must be processed at most once (idempotency)"""
+
+    def _service(self):
+        service = BotService.__new__(BotService)
+        service.db = Mock()
+        service.admin_user_id = ADMIN_ID
+        service.environment = 'test'
+        service.command_router = Mock()
+        service.callback_handler = Mock()
+        service._register_customer_if_needed = Mock()
+        return service
+
+    def test_first_delivery_processed(self):
+        service = self._service()
+        service.db.mark_update_processed.return_value = True  # first time
+
+        result = service.process_update({'update_id': 42, 'callback_query': {'x': 1}})
+
+        service.db.mark_update_processed.assert_called_once_with(42)
+        service.callback_handler.handle_callback_query.assert_called_once()
+        assert result != {'status': 'duplicate'}
+
+    def test_redelivered_update_skipped(self):
+        service = self._service()
+        service.db.mark_update_processed.return_value = False  # already seen
+
+        result = service.process_update({'update_id': 42, 'callback_query': {'x': 1}})
+
+        assert result == {'status': 'duplicate'}
+        service.callback_handler.handle_callback_query.assert_not_called()
+
+    def test_missing_update_id_not_deduplicated(self):
+        service = self._service()
+
+        service.process_update({'callback_query': {'x': 1}})
+
+        # No update_id -> dedup store is not touched, update still handled
+        service.db.mark_update_processed.assert_not_called()
+        service.callback_handler.handle_callback_query.assert_called_once()
 
 
 class TestOrderAuthorization:

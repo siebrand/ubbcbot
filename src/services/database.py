@@ -14,6 +14,7 @@ from repositories.notification_repository import NotificationRepository
 from repositories.offer_repository import OfferRepository
 from repositories.order_history_repository import OrderHistoryRepository
 from repositories.order_repository import OrderRepository
+from repositories.processed_update_repository import ProcessedUpdateRepository
 from repositories.supplier_repository import SupplierRepository
 from repositories.system_repository import SystemRepository
 from services.offer_cache import OfferCache
@@ -40,6 +41,7 @@ class DynamoDBService:
         self.notification_repo = NotificationRepository()
         self.discount_repo = DiscountRepository()
         self.edit_context_repo = EditContextRepository()
+        self.processed_update_repo = ProcessedUpdateRepository()
 
         # Initialize tables (Legacy - to be removed)
         self.suppliers_table = self.dynamodb.Table(f'{self.table_prefix}-suppliers')
@@ -361,6 +363,10 @@ class DynamoDBService:
 
     def create_edit_context(self, context) -> bool:
         return self.edit_context_repo.create_edit_context(context)
+
+    def mark_update_processed(self, update_id: int) -> bool:
+        """Return True if this update_id is seen for the first time (see repository)."""
+        return self.processed_update_repo.mark_processed(update_id)
 
     def get_edit_context_by_chat_id(self, chat_id: int):
         return self.edit_context_repo.get_edit_context_by_chat_id(chat_id)

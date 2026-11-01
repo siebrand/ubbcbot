@@ -212,6 +212,7 @@ Resources:
                 - !GetAtt NotificationsTable.Arn
                 - !Sub '${NotificationsTable.Arn}/index/*'
                 - !GetAtt EditContextsTable.Arn
+                - !GetAtt ProcessedUpdatesTable.Arn
                 - !GetAtt OrderHistoryTable.Arn
                 - !Sub '${OrderHistoryTable.Arn}/index/*'
                 - !GetAtt CustomerCreditsTable.Arn
@@ -574,6 +575,34 @@ Resources:
       KeySchema:
         - AttributeName: context_id
           KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: ubbc-telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
+  ProcessedUpdatesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ubbc-bot-${Environment}-processed-updates'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: update_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: update_id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
       Tags:
         - Key: Project
           Value: UBBCBot

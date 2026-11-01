@@ -159,6 +159,13 @@ class BotService:
     def process_update(self, update: Dict[str, Any]) -> Dict[str, Any]:
         """Process incoming Telegram update"""
         try:
+            # Idempotency: Telegram re-delivers an update after a 5xx/timeout. Record
+            # the update_id once (conditional write); a repeat is skipped so retries
+            # cannot create duplicate orders. Fails open if the dedup store errors.
+            update_id = update.get('update_id')
+            if update_id is not None and not self.db.mark_update_processed(update_id):
+                return {'status': 'duplicate'}
+
             # Handle callback queries (inline button presses)
             if 'callback_query' in update:
                 return self.callback_handler.handle_callback_query(update['callback_query'])
