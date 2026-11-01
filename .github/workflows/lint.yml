@@ -1,0 +1,25 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      # pre-commit mirrors the local hook (ruff + ruff-format), keeping CI and
+      # developers in sync.
+      - name: Run pre-commit (ruff, ruff-format)
+        run: pipx run pre-commit==4.7.0 run --all-files
+
+      # Catch syntax and import errors ruff does not.
+      - name: Compile sources
+        run: python -m compileall -q src

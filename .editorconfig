@@ -1,0 +1,6 @@
+root = true
+
+# Disable the IntelliJ formatter for documentation so hand-authored Markdown
+# (tables, wrapped lines, "(s)" suffixes) is never reflowed on save or commit.
+[docs/**]
+ij_formatter_enabled = false
