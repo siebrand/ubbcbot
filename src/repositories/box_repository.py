@@ -1,11 +1,13 @@
 import logging
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Optional, List, Dict, Any
+
 from boto3.dynamodb.conditions import Key
-from repositories.base_repository import BaseRepository
 from models.entities import Box
+from repositories.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
+
 
 class BoxRepository(BaseRepository):
     def __init__(self):
@@ -81,19 +83,51 @@ class BoxRepository(BaseRepository):
             logger.error(f"Error getting all boxes: {e}")
             return []
 
+    def increment_box_quantity(self, box_id: str, delta: int, max_capacity: int) -> bool:
+        """Atomically add `delta` to current_quantity, failing if it would exceed max_capacity.
+
+        Uses a single conditional UpdateItem so concurrent orders cannot overfill a box:
+        the ADD and the capacity check happen server-side in one operation. `delta` may be
+        negative (e.g. on cancellation); the guard only limits the upper bound.
+
+        Returns True on success, False if the condition failed (would overfill) or on error.
+        """
+        from botocore.exceptions import ClientError
+        try:
+            # DynamoDB condition expressions cannot do arithmetic, so compute the
+            # threshold in Python: current_quantity must be <= max_capacity - delta
+            # for the post-increment value to stay within capacity. For a negative
+            # delta (cancellation) the threshold grows, making the guard a no-op.
+            self.table.update_item(
+                Key={'box_id': box_id},
+                UpdateExpression="ADD current_quantity :delta",
+                ConditionExpression="attribute_exists(box_id) AND current_quantity <= :threshold",
+                ExpressionAttributeValues={':delta': delta, ':threshold': max_capacity - delta},
+            )
+            return True
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logger.warning(f"Box {box_id} increment by {delta} rejected: would exceed capacity {max_capacity}")
+                return False
+            logger.error(f"Error incrementing box {box_id}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Error incrementing box {box_id}: {e}")
+            return False
+
     def update_box(self, box_id: str, updates: Dict[str, Any]) -> bool:
         try:
             update_expression = "SET "
             expression_values = {}
             expression_names = {}
-            
+
             for key, value in updates.items():
                 update_expression += f"#{key} = :{key}, "
                 expression_values[f":{key}"] = value
                 expression_names[f"#{key}"] = key
-            
+
             update_expression = update_expression.rstrip(", ")
-            
+
             self.table.update_item(
                 Key={'box_id': box_id},
                 UpdateExpression=update_expression,

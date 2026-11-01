@@ -148,6 +148,9 @@ class DynamoDBService:
     def update_box(self, box_id: str, updates: Dict[str, Any]) -> bool:
         return self.box_repo.update_box(box_id, updates)
 
+    def increment_box_quantity(self, box_id: str, delta: int, max_capacity: int) -> bool:
+        return self.box_repo.increment_box_quantity(box_id, delta, max_capacity)
+
     # Order operations
     def create_order(self, order: Order, admin_id: int = 0) -> Optional[Order]:
         """Create order with automatic audit logging"""

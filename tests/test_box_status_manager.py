@@ -32,17 +32,17 @@ class TestBoxStatusManager:
             status=BoxStatus.OPEN.value
         )
         self.mock_db.get_box.return_value = box
+        self.mock_db.increment_box_quantity.return_value = True
         self.mock_db.update_box.return_value = True
-        
+
         # Execute
         result = self.manager.update_box_after_order_placement("box1", 2)
-        
-        # Verify
+
+        # Verify: atomic conditional increment, no status change (still below capacity)
         assert result is True
-        self.mock_db.update_box.assert_called_once_with("box1", {
-            'current_quantity': 10,
-        })
-    
+        self.mock_db.increment_box_quantity.assert_called_once_with("box1", 2, 12)
+        self.mock_db.update_box.assert_not_called()
+
     def test_update_box_after_order_placement_fills_box(self):
         """Test box status changes to FULL when capacity reached"""
         # Setup
@@ -54,18 +54,37 @@ class TestBoxStatusManager:
             status=BoxStatus.OPEN.value
         )
         self.mock_db.get_box.return_value = box
+        self.mock_db.increment_box_quantity.return_value = True
         self.mock_db.update_box.return_value = True
-        
+
         # Execute
         result = self.manager.update_box_after_order_placement("box1", 2)
-        
-        # Verify
+
+        # Verify: atomic increment, then FULL status follow-up
         assert result is True
+        self.mock_db.increment_box_quantity.assert_called_once_with("box1", 2, 12)
         self.mock_db.update_box.assert_called_once_with("box1", {
-            'current_quantity': 12,
             'status': BoxStatus.FULL.value
         })
-    
+
+    def test_update_box_after_order_placement_rejected_when_overfill(self):
+        """Atomic increment failing (would overfill) aborts without a status write"""
+        box = Box(
+            box_id="box1",
+            offer_id=1,
+            current_quantity=11,
+            max_capacity=12,
+            status=BoxStatus.OPEN.value
+        )
+        self.mock_db.get_box.return_value = box
+        self.mock_db.increment_box_quantity.return_value = False  # concurrent fill won the race
+
+        result = self.manager.update_box_after_order_placement("box1", 2)
+
+        assert result is False
+        self.mock_db.increment_box_quantity.assert_called_once_with("box1", 2, 12)
+        self.mock_db.update_box.assert_not_called()
+
     def test_update_box_after_order_placement_ordered_box(self):
         """Test box status not changed when already ORDERED"""
         # Setup
@@ -77,29 +96,30 @@ class TestBoxStatusManager:
             status=BoxStatus.ORDERED.value
         )
         self.mock_db.get_box.return_value = box
+        self.mock_db.increment_box_quantity.return_value = True
         self.mock_db.update_box.return_value = True
-        
+
         # Execute
         result = self.manager.update_box_after_order_placement("box1", 2)
-        
-        # Verify - status should not be updated
+
+        # Verify - quantity incremented atomically, status untouched (ORDERED)
         assert result is True
-        self.mock_db.update_box.assert_called_once_with("box1", {
-            'current_quantity': 12,
-        })
-    
+        self.mock_db.increment_box_quantity.assert_called_once_with("box1", 2, 12)
+        self.mock_db.update_box.assert_not_called()
+
     def test_update_box_after_order_placement_box_not_found(self):
         """Test error handling when box not found"""
         # Setup
         self.mock_db.get_box.return_value = None
-        
+
         # Execute
         result = self.manager.update_box_after_order_placement("box1", 2)
-        
+
         # Verify
         assert result is False
+        self.mock_db.increment_box_quantity.assert_not_called()
         self.mock_db.update_box.assert_not_called()
-    
+
     def test_update_box_after_order_cancellation_partial(self):
         """Test box update when order partially empties box"""
         # Setup
@@ -111,18 +131,19 @@ class TestBoxStatusManager:
             status=BoxStatus.FULL.value
         )
         self.mock_db.get_box.return_value = box
+        self.mock_db.increment_box_quantity.return_value = True
         self.mock_db.update_box.return_value = True
-        
+
         # Execute
         result = self.manager.update_box_after_order_cancellation("box1", 2)
-        
-        # Verify - should change to OPEN since 8 < 12
+
+        # Verify - atomic decrement, then OPEN since 8 < 12
         assert result is True
+        self.mock_db.increment_box_quantity.assert_called_once_with("box1", -2, 12)
         self.mock_db.update_box.assert_called_once_with("box1", {
-            'current_quantity': 8,
             'status': BoxStatus.OPEN.value
         })
-    
+
     def test_update_box_after_order_cancellation_empties_box(self):
         """Test box status changes to OPEN when no longer full"""
         # Setup
@@ -134,18 +155,19 @@ class TestBoxStatusManager:
             status=BoxStatus.FULL.value
         )
         self.mock_db.get_box.return_value = box
+        self.mock_db.increment_box_quantity.return_value = True
         self.mock_db.update_box.return_value = True
-        
+
         # Execute - remove 2 units
         result = self.manager.update_box_after_order_cancellation("box1", 2)
-        
-        # Verify - should become OPEN since 10 < 12
+
+        # Verify - atomic decrement, then OPEN since 10 < 12
         assert result is True
+        self.mock_db.increment_box_quantity.assert_called_once_with("box1", -2, 12)
         self.mock_db.update_box.assert_called_once_with("box1", {
-            'current_quantity': 10,
             'status': BoxStatus.OPEN.value
         })
-    
+
     def test_update_box_after_order_cancellation_ordered_box(self):
         """Test box status not changed when already ORDERED"""
         # Setup
@@ -157,16 +179,16 @@ class TestBoxStatusManager:
             status=BoxStatus.ORDERED.value
         )
         self.mock_db.get_box.return_value = box
+        self.mock_db.increment_box_quantity.return_value = True
         self.mock_db.update_box.return_value = True
-        
+
         # Execute
         result = self.manager.update_box_after_order_cancellation("box1", 2)
-        
-        # Verify - status should not be updated
+
+        # Verify - decremented atomically, status untouched (ORDERED)
         assert result is True
-        self.mock_db.update_box.assert_called_once_with("box1", {
-            'current_quantity': 0,
-        })
+        self.mock_db.increment_box_quantity.assert_called_once_with("box1", -2, 12)
+        self.mock_db.update_box.assert_not_called()
     
     def test_mark_boxes_as_ordered(self):
         """Test marking multiple boxes as ORDERED"""
