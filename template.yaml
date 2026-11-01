@@ -39,10 +39,6 @@ Resources:
     Properties:
       Name: !Sub 'ubbc-bot-${Environment}-api'
       StageName: !Ref Environment
-      Cors:
-        AllowMethods: "'GET,POST'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-        AllowOrigin: "'*'"
       Tags:
         Project: UBBCBot
         Environment: !Ref Environment
