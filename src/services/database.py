@@ -5,11 +5,10 @@ from typing import Any
 
 import boto3
 
-from models.entities import Box, Customer, DiscountPeriod, Offer, Order, Supplier
+from models.entities import Box, Customer, Offer, Order, Supplier
 from repositories.box_repository import BoxRepository
 from repositories.credit_repository import CreditRepository
 from repositories.customer_repository import CustomerRepository
-from repositories.discount_repository import DiscountRepository
 from repositories.edit_context_repository import EditContextRepository
 from repositories.notification_repository import NotificationRepository
 from repositories.offer_repository import OfferRepository
@@ -40,7 +39,6 @@ class DynamoDBService:
         self.order_history_repo = OrderHistoryRepository()
         self.credit_repo = CreditRepository()
         self.notification_repo = NotificationRepository()
-        self.discount_repo = DiscountRepository()
         self.edit_context_repo = EditContextRepository()
         self.processed_update_repo = ProcessedUpdateRepository()
 
@@ -50,7 +48,6 @@ class DynamoDBService:
         self.customers_table = self.dynamodb.Table(f"{self.table_prefix}-customers")
         self.boxes_table = self.dynamodb.Table(f"{self.table_prefix}-boxes")
         self.orders_table = self.dynamodb.Table(f"{self.table_prefix}-orders")
-        self.discounts_table = self.dynamodb.Table(f"{self.table_prefix}-discounts")
         self.counters_table = self.dynamodb.Table(f"{self.table_prefix}-counters")
         self.notifications_table = self.dynamodb.Table(f"{self.table_prefix}-notifications")
         self.edit_contexts_table = self.dynamodb.Table(f"{self.table_prefix}-edit-contexts")
@@ -274,9 +271,6 @@ class DynamoDBService:
         """Get all orders for a specific box"""
         return self.order_repo.get_orders_by_box(box_id)
 
-    def get_active_discount(self) -> DiscountPeriod | None:
-        return self.discount_repo.get_active_discount()
-
     def get_order(self, order_id: str) -> Order | None:
         return self.order_repo.get_order(order_id)
 
@@ -364,12 +358,6 @@ class DynamoDBService:
 
     def delete_notification_message(self, notification_id: str) -> bool:
         return self.notification_repo.delete_notification_message(notification_id)
-
-    def create_discount(self, discount: DiscountPeriod) -> bool:
-        return self.discount_repo.create_discount(discount)
-
-    def update_discount(self, discount_id: str, updates: dict[str, Any]) -> bool:
-        return self.discount_repo.update_discount(discount_id, updates)
 
     def create_edit_context(self, context) -> bool:
         return self.edit_context_repo.create_edit_context(context)

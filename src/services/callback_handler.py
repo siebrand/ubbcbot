@@ -713,8 +713,6 @@ class CallbackHandler:
             return self.handlers["admin_commands"].handle_admin_orders(chat_id, user_id)
         elif action == "users":
             return self.handlers["admin_commands"].handle_admin_users(chat_id, user_id)
-        elif action == "discounts":
-            return self.handlers["admin_commands"].handle_admin_discounts(chat_id, user_id)
         elif action == "system":
             return self.handlers["admin_commands"].handle_admin_system(chat_id, user_id)
         # Legacy support
@@ -764,9 +762,6 @@ class CallbackHandler:
             "send_delivery_overviews": lambda: self.handlers["admin_order"].handle_send_delivery_overviews(chat_id, []),
             "process_payment": lambda: self.handlers["admin_order"].handle_process_payment(chat_id, []),
             "send_payment_reminder": lambda: self.handlers["admin_order"].handle_send_payment_reminder(chat_id, []),
-            "create_discount": lambda: self._send_usage_message(chat_id, "usage_create_discount"),
-            "view_discount": lambda: self.handlers["discount"].handle_view_discount(chat_id),
-            "cancel_discount": lambda: self.handlers["discount"].handle_cancel_discount(chat_id),
             "setup_test_data": lambda: self.handlers["test"].handle_setup_test_data(chat_id),
             "failed_notifications": lambda: self.handlers["admin_order"].handle_failed_notifications(chat_id, []),
             "delete_old_orders": lambda: self.handlers["admin_order"].handle_delete_old_orders(chat_id),

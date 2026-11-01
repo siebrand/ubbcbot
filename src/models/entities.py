@@ -42,12 +42,6 @@ class DeliveryAction(Enum):
     INCOMPLETE = "incomplete"
 
 
-class DiscountStatus(Enum):
-    ACTIVE = "active"
-    EXPIRED = "expired"
-    CANCELLED = "cancelled"
-
-
 class AuthorizationStatus(Enum):
     UNAUTHORIZED = "unauthorized"
     APPROVED = "approved"
@@ -118,16 +112,6 @@ class Order:
     placed_by_admin: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     update_date: datetime | None = field(default_factory=lambda: datetime.now(UTC))
-
-
-@dataclass
-class DiscountPeriod:
-    discount_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    discount_percentage: Decimal = Decimal("0.0")
-    start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
-    end_time: datetime | None = None
-    status: str = DiscountStatus.ACTIVE.value
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass

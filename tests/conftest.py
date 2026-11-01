@@ -202,14 +202,6 @@ def dynamodb(aws_credentials):
             ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
 
-        # Create discounts table
-        dynamodb.create_table(
-            TableName="ubbc-bot-test-discounts",
-            KeySchema=[{"AttributeName": "discount_id", "KeyType": "HASH"}],
-            AttributeDefinitions=[{"AttributeName": "discount_id", "AttributeType": "S"}],
-            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
-        )
-
         # Create edit contexts table
         dynamodb.create_table(
             TableName="ubbc-bot-test-edit-contexts",

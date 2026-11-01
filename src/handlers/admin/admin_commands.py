@@ -26,7 +26,6 @@ class AdminCommandsHandler(BaseHandler):
                 ],
                 # Additional Categories
                 [
-                    {"text": self._t("admin_discounts", user_id), "callback_data": "admin:discounts"},
                     {"text": self._t("admin_system", user_id), "callback_data": "admin:system"},
                 ],
                 # Close
@@ -139,22 +138,6 @@ class AdminCommandsHandler(BaseHandler):
                     {"text": self._t("approve_user_btn", user_id), "callback_data": "cmd:approve_user"},
                     {"text": self._t("user_status_btn", user_id), "callback_data": "cmd:user_status"},
                 ],
-                [{"text": self._t("back_to_admin", user_id), "callback_data": "admin:main"}],
-            ]
-        }
-
-        self._send_message(chat_id, message, reply_markup=keyboard)
-        return {"status": "success"}
-
-    def handle_admin_discounts(self, chat_id: int, user_id: int) -> dict[str, Any]:
-        """Show discount management options"""
-        message = self._t("admin_discounts_menu_enhanced", user_id)
-
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": self._t("create_discount_btn", user_id), "callback_data": "cmd:create_discount"}],
-                [{"text": self._t("discount_status_btn", user_id), "callback_data": "cmd:view_discount"}],
-                [{"text": self._t("cancel_discount_btn", user_id), "callback_data": "cmd:cancel_discount"}],
                 [{"text": self._t("back_to_admin", user_id), "callback_data": "admin:main"}],
             ]
         }

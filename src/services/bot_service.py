@@ -6,7 +6,6 @@ from config import ADMIN_USER_ID
 from handlers.admin.admin_commands import AdminCommandsHandler
 from handlers.admin.credit_commands import CreditCommands
 from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
-from handlers.admin.discount_commands import DiscountCommands
 from handlers.admin.import_handler import ImportHandler
 from handlers.admin.labeling_commands import LabelingCommands
 from handlers.admin.offer_commands import OfferCommands
@@ -108,7 +107,6 @@ class BotService:
         )
         self.user_commands = UserCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.test_commands = TestCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        self.discount_commands = DiscountCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.wholesale_delivery_commands = WholesaleDeliveryCommands(
             self.db, self.admin_user_id, self.environment, self.telegram_token
         )
@@ -142,7 +140,6 @@ class BotService:
             "admin_order": self.admin_order_commands,
             "user": self.user_commands,
             "test": self.test_commands,
-            "discount": self.discount_commands,
             "wholesale_delivery": self.wholesale_delivery_commands,
             "labeling": self.labeling_commands,
             "delivery_overview": self.delivery_overview_handler,

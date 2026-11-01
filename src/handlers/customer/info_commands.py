@@ -66,7 +66,7 @@ class InfoCommands(BaseHandler):
             # Show all available sections in separate messages
             sections = ["general", "orders"]
             if self._is_admin(user_id):
-                sections.extend(["suppliers", "offers", "users", "delivery", "discounts", "import", "system"])
+                sections.extend(["suppliers", "offers", "users", "delivery", "import", "system"])
 
             for sect in sections:
                 message = self._get_section_help(sect)
@@ -81,7 +81,6 @@ class InfoCommands(BaseHandler):
             "offers",
             "users",
             "delivery",
-            "discounts",
             "import",
             "system",
         ]:
@@ -90,7 +89,6 @@ class InfoCommands(BaseHandler):
                 "offers",
                 "users",
                 "delivery",
-                "discounts",
                 "import",
                 "system",
             ] and not self._is_admin(user_id):
@@ -101,7 +99,7 @@ class InfoCommands(BaseHandler):
         else:
             available_sections = ["general", "orders", "all"]
             if self._is_admin(user_id):
-                available_sections.extend(["suppliers", "offers", "users", "delivery", "discounts", "import", "system"])
+                available_sections.extend(["suppliers", "offers", "users", "delivery", "import", "system"])
 
             sections_text = ", ".join(available_sections)
             message = self._t("unknown_section", user_id, section=section, sections=sections_text)
@@ -123,8 +121,6 @@ class InfoCommands(BaseHandler):
             return self._t("help_users")
         elif section == "delivery":
             return self._t("help_delivery")
-        elif section == "discounts":
-            return self._t("help_discounts")
         elif section == "import":
             return self._t("help_import")
         elif section == "system":
@@ -190,16 +186,6 @@ class InfoCommands(BaseHandler):
 
         return total_ordered, total_capacity
 
-    def _apply_discount_to_offer(self, offer, active_discount):
-        """Apply discount to offer and return modified copy"""
-        if not active_discount:
-            return offer
-
-        display_price = offer.price_per_unit * (1 - active_discount.discount_percentage / 100)
-        offer_copy = type(offer)(**dict(offer.__dict__.items()))
-        offer_copy.price_per_unit = display_price
-        return offer_copy
-
     def _validate_customer(self, chat_id: int, user_id: int):
         """Validate customer exists and return customer object or error status"""
         customer = self.db.get_customer_by_telegram_id(user_id)
@@ -239,12 +225,10 @@ class InfoCommands(BaseHandler):
             self._send_message(chat_id, self._t(key, caller_user_id, name=customer_name))
             return {"status": "success"}
 
-        active_discount = self.db.get_active_discount()
         header_key = "fomo_header" if is_self else "fomo_header_for_user"
         message = self._t(header_key, caller_user_id, name=customer_name) + "\n\n"
         for offer in unordered:
-            offer_display = self._apply_discount_to_offer(offer, active_discount)
-            message += self._format_offer_line(offer_display, "🍺", caller_user_id)
+            message += self._format_offer_line(offer, "🍺", caller_user_id)
 
         self._send_message(chat_id, message, parse_mode="HTML")
         return {"status": "success"}
@@ -302,16 +286,6 @@ class InfoCommands(BaseHandler):
         offers.sort(key=lambda x: x.offer_id)
 
         message = ""
-
-        # Check for active discount
-        active_discount = self.db.get_active_discount()
-        if active_discount:
-            message += self._t("discount_active", percentage=active_discount.discount_percentage)
-            if active_discount.end_time:
-                from utils.timezone import to_cet_string
-
-                message += "\n" + self._t("valid_until", end_time=to_cet_string(active_discount.end_time))
-            message += "\n\n"
 
         is_admin = self._is_admin(user_id)
 
@@ -511,11 +485,10 @@ class InfoCommands(BaseHandler):
                     total_ordered, total_capacity = self._get_offer_capacity_info(
                         offer.offer_id, user_id, boxes_by_offer, orders_by_offer
                     )
-                    offer_to_display = self._apply_discount_to_offer(offer, active_discount)
                     boxes = boxes_by_offer.get(offer.offer_id, [])
                     has_ordered_boxes = any(box.status == "ordered" for box in boxes)
                     emoji = "📦🍺" if has_ordered_boxes else "🍺"
-                    message += self._format_offer_line(offer_to_display, emoji, user_id, total_ordered, total_capacity)
+                    message += self._format_offer_line(offer, emoji, user_id, total_ordered, total_capacity)
                 else:
                     status_emoji = {
                         OfferStatus.SOLD_OUT.value: "🚫",
@@ -564,8 +537,7 @@ class InfoCommands(BaseHandler):
                 total_ordered, total_capacity = self._get_offer_capacity_info(
                     offer.offer_id, user_id, boxes_by_offer, orders_by_offer
                 )
-                offer_to_display = self._apply_discount_to_offer(offer, active_discount)
-                message += self._format_offer_line(offer_to_display, "🍺", user_id, total_ordered, total_capacity)
+                message += self._format_offer_line(offer, "🍺", user_id, total_ordered, total_capacity)
 
             reply_markup = None
             if total_pages > 1:

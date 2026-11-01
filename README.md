@@ -148,7 +148,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 
 ### Admin Commands
 - `/admin` - Admin panel with buttons for all admin functions
-- `/help [section]` - Show help for specific section (general, orders, suppliers, offers, users, delivery, discounts, import, system)
+- `/help [section]` - Show help for specific section (general, orders, suppliers, offers, users, delivery, import, system)
 - `/setup_test_data` - Setup test data (test environment only)
 - `/create_supplier <name>` - Register new supplier
 - `/archive_supplier <name>` - Archive supplier (no longer available for new offers)
@@ -184,9 +184,6 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/update_user <username> <new_first_name> [new_last_name]` - Update customer name
 - `/update_user_first_name <customer_id> <new_first_name>` - Update customer first name
 - `/update_user_last_name <customer_id> <new_last_name>` - Update customer last name
-- `/create_discount <percentage> [hours]` - Create discount (percentage 0-100, optional duration)
-- `/cancel_discount` - Cancel active discount
-- `/view_discount` - View current discount status
 - `/process_delivery` - Process wholesale deliveries and manage delivery status
 - `/process_labeling` - Complete labeling process for delivered orders
 - `/send_delivery_overviews` - Send delivery overviews to customers

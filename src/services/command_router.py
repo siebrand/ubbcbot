@@ -241,12 +241,6 @@ class CommandRouter:
                 return self.handlers["user"].handle_create_guest(admin_target_chat, parts[1:])
             elif command == "/list_guests":
                 return self.handlers["user"].handle_list_guests(admin_target_chat)
-            elif command == "/create_discount":
-                return self.handlers["discount"].handle_create_discount(admin_target_chat, parts[1:])
-            elif command == "/cancel_discount":
-                return self.handlers["discount"].handle_cancel_discount(admin_target_chat)
-            elif command == "/view_discount":
-                return self.handlers["discount"].handle_view_discount(admin_target_chat)
             elif command == "/process_delivery":
                 return self.handlers["wholesale_delivery"].handle_process_delivery(
                     admin_target_chat, user_id, parts[1:]

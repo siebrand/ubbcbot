@@ -208,7 +208,6 @@ Resources:
                 - !GetAtt BoxesTable.Arn
                 - !Sub '${BoxesTable.Arn}/index/*'
                 - !GetAtt SuppliersTable.Arn
-                - !GetAtt DiscountsTable.Arn
                 - !GetAtt NotificationsTable.Arn
                 - !Sub '${NotificationsTable.Arn}/index/*'
                 - !GetAtt EditContextsTable.Arn
@@ -490,31 +489,6 @@ Resources:
           AttributeType: S
       KeySchema:
         - AttributeName: supplier_id
-          KeyType: HASH
-      Tags:
-        - Key: Project
-          Value: UBBCBot
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Owner
-          Value: siebrand
-        - Key: CostCenter
-          Value: personal
-        - Key: Application
-          Value: ubbc-telegram-bot
-        - Key: ManagedBy
-          Value: sam
-
-  DiscountsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub 'ubbc-bot-${Environment}-discounts'
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: discount_id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: discount_id
           KeyType: HASH
       Tags:
         - Key: Project

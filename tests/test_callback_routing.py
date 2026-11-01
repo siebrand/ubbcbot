@@ -39,7 +39,6 @@ class TestCallbackRouting:
             "supplier",
             "offer",
             "user",
-            "discount",
             "wholesale_delivery",
             "labeling",
             "admin_commands",
@@ -87,7 +86,6 @@ class TestCallbackRouting:
             ("admin:offers", "handle_admin_offers"),
             ("admin:orders", "handle_admin_orders"),
             ("admin:users", "handle_admin_users"),
-            ("admin:discounts", "handle_admin_discounts"),
             ("admin:system", "handle_admin_system"),
         ],
     )
@@ -112,7 +110,6 @@ class TestCallbackRouting:
             ("cmd:create_order_for", "admin_order", "handle_create_order_for"),
             ("cmd:list_pending", "user", "handle_list_pending"),
             ("cmd:create_guest", "admin_commands", "_send_usage_message"),
-            ("cmd:view_discount", "discount", "handle_view_discount"),
             ("cmd:process_delivery", "wholesale_delivery", "handle_process_delivery"),
             ("cmd:process_labeling", "labeling", "handle_process_labeling"),
             ("cmd:send_delivery_overviews", "admin_order", "handle_send_delivery_overviews"),
