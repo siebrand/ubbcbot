@@ -11,6 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 class InfoCommands(BaseHandler):
+    def handle_privacy(self, chat_id: int, user_id: int, args: list = None) -> dict[str, Any]:
+        """Handle /privacy command: reply with a link to the rendered privacy statement."""
+        import os
+
+        privacy_url = os.environ.get("PRIVACY_URL", "")
+        message = self._t("privacy_info", user_id, url=privacy_url)
+        self._send_message(chat_id, message, parse_mode="HTML")
+        return {"status": "success"}
+
     def handle_start(self, chat_id: int, user_id: int, args: list = None) -> dict[str, Any]:
         """Handle /start command with optional help section parameter"""
         import logging

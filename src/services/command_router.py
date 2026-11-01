@@ -118,6 +118,8 @@ class CommandRouter:
             return self.handlers["info"].handle_start(target_chat, user_id, parts[1:])
         elif command == "/help":
             return self.handlers["info"].handle_help(target_chat, user_id, parts[1:])
+        elif command == "/privacy":
+            return self.handlers["info"].handle_privacy(target_chat, user_id, parts[1:])
         elif command == "/create_order":
             return self.handlers["customer_order"].handle_create_order(chat_id, user_id, parts[1:])
         elif command == "/list_my_orders":

@@ -46,6 +46,22 @@ def _is_authentic_request(event: dict[str, Any]) -> bool:
     return hmac.compare_digest(received.encode(), expected.encode())
 
 
+def _ensure_privacy_url(event: dict[str, Any]) -> None:
+    """Derive the public /privacy URL from the request and expose it via env.
+
+    Building the URL from the API Gateway request (host + stage) avoids a
+    CloudFormation reference from this function to the API, which would create a
+    circular dependency (the API already depends on this function via its route).
+    """
+    if os.environ.get("PRIVACY_URL"):
+        return
+    headers = {k.lower(): v for k, v in (event.get("headers") or {}).items()}
+    host = headers.get("host")
+    stage = (event.get("requestContext") or {}).get("stage")
+    if host and stage:
+        os.environ["PRIVACY_URL"] = f"https://{host}/{stage}/privacy"
+
+
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Lambda handler for Telegram webhook"""
     if not _is_authentic_request(event):
@@ -53,6 +69,8 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         return create_response(403, {"error": "Forbidden"})
 
     try:
+        _ensure_privacy_url(event)
+
         # Parse webhook data
         body = json.loads(event.get("body", "{}"))
 

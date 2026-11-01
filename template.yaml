@@ -48,6 +48,26 @@ Resources:
         ManagedBy: sam
 
   # Lambda Functions
+  PrivacyApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/ubbc-bot-${Environment}-privacy-api'
+      RetentionInDays: 7
+      LogGroupClass: STANDARD
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: ubbc-telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
   OffersApiLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -127,6 +147,36 @@ Resources:
           Value: ubbc-telegram-bot
         - Key: ManagedBy
           Value: sam
+
+  PrivacyApiHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'ubbc-bot-${Environment}-privacy-api'
+      CodeUri: src/
+      Handler: handlers.api.privacy.handler
+      Timeout: 10
+      Events:
+        GetPrivacy:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BotApi
+            Path: /privacy
+            Method: get
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !GetAtt PrivacyApiLogGroup.Arn
+      Tags:
+        Project: UBBCBot
+        Environment: !Ref Environment
+        Owner: siebrand
+        CostCenter: personal
+        Application: ubbc-telegram-bot
+        ManagedBy: sam
 
   OffersApiHandler:
     Type: AWS::Serverless::Function
@@ -772,3 +822,7 @@ Outputs:
   OffersApiUrl:
     Description: Public API URL for active offers
     Value: !Sub 'https://${BotApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/offers'
+
+  PrivacyUrl:
+    Description: Public URL for the rendered privacy statement
+    Value: !Sub 'https://${BotApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/privacy'
