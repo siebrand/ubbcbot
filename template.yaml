@@ -651,8 +651,6 @@ Resources:
           AttributeType: S
         - AttributeName: changed_at
           AttributeType: S
-        - AttributeName: event_date
-          AttributeType: S
         - AttributeName: customer_name_event
           AttributeType: S
         - AttributeName: event_type
@@ -661,12 +659,6 @@ Resources:
         - AttributeName: history_id
           KeyType: HASH
       GlobalSecondaryIndexes:
-        - IndexName: event-date-index
-          KeySchema:
-            - AttributeName: event_date
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
         - IndexName: customer-name-event-index
           KeySchema:
             - AttributeName: customer_name_event
