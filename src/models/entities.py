@@ -31,7 +31,6 @@ class OrderStatus(Enum):
     LABELING_COMPLETED = "labeling_completed"
     AWAITING_PAYMENT = "awaiting_payment"
     COMPLETED = "completed"
-    DELIVERED = "delivered"
     CANCELLED = "cancelled"
 
 

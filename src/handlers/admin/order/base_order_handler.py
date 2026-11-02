@@ -73,7 +73,6 @@ class BaseOrderHandler(BaseHandler):
             "ready_for_labeling",
             "labeling_completed",
             "awaiting_payment",
-            "delivered",
             "completed",
             "cancelled",
         ]:
@@ -129,7 +128,6 @@ class BaseOrderHandler(BaseHandler):
                     "labeling_completed": "✅",
                     "awaiting_payment": "💳",
                     "cancelled": "❌",
-                    "delivered": "🚚",
                     "completed": "✅",
                 }.get(status, "❓")
                 status_label = self._t(f"status_{status}", user_id=None).upper()
