@@ -649,8 +649,6 @@ Resources:
       AttributeDefinitions:
         - AttributeName: history_id
           AttributeType: S
-        - AttributeName: order_id
-          AttributeType: S
         - AttributeName: changed_at
           AttributeType: S
         - AttributeName: customer_event
@@ -665,14 +663,6 @@ Resources:
         - AttributeName: history_id
           KeyType: HASH
       GlobalSecondaryIndexes:
-        - IndexName: order-index
-          KeySchema:
-            - AttributeName: order_id
-              KeyType: HASH
-            - AttributeName: changed_at
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
         - IndexName: customer-event-index
           KeySchema:
             - AttributeName: customer_event
