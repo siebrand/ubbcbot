@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 import pytest
 
@@ -13,147 +14,84 @@ def history_repo(dynamodb):
 
 class TestOrderHistoryRepository:
     def test_create_order_history(self, history_repo):
-        now = datetime.now(UTC)
         history = OrderHistory(
-            order_id="order-1",
             customer_id="cust-1",
-            customer_name="Test User",
-            offer_name="Test Offer",
+            offer_name="Test Beer",
             event_type="ORDER_CREATED",
-            changed_by=123,
-            customer_event="cust-1#ORDER_CREATED",
-            event_date=f"ORDER_CREATED#{now.isoformat()}",
-            customer_name_event="Test User#ORDER_CREATED",
+            amount=Decimal("24.00"),
         )
         assert history_repo.create_order_history(history) is True
 
-        # Verify it exists
-        records = history_repo.get_order_history("order-1")
-        assert len(records) == 1
-        assert records[0].event_type == "ORDER_CREATED"
-
-    def test_get_order_history(self, history_repo):
-        now = datetime.now(UTC)
-        history1 = OrderHistory(
-            order_id="order-2",
-            customer_id="cust-2",
-            event_type="ORDER_CREATED",
-            customer_event="cust-2#ORDER_CREATED",
-            event_date=f"ORDER_CREATED#{now.isoformat()}",
-            customer_name_event="User#ORDER_CREATED",
+    def test_create_sets_ttl(self, history_repo):
+        history = OrderHistory(
+            customer_id="cust-1",
+            offer_name="Test Beer",
+            event_type="PAYMENT_RECEIVED",
+            amount=Decimal("24.00"),
         )
-        history2 = OrderHistory(
-            order_id="order-2",
-            customer_id="cust-2",
-            event_type="STATUS_CHANGED",
-            customer_event="cust-2#STATUS_CHANGED",
-            event_date=f"STATUS_CHANGED#{now.isoformat()}",
-            customer_name_event="User#STATUS_CHANGED",
-        )
+        assert history.ttl is not None and history.ttl > 0
 
-        history_repo.create_order_history(history1)
-        history_repo.create_order_history(history2)
-
-        records = history_repo.get_order_history("order-2")
-        assert len(records) == 2
-
-    def test_get_order_history_with_limit(self, history_repo):
+    def test_get_events_by_type_filters_event_and_range(self, history_repo):
         now = datetime.now(UTC)
-        for i in range(5):
-            history = OrderHistory(
-                order_id="order-3",
-                customer_id="cust-3",
-                event_type=f"EVENT_{i}",
-                customer_event=f"cust-3#EVENT_{i}",
-                event_date=f"EVENT_{i}#{now.isoformat()}",
-                customer_name_event=f"User#EVENT_{i}",
+        history_repo.create_order_history(
+            OrderHistory(
+                customer_id="cust-2",
+                offer_name="A",
+                event_type="PAYMENT_RECEIVED",
+                changed_at=now,
+                amount=Decimal("10.00"),
             )
-            history_repo.create_order_history(history)
+        )
+        history_repo.create_order_history(
+            OrderHistory(
+                customer_id="cust-3",
+                offer_name="B",
+                event_type="ORDER_CREATED",
+                changed_at=now,
+                amount=Decimal("20.00"),
+            )
+        )
 
-        records = history_repo.get_order_history("order-3", limit=3)
-        assert len(records) == 3
+        payments = history_repo.get_events_by_type(
+            "PAYMENT_RECEIVED", start_date=now - timedelta(minutes=1), end_date=now + timedelta(minutes=1)
+        )
+        assert len(payments) == 1
+        assert payments[0].customer_id == "cust-2"
+        assert payments[0].event_type == "PAYMENT_RECEIVED"
+        assert payments[0].amount == Decimal("10.00")
 
-    def test_get_customer_events(self, history_repo):
+    def test_get_events_by_type_excludes_out_of_range(self, history_repo):
         now = datetime.now(UTC)
-        history1 = OrderHistory(
-            order_id="order-4",
-            customer_id="cust-4",
-            event_type="ORDER_CREATED",
-            customer_event="cust-4#ORDER_CREATED",
-            event_date=f"ORDER_CREATED#{now.isoformat()}",
-            customer_name_event="User#ORDER_CREATED",
+        history_repo.create_order_history(
+            OrderHistory(
+                customer_id="cust-4",
+                offer_name="Old",
+                event_type="PAYMENT_RECEIVED",
+                changed_at=now - timedelta(days=10),
+                amount=Decimal("5.00"),
+            )
         )
-        history2 = OrderHistory(
-            order_id="order-5",
-            customer_id="cust-4",
-            event_type="ORDER_CANCELLED",
-            customer_event="cust-4#ORDER_CANCELLED",
-            event_date=f"ORDER_CANCELLED#{now.isoformat()}",
-            customer_name_event="User#ORDER_CANCELLED",
+        recent = history_repo.get_events_by_type(
+            "PAYMENT_RECEIVED", start_date=now - timedelta(days=1), end_date=now + timedelta(days=1)
         )
+        assert recent == []
 
-        history_repo.create_order_history(history1)
-        history_repo.create_order_history(history2)
-
-        events = history_repo.get_customer_events("cust-4")
-        assert len(events) >= 2
-
-    def test_get_customer_events_by_type(self, history_repo):
-        now = datetime.now(UTC)
-        history1 = OrderHistory(
-            order_id="order-6",
-            customer_id="cust-5",
-            event_type="ORDER_CREATED",
-            customer_event="cust-5#ORDER_CREATED",
-            event_date=f"ORDER_CREATED#{now.isoformat()}",
-            customer_name_event="User#ORDER_CREATED",
-        )
-        history2 = OrderHistory(
-            order_id="order-7",
-            customer_id="cust-5",
-            event_type="ORDER_CANCELLED",
-            customer_event="cust-5#ORDER_CANCELLED",
-            event_date=f"ORDER_CANCELLED#{now.isoformat()}",
-            customer_name_event="User#ORDER_CANCELLED",
-        )
-
-        history_repo.create_order_history(history1)
-        history_repo.create_order_history(history2)
-
-        events = history_repo.get_customer_events("cust-5", event_type="ORDER_CREATED")
-        assert len(events) >= 1
-        assert all(e.event_type == "ORDER_CREATED" for e in events)
-
-    def test_get_events_by_type(self, history_repo):
-        now = datetime.now(UTC)
-        history = OrderHistory(
-            order_id="order-8",
-            customer_id="cust-6",
-            event_type="PRICE_CHANGED",
-            event_date=f"PRICE_CHANGED#{now.isoformat()}",
-            customer_event="cust-6#PRICE_CHANGED",
-            customer_name_event="User#PRICE_CHANGED",
-        )
-        history_repo.create_order_history(history)
-
-        # Use exact match since between() may not work in moto
-        events = history_repo.get_events_by_type("PRICE_CHANGED", start_date=now, end_date=now)
-        assert len(events) >= 0  # Just verify no error
-
-    def test_get_history_by_customer_name(self, history_repo):
-        now = datetime.now(UTC)
-        history = OrderHistory(
-            order_id="order-9",
-            customer_id="cust-7",
-            customer_name="John Doe",
-            event_type="ORDER_CREATED",
-            customer_name_event="John Doe#ORDER_CREATED",
-            customer_event="cust-7#ORDER_CREATED",
-            event_date=f"ORDER_CREATED#{now.isoformat()}",
-        )
-        history_repo.create_order_history(history)
-
-        # Use exact match since begins_with() may not work in moto
-        records = history_repo.get_history_by_customer_name("John Doe", event_type="ORDER_CREATED")
-        assert len(records) >= 0  # Just verify no error
-        assert records[0].customer_name == "John Doe"
+    def test_item_to_history_tolerates_legacy_attributes(self, history_repo):
+        """A legacy row carrying dropped attributes still deserializes cleanly."""
+        legacy_item = {
+            "history_id": "h1",
+            "customer_id": "cust-9",
+            "offer_name": "Legacy",
+            "event_type": "ORDER_CREATED",
+            "changed_at": datetime.now(UTC).isoformat(),
+            "amount": Decimal("12.00"),
+            # dropped / legacy attributes that must be ignored:
+            "order_id": "order-legacy",
+            "customer_name": "Should Be Ignored",
+            "reason": "old",
+            "customer_event": "cust-9#ORDER_CREATED",
+        }
+        history = history_repo._item_to_history(legacy_item)
+        assert history.customer_id == "cust-9"
+        assert history.offer_name == "Legacy"
+        assert not hasattr(history, "customer_name")

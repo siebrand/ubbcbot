@@ -119,9 +119,7 @@ class WholesalerDeliveryService:
         for order in orders:
             if remaining_to_allocate <= 0:
                 # No more units to allocate - cancel entire order
-                self.db.cancel_order_with_audit(
-                    order.order_id, self.admin_user_id, "Wholesale delivery - units unavailable"
-                )
+                self.db.cancel_order(order.order_id, self.admin_user_id, "Wholesale delivery - units unavailable")
                 self.notify_customer_of_cancellation(order.order_id)
             elif remaining_to_allocate >= order.quantity:
                 # Full order can be fulfilled

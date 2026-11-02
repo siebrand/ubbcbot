@@ -93,8 +93,8 @@ class TestOrderCancellation(unittest.TestCase):
         refreshed_box.current_quantity = 8
         refreshed_box.max_capacity = 24
 
-        # Mock database operations - now uses cancel_order_with_audit
-        self.mock_db.cancel_order_with_audit.return_value = True
+        # Mock database operations - now uses cancel_order
+        self.mock_db.cancel_order.return_value = True
         self.mock_db.get_box.return_value = refreshed_box
 
         # Mock customer and offer
@@ -111,8 +111,8 @@ class TestOrderCancellation(unittest.TestCase):
         # Verify success
         self.assertEqual(result["status"], "success")
 
-        # Verify cancel_order_with_audit was called
-        self.mock_db.cancel_order_with_audit.assert_called_once_with("test123", self.admin_user_id, "Test reason")
+        # Verify cancel_order was called
+        self.mock_db.cancel_order.assert_called_once_with("test123", self.admin_user_id, "Test reason")
 
     @patch.object(OrderCancellation, "_send_message")
     def test_execute_cancel_database_error(self, mock_send):
@@ -126,7 +126,7 @@ class TestOrderCancellation(unittest.TestCase):
         mock_box.max_capacity = 24
 
         # Mock database failure
-        self.mock_db.cancel_order_with_audit.return_value = False
+        self.mock_db.cancel_order.return_value = False
 
         result = self.handler._execute_cancel(mock_order, mock_box, 123)
 
@@ -154,7 +154,7 @@ class TestOrderCancellation(unittest.TestCase):
         refreshed_box.current_quantity = 0
         refreshed_box.max_capacity = 24
 
-        self.mock_db.cancel_order_with_audit.return_value = True
+        self.mock_db.cancel_order.return_value = True
         self.mock_db.get_box.return_value = refreshed_box
         self.mock_db.get_customer.return_value = Mock()
         self.mock_db.get_offer.return_value = Mock()
@@ -162,8 +162,8 @@ class TestOrderCancellation(unittest.TestCase):
         with patch.object(self.handler, "_send_message"):
             self.handler._execute_cancel(mock_order, mock_box, 123)
 
-        # Verify cancel_order_with_audit was called
-        self.mock_db.cancel_order_with_audit.assert_called()
+        # Verify cancel_order was called
+        self.mock_db.cancel_order.assert_called()
 
 
 if __name__ == "__main__":

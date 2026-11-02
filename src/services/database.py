@@ -296,14 +296,12 @@ class DynamoDBService:
             if not self.order_repo.update_order(order_id, updates):
                 return False
 
-            # Auto-log significant changes
+            # Record a purchase analytics event only when an order is paid.
             audit = AuditService(self)
             new_order = self.get_order(order_id)
 
-            if "total_price" in updates and old_order.total_price != new_order.total_price:
-                audit.log_price_change(new_order, old_order.total_price, new_order.total_price, admin_id, reason)
-            elif "status" in updates and old_order.status != new_order.status:
-                audit.log_status_change(new_order, old_order.status, new_order.status, admin_id, reason)
+            if "status" in updates and old_order.status != new_order.status:
+                audit.log_payment_if_completed(new_order, old_order.status, new_order.status, admin_id)
 
             return True
         except Exception as e:
@@ -321,10 +319,8 @@ class DynamoDBService:
 
         if updated_count > 0 and orders:
             audit = AuditService(self)
-            # Batch audit logging instead of looping
-            audit.log_batch_status_change(
-                orders[:updated_count], orders[0].status, status, admin_id, "Delivery overview queued"
-            )
+            # Record PAYMENT_RECEIVED only for an awaiting_payment -> completed batch.
+            audit.log_batch_payment_if_completed(orders[:updated_count], orders[0].status, status, admin_id)
 
         return updated_count
 
@@ -603,79 +599,53 @@ class DynamoDBService:
             logger.error(f"Error deleting offer images: {e}")
             return False
 
-    # Order History operations
+    # Order history (purchase analytics) operations
     def create_order_history(self, history) -> bool:
         return self.order_history_repo.create_order_history(history)
-
-    def get_order_history(self, order_id: str, limit: int = 50) -> list:
-        return self.order_history_repo.get_order_history(order_id, limit)
-
-    def get_customer_events(self, customer_id: str, event_type: str | None = None, days: int = 30) -> list:
-        return self.order_history_repo.get_customer_events(customer_id, event_type, days)
 
     def get_events_by_type(
         self, event_type: str, start_date: datetime | None = None, end_date: datetime | None = None
     ) -> list:
         return self.order_history_repo.get_events_by_type(event_type, start_date, end_date)
 
-    def get_history_by_customer_name(self, customer_name: str, event_type: str | None = None, limit: int = 50) -> list:
-        return self.order_history_repo.get_history_by_customer_name(customer_name, event_type, limit)
-
-    # Transaction methods for sensitive operations (audit enforced)
-    def cancel_order_with_audit(self, order_id: str, admin_id: int, reason: str) -> bool:
-        """Cancel order with mandatory audit logging"""
+    # Transaction methods for sensitive order operations
+    def cancel_order(self, order_id: str, admin_id: int, reason: str) -> bool:
+        """Cancel an order (inventory correction handled by the status update)."""
         try:
-            from services.audit_service import AuditService
-
             order = self.get_order(order_id)
             if not order:
                 return False
 
-            # Log cancellation first
-            audit = AuditService(self)
-            audit.log_order_cancelled(order, admin_id, reason)
-
-            # Then update order (will also log status change via update_order)
             return self.update_order(order_id, {"status": "cancelled"}, admin_id, reason)
         except Exception as e:
-            logger.error(f"Error cancelling order with audit: {e}")
+            logger.error(f"Error cancelling order: {e}")
             return False
 
-    def adjust_order_price_with_audit(self, order_id: str, new_price, admin_id: int, reason: str) -> bool:
-        """Adjust order price with mandatory audit logging and optional refund linkage"""
+    def adjust_order_price(self, order_id: str, new_price, admin_id: int, reason: str) -> bool:
+        """Adjust an order's total price."""
         try:
             from decimal import Decimal
 
-            from services.audit_service import AuditService
-
             order = self.get_order(order_id)
             if not order:
                 return False
 
-            old_price = order.total_price
             new_price = Decimal(str(new_price))
-
-            # Log price change with refund linkage
-            audit = AuditService(self)
-            audit.log_price_change(order, old_price, new_price, admin_id, reason)
-
-            # Update order (will also log via update_order, but price change already logged above)
             return self.update_order(order_id, {"total_price": new_price}, admin_id, reason)
         except Exception as e:
-            logger.error(f"Error adjusting order price with audit: {e}")
+            logger.error(f"Error adjusting order price: {e}")
             return False
 
-    def mark_order_paid_with_audit(self, order_id: str, admin_id: int) -> bool:
-        """Mark order as paid with mandatory audit logging"""
+    def mark_order_paid(self, order_id: str, admin_id: int) -> bool:
+        """Mark an order as paid (records a PAYMENT_RECEIVED analytics event)."""
         try:
             order = self.get_order(order_id)
             if not order:
                 return False
 
-            # Update order status (audit logging handled by update_order)
             return self.update_order(order_id, {"status": "completed"}, admin_id, "Payment received")
         except Exception as e:
-            logger.error(f"Error marking order paid with audit: {e}")
+            logger.error(f"Error marking order paid: {e}")
             return False
 
     # Credit system operations

@@ -134,37 +134,33 @@ class NotificationMessage:
 
 @dataclass
 class OrderHistory:
-    history_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    order_id: str = ""
-    customer_id: str = ""  # Denormalized for reporting
-    customer_name: str = ""  # Denormalized - customer may be deleted
-    offer_name: str = ""  # Denormalized - offer may be deleted
-    event_type: str = ""  # ORDER_CREATED, ORDER_CANCELLED, PRICE_CHANGED, STATUS_CHANGED, PAYMENT_RECEIVED
-    changed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    changed_by: int = 0  # Admin user ID (0 for system)
-    field_name: str = ""  # Field that changed
-    old_value: str = ""
-    new_value: str = ""
-    reason: str = ""
-    amount: Decimal | None = None  # Payment/refund amount for financial events
+    """Analytics event for purchase reporting.
 
-    # Composite fields for GSI queries
-    customer_event: str = ""  # Format: "customer_id#event_type" for customer-event-index
-    event_date: str = ""  # Format: "event_type#2024-01-15T10:30:00Z" for event-date-index
-    customer_name_event: str = ""  # Format: "customer_name#event_type" for customer-name-event-index
+    Only two event types are recorded:
+      - ORDER_CREATED:    an order was placed (answers "when do customers buy")
+      - PAYMENT_RECEIVED: an order was paid (answers "top customers by spend")
+
+    No personal data is stored here: the customer is referenced only by the
+    pseudonymous ``customer_id``. Reporting resolves the real name at report
+    time by looking the id up in the customers table, so right-to-be-forgotten
+    is handled entirely on the customers record.
+
+    The ``event-time-index`` GSI (hash ``event_type``, range ``changed_at``)
+    serves both queries directly from the real attributes, so no composite key
+    fields are needed.
+    """
+
+    history_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    customer_id: str = ""  # Pseudonymous reference; name resolved from customers table
+    offer_name: str = ""  # Denormalized product name (not personal data)
+    event_type: str = ""  # ORDER_CREATED | PAYMENT_RECEIVED
+    changed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    amount: Decimal | None = None  # Euro value: ordered value (CREATED) / paid value (PAYMENT_RECEIVED)
 
     # TTL (5 years prod, 90 days test)
     ttl: int | None = None
 
     def __post_init__(self):
-        # Auto-generate composite fields
-        if self.customer_id and self.event_type:
-            self.customer_event = f"{self.customer_id}#{self.event_type}"
-        if self.event_type and self.changed_at:
-            self.event_date = f"{self.event_type}#{self.changed_at.isoformat()}"
-        if self.customer_name and self.event_type:
-            self.customer_name_event = f"{self.customer_name}#{self.event_type}"
-        # Set TTL based on environment
         if not self.ttl:
             import os
             from datetime import timedelta

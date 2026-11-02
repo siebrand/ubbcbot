@@ -262,7 +262,7 @@ class OrderCancellation(BaseOrderHandler):
     def _execute_cancel(self, order, box, chat_id: int, reason: str = "Manual cancellation") -> dict[str, Any]:
         """Execute order cancellation"""
         # Use transaction method for audit enforcement
-        if not self.db.cancel_order_with_audit(order.order_id, self.admin_user_id, reason):
+        if not self.db.cancel_order(order.order_id, self.admin_user_id, reason):
             self._send_message(chat_id, self._t("failed_cancel_order"))
             return {"status": "error"}
 

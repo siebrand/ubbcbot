@@ -230,7 +230,7 @@ class OfferManagementHandler(OfferBaseHandler):
 
         # Cancel remaining orders
         for order in cancelled_orders:
-            self.db.cancel_order_with_audit(order.order_id, self.admin_user_id, "Insufficient wholesale capacity")
+            self.db.cancel_order(order.order_id, self.admin_user_id, "Insufficient wholesale capacity")
 
             # Notify customer of cancellation
             customer = self.db.get_customer(order.customer_id)
@@ -482,7 +482,7 @@ class OfferManagementHandler(OfferBaseHandler):
         cancelled_count = 0
         notified_customers = []
         for order in active_orders:
-            if self.db.cancel_order_with_audit(order.order_id, self.admin_user_id, "Offer cancelled by admin"):
+            if self.db.cancel_order(order.order_id, self.admin_user_id, "Offer cancelled by admin"):
                 cancelled_count += 1
                 customer = self.db.get_customer(order.customer_id)
                 if customer:

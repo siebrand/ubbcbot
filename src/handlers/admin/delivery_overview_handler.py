@@ -321,7 +321,7 @@ class DeliveryOverviewHandler(BaseHandler):
         # Update orders to COMPLETED using transaction method
         updated_count = 0
         for order in awaiting_payment_orders:
-            if self.db.mark_order_paid_with_audit(order.order_id, self.admin_user_id):
+            if self.db.mark_order_paid(order.order_id, self.admin_user_id):
                 updated_count += 1
 
         customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(

@@ -77,7 +77,7 @@ class TestWholesalerDelivery(unittest.TestCase):
         self.mock_db.get_orders_by_box.return_value = test_orders
         self.mock_db.update_order.return_value = True
         self.mock_db.create_order.return_value = True
-        self.mock_db.cancel_order_with_audit.return_value = True
+        self.mock_db.cancel_order.return_value = True
 
         # Mock notification methods
         with patch.object(self.service, "notify_customer_of_cancellation") as mock_cancel_notify:
@@ -93,7 +93,7 @@ class TestWholesalerDelivery(unittest.TestCase):
 
             # Verify order updates
             update_calls = self.mock_db.update_order.call_args_list
-            cancel_calls = self.mock_db.cancel_order_with_audit.call_args_list
+            cancel_calls = self.mock_db.cancel_order.call_args_list
 
             # Should have 2 update calls (first two orders fully received)
             self.assertEqual(len(update_calls), 2)

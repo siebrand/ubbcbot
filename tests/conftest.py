@@ -139,43 +139,22 @@ def dynamodb(aws_credentials):
             ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
         )
 
-        # Create order history table
+        # Create order history table (purchase analytics event store)
         dynamodb.create_table(
             TableName="ubbc-bot-test-order-history",
             KeySchema=[{"AttributeName": "history_id", "KeyType": "HASH"}],
             AttributeDefinitions=[
                 {"AttributeName": "history_id", "AttributeType": "S"},
-                {"AttributeName": "order_id", "AttributeType": "S"},
-                {"AttributeName": "customer_event", "AttributeType": "S"},
+                {"AttributeName": "event_type", "AttributeType": "S"},
                 {"AttributeName": "changed_at", "AttributeType": "S"},
-                {"AttributeName": "event_date", "AttributeType": "S"},
-                {"AttributeName": "customer_name_event", "AttributeType": "S"},
             ],
             GlobalSecondaryIndexes=[
                 {
-                    "IndexName": "order-index",
-                    "KeySchema": [{"AttributeName": "order_id", "KeyType": "HASH"}],
-                    "Projection": {"ProjectionType": "ALL"},
-                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
-                },
-                {
-                    "IndexName": "customer-event-index",
+                    "IndexName": "event-time-index",
                     "KeySchema": [
-                        {"AttributeName": "customer_event", "KeyType": "HASH"},
+                        {"AttributeName": "event_type", "KeyType": "HASH"},
                         {"AttributeName": "changed_at", "KeyType": "RANGE"},
                     ],
-                    "Projection": {"ProjectionType": "ALL"},
-                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
-                },
-                {
-                    "IndexName": "event-date-index",
-                    "KeySchema": [{"AttributeName": "event_date", "KeyType": "HASH"}],
-                    "Projection": {"ProjectionType": "ALL"},
-                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
-                },
-                {
-                    "IndexName": "customer-name-event-index",
-                    "KeySchema": [{"AttributeName": "customer_name_event", "KeyType": "HASH"}],
                     "Projection": {"ProjectionType": "ALL"},
                     "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
                 },
