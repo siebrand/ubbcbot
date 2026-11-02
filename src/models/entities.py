@@ -157,7 +157,7 @@ class OrderHistory:
     changed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     amount: Decimal | None = None  # Euro value: ordered value (CREATED) / paid value (PAYMENT_RECEIVED)
 
-    # TTL (5 years prod, 90 days test)
+    # TTL (8 years prod, 90 days test)
     ttl: int | None = None
 
     def __post_init__(self):
@@ -166,7 +166,9 @@ class OrderHistory:
             from datetime import timedelta
 
             environment = os.environ.get("ENVIRONMENT", "test")
-            ttl_days = 1825 if environment == "prod" else 90  # 5 years prod, 90 days test
+            # 8 years in prod: transaction records (who paid what, for which order)
+            # are kept to satisfy the fiscal retention obligation. 90 days in test.
+            ttl_days = 2920 if environment == "prod" else 90  # 8 years prod, 90 days test
             expiry = self.changed_at + timedelta(days=ttl_days)
             self.ttl = int(expiry.timestamp())
 

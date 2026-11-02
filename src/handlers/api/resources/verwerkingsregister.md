@@ -27,7 +27,7 @@ De bijbehorende informatie voor betrokkenen staat in de
 | **Betrokkenen** | Leden (klanten) en gastgebruikers van UBBC |
 | **Categorieën gegevens** | Telegram-ID, gebruikersnaam, voor- en achternaam, taalvoorkeur, optionele contactgegevens, bestelgeschiedenis |
 | **Ontvangers** | Telegram (berichten), AWS (hosting/opslag) |
-| **Bewaartermijn** | Profielgegevens zolang account actief; bestelgeschiedenis max. 5 jaar (prod) / 90 dagen (test), daarna automatische verwijdering (TTL) |
+| **Bewaartermijn** | Profielgegevens zolang account actief; bestelgeschiedenis max. 8 jaar (prod) / 90 dagen (test), daarna automatische verwijdering (TTL). De 8 jaar volgt de wettelijke fiscale bewaarplicht voor administratie/betaalgegevens |
 
 ### 2.2 Betalingen en tegoeden
 
@@ -38,7 +38,7 @@ De bijbehorende informatie voor betrokkenen staat in de
 | **Betrokkenen** | Leden en gastgebruikers |
 | **Categorieën gegevens** | Klant-ID, bedragen, betaal- en tegoedtransacties, tijdstippen |
 | **Ontvangers** | AWS (opslag) |
-| **Bewaartermijn** | Max. 5 jaar (prod); indien fiscale bewaarplicht geldt, zolang die vereist |
+| **Bewaartermijn** | Max. 8 jaar (prod) ter nakoming van de wettelijke fiscale bewaarplicht; daarna automatische verwijdering (TTL) |
 
 ### 2.3 Meldingen over nieuwe aanbiedingen
 
@@ -77,7 +77,7 @@ communicatiekanaal.
 ## 6. Rechten van betrokkenen
 
 Inzage, correctie, verwijdering, beperking, bezwaar en intrekken van
-toestemming. Zie de [privacyverklaring](../src/handlers/api/privacyverklaring.md) voor de
+toestemming. Zie de [privacyverklaring](privacy_statement.md) voor de
 procedure. Bij verwijdering worden identificeerbare gegevens gewist of
 gepseudonimiseerd; transactiegegevens kunnen geanonimiseerd bewaard blijven.
 

@@ -64,9 +64,10 @@ marketingdoeleinden.
 
 ## Bewaartermijn
 
-- **Bestel- en transactiegeschiedenis:** maximaal 5 jaar in de
+- **Bestel- en transactiegeschiedenis:** maximaal 8 jaar in de
   productieomgeving (testomgeving: 90 dagen), waarna gegevens automatisch
-  worden verwijderd.
+  worden verwijderd. Deze termijn is gekozen om te voldoen aan de wettelijke
+  fiscale bewaarplicht voor administratie en betaalgegevens.
 - **Profielgegevens** worden bewaard zolang je account actief is en worden op
   verzoek verwijderd of geanonimiseerd (zie hieronder).
 
