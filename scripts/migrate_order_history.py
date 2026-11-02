@@ -25,26 +25,27 @@ Usage:
     python scripts/migrate_order_history.py <test|prod> [--apply]
 """
 
+import contextlib
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from decimal import Decimal, InvalidOperation
 
 import boto3
 
 KEEP_EVENT_TYPES = {"ORDER_CREATED", "PAYMENT_RECEIVED"}
 
-# Attributes the slim schema no longer stores.
-DROPPED_ATTRS = [
-    "customer_name",
-    "order_id",
-    "changed_by",
-    "field_name",
-    "old_value",
-    "new_value",
-    "reason",
-    "customer_event",
-    "event_date",
-    "customer_name_event",
-]
+# The only attributes the slim schema keeps. Anything else on a row is a legacy
+# attribute and is removed (allow-list, so forgotten legacy fields such as
+# triggers_refund / changed_by / composite keys are all cleaned up).
+KEEP_ATTRS = {
+    "history_id",
+    "customer_id",
+    "offer_name",
+    "event_type",
+    "changed_at",
+    "amount",
+    "ttl",
+}
 
 
 def _parse_total(new_value) -> Decimal | None:
@@ -58,76 +59,107 @@ def _parse_total(new_value) -> Decimal | None:
         return None
 
 
-def migrate(environment: str, do_apply: bool):
-    dynamodb = boto3.resource("dynamodb")
+def _build_update(item):
+    """Return (update_expr, expr_names, expr_values, did_strip, did_backfill) for a
+    kept row, or None if the row is already clean."""
+    event_type = item.get("event_type", "")
+    to_remove = sorted(a for a in item if a not in KEEP_ATTRS)
+
+    amount_set = None
+    if event_type == "ORDER_CREATED" and item.get("amount") is None:
+        amount_set = _parse_total(item.get("new_value"))
+
+    if not to_remove and amount_set is None:
+        return None
+
+    parts = []
+    expr_names = {}
+    expr_values = {}
+    if amount_set is not None:
+        parts.append("SET #amount = :amount")
+        expr_names["#amount"] = "amount"
+        expr_values[":amount"] = amount_set
+    if to_remove:
+        parts.append("REMOVE " + ", ".join(f"#{a}" for a in to_remove))
+        expr_names.update({f"#{a}": a for a in to_remove})
+
+    return " ".join(parts), expr_names, expr_values, bool(to_remove), amount_set is not None
+
+
+def migrate(environment: str, do_apply: bool, workers: int = 32):
+    from botocore.config import Config
+
+    # Size the HTTP connection pool to the worker count so concurrent update_item
+    # calls do not queue behind the default pool of 10.
+    dynamodb = boto3.resource("dynamodb", config=Config(max_pool_connections=max(workers, 10)))
     table_name = f"ubbc-bot-{environment}-order-history"
     table = dynamodb.Table(table_name)
 
     mode = "APPLY" if do_apply else "DRY-RUN"
-    print(f"[{mode}] Migrating {table_name}\n")
+    print(f"[{mode}] Migrating {table_name} (workers={workers})\n")
 
     scanned = deleted = stripped = backfilled = unchanged = 0
+    update_jobs = []  # (key, update_expr, expr_names, expr_values)
 
-    scan_kwargs: dict = {}
-    while True:
-        response = table.scan(**scan_kwargs)
-        for item in response.get("Items", []):
-            scanned += 1
-            history_id = item["history_id"]
-            event_type = item.get("event_type", "")
+    # Batched deletes via BatchWriteItem (25/op, auto-retry). Only used with --apply.
+    writer_cm = table.batch_writer() if do_apply else contextlib.nullcontext()
+    with writer_cm as writer:
+        scan_kwargs: dict = {}
+        while True:
+            response = table.scan(**scan_kwargs)
+            for item in response.get("Items", []):
+                scanned += 1
+                if scanned % 500 == 0:
+                    print(f"  ... scanned {scanned} records")
+                history_id = item["history_id"]
+                event_type = item.get("event_type", "")
 
-            # 1. Delete non-purchase events.
-            if event_type not in KEEP_EVENT_TYPES:
-                print(f"  DELETE {history_id} (event_type={event_type or 'MISSING'})")
+                # 1. Delete non-purchase events (batched).
+                if event_type not in KEEP_EVENT_TYPES:
+                    if do_apply:
+                        writer.delete_item(Key={"history_id": history_id})
+                    deleted += 1
+                    continue
+
+                # 2/3. Strip legacy attributes / backfill amount on kept rows.
+                plan = _build_update(item)
+                if plan is None:
+                    unchanged += 1
+                    continue
+                update_expr, expr_names, expr_values, did_strip, did_backfill = plan
+                if did_strip:
+                    stripped += 1
+                if did_backfill:
+                    backfilled += 1
                 if do_apply:
-                    table.delete_item(Key={"history_id": history_id})
-                deleted += 1
-                continue
+                    update_jobs.append(({"history_id": history_id}, update_expr, expr_names, expr_values))
 
-            # 2/3. Build REMOVE + SET for kept rows.
-            to_remove = [a for a in DROPPED_ATTRS if a in item]
+            if "LastEvaluatedKey" in response:
+                scan_kwargs["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+            else:
+                break
+    # (batch_writer flushes any remaining deletes on context exit)
 
-            amount_set = None
-            if event_type == "ORDER_CREATED" and item.get("amount") is None:
-                amount_set = _parse_total(item.get("new_value"))
+    # Updates can't be batched (BatchWriteItem has no partial-update op), so run
+    # them concurrently to hide per-request latency.
+    if do_apply and update_jobs:
+        print(f"\n  Applying {len(update_jobs)} updates with {workers} workers...")
 
-            if not to_remove and amount_set is None:
-                unchanged += 1
-                continue
+        def _apply(job):
+            key, update_expr, expr_names, expr_values = job
+            kwargs = {"Key": key, "UpdateExpression": update_expr}
+            if expr_names:
+                kwargs["ExpressionAttributeNames"] = expr_names
+            if expr_values:
+                kwargs["ExpressionAttributeValues"] = expr_values
+            table.update_item(**kwargs)
 
-            parts = []
-            expr_names = {}
-            expr_values = {}
-            if amount_set is not None:
-                parts.append("SET #amount = :amount")
-                expr_names["#amount"] = "amount"
-                expr_values[":amount"] = amount_set
-            if to_remove:
-                parts.append("REMOVE " + ", ".join(f"#{a}" for a in to_remove))
-                expr_names.update({f"#{a}": a for a in to_remove})
-
-            update_expr = " ".join(parts)
-            desc = []
-            if to_remove:
-                desc.append(f"strip {to_remove}")
-                stripped += 1
-            if amount_set is not None:
-                desc.append(f"amount={amount_set}")
-                backfilled += 1
-            print(f"  UPDATE {history_id} ({event_type}): {'; '.join(desc)}")
-
-            if do_apply:
-                kwargs = {"Key": {"history_id": history_id}, "UpdateExpression": update_expr}
-                if expr_names:
-                    kwargs["ExpressionAttributeNames"] = expr_names
-                if expr_values:
-                    kwargs["ExpressionAttributeValues"] = expr_values
-                table.update_item(**kwargs)
-
-        if "LastEvaluatedKey" in response:
-            scan_kwargs["ExclusiveStartKey"] = response["LastEvaluatedKey"]
-        else:
-            break
+        done = 0
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for _ in as_completed([pool.submit(_apply, j) for j in update_jobs]):
+                done += 1
+                if done % 500 == 0:
+                    print(f"  ... updated {done}/{len(update_jobs)}")
 
     print("\nSummary:")
     print(f"  Scanned:    {scanned}")
@@ -143,8 +175,15 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     do_apply = "--apply" in args
     args = [a for a in args if a != "--apply"]
+
+    workers = 32
+    for a in list(args):
+        if a.startswith("--workers="):
+            workers = int(a.split("=", 1)[1])
+            args.remove(a)
+
     if len(args) != 1 or args[0] not in ("test", "prod"):
-        print("Usage: python scripts/migrate_order_history.py <test|prod> [--apply]")
+        print("Usage: python scripts/migrate_order_history.py <test|prod> [--apply] [--workers=N]")
         sys.exit(1)
-    migrate(args[0], do_apply)
+    migrate(args[0], do_apply, workers)
     print("\nDone.")
