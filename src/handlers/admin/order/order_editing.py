@@ -137,7 +137,7 @@ class OrderEditing(BaseOrderHandler):
             offer_name = offer.name if offer else self._t("unknown", user_id=None)
             name = f"{customer.first_name} {customer.last_name}" if customer else self._t("unknown", user_id=None)
             label = f"{order.order_id[:8]}: {name} - {order.quantity}x {offer_name}"
-            buttons.append([{"text": label, "callback_data": f"edit_order_pick_{order.order_id}"}])
+            buttons.append([{"text": label, "callback_data": f"edit_order_pick_{order.order_id[:8]}"}])
         buttons.append([{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}])
         self._send_message(chat_id, message, reply_markup={"inline_keyboard": buttons})
         return {"status": "disambiguation_shown"}
@@ -165,7 +165,7 @@ class OrderEditing(BaseOrderHandler):
         )
 
     def _show_aspect_menu(self, chat_id: int, order) -> dict[str, Any]:
-        oid = order.order_id
+        oid = order.order_id[:8]  # short id keeps callback_data within Telegram's 64-byte limit
         buttons = [
             [{"text": self._t("edit_order_aspect_box", chat_id), "callback_data": f"edit_order_box_{oid}"}],
             [{"text": self._t("edit_order_aspect_price", chat_id), "callback_data": f"edit_order_price_{oid}"}],
@@ -180,10 +180,22 @@ class OrderEditing(BaseOrderHandler):
 
     # ----------------------------------------------------------- callback flow
     def _get_order_or_warn(self, chat_id: int, order_id: str):
+        # callback_data carries the short (8-char) order id to stay within
+        # Telegram's 64-byte limit; resolve it to the full order here.
         order = self.db.get_order(order_id)
+        if not order:
+            matches = self.find_orders_by_partial_id(order_id, include_cancelled=True)
+            order = matches[0][0] if len(matches) == 1 else None
         if not order:
             self._send_message(chat_id, self._t("order_not_found_full_id", chat_id, order_id=order_id))
         return order
+
+    def _resolve_box(self, order, box_short_id: str):
+        """Resolve a short box id (first 8 chars) to a full box of the order's offer."""
+        for b in self.db.get_boxes_by_offer(order.offer_id) or []:
+            if b.box_id.startswith(box_short_id):
+                return b
+        return None
 
     def show_box_options(self, chat_id: int, order_id: str) -> dict[str, Any]:
         """Show buttons listing boxes (of the order's offer) that have space."""
@@ -197,8 +209,8 @@ class OrderEditing(BaseOrderHandler):
         buttons = [
             [
                 {
-                    "text": f"{b.box_id} ({b.current_quantity}/{b.max_capacity})",
-                    "callback_data": f"edit_order_setbox_{order_id}_{b.box_id}",
+                    "text": f"{b.box_id[:8]} ({b.current_quantity}/{b.max_capacity})",
+                    "callback_data": f"edit_order_setbox_{order.order_id[:8]}_{b.box_id[:8]}",
                 }
             ]
             for b in boxes
@@ -207,32 +219,40 @@ class OrderEditing(BaseOrderHandler):
         self._send_message(chat_id, self._t("edit_order_pick_box", chat_id), reply_markup={"inline_keyboard": buttons})
         return {"status": "box_options_shown"}
 
-    def confirm_box(self, chat_id: int, order_id: str, new_box_id: str) -> dict[str, Any]:
+    def confirm_box(self, chat_id: int, order_id: str, box_short_id: str) -> dict[str, Any]:
         order = self._get_order_or_warn(chat_id, order_id)
         if not order:
             return {"status": "order_not_found"}
+        box = self._resolve_box(order, box_short_id)
+        if not box:
+            self._send_message(chat_id, self._t("edit_order_box_not_found", chat_id))
+            return {"status": "box_not_found"}
         buttons = [
             [
                 {
                     "text": self._t("confirm", user_id=None),
-                    "callback_data": f"edit_order_applybox_{order_id}_{new_box_id}",
+                    "callback_data": f"edit_order_applybox_{order.order_id[:8]}_{box.box_id[:8]}",
                 }
             ],
             [{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}],
         ]
         self._send_message(
             chat_id,
-            self._t("edit_order_confirm_box", chat_id, order_id=order_id[:8], box_id=new_box_id),
+            self._t("edit_order_confirm_box", chat_id, order_id=order.order_id[:8], box_id=box.box_id[:8]),
             reply_markup={"inline_keyboard": buttons},
         )
         return {"status": "confirm_shown"}
 
-    def apply_box(self, chat_id: int, order_id: str, new_box_id: str) -> dict[str, Any]:
+    def apply_box(self, chat_id: int, order_id: str, box_short_id: str) -> dict[str, Any]:
         order = self._get_order_or_warn(chat_id, order_id)
         if not order:
             return {"status": "order_not_found"}
-        ok, key = self._apply_box_change(order, new_box_id)
-        self._send_message(chat_id, self._t(key, chat_id, order_id=order_id[:8], box_id=new_box_id))
+        box = self._resolve_box(order, box_short_id)
+        if not box:
+            self._send_message(chat_id, self._t("edit_order_box_not_found", chat_id))
+            return {"status": "box_not_found"}
+        ok, key = self._apply_box_change(order, box.box_id)
+        self._send_message(chat_id, self._t(key, chat_id, order_id=order.order_id[:8], box_id=box.box_id[:8]))
         return {"status": key if ok else "edit_failed"}
 
     def show_status_options(self, chat_id: int, order_id: str) -> dict[str, Any]:
@@ -240,7 +260,8 @@ class OrderEditing(BaseOrderHandler):
         if not order:
             return {"status": "order_not_found"}
         buttons = [
-            [{"text": s, "callback_data": f"edit_order_setstatus_{order_id}_{s}"}] for s in self._status_options()
+            [{"text": s, "callback_data": f"edit_order_setstatus_{order.order_id[:8]}_{s}"}]
+            for s in self._status_options()
         ]
         buttons.append([{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}])
         self._send_message(
@@ -249,18 +270,21 @@ class OrderEditing(BaseOrderHandler):
         return {"status": "status_options_shown"}
 
     def confirm_status(self, chat_id: int, order_id: str, new_status: str) -> dict[str, Any]:
+        order = self._get_order_or_warn(chat_id, order_id)
+        if not order:
+            return {"status": "order_not_found"}
         buttons = [
             [
                 {
                     "text": self._t("confirm", user_id=None),
-                    "callback_data": f"edit_order_applystatus_{order_id}_{new_status}",
+                    "callback_data": f"edit_order_applystatus_{order.order_id[:8]}_{new_status}",
                 }
             ],
             [{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}],
         ]
         self._send_message(
             chat_id,
-            self._t("edit_order_confirm_status", chat_id, order_id=order_id[:8], status=new_status),
+            self._t("edit_order_confirm_status", chat_id, order_id=order.order_id[:8], status=new_status),
             reply_markup={"inline_keyboard": buttons},
         )
         return {"status": "confirm_shown"}

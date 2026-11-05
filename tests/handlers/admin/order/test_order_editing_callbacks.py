@@ -27,9 +27,10 @@ class TestOrderEditingCallbacks(unittest.TestCase):
         result = self.handler.show_box_options(123, self.order.order_id)
         self.assertEqual(result["status"], "box_options_shown")
         keyboard = mock_send.call_args[1]["reply_markup"]["inline_keyboard"]
-        # one box button (callback carries order + new box) + a cancel row
+        # callback_data uses short order + short box ids (<= 64 bytes)
         callbacks = [btn["callback_data"] for row in keyboard for btn in row]
-        self.assertIn(f"edit_order_setbox_{self.order.order_id}_box-1", callbacks)
+        self.assertIn(f"edit_order_setbox_{self.order.order_id[:8]}_{b.box_id[:8]}", callbacks)
+        self.assertTrue(all(len(c.encode()) <= 64 for c in callbacks))
 
     @patch.object(OrderEditing, "_send_message")
     def test_show_box_options_when_none_available(self, mock_send):
@@ -43,22 +44,26 @@ class TestOrderEditingCallbacks(unittest.TestCase):
         self.assertEqual(result["status"], "status_options_shown")
         keyboard = mock_send.call_args[1]["reply_markup"]["inline_keyboard"]
         callbacks = [btn["callback_data"] for row in keyboard for btn in row if "setstatus" in btn["callback_data"]]
-        self.assertEqual(callbacks[0], f"edit_order_setstatus_{self.order.order_id}_pending")
-        self.assertEqual(callbacks[-1], f"edit_order_setstatus_{self.order.order_id}_cancelled")
+        oid = self.order.order_id[:8]
+        self.assertEqual(callbacks[0], f"edit_order_setstatus_{oid}_pending")
+        self.assertEqual(callbacks[-1], f"edit_order_setstatus_{oid}_cancelled")
+        # every status callback must stay within Telegram's 64-byte limit
+        self.assertTrue(all(len(c.encode()) <= 64 for c in callbacks))
 
     @patch.object(OrderEditing, "_send_message")
     def test_confirm_box_shows_confirmation(self, mock_send):
         new_box = Box(box_id="box-1", offer_id=724, current_quantity=0, max_capacity=12)
-        self.mock_db.get_box.return_value = new_box
+        self.mock_db.get_boxes_by_offer.return_value = [new_box]
         result = self.handler.confirm_box(123, self.order.order_id, "box-1")
         self.assertEqual(result["status"], "confirm_shown")
         keyboard = mock_send.call_args[1]["reply_markup"]["inline_keyboard"]
         callbacks = [btn["callback_data"] for row in keyboard for btn in row]
-        self.assertIn(f"edit_order_applybox_{self.order.order_id}_box-1", callbacks)
+        self.assertIn(f"edit_order_applybox_{self.order.order_id[:8]}_{new_box.box_id[:8]}", callbacks)
 
     @patch.object(OrderEditing, "_send_message")
     def test_apply_box_success_sends_confirmation(self, mock_send):
         new_box = Box(box_id="box-1", offer_id=724, current_quantity=0, max_capacity=12)
+        self.mock_db.get_boxes_by_offer.return_value = [new_box]
         self.mock_db.get_box.return_value = new_box
         self.handler.box_status_manager.update_box_after_order_placement.return_value = True
         self.handler.box_status_manager.update_box_after_order_cancellation.return_value = True
