@@ -5,6 +5,7 @@ Telegram beer ordering bot with AWS serverless architecture.
 ## Quick Start
 
 ### Prerequisites
+
 - ✅ AWS CLI configured
 - ✅ AWS SAM CLI installed
 - ✅ Telegram bot token from @BotFather
@@ -14,62 +15,63 @@ Telegram beer ordering bot with AWS serverless architecture.
 ### ✅ Test Environment Setup
 
 1. **Create test bot with @BotFather:**
-   - Send `/newbot` to @BotFather
-   - Choose name ending with "Test" (e.g., "UBBC Test Bot")
-   - Choose username ending with "test_bot" (e.g., "ubbc_test_bot")
-   - Save the bot token for Parameter Store
+    - Send `/newbot` to @BotFather
+    - Choose name ending with "Test" (e.g., "UBBC Test Bot")
+    - Choose username ending with "test_bot" (e.g., "ubbc_test_bot")
+    - Save the bot token for Parameter Store
 
 2. **Configure test bot:**
-   - Send `/setdescription` to @BotFather
-   - Select your test bot
-   - Set: "TEST - Beer ordering bot for UBBC (Test Environment)"
+    - Send `/setdescription` to @BotFather
+    - Select your test bot
+    - Set: "TEST - Beer ordering bot for UBBC (Test Environment)"
 
 3. **Set bot description:**
-   - Send `/setdescription` to @BotFather
-   - Select your test bot
-   - Set: "TEST - Beer ordering bot for UBBC (Test Environment)"
+    - Send `/setdescription` to @BotFather
+    - Select your test bot
+    - Set: "TEST - Beer ordering bot for UBBC (Test Environment)"
 
 4. **Add bot to test group:**
-   - Create or use existing test group (e.g., "UBBC Test Group")
-   - Add the test bot to the group
-   - Make the bot an admin with permissions:
-     - Delete messages
-     - Restrict members
-     - Pin messages
-     - Manage video chats
+    - Create or use existing test group (e.g., "UBBC Test Group")
+    - Add the test bot to the group
+    - Make the bot an admin with permissions:
+        - Delete messages
+        - Restrict members
+        - Pin messages
+        - Manage video chats
 
 ### ✅Production Environment Setup
 
 1. **Create production bot with @BotFather:**
-   - Send `/newbot` to @BotFather
-   - Choose production name (e.g., "UBBC Bot")
-   - Choose production username (e.g., "ubbc_bot")
-   - Save the bot token for Parameter Store
+    - Send `/newbot` to @BotFather
+    - Choose production name (e.g., "UBBC Bot")
+    - Choose production username (e.g., "ubbc_bot")
+    - Save the bot token for Parameter Store
 
 2. **Configure production bot:**
-   - Send `/setdescription` to @BotFather
-   - Select your production bot
-   - Set: "Beer ordering bot for UBBC - Order craft beers"
+    - Send `/setdescription` to @BotFather
+    - Select your production bot
+    - Set: "Beer ordering bot for UBBC - Order craft beers"
 
 3. **Set bot description:**
-   - Send `/setdescription` to @BotFather
-   - Select your production bot
-   - Set: "Beer ordering bot for UBBC - Order craft beers"
+    - Send `/setdescription` to @BotFather
+    - Select your production bot
+    - Set: "Beer ordering bot for UBBC - Order craft beers"
 
 4. **Add bot to production groups:**
-   - Add the bot to UBBC main group/channel
-   - Make the bot an admin with permissions:
-     - Delete messages
-     - Restrict members
-     - Pin messages
-     - Manage video chats
-   - Consider adding to additional relevant groups (regional, special events)
+    - Add the bot to UBBC main group/channel
+    - Make the bot an admin with permissions:
+        - Delete messages
+        - Restrict members
+        - Pin messages
+        - Manage video chats
+    - Consider adding to additional relevant groups (regional, special events)
 
 ## Deployment
 
 1. ✅**Configure admin user ID:**
 
 Edit `samconfig.toml` and replace `<YOUR_TELEGRAM_USER_ID>` with your Telegram user ID:
+
 ```toml
 [test.deploy.parameters]
 parameter_overrides = "Environment=test AdminUserId=YOUR_TELEGRAM_USER_ID"
@@ -82,6 +84,7 @@ To find your Telegram user ID, send a message to @userinfobot on Telegram.
 
 2. ✅**Store bot tokens in Parameter Store:**
 2. ✅**Store bot tokens in Parameter Store:**
+
 ```bash
 # For test environment (use token from test bot creation)
 aws ssm put-parameter \
@@ -96,48 +99,55 @@ aws ssm put-parameter \
     --type "SecureString"
 ```
 
-The webhook secret (`/ubbc-bot/{environment}/telegram-webhook-secret`) is generated automatically by `deploy.sh` on first deploy and passed to Telegram as `secret_token`. The webhook Lambda rejects (403) every request without a matching `X-Telegram-Bot-Api-Secret-Token` header. To rotate it, delete the parameter and redeploy.
+The webhook secret (`/ubbc-bot/{environment}/telegram-webhook-secret`) is generated automatically by `deploy.sh` on
+first deploy and passed to Telegram as `secret_token`. The webhook Lambda rejects (403) every request without a matching
+`X-Telegram-Bot-Api-Secret-Token` header. To rotate it, delete the parameter and redeploy.
 
 3. ✅**Deploy to test environment:**
+
 ```bash
 ./deploy.sh test
 ```
 
 4. **Deploy to production:**
+
 ```bash
 ./deploy.sh prod
 ```
 
-*Note: The deployment script automatically sets the Telegram webhook and configures bot commands with proper scopes (admin commands only visible to chat administrators).*
+*Note: The deployment script automatically sets the Telegram webhook and configures bot commands with proper scopes (
+admin commands only visible to chat administrators).*
 
 ## Post-Deployment Verification
 
 ### Test Environment Verification
 
 1. **Test bot functionality:**
-   - Send `/start` to verify registration (both private and group)
-   - Admin: Use `/setup_test_data` to create test data
-   - Verify all messages are prefixed with "TEST - "
-   - Test group functionality: orders, announcements
+    - Send `/start` to verify registration (both private and group)
+    - Admin: Use `/setup_test_data` to create test data
+    - Verify all messages are prefixed with "TEST - "
+    - Test group functionality: orders, announcements
 
 ### Production Environment Verification
 
 1. **Production verification:**
-   - Send `/start` to verify registration (both private and group)
-   - Admin: Add real suppliers
-   - Verify messages have NO "TEST - " prefix
-   - Test complete order flow in production groups
-   - Verify admin permissions work correctly
+    - Send `/start` to verify registration (both private and group)
+    - Admin: Add real suppliers
+    - Verify messages have NO "TEST - " prefix
+    - Test complete order flow in production groups
+    - Verify admin permissions work correctly
 
 ### ✅Webhook Verification
 
 After deployment, verify webhook is active:
+
 ```bash
 # Check webhook status
 curl "https://api.telegram.org/botYOUR_BOT_TOKEN/getWebhookInfo"
 ```
 
 Expected response should show:
+
 - `"url"`: Your API Gateway endpoint
 - `"has_custom_certificate"`: false
 - `"pending_update_count"`: 0
@@ -147,8 +157,10 @@ Expected response should show:
 These commands are set up in the deployment script, throught bash script setup-commands.sh.
 
 ### Admin Commands
+
 - `/admin` - Admin panel with buttons for all admin functions
-- `/help [section]` - Show help for specific section (general, orders, suppliers, offers, users, delivery, import, system)
+- `/help [section]` - Show help for specific section (general, orders, suppliers, offers, users, delivery, import,
+  system)
 - `/setup_test_data` - Setup test data (test environment only)
 - `/create_supplier <name>` - Register new supplier
 - `/archive_supplier <name>` - Archive supplier (no longer available for new offers)
@@ -166,14 +178,18 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/cancel_offer <offer_id>` - Cancel offer and all related orders (button confirmation)
 - `/delete_offer <offer_id>` - Delete completed or inactive offer from database
 - `/create_box <offer_id>` - Add single box to offer (updates sold out offers to active)
-- `/list_boxes [<offer_id>|active|ordered|full|delivered|all|help]` - View box status and capacity (paginated with enhanced navigation)
+- `/list_boxes [<offer_id>|active|ordered|full|delivered|all|help]` - View box status and capacity (paginated with
+  enhanced navigation)
 - `/audit_offer <offer_id>` - Audit offer capacity vs orders
 - `/process_wholesale <offer_id>` - Start wholesale ordering process (button confirmation)
-- `/create_order_for <username> <offer_id> [quantity]` - Place order for another user (10-unit admin limit, alias: /order_for)
+- `/create_order_for <username> <offer_id> [quantity]` - Place order for another user (10-unit admin limit, alias:
+  /order_for)
 - `/cancel_order <order_id>` - Cancel customer order (button confirmation)
 - `/list_user_orders <username>` - View orders for specific user
 - `/list_offer_orders <offer_id>` - View all orders for specific offer
-- `/export_orders [active|cancelled|ordered|ready_for_labeling|labeling_completed|awaiting_payment|completed|all|full]` - Download CSV of all orders (default: active, full exports all fields)
+-
+`/export_orders [active|cancelled|ordered|ready_for_labeling|labeling_completed|awaiting_payment|completed|all|full]` -
+Download CSV of all orders (default: active, full exports all fields)
 - `/list_pending` - View users awaiting approval (paginated with approve/reject buttons)
 - `/list_users` - View all customers (paginated with status filtering)
 - `/create_guest <first_name> [last_name] [contact]` - Add guest user (non-Telegram)
@@ -200,6 +216,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/cancel` - Cancel pending operation (e.g., text input prompts)
 
 ### Customer Commands
+
 - `/start` - Register and view help
 - `/help [section]` - Show help for specific section (general, orders)
 - `/cancel` - Cancel pending operation (e.g., text input prompts)
@@ -227,12 +244,14 @@ These commands are set up in the deployment script, throught bash script setup-c
 ## Features
 
 ### Enhanced Wholesale Delivery
+
 - **Complete Delivery Button**: Single-click option to mark all boxes in an offer as delivered with full quantities
 - **Confirmation Dialog**: Safety confirmation before processing multiple boxes
 - **Streamlined Workflow**: Reduces repetitive clicking for common full delivery scenarios
 - **Individual Box Control**: Maintains granular control for partial deliveries and edge cases
 
 ### Enhanced Offer Management
+
 - **Staged Publishing**: Create draft offers, add descriptions and images, then publish when ready
 - **Rich Offer Display**: Offers include detailed descriptions and multiple images
 - **Admin Preview**: Preview how offers will appear before publishing
@@ -240,12 +259,20 @@ These commands are set up in the deployment script, throught bash script setup-c
 - **Draft Status**: Draft offers visible only to admins until published
 
 ### Notification Management
+
 - **Rich Notifications**: Offer announcements include images and descriptions
-- **Automatic cleanup**: Notification messages deleted when offers become sold out
-- **Cancellation cleanup**: Messages deleted from subscribers when offers cancelled (within 48 hours)
-- **Database hygiene**: Notification records cleaned up to prevent data accumulation
+- **Live status updates**: When an offer sells out, is cancelled, or becomes available again, the group announcement and
+  every subscriber DM are edited in place — a 🔴 (sold out) or ⛔ (cancelled) marker is added and the order buttons are
+  removed/re-added accordingly (messages are never deleted)
+- **Live content updates**: Editing an offer's name, price, or description re-renders the already-sent announcements to
+  match
+- **Group-first, then trickle**: The group message is edited first (one call, inline); subscriber DMs follow — inline
+  for small lists, batched via the NotificationSender Lambda for large ones
+- **Self-expiring tracking**: Each announcement's message id is tracked for 7 days (DynamoDB TTL) so edits stop chasing
+  week-old offers; rows whose Telegram message is gone are pruned
 
 ### Order Management
+
 - **5-unit customer limit**: Customers can order max 5 units per offer
 - **10-unit admin limit**: Admins can place up to 10 units for customers via `/order_for`
 - **Duplicate order confirmation**: Warns customers about existing orders before placing new ones
@@ -269,6 +296,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 All resources follow: `ubbc-bot-{environment}-{resource-type}`
 
 Examples:
+
 - `ubbc-bot-test-webhook-handler`
 - `ubbc-bot-prod-customers`
 - `ubbc-bot-test-123456789-images`
