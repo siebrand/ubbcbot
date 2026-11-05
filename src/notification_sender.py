@@ -142,4 +142,15 @@ class NotificationSender(BaseHandler):
             ]
         }
 
-        self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
+        result = self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
+        if result and result.get("success"):
+            try:
+                from models.entities import NotificationMessage
+
+                self.db.create_notification_message(
+                    NotificationMessage(
+                        offer_id=offer.offer_id, chat_id=chat_id, message_id=result["message_id"], kind="subscriber"
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Failed to track notification message for offer {offer.offer_id}: {e}")

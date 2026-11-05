@@ -128,7 +128,22 @@ class NotificationMessage:
     offer_id: int = 0
     chat_id: int = 0
     message_id: int = 0
+    kind: str = "group"  # "group" (channel announcement) or "subscriber" (DM)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    # TTL: tracking rows self-expire 168h (7 days) after send. Both group and
+    # subscriber rows use the same window because every message is edited (never
+    # deleted) and may need reverting on sold_out -> active.
+    ttl: int | None = None
+
+    def __post_init__(self):
+        if not self.ttl:
+            from datetime import timedelta
+
+            created = self.created_at
+            if isinstance(created, str):
+                created = datetime.fromisoformat(created)
+            self.ttl = int((created + timedelta(hours=168)).timestamp())
 
 
 @dataclass

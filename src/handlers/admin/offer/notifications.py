@@ -60,7 +60,25 @@ class NotificationHandler(OfferBaseHandler):
                 ]
             }
 
-        self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup, force_group=force_group)
+        result = self._send_message(
+            chat_id, message, parse_mode="HTML", reply_markup=reply_markup, force_group=force_group
+        )
+
+        # Track the group announcement so its status/content can be synced later.
+        # Only real announcements (not admin previews) are tracked.
+        if not preview and result and result.get("success"):
+            self._track_notification_message(offer.offer_id, chat_id, result["message_id"], kind="group")
+
+    def _track_notification_message(self, offer_id: int, chat_id: int, message_id: int, kind: str):
+        """Record a sent announcement message so it can be edited on status/content change."""
+        from models.entities import NotificationMessage
+
+        try:
+            self.db.create_notification_message(
+                NotificationMessage(offer_id=offer_id, chat_id=chat_id, message_id=message_id, kind=kind)
+            )
+        except Exception as e:
+            logger.error(f"Failed to track notification message for offer {offer_id}: {e}")
 
     def _get_offer_capacity_info(self, offer_id: int):
         """Get order and capacity information for an offer"""
@@ -202,7 +220,9 @@ class NotificationHandler(OfferBaseHandler):
             ]
         }
 
-        self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
+        result = self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
+        if result and result.get("success"):
+            self._track_notification_message(offer.offer_id, chat_id, result["message_id"], kind="subscriber")
 
     def _send_simple_offer_notification(self, chat_id: int, offer):
         """Send simplified notification without images for speed"""
@@ -225,4 +245,6 @@ class NotificationHandler(OfferBaseHandler):
             ]
         }
 
-        self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
+        result = self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
+        if result and result.get("success"):
+            self._track_notification_message(offer.offer_id, chat_id, result["message_id"], kind="subscriber")
