@@ -57,6 +57,7 @@
   "offer_published": "✅ Offer published and announced",
   "confirm": "✅ Confirm",
   "edit_order_usage": "Usage: /edit_order <order_id> (first 8 characters of the order ID)",
+  "edit_order_details": "📋 <b>Order {order_id}</b>\n👤 {customer}\n🍺 [{offer_id}] {offer_name}\n📦 {quantity}x — unit €{unit_price:.2f}, total €{total_price:.2f}\n📦 Box: {box_id}\n📊 Status: {status}",
   "edit_order_choose_aspect": "✏️ Editing order {order_id}. What do you want to change?",
   "edit_order_aspect_box": "📦 Box",
   "edit_order_aspect_price": "💰 Unit price",

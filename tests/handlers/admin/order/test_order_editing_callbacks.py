@@ -89,6 +89,26 @@ class TestOrderEditingCallbacks(unittest.TestCase):
         result = self.handler.apply_status(123, self.order.order_id, "completed")
         self.assertEqual(result["status"], "edit_order_status_success")
 
+    @patch.object(OrderEditing, "_send_message")
+    def test_aspect_menu_includes_order_details(self, mock_send):
+        offer = Mock()
+        offer.name = "Fermentaria Local Reserva Local (WILD) 75cl"
+        self.mock_db.get_offer.return_value = offer
+        customer = Mock()
+        customer.first_name = "Siebrand"
+        customer.last_name = "Mazeland"
+        self.mock_db.get_customer.return_value = customer
+
+        self.handler._show_aspect_menu(123, self.order)
+        text = mock_send.call_args[0][1]
+        # details present above the buttons
+        self.assertIn(self.order.order_id[:8], text)
+        self.assertIn("Siebrand Mazeland", text)
+        self.assertIn(str(self.order.offer_id), text)
+        self.assertIn("Fermentaria", text)
+        # buttons still present
+        self.assertIn("inline_keyboard", mock_send.call_args[1]["reply_markup"])
+
 
 if __name__ == "__main__":
     unittest.main()

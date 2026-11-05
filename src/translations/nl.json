@@ -57,6 +57,7 @@
   "offer_published": "✅ Aanbieding gepubliceerd en aangekondigd",
   "confirm": "✅ Bevestigen",
   "edit_order_usage": "Gebruik: /edit_order <order_id> (eerste 8 tekens van de order-ID)",
+  "edit_order_details": "📋 <b>Order {order_id}</b>\n👤 {customer}\n🍺 [{offer_id}] {offer_name}\n📦 {quantity}x — stuk €{unit_price:.2f}, totaal €{total_price:.2f}\n📦 Doos: {box_id}\n📊 Status: {status}",
   "edit_order_choose_aspect": "✏️ Order {order_id} bewerken. Wat wil je wijzigen?",
   "edit_order_aspect_box": "📦 Doos",
   "edit_order_aspect_price": "💰 Stukprijs",

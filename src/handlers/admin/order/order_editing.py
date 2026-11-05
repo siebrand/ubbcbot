@@ -142,6 +142,28 @@ class OrderEditing(BaseOrderHandler):
         self._send_message(chat_id, message, reply_markup={"inline_keyboard": buttons})
         return {"status": "disambiguation_shown"}
 
+    def _order_details_block(self, order) -> str:
+        """Human-readable summary of the order shown above the edit buttons."""
+        offer = self.db.get_offer(order.offer_id)
+        offer_name = offer.name if offer else self._t("unknown", user_id=None)
+        customer = self.db.get_customer(order.customer_id)
+        customer_name = (
+            f"{customer.first_name} {customer.last_name}".strip() if customer else self._t("unknown", user_id=None)
+        )
+        return self._t(
+            "edit_order_details",
+            None,
+            order_id=order.order_id[:8],
+            customer=self._escape_html(customer_name),
+            offer_id=order.offer_id,
+            offer_name=self._escape_html(offer_name),
+            quantity=order.quantity,
+            unit_price=order.unit_price,
+            total_price=order.total_price,
+            box_id=order.box_id,
+            status=order.status,
+        )
+
     def _show_aspect_menu(self, chat_id: int, order) -> dict[str, Any]:
         oid = order.order_id
         buttons = [
@@ -150,11 +172,10 @@ class OrderEditing(BaseOrderHandler):
             [{"text": self._t("edit_order_aspect_status", chat_id), "callback_data": f"edit_order_status_{oid}"}],
             [{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}],
         ]
-        self._send_message(
-            chat_id,
-            self._t("edit_order_choose_aspect", chat_id, order_id=oid[:8]),
-            reply_markup={"inline_keyboard": buttons},
+        message = (
+            self._order_details_block(order) + "\n\n" + self._t("edit_order_choose_aspect", chat_id, order_id=oid[:8])
         )
+        self._send_message(chat_id, message, parse_mode="HTML", reply_markup={"inline_keyboard": buttons})
         return {"status": "aspect_menu_shown"}
 
     # ----------------------------------------------------------- callback flow
