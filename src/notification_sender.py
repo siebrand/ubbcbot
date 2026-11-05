@@ -28,6 +28,23 @@ def lambda_handler(event, context):
 
         # Extract payload
         offer_id = event["offer_id"]
+        action = event.get("action", "send")
+
+        # Edit-existing-messages mode: re-render the subscriber DMs for an offer
+        # whose status/content changed (the group message is edited inline by the
+        # webhook handler; this Lambda only handles large subscriber batches).
+        if action == "sync_offer_messages":
+            logger.info(f"Syncing subscriber messages for offer {offer_id}")
+            offer = db.get_offer(offer_id)
+            if not offer:
+                logger.error(f"Offer {offer_id} not found")
+                return {"statusCode": 404, "body": "Offer not found"}
+            edited, failed = handler.sync_subscriber_messages(offer, cancelled=event.get("cancelled", False))
+            logger.info(f"Subscriber message sync complete: {edited} edited, {failed} failed")
+            return {
+                "statusCode": 200,
+                "body": json.dumps({"edited": edited, "failed": failed}),
+            }
 
         logger.info(f"Processing notifications for offer {offer_id}")
 
@@ -103,6 +120,35 @@ class NotificationSender(BaseHandler):
                 time.sleep(0.5)
 
         return success_count, error_count
+
+    def sync_subscriber_messages(self, offer, cancelled: bool = False):
+        """Edit the subscriber DM announcements for an offer in rate-limited batches.
+
+        Only ``kind == "subscriber"`` rows are touched here — the group message is
+        edited inline by the webhook handler. Returns (edited_count, pruned_count).
+        """
+        import time
+
+        text, reply_markup = self._build_offer_message(offer, cancelled)
+        rows = [
+            r
+            for r in self.db.get_notification_messages_by_offer(offer.offer_id)
+            if getattr(r, "kind", "group") == "subscriber"
+        ]
+
+        edited = 0
+        failed = 0
+        batch_size = 20
+        for i in range(0, len(rows), batch_size):
+            for row in rows[i : i + batch_size]:
+                if self._edit_tracked_message(row, text, reply_markup):
+                    edited += 1
+                else:
+                    failed += 1
+            if i + batch_size < len(rows):
+                time.sleep(0.5)
+
+        return edited, failed
 
     def _send_notification_to_customer(self, customer, offer, presigned_images):
         """Send notification to a single customer using BaseHandler methods"""

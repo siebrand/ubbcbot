@@ -64,7 +64,7 @@ class OrderEditing(BaseOrderHandler):
         if not self.db.update_order(order.order_id, {"box_id": new_box_id}, self.admin_user_id, "Order box edited"):
             return False, "edit_order_update_failed"
 
-        self.box_status_manager.update_offer_status_after_change(order.offer_id)
+        self._check_offer_status_after_change(order.offer_id)
         return True, "edit_order_box_success"
 
     # -------------------------------------------------------------- unit price

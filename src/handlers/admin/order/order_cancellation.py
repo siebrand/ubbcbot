@@ -264,8 +264,8 @@ class OrderCancellation(BaseOrderHandler):
         if not self.box_status_manager.update_box_after_order_cancellation(box.box_id, order.quantity):
             logger.error(f"Failed to update box {box.box_id} after cancellation")
 
-        # Check if offer status should change after cancellation
-        self.box_status_manager.update_offer_status_after_change(order.offer_id)
+        # Check if offer status should change after cancellation (syncs messages)
+        self._check_offer_status_after_change(order.offer_id)
 
         # Get customer and offer info for notifications
         customer = self.db.get_customer(order.customer_id)

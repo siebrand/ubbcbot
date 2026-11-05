@@ -37,6 +37,12 @@ class OfferEditingHandler(OfferBaseHandler):
             return self._send_error(chat_id, "offer_status_must_be_draft", "wrong_status", current_status=offer.status)
 
         if self.db.update_offer(offer.offer_id, {"status": target_status.value}):
+            # The manual sold_out path is the admin's fallback when the automatic
+            # active -> sold_out transition failed; it must update the channel and
+            # subscriber messages just like the automatic transition would. Other
+            # status changes here do not re-render the announcements.
+            if target_status == OfferStatus.SOLD_OUT:
+                self.sync_offer_messages(offer.offer_id)
             return self._send_success(
                 chat_id,
                 "offer_status_changed",
@@ -69,6 +75,7 @@ class OfferEditingHandler(OfferBaseHandler):
                 return {"status": "offer_not_found"}
 
             if self.db.update_offer(offer_id, {"name": new_name}):
+                self.sync_offer_messages(offer_id)
                 # Send confirmation and return to edit interface
                 message = self._t("offer_name_updated", old_name=offer.name, new_name=new_name)
                 self._send_message(chat_id, message)
@@ -104,6 +111,7 @@ class OfferEditingHandler(OfferBaseHandler):
                 return {"status": "offer_not_found"}
 
             if self.db.update_offer(offer_id, {"price_per_unit": Decimal(str(new_price))}):
+                self.sync_offer_messages(offer_id)
                 # Send confirmation and return to edit interface
                 message = self._t("offer_price_updated", old_price=offer.price_per_unit, new_price=new_price)
                 self._send_message(chat_id, message)
@@ -145,6 +153,7 @@ class OfferEditingHandler(OfferBaseHandler):
                 return {"status": "offer_not_found"}
 
             if self.db.update_offer(offer_id, {"description": new_description}):
+                self.sync_offer_messages(offer_id)
                 old_desc = offer.description or self._t("not_set")
 
                 # Send confirmation and return to edit interface

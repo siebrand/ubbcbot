@@ -182,6 +182,53 @@ class BaseHandler:
             logger.error(f"Error setting message reaction: {e}")
             return False
 
+    def _edit_message_text(
+        self, chat_id: int, message_id: int, text: str, parse_mode: str = None, reply_markup: dict = None
+    ) -> dict:
+        """Edit the text (and optionally inline keyboard) of an existing message.
+
+        Returns a dict with:
+          - ``success``: True when Telegram accepted the edit.
+          - ``not_found``: True when Telegram reports the message no longer exists
+            (so the caller can prune its tracking row).
+
+        ``reply_markup`` is only sent when provided; omitting it removes the inline
+        keyboard (used to drop the order buttons on sold_out/cancelled).
+        """
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
+            return {"success": False, "not_found": False}
+
+        url = f"https://api.telegram.org/bot{self.telegram_token}/editMessageText"
+        data = {"chat_id": chat_id, "message_id": message_id, "text": text, "disable_web_page_preview": True}
+        if parse_mode:
+            data["parse_mode"] = parse_mode
+        if reply_markup is not None:
+            data["reply_markup"] = reply_markup
+
+        try:
+            response = requests.post(url, json=data, timeout=20)
+            if response.status_code == 200:
+                return {"success": True, "not_found": False}
+
+            body = response.text or ""
+            # Telegram returns 400 with these descriptions when the message is gone
+            # or unchanged. "message is not modified" is harmless (idempotent edit).
+            lowered = body.lower()
+            if "message is not modified" in lowered:
+                return {"success": True, "not_found": False}
+            not_found = (
+                "message to edit not found" in lowered
+                or "message can't be edited" in lowered
+                or "chat not found" in lowered
+            )
+            if not not_found:
+                logger.error(f"Failed to edit message: status {response.status_code}, response {body}")
+            return {"success": False, "not_found": not_found}
+        except Exception as e:
+            logger.error(f"Error editing message: {e}")
+            return {"success": False, "not_found": False}
+
     def _send_message_simple(
         self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False
     ) -> bool:
@@ -372,5 +419,107 @@ class BaseHandler:
         return customer, None
 
     def _check_offer_status_after_change(self, offer_id: int):
-        """Check if offer should be SOLD_OUT or ACTIVE based on box states"""
-        self.box_status_manager.update_offer_status_after_change(offer_id)
+        """Recompute the offer's status from box states and, if it changed, sync
+        the channel/subscriber announcement messages so they reflect the new
+        sold_out/active state (icon + order buttons)."""
+        new_status = self.box_status_manager.update_offer_status_after_change(offer_id)
+        if new_status is not None:
+            self.sync_offer_messages(offer_id)
+
+    def sync_offer_messages(self, offer_id: int, cancelled: bool = False):
+        """Re-render all tracked announcement messages for an offer.
+
+        Rebuilds the text + keyboard from the *current* offer (name/price/
+        description) and its *current* status (icon/buttons), then edits the group
+        announcement first (one cheap, high-priority call) and the subscriber DMs
+        afterwards. Subscriber edits trickle inline for small counts and are handed
+        off to the NotificationSender Lambda for large counts, mirroring the
+        announce path. Pass ``cancelled=True`` from the cancel path, where the
+        offer's stored status is INACTIVE but the message must show the cancelled
+        marker.
+        """
+        offer = self.db.get_offer(offer_id)
+        if not offer:
+            logger.warning(f"sync_offer_messages: offer {offer_id} not found")
+            return
+
+        text, reply_markup = self._build_offer_message(offer, cancelled)
+        rows = self.db.get_notification_messages_by_offer(offer_id)
+        group_rows = [r for r in rows if getattr(r, "kind", "group") == "group"]
+        subscriber_rows = [r for r in rows if getattr(r, "kind", "group") == "subscriber"]
+
+        # Group first: single, most-important surface, always inline.
+        for row in group_rows:
+            self._edit_tracked_message(row, text, reply_markup)
+
+        if not subscriber_rows:
+            return
+
+        # Small batches inline; large batches off to the async Lambda.
+        if len(subscriber_rows) <= 10:
+            for row in subscriber_rows:
+                self._edit_tracked_message(row, text, reply_markup)
+        else:
+            self._sync_subscriber_messages_async(offer_id, cancelled)
+
+    def _build_offer_message(self, offer, cancelled: bool):
+        """Build (text, reply_markup) for the offer using the shared builder.
+
+        Group/channel messages are always Dutch per the i18n rules, so the
+        translate callable forces the group language.
+        """
+        from services.offer_message_builder import OfferMessageBuilder
+
+        bot_username = self._get_bot_username()
+        builder = OfferMessageBuilder(bot_username, lambda key: self._t(key, force_group_lang=True))
+        return builder.build(offer, cancelled=cancelled)
+
+    def _edit_tracked_message(self, row, text, reply_markup) -> bool:
+        """Edit one tracked message; prune its row if Telegram says it's gone.
+
+        A ``None`` reply_markup means "no buttons" (sold_out/cancelled). Telegram
+        leaves the existing keyboard untouched when reply_markup is omitted, so an
+        explicit empty keyboard is sent to actually remove the order buttons.
+        """
+        markup = reply_markup if reply_markup is not None else {"inline_keyboard": []}
+        result = self._edit_message_text(row.chat_id, row.message_id, text, parse_mode="HTML", reply_markup=markup)
+        if result.get("not_found"):
+            try:
+                self.db.delete_notification_message(row.notification_id)
+            except Exception as e:
+                logger.error(f"Failed to prune notification row {row.notification_id}: {e}")
+        return result.get("success", False)
+
+    def _sync_subscriber_messages_async(self, offer_id: int, cancelled: bool = False):
+        """Hand off large subscriber-edit batches to the NotificationSender Lambda."""
+        import json
+        from decimal import Decimal
+
+        import boto3
+
+        try:
+            lambda_client = boto3.client("lambda")
+            function_name = os.environ.get(
+                "NOTIFICATION_LAMBDA_NAME", f"ubbc-bot-{os.environ.get('ENVIRONMENT', 'test')}-notification-sender"
+            )
+
+            class DecimalEncoder(json.JSONEncoder):
+                def default(self, obj):
+                    if isinstance(obj, Decimal):
+                        return float(obj)
+                    return super().default(obj)
+
+            payload = {
+                "action": "sync_offer_messages",
+                "offer_id": offer_id,
+                "cancelled": cancelled,
+                "environment": os.environ.get("ENVIRONMENT", "test"),
+            }
+            lambda_client.invoke(
+                FunctionName=function_name,
+                InvocationType="Event",
+                Payload=json.dumps(payload, cls=DecimalEncoder),
+            )
+            logger.info(f"Async subscriber-message sync invoked for offer {offer_id}")
+        except Exception as e:
+            logger.error(f"Failed to invoke async subscriber-message sync for offer {offer_id}: {e}")

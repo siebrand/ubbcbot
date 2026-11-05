@@ -443,6 +443,7 @@ class OfferManagementHandler(OfferBaseHandler):
             # No active orders, just cancel the offer
             self.db.update_offer(offer.offer_id, {"status": OfferStatus.INACTIVE.value})
             self._delete_offer_boxes(offer.offer_id)
+            self.sync_offer_messages(offer.offer_id, cancelled=True)
             self._send_message(chat_id, self._t("offer_cancelled_no_orders", offer_id=offer.offer_id))
             return {"status": "success"}
 
@@ -494,6 +495,7 @@ class OfferManagementHandler(OfferBaseHandler):
 
         # Cancel the offer
         self.db.update_offer(offer.offer_id, {"status": OfferStatus.INACTIVE.value})
+        self.sync_offer_messages(offer.offer_id, cancelled=True)
 
         # Send summary
         summary = self._t(

@@ -14,6 +14,7 @@ class TestOrderEditingCallbacks(unittest.TestCase):
         self.mock_db = Mock()
         self.handler = OrderEditing(self.mock_db, 15005473, "test", "token")
         self.handler.box_status_manager = Mock()
+        self.handler.box_status_manager.update_offer_status_after_change.return_value = None
         self.order = Order(order_id="abc12345-1111", customer_id="c1", offer_id=724, box_id="box-old", quantity=2)
         self.mock_db.get_order.return_value = self.order
 

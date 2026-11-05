@@ -16,19 +16,33 @@ class TestBaseOrderHandler(unittest.TestCase):
         self.mock_db = Mock()
         self.handler = BaseOrderHandler(self.mock_db, 15005473, "test", "test_token")
         self.handler.box_status_manager = Mock()
+        # Isolate the wrapper from the Telegram-touching message sync.
+        self.handler.sync_offer_messages = Mock()
 
     def test_check_offer_status_delegates_to_box_status_manager(self):
         """_check_offer_status_after_change recomputes status via the box status
-        manager. (The old sold-out notification-delete behaviour has been removed;
-        status messages are now edited by the offer status/content sync, not
-        deleted here.)"""
+        manager."""
+        self.handler.box_status_manager.update_offer_status_after_change.return_value = None
         self.handler._check_offer_status_after_change(1)
         self.handler.box_status_manager.update_offer_status_after_change.assert_called_once_with(1)
 
-    def test_check_offer_status_does_not_delete_notifications(self):
-        """The handler must no longer touch notification messages."""
+    def test_status_change_triggers_message_sync(self):
+        """When the status actually changes, the channel/subscriber messages are
+        re-synced (edited), not deleted."""
+        self.handler.box_status_manager.update_offer_status_after_change.return_value = "sold_out"
         self.handler._check_offer_status_after_change(1)
-        self.mock_db.get_notification_messages_by_offer.assert_not_called()
+        self.handler.sync_offer_messages.assert_called_once_with(1)
+
+    def test_no_status_change_does_not_sync(self):
+        """When the status is unchanged, no message edit is triggered."""
+        self.handler.box_status_manager.update_offer_status_after_change.return_value = None
+        self.handler._check_offer_status_after_change(1)
+        self.handler.sync_offer_messages.assert_not_called()
+
+    def test_check_offer_status_does_not_delete_notifications(self):
+        """The handler must no longer delete notification messages."""
+        self.handler.box_status_manager.update_offer_status_after_change.return_value = "active"
+        self.handler._check_offer_status_after_change(1)
         self.mock_db.delete_notification_message.assert_not_called()
 
 

@@ -14,6 +14,7 @@ class TestOrderEditingBox(unittest.TestCase):
         self.mock_db = Mock()
         self.handler = OrderEditing(self.mock_db, 15005473, "test", "token")
         self.handler.box_status_manager = Mock()
+        self.handler.box_status_manager.update_offer_status_after_change.return_value = None
 
     def _order(self, **kw):
         defaults = {

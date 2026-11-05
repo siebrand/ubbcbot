@@ -179,7 +179,7 @@ class OrderPlacement(BaseOrderHandler):
         )
 
         if result["status"] == "success":
-            self.box_status_manager.update_offer_status_after_change(offer_id)
+            self._check_offer_status_after_change(offer_id)
 
             # Get the actual order to show correct status
             orders = self.db.get_orders_by_customer(customer.customer_id)

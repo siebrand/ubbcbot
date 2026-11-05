@@ -84,8 +84,8 @@ class CustomerOrderCommands(BaseHandler):
             if not order:
                 return {"status": "error"}
 
-            # Update offer status and send notifications
-            self.box_status_manager.update_offer_status_after_change(offer.offer_id)
+            # Update offer status and send notifications (syncs channel messages)
+            self._check_offer_status_after_change(offer.offer_id)
             self._send_order_confirmation(chat_id, user_id, order, offer, quantity, placed_by_admin, customer)
 
             return {"status": "success"}
