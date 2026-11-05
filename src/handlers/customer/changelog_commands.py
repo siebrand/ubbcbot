@@ -8,6 +8,23 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2026-11-06",
+                "content": """<b>User-Facing Updates</b>
+• <b>Offer Announcements Stay Up To Date</b> - When an offer sells out, is cancelled, or becomes available again, the announcement in the group and the one sent to you is updated automatically: a 🔴 marker appears for sold out, ⛔ for cancelled, and the order buttons are removed so you can't tap "order" on something that's gone
+• <b>Live Price & Detail Changes</b> - If an admin updates an offer's name, price, or description, the already-sent announcements are refreshed to show the new information
+• <b>Clearer Delivery & Payment Overviews</b> - Order lines in delivery overviews, payment reminders and <code>/payment_info</code> are now grouped per offer (multiple orders of the same beer become one line with the combined quantity and total), sorted alphabetically, and tagged with the offer id
+• <b>New /privacy Command</b> - View the privacy statement as a nicely formatted message at any time
+
+<b>Admin-Facing Updates</b>
+• <b>New /edit_order Command</b> - Edit an existing order interactively: move it to another box, change its unit price (0 allowed for free items), or change its status, all via buttons with a confirmation step
+• <b>A unit price of 0 (free) is now accepted when editing an order</b>
+
+<b>Behind the Scenes</b>
+• <b>Purchase Analytics</b> - Order history was reduced to purchase analytics events (order created / payment received), with transaction records retained for 8 years to meet fiscal retention, and the analytics tables slimmed down to a single index
+• <b>Tighter Secret Access</b> - The Telegram session secret is now read only by the message sender
+• <b>Reliability & Maintenance</b> - Removed an unused order status and dead code, and kept dependencies current with automated updates""",
+            },
+            {
                 "title": "Up to 2026-11-01",
                 "content": """<b>User-Facing Updates</b>
 • <b>New /fomo Command</b> - See the active offers you haven't ordered yet; in the group it reacts 👍 and sends your list in a private chat
