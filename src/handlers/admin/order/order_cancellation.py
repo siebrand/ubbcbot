@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from models.entities import AuthorizationStatus, BoxStatus
+from models.entities import BoxStatus
 from services.box_status_manager import BoxStatusManager
 
 from .base_order_handler import BaseOrderHandler
@@ -49,15 +49,9 @@ class OrderCancellation(BaseOrderHandler):
 
     def _handle_cancel_order_by_partial_id(self, chat_id: int, partial_order_id: str) -> dict[str, Any]:
         """Handle cancel order by partial order ID (first 8 characters) with enhanced confirmation"""
-        # Search for orders that start with the partial ID
-        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-        matching_orders = []
-
-        for customer in customers:
-            orders = self.db.get_orders_by_customer(customer.customer_id)
-            for order in orders:
-                if order.order_id.startswith(partial_order_id) and order.status != "cancelled":
-                    matching_orders.append((order, customer))
+        # Shared resolver: match on order_id prefix across approved customers,
+        # excluding already-cancelled orders.
+        matching_orders = self.find_orders_by_partial_id(partial_order_id)
 
         if not matching_orders:
             self._send_message(chat_id, self._t("no_orders_found_partial", chat_id, partial_id=partial_order_id))

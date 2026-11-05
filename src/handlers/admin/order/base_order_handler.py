@@ -2,11 +2,30 @@ from decimal import Decimal
 from typing import Any
 
 from handlers.base_handler import BaseHandler
+from models.entities import AuthorizationStatus
 from utils.pagination import PaginationUtils
 
 
 class BaseOrderHandler(BaseHandler):
     """Base class for order-related handlers with shared utilities"""
+
+    def find_orders_by_partial_id(self, partial_id: str, include_cancelled: bool = False) -> list[tuple]:
+        """Find orders whose order_id starts with the given short/partial id.
+
+        Scans the orders of all approved customers and returns a list of
+        (order, customer) tuples. Cancelled orders are excluded unless
+        include_cancelled is True. Shared by /cancel_order and /edit_order so
+        the short-id resolution and disambiguation live in one place.
+        """
+        matches = []
+        for customer in self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value):
+            for order in self.db.get_orders_by_customer(customer.customer_id):
+                if not order.order_id.startswith(partial_id):
+                    continue
+                if not include_cancelled and order.status == "cancelled":
+                    continue
+                matches.append((order, customer))
+        return matches
 
     def _show_customer_orders(
         self, chat_id: int, customer, page: int = 1, show_order_ids: bool = False, user_id: int = None
