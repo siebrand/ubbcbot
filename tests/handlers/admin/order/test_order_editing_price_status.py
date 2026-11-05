@@ -50,6 +50,16 @@ class TestOrderEditingPriceStatus(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(key, "edit_order_bad_price")
 
+    def test_unit_price_allows_zero_free_item(self):
+        order = self._order(quantity=4)
+        self.mock_db.update_order.return_value = True
+        ok, key = self.handler._apply_unit_price_change(order, "0")
+        self.assertTrue(ok)
+        self.assertEqual(key, "edit_order_price_success")
+        updates = self.mock_db.update_order.call_args[0][1]
+        self.assertEqual(updates["unit_price"], Decimal("0"))
+        self.assertEqual(updates["total_price"], Decimal("0"))
+
     # --- status ---
     def test_status_options_in_workflow_order(self):
         self.assertEqual(

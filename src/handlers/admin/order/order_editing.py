@@ -74,6 +74,7 @@ class OrderEditing(BaseOrderHandler):
             unit = Decimal(str(new_unit_price))
         except ArithmeticError, ValueError:
             return False, "edit_order_bad_price"
+        # A unit price of 0 is allowed (free / comped item); only negatives are rejected.
         if unit < 0:
             return False, "edit_order_bad_price"
 
