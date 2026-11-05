@@ -328,6 +328,7 @@
   "status_draft": "concept",
   "status_pending": "open",
   "status_ordered": "besteld",
+  "status_received_partial_delayed": "ontvangen (deels/vertraagd)",
   "status_delivered": "geleverd",
   "status_completed": "voltooid",
   "status_ready_for_labeling": "klaar voor labelen",

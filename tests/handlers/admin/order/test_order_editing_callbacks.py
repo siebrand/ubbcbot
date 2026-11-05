@@ -114,6 +114,40 @@ class TestOrderEditingCallbacks(unittest.TestCase):
         # buttons still present
         self.assertIn("inline_keyboard", mock_send.call_args[1]["reply_markup"])
 
+    @patch.object(OrderEditing, "_send_message")
+    def test_status_buttons_use_localized_labels(self, mock_send):
+        # Buttons show the localized status label (not the raw status key/value).
+        self.handler.show_status_options(123, self.order.order_id)
+        keyboard = mock_send.call_args[1]["reply_markup"]["inline_keyboard"]
+        labels = [btn["text"] for row in keyboard for btn in row if "setstatus" in btn.get("callback_data", "")]
+        # raw status values must NOT appear verbatim as labels
+        self.assertNotIn("pending", labels)
+        self.assertNotIn("received_partial_delayed", labels)
+        # the localized nl labels do (test env default language is nl)
+        self.assertIn("open", labels)
+        self.assertIn("ontvangen (deels/vertraagd)", labels)
+
+    @patch.object(OrderEditing, "_send_message")
+    def test_apply_status_returns_to_aspect_menu(self, mock_send):
+        self.mock_db.update_order.return_value = True
+        # make the re-shown menu's detail lookups return plain values
+        offer = Mock()
+        offer.name = "Beer"
+        self.mock_db.get_offer.return_value = offer
+        cust = Mock()
+        cust.first_name = "A"
+        cust.last_name = "B"
+        self.mock_db.get_customer.return_value = cust
+
+        self.handler.apply_status(123, self.order.order_id, "completed")
+        # _return_to_menu re-fetches the order and re-shows the aspect menu.
+        self.assertGreaterEqual(self.mock_db.get_order.call_count, 2)
+        # the aspect menu is re-sent (its message carries the three aspect buttons)
+        last_keyboard = mock_send.call_args[1]["reply_markup"]["inline_keyboard"]
+        callbacks = [btn["callback_data"] for row in last_keyboard for btn in row]
+        self.assertTrue(any(c.startswith("edit_order_box_") for c in callbacks))
+        self.assertTrue(any(c.startswith("edit_order_status_") for c in callbacks))
+
 
 if __name__ == "__main__":
     unittest.main()

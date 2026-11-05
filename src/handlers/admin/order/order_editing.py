@@ -215,7 +215,9 @@ class OrderEditing(BaseOrderHandler):
             ]
             for b in boxes
         ]
-        buttons.append([{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}])
+        buttons.append(
+            [{"text": self._t("cancel", user_id=None), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}]
+        )
         self._send_message(chat_id, self._t("edit_order_pick_box", chat_id), reply_markup={"inline_keyboard": buttons})
         return {"status": "box_options_shown"}
 
@@ -234,7 +236,7 @@ class OrderEditing(BaseOrderHandler):
                     "callback_data": f"edit_order_applybox_{order.order_id[:8]}_{box.box_id[:8]}",
                 }
             ],
-            [{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}],
+            [{"text": self._t("cancel", user_id=None), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}],
         ]
         self._send_message(
             chat_id,
@@ -253,6 +255,7 @@ class OrderEditing(BaseOrderHandler):
             return {"status": "box_not_found"}
         ok, key = self._apply_box_change(order, box.box_id)
         self._send_message(chat_id, self._t(key, chat_id, order_id=order.order_id[:8], box_id=box.box_id[:8]))
+        self._return_to_menu(chat_id, order.order_id)
         return {"status": key if ok else "edit_failed"}
 
     def show_status_options(self, chat_id: int, order_id: str) -> dict[str, Any]:
@@ -260,10 +263,17 @@ class OrderEditing(BaseOrderHandler):
         if not order:
             return {"status": "order_not_found"}
         buttons = [
-            [{"text": s, "callback_data": f"edit_order_setstatus_{order.order_id[:8]}_{s}"}]
+            [
+                {
+                    "text": self._t(f"status_{s}", chat_id),
+                    "callback_data": f"edit_order_setstatus_{order.order_id[:8]}_{s}",
+                }
+            ]
             for s in self._status_options()
         ]
-        buttons.append([{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}])
+        buttons.append(
+            [{"text": self._t("cancel", user_id=None), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}]
+        )
         self._send_message(
             chat_id, self._t("edit_order_pick_status", chat_id), reply_markup={"inline_keyboard": buttons}
         )
@@ -280,7 +290,7 @@ class OrderEditing(BaseOrderHandler):
                     "callback_data": f"edit_order_applystatus_{order.order_id[:8]}_{new_status}",
                 }
             ],
-            [{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}],
+            [{"text": self._t("cancel", user_id=None), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}],
         ]
         self._send_message(
             chat_id,
@@ -295,6 +305,7 @@ class OrderEditing(BaseOrderHandler):
             return {"status": "order_not_found"}
         ok, key = self._apply_status_change(order, new_status)
         self._send_message(chat_id, self._t(key, chat_id, order_id=order_id[:8], status=new_status))
+        self._return_to_menu(chat_id, order.order_id)
         return {"status": key if ok else "edit_failed"}
 
     def prompt_price(self, chat_id: int, order_id: str) -> dict[str, Any]:
@@ -313,4 +324,12 @@ class OrderEditing(BaseOrderHandler):
             return {"status": "order_not_found"}
         ok, key = self._apply_unit_price_change(order, (text or "").strip())
         self._send_message(chat_id, self._t(key, chat_id, order_id=order_id[:8]))
+        self._return_to_menu(chat_id, order.order_id)
         return {"status": key if ok else "edit_failed"}
+
+    def _return_to_menu(self, chat_id: int, order_id: str):
+        """After a property edit completes, re-show the aspect menu with the
+        refreshed order so the admin can make another change or exit."""
+        order = self.db.get_order(order_id)
+        if order:
+            self._show_aspect_menu(chat_id, order)
