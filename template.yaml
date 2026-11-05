@@ -316,6 +316,12 @@ Resources:
                 - !GetAtt OffersTable.Arn
                 - !GetAtt CustomersTable.Arn
                 - !Sub '${CustomersTable.Arn}/index/*'
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt NotificationsTable.Arn
+                - !Sub '${NotificationsTable.Arn}/index/*'
         - S3CrudPolicy:
             BucketName: !Ref ImageBucket
         - Version: '2012-10-17'
