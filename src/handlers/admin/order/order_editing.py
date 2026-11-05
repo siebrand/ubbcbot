@@ -155,3 +155,116 @@ class OrderEditing(BaseOrderHandler):
             reply_markup={"inline_keyboard": buttons},
         )
         return {"status": "aspect_menu_shown"}
+
+    # ----------------------------------------------------------- callback flow
+    def _get_order_or_warn(self, chat_id: int, order_id: str):
+        order = self.db.get_order(order_id)
+        if not order:
+            self._send_message(chat_id, self._t("order_not_found_full_id", chat_id, order_id=order_id))
+        return order
+
+    def show_box_options(self, chat_id: int, order_id: str) -> dict[str, Any]:
+        """Show buttons listing boxes (of the order's offer) that have space."""
+        order = self._get_order_or_warn(chat_id, order_id)
+        if not order:
+            return {"status": "order_not_found"}
+        boxes = self._boxes_with_space(order)
+        if not boxes:
+            self._send_message(chat_id, self._t("edit_order_no_boxes", chat_id))
+            return {"status": "no_boxes_available"}
+        buttons = [
+            [
+                {
+                    "text": f"{b.box_id} ({b.current_quantity}/{b.max_capacity})",
+                    "callback_data": f"edit_order_setbox_{order_id}_{b.box_id}",
+                }
+            ]
+            for b in boxes
+        ]
+        buttons.append([{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}])
+        self._send_message(chat_id, self._t("edit_order_pick_box", chat_id), reply_markup={"inline_keyboard": buttons})
+        return {"status": "box_options_shown"}
+
+    def confirm_box(self, chat_id: int, order_id: str, new_box_id: str) -> dict[str, Any]:
+        order = self._get_order_or_warn(chat_id, order_id)
+        if not order:
+            return {"status": "order_not_found"}
+        buttons = [
+            [
+                {
+                    "text": self._t("confirm", user_id=None),
+                    "callback_data": f"edit_order_applybox_{order_id}_{new_box_id}",
+                }
+            ],
+            [{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}],
+        ]
+        self._send_message(
+            chat_id,
+            self._t("edit_order_confirm_box", chat_id, order_id=order_id[:8], box_id=new_box_id),
+            reply_markup={"inline_keyboard": buttons},
+        )
+        return {"status": "confirm_shown"}
+
+    def apply_box(self, chat_id: int, order_id: str, new_box_id: str) -> dict[str, Any]:
+        order = self._get_order_or_warn(chat_id, order_id)
+        if not order:
+            return {"status": "order_not_found"}
+        ok, key = self._apply_box_change(order, new_box_id)
+        self._send_message(chat_id, self._t(key, chat_id, order_id=order_id[:8], box_id=new_box_id))
+        return {"status": key if ok else "edit_failed"}
+
+    def show_status_options(self, chat_id: int, order_id: str) -> dict[str, Any]:
+        order = self._get_order_or_warn(chat_id, order_id)
+        if not order:
+            return {"status": "order_not_found"}
+        buttons = [
+            [{"text": s, "callback_data": f"edit_order_setstatus_{order_id}_{s}"}] for s in self._status_options()
+        ]
+        buttons.append([{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}])
+        self._send_message(
+            chat_id, self._t("edit_order_pick_status", chat_id), reply_markup={"inline_keyboard": buttons}
+        )
+        return {"status": "status_options_shown"}
+
+    def confirm_status(self, chat_id: int, order_id: str, new_status: str) -> dict[str, Any]:
+        buttons = [
+            [
+                {
+                    "text": self._t("confirm", user_id=None),
+                    "callback_data": f"edit_order_applystatus_{order_id}_{new_status}",
+                }
+            ],
+            [{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}],
+        ]
+        self._send_message(
+            chat_id,
+            self._t("edit_order_confirm_status", chat_id, order_id=order_id[:8], status=new_status),
+            reply_markup={"inline_keyboard": buttons},
+        )
+        return {"status": "confirm_shown"}
+
+    def apply_status(self, chat_id: int, order_id: str, new_status: str) -> dict[str, Any]:
+        order = self._get_order_or_warn(chat_id, order_id)
+        if not order:
+            return {"status": "order_not_found"}
+        ok, key = self._apply_status_change(order, new_status)
+        self._send_message(chat_id, self._t(key, chat_id, order_id=order_id[:8], status=new_status))
+        return {"status": key if ok else "edit_failed"}
+
+    def prompt_price(self, chat_id: int, order_id: str) -> dict[str, Any]:
+        """Store an EditContext and ask the admin to type the new unit price."""
+        from models.entities import EditContext
+
+        self.db.create_edit_context(
+            EditContext(chat_id=chat_id, edit_type="edit_order_price_input", entity_id=order_id)
+        )
+        self._send_message(chat_id, self._t("edit_order_enter_price", chat_id))
+        return {"status": "awaiting_price"}
+
+    def apply_price_input(self, chat_id: int, order_id: str, text: str) -> dict[str, Any]:
+        order = self._get_order_or_warn(chat_id, order_id)
+        if not order:
+            return {"status": "order_not_found"}
+        ok, key = self._apply_unit_price_change(order, (text or "").strip())
+        self._send_message(chat_id, self._t(key, chat_id, order_id=order_id[:8]))
+        return {"status": key if ok else "edit_failed"}

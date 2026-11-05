@@ -3,6 +3,7 @@ from typing import Any
 from handlers.base_handler import BaseHandler
 
 from .order.order_cancellation import OrderCancellation
+from .order.order_editing import OrderEditing
 from .order.order_maintenance import OrderMaintenance
 from .order.order_placement import OrderPlacement
 from .order.order_status import OrderStatusManagement
@@ -21,6 +22,11 @@ class AdminOrderCommands(BaseHandler):
         self.viewing = OrderViewing(db, admin_user_id, environment, telegram_token)
         self.status_mgmt = OrderStatusManagement(db, admin_user_id, environment, telegram_token)
         self.maintenance = OrderMaintenance(db, admin_user_id, environment, telegram_token)
+        self.editing = OrderEditing(db, admin_user_id, environment, telegram_token)
+
+    # Order Editing Methods
+    def handle_edit_order(self, chat_id: int, args: list) -> dict[str, Any]:
+        return self.editing.handle_edit_order(chat_id, args)
 
     # Order Cancellation Methods
     def handle_cancel_order(self, chat_id: int, args: list) -> dict[str, Any]:

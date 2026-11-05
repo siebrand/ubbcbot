@@ -447,5 +447,7 @@ class BotService:
             order_id = entity_id
             reason = text.strip() if text.strip() else "No reason provided"
             return self.admin_order_commands.handle_confirm_cancel_with_reason(chat_id, order_id, reason)
+        elif edit_type == "edit_order_price_input":
+            return self.admin_order_commands.editing.apply_price_input(chat_id, entity_id, text)
 
         return {"status": "unknown_edit_type"}

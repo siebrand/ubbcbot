@@ -206,6 +206,8 @@ class CommandRouter:
                 return self.handlers["admin_order"].handle_create_order_for(admin_target_chat, user_id, parts[1:])
             elif command == "/cancel_order":
                 return self.handlers["admin_order"].handle_cancel_order(admin_target_chat, parts[1:])
+            elif command == "/edit_order":
+                return self.handlers["admin_order"].handle_edit_order(admin_target_chat, parts[1:])
             elif command == "/list_user_orders":
                 return self.handlers["admin_order"].handle_list_user_orders(admin_target_chat, parts[1:])
             elif command == "/list_offer_orders":

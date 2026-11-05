@@ -255,6 +255,7 @@ class TestCommandRouting:
             ("/create_order_for user 1 2", "admin_order", "handle_create_order_for"),
             ("/order_for user 1 2", "admin_order", "handle_create_order_for"),  # Permanent alias
             ("/cancel_order 1", "admin_order", "handle_cancel_order"),
+            ("/edit_order abc12345", "admin_order", "handle_edit_order"),
             ("/list_user_orders user", "admin_order", "handle_list_user_orders"),
             ("/list_offer_orders 1", "admin_order", "handle_list_offer_orders"),
             ("/export_orders", "admin_order", "handle_export_orders"),

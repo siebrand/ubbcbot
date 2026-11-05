@@ -274,6 +274,52 @@ class CallbackHandler:
                 ctx["chat_id"], match.group(1)
             ),
         )
+
+        # /edit_order flow: pick order, choose aspect, choose value, confirm, apply.
+        self.router.register(
+            r"^edit_order_pick_(.+)$",
+            lambda match, ctx: self.handlers["admin_order"].editing._show_aspect_menu(
+                ctx["chat_id"], self.db.get_order(match.group(1))
+            ),
+        )
+        self.router.register(
+            r"^edit_order_box_(.+)$",
+            lambda match, ctx: self.handlers["admin_order"].editing.show_box_options(ctx["chat_id"], match.group(1)),
+        )
+        self.router.register(
+            r"^edit_order_price_(.+)$",
+            lambda match, ctx: self.handlers["admin_order"].editing.prompt_price(ctx["chat_id"], match.group(1)),
+        )
+        self.router.register(
+            r"^edit_order_status_(.+)$",
+            lambda match, ctx: self.handlers["admin_order"].editing.show_status_options(ctx["chat_id"], match.group(1)),
+        )
+        # setbox/applybox: order_id and box_id are both UUIDs; split on the LAST
+        # underscore-delimited UUID boundary via a greedy order-id capture.
+        self.router.register(
+            r"^edit_order_setbox_(.+)_([^_]+)$",
+            lambda match, ctx: self.handlers["admin_order"].editing.confirm_box(
+                ctx["chat_id"], match.group(1), match.group(2)
+            ),
+        )
+        self.router.register(
+            r"^edit_order_applybox_(.+)_([^_]+)$",
+            lambda match, ctx: self.handlers["admin_order"].editing.apply_box(
+                ctx["chat_id"], match.group(1), match.group(2)
+            ),
+        )
+        self.router.register(
+            r"^edit_order_setstatus_(.+)_([a-z_]+)$",
+            lambda match, ctx: self.handlers["admin_order"].editing.confirm_status(
+                ctx["chat_id"], match.group(1), match.group(2)
+            ),
+        )
+        self.router.register(
+            r"^edit_order_applystatus_(.+)_([a-z_]+)$",
+            lambda match, ctx: self.handlers["admin_order"].editing.apply_status(
+                ctx["chat_id"], match.group(1), match.group(2)
+            ),
+        )
         self.router.register(
             r"^start_send_overviews$",
             lambda match, ctx: self.handlers["delivery_overview"].start_send_overviews(ctx["chat_id"]),
