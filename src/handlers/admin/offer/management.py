@@ -492,9 +492,6 @@ class OfferManagementHandler(OfferBaseHandler):
         # Delete all boxes
         deleted_boxes = self._delete_offer_boxes(offer.offer_id)
 
-        # Delete notification messages for cancelled offer
-        self._cleanup_offer_notifications(offer.offer_id)
-
         # Cancel the offer
         self.db.update_offer(offer.offer_id, {"status": OfferStatus.INACTIVE.value})
 
@@ -552,36 +549,3 @@ class OfferManagementHandler(OfferBaseHandler):
                 self._send_message(chat_id, self._t("failed_delete_offer"))
 
         return {"status": "success"}
-
-    def _cleanup_offer_notifications(self, offer_id: int):
-        """Clean up notification messages for cancelled offer"""
-        try:
-            offer = self.db.get_offer(offer_id)
-            if not offer:
-                return
-
-            notifications = self.db.get_notification_messages_by_offer(offer_id)
-
-            # Check if offer is within 48 hours (172800 seconds)
-            from datetime import UTC, datetime, timedelta
-
-            now = datetime.now(UTC)
-            offer_age = now - offer.created_at
-            within_48_hours = offer_age < timedelta(hours=48)
-
-            for notification in notifications:
-                try:
-                    if within_48_hours:
-                        # Delete message from Telegram
-                        self._delete_message(notification.chat_id, notification.message_id)
-
-                    # Always remove from database
-                    self.db.delete_notification_message(notification.notification_id)
-                except Exception as e:
-                    import logging
-
-                    logging.error(f"Failed to cleanup notification {notification.notification_id}: {e}")
-        except Exception as e:
-            import logging
-
-            logging.error(f"Error cleaning up offer notifications: {e}")

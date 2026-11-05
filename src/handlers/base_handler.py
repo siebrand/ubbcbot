@@ -5,7 +5,6 @@ from typing import Any
 
 import requests
 
-from models.entities import OfferStatus
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
 from utils.pagination import PaginationUtils
@@ -374,21 +373,4 @@ class BaseHandler:
 
     def _check_offer_status_after_change(self, offer_id: int):
         """Check if offer should be SOLD_OUT or ACTIVE based on box states"""
-        new_status = self.box_status_manager.update_offer_status_after_change(offer_id)
-        if new_status == OfferStatus.SOLD_OUT.value:
-            self._delete_offer_notifications(offer_id)
-
-    def _delete_offer_notifications(self, offer_id: int):
-        """Delete notification messages for sold out offer"""
-        try:
-            notifications = self.db.get_notification_messages_by_offer(offer_id)
-
-            for notification in notifications:
-                try:
-                    if self._delete_message(notification.chat_id, notification.message_id):
-                        self.db.delete_notification_message(notification.notification_id)
-                        logger.info(f"Deleted notification message {notification.message_id} for offer {offer_id}")
-                except Exception as e:
-                    logger.error(f"Failed to delete message {notification.message_id}: {e}")
-        except Exception as e:
-            logger.error(f"Error deleting offer notifications: {e}")
+        self.box_status_manager.update_offer_status_after_change(offer_id)
