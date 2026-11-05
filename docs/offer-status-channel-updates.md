@@ -1,7 +1,8 @@
 # Updating offer status and content in the channel and subscriber messages
 
-Status: **in progress.** Steps 1–2 implemented and committed (`0bd82e2`,
-`fcf7ccc`); Steps 3–6 remaining — see "Implementation status & remaining work".
+Status: **complete.** Steps 1–3 committed (`0bd82e2`, `fcf7ccc`, `317b7bc`);
+Steps 4–5 committed (`ffaaa6e`); Step 6 (changelog + README) done. See
+"Implementation status & remaining work" for the per-step record.
 
 ## Goal
 
@@ -237,87 +238,69 @@ listed.
   icon + order buttons; sold_out → 🔴 + `status_sold_out` suffix + no buttons;
   cancelled → ⛔ + `status_cancelled` suffix + no buttons. Name is HTML-escaped.
   Pure; tested in `tests/test_offer_message_builder.py`.
+- **Step 3 — capture message ids (+ TTL/kind, template).** (pending commit)
+  Added `kind` (`"group"`/`"subscriber"`, default `"group"`) and `ttl`
+  (`int | None`, computed to `created_at + 168h` in `__post_init__`, tolerant of a
+  string `created_at` for the DynamoDB round-trip) to `NotificationMessage`
+  (`src/models/entities.py`). Enabled `TimeToLiveSpecification` on `ttl` for the
+  `notifications` table (`template.yaml`); `kind`/`ttl` are non-key attributes so
+  no `AttributeDefinitions`/conftest fixture change was needed. Capture is wired at
+  every announce send site after a successful `_send_message`
+  (`result["success"]`): group announcement in
+  `offer/notifications.py._send_rich_offer_message` (only when `not preview`, via
+  the new `_track_notification_message` helper, `kind="group"`); subscriber DMs in
+  `_send_optimized_rich_message` and `_send_simple_offer_notification`
+  (`kind="subscriber"`); and the bulk Lambda
+  `notification_sender.py._send_notification_to_customer` (`kind="subscriber"`).
+  Tests in `tests/handlers/admin/offer/test_notification_tracking.py` (group row,
+  subscriber row, preview skipped, failed-send skipped, ttl ≈168h, string
+  `created_at`). Full suite green (592 passed; the one collection error in
+  `test_privacy.py` is a pre-existing missing `markdown` dependency, unrelated);
+  `sam validate --lint` passes.
 
-### Remaining
+### Done (Steps 4–6)
 
-Useful facts already verified (so the next session need not re-derive):
+- **Step 4 — `_edit_message_text` helper + `sync_offer_messages`.** Commit
+  `ffaaa6e`. Added `BaseHandler._edit_message_text(chat_id, message_id, text,
+  parse_mode=None, reply_markup=None) -> {"success", "not_found"}` (calls Telegram
+  `editMessageText`; treats "message is not modified" as success and
+  "message to edit not found" / "message can't be edited" / "chat not found" as
+  `not_found`). Added `BaseHandler.sync_offer_messages(offer_id, cancelled=False)`:
+  loads the offer, builds `(text, markup)` via `OfferMessageBuilder` (group
+  language forced to Dutch), reads rows via `get_notification_messages_by_offer`,
+  edits the group row(s) first, then subscriber rows (≤10 inline; >10 →
+  `_sync_subscriber_messages_async`). `_edit_tracked_message` sends an **empty**
+  keyboard (`{"inline_keyboard": []}`) when markup is None so sold_out/cancelled
+  actually drop the order buttons, and prunes the row on `not_found`. Tested in
+  `tests/handlers/admin/offer/test_offer_message_sync.py`.
+- **Step 5 — wire triggers + NotificationSender async mode.** Commit `ffaaa6e`.
+  `_check_offer_status_after_change` now captures the status returned by
+  `box_status_manager.update_offer_status_after_change` and calls
+  `sync_offer_messages` when it changed; the direct `box_status_manager` callers
+  in `order_placement.py`, `order_cancellation.py`, `order_editing.py`, and
+  `customer/order_commands.py` were routed through this wrapper.
+  `/cancel_offer` (both the no-orders and confirmed paths in `management.py`) calls
+  `sync_offer_messages(offer_id, cancelled=True)`; `/offer_status` calls it for the
+  **soldout case only**; the three `offer/editing.py` content updaters call it
+  after a successful `db.update_offer`. `notification_sender.lambda_handler`
+  dispatches on `event["action"]`: `sync_offer_messages` →
+  `NotificationSender.sync_subscriber_messages(offer, cancelled)` which edits only
+  `kind == "subscriber"` rows in batches of 20 with `time.sleep(0.5)` between
+  batches; the `cancelled` flag is threaded through the async payload. Routing
+  tests in `tests/handlers/admin/offer/test_offer_sync_triggers.py` plus the
+  updated `tests/handlers/admin/order/test_base_order_handler.py`.
+- **Step 6 — user-facing docs.** Added a changelog entry
+  (`src/handlers/customer/changelog_commands.py`, "Up to 2026-11-06") describing
+  the live announcement updates, and rewrote the README "Notification Management"
+  section (the old "delete on sold out / cancel" bullets, removed in Step 1, were
+  replaced by the edit-in-place behaviour). This design doc is intentionally
+  **not** committed.
 
-- `BaseHandler._send_message(...)` **already returns**
-  `{"success": True, "message_id": <id>}` on success (`base_handler.py:143`), so
-  capturing the sent id needs no change to `_send_message` — just read it.
-- There is **no `editMessageText` helper yet** (only `_delete_message`,
-  `_set_message_reaction`, and `callback_handler._edit_message_remove_keyboard`).
-  Add `BaseHandler._edit_message_text(chat_id, message_id, text, parse_mode=None,
-  reply_markup=None) -> bool` calling Telegram `editMessageText` (mirror
-  `_delete_message`; include `reply_markup` only when provided so it can be
-  dropped to remove buttons).
-- Announce send sites (where to capture ids): group announcement text message in
-  `offer/notifications.py` `_send_rich_offer_message` (the `self._send_message`
-  at ~line 61); subscriber DMs in `_send_optimized_rich_message` /
-  `_send_simple_offer_notification` (same file) and in
-  `notification_sender.py` `_send_notification_to_customer` (the bulk Lambda).
-- `NotificationMessage` fields today: `notification_id, offer_id, chat_id,
-  message_id, created_at`. Table: `template.yaml` ~line 560, GSI `offer-index` on
-  `offer_id`, **no TTL currently**.
-- Content-change trigger sites: `offer/editing.py` `handle_update_offer_name`
-  (~71), `handle_update_offer_price` (~106), `handle_update_offer_description`
-  (~147), each right after a successful `db.update_offer(...)`. The `/view_offer`
-  edit menu routes through these same handlers via `bot_service` (no separate
-  path).
-- Status-transition sites: `box_status_manager.update_offer_status_after_change`
-  (sets SOLD_OUT/ACTIVE at ~119/124/133/137) is the natural hook for
-  auto sold_out ↔ active; `/cancel_offer` in `offer/management.py` (~496 area,
-  sets INACTIVE); `/offer_status` handler (sold_out case only).
-
-**Step 3 — capture message ids (+ TTL/kind, template).**
-- Add `kind: str` (``"group"``/``"subscriber"``) and `ttl: int | None` to
-  `NotificationMessage` (`entities.py`); compute `ttl` = `created_at + 168h` in
-  `__post_init__` when unset (mirror `OrderHistory`'s ttl pattern).
-- Add `kind` + `ttl` attributes to the `notifications` table and enable DynamoDB
-  `TimeToLiveSpecification` on `ttl` (`template.yaml`). Add `kind` to the test
-  table fixture in `tests/conftest.py` if it defines the notifications table.
-- At each announce send site above, after a successful `_send_message`
-  (`result["success"]`), call `db.create_notification_message(NotificationMessage(
-  offer_id=..., chat_id=..., message_id=result["message_id"], kind=...))`.
-  group announce → `kind="group"`; subscriber sends → `kind="subscriber"`.
-- Tests: a send records a `group` row with the returned message_id; a subscriber
-  send records a `subscriber` row; ttl is set ~168h out.
-
-**Step 4 — `_edit_message_text` helper + `sync_offer_messages(offer_id)`.**
-- Add `_edit_message_text` to `BaseHandler` (see facts above), tested against a
-  mocked `requests.post`.
-- Add a service/handler method `sync_offer_messages(offer_id, cancelled=False)`:
-  load the offer; build `(text, markup)` with `OfferMessageBuilder` from the
-  **current** offer + state; `get_notification_messages_by_offer(offer_id)`;
-  edit the **group** row first (inline), then the **subscriber** rows. ≤10
-  subscriber rows → edit inline; >10 → async-invoke `NotificationSender`
-  (`InvocationType="Event"`, payload `{"action":"sync_offer_messages","offer_id":...}`).
-  Best-effort per message; on Telegram "message not found", prune the row via
-  `delete_notification_message`. `cancelled=True` when called from the cancel path
-  (offer status is INACTIVE there). Pure-ish parts unit-tested with mocked db +
-  `_edit_message_text`.
-
-**Step 5 — wire triggers + NotificationSender async mode.**
-- Call `sync_offer_messages` from: the auto sold_out↔active transition (hook in
-  `box_status_manager.update_offer_status_after_change` or its callers — keep
-  `box_status_manager` free of Telegram concerns; prefer calling the sync from
-  the handler layer after the status recompute), `/cancel_offer`
-  (`sync_offer_messages(offer_id, cancelled=True)` where `_cleanup_offer_notifications`
-  used to be called), and `/offer_status` **sold_out case only**, and the three
-  content updaters in `offer/editing.py` after their `db.update_offer`.
-- Add the `sync_offer_messages` branch to `notification_sender.py`'s
-  `lambda_handler` (dispatch on `event["action"]`), editing only
-  `kind == "subscriber"` rows in batches with the existing `time.sleep` between
-  batches.
-- Routing/trigger tests (mock `sync_offer_messages`) to prove each site calls it.
-
-**Step 6 — commit the design doc** (`docs/offer-status-channel-updates.md`) and
-update the README/changelog if offer announcements' behaviour is user-visible.
-
-Across all steps: run the full suite + `ruff check .` + `sam validate` (Step 3
-touches the template); keep en/nl translation parity (the `status_*` suffix keys
-already exist). No new Lambda; the only infra change is the `notifications`
-table `ttl`/`kind` + TTL spec.
+Verification across the work: full suite 619 passed (the lone `test_privacy.py`
+collection error is a pre-existing missing `markdown` dependency, unrelated);
+`sam validate --lint` passes; the pre-commit ruff hook reformatted and the commits
+contain the formatted result. ruff is not installed in this environment, so it was
+run only via the commit hook, not standalone.
 
 ## Decision: edit everything, delete nothing
 
