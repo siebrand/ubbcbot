@@ -474,16 +474,21 @@ class BaseHandler:
         builder = OfferMessageBuilder(bot_username, lambda key: self._t(key, force_group_lang=True))
         return builder.build(offer, cancelled=cancelled)
 
-    def _edit_tracked_message(self, row, text, reply_markup) -> bool:
+    def _edit_tracked_message(self, row, text, reply_markup, prune: bool = True) -> bool:
         """Edit one tracked message; prune its row if Telegram says it's gone.
 
         A ``None`` reply_markup means "no buttons" (sold_out/cancelled). Telegram
         leaves the existing keyboard untouched when reply_markup is omitted, so an
         explicit empty keyboard is sent to actually remove the order buttons.
+
+        ``prune`` controls whether a "message not found" result deletes the tracking
+        row. Callers without ``dynamodb:DeleteItem`` on the notifications table
+        (e.g. the NotificationSender Lambda) pass ``prune=False`` and leave cleanup
+        to the row's 168h TTL.
         """
         markup = reply_markup if reply_markup is not None else {"inline_keyboard": []}
         result = self._edit_message_text(row.chat_id, row.message_id, text, parse_mode="HTML", reply_markup=markup)
-        if result.get("not_found"):
+        if prune and result.get("not_found"):
             try:
                 self.db.delete_notification_message(row.notification_id)
             except Exception as e:

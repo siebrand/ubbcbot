@@ -320,7 +320,6 @@ Resources:
               Action:
                 - dynamodb:Query
                 - dynamodb:PutItem
-                - dynamodb:DeleteItem
               Resource:
                 - !GetAtt NotificationsTable.Arn
                 - !Sub '${NotificationsTable.Arn}/index/*'

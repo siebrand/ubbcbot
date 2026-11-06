@@ -141,7 +141,9 @@ class NotificationSender(BaseHandler):
         batch_size = 20
         for i in range(0, len(rows), batch_size):
             for row in rows[i : i + batch_size]:
-                if self._edit_tracked_message(row, text, reply_markup):
+                # The NotificationSender Lambda has no DeleteItem on the notifications
+                # table; stale rows are cleaned up by the 168h TTL instead of pruning.
+                if self._edit_tracked_message(row, text, reply_markup, prune=False):
                     edited += 1
                 else:
                     failed += 1

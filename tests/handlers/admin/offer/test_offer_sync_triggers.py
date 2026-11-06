@@ -54,6 +54,8 @@ class TestNotificationSenderSync:
         edited, failed = s.sync_subscriber_messages(offer)
         assert edited == 0
         assert failed == 1
+        # The Lambda has no DeleteItem permission, so it must not try to prune.
+        s.db.delete_notification_message.assert_not_called()
 
 
 class TestLambdaHandlerDispatch:
