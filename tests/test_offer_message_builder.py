@@ -51,6 +51,13 @@ class TestOfferMessageBuilder(unittest.TestCase):
         self.assertIn("status_cancelled", text)
         self.assertIsNone(markup)
 
+    def test_active_with_buttons_false_has_no_buttons(self):
+        # Group/channel announcements are rendered button-less even when active.
+        text, markup = self.builder.build(self.offer, with_buttons=False)
+        self.assertIn("Beer", text)
+        self.assertNotIn("🔴", text)
+        self.assertIsNone(markup)
+
     def test_description_included(self):
         text, _ = self.builder.build(self.offer)
         self.assertIn("Tasty", text)

@@ -443,36 +443,39 @@ class BaseHandler:
             logger.warning(f"sync_offer_messages: offer {offer_id} not found")
             return
 
-        text, reply_markup = self._build_offer_message(offer, cancelled)
         rows = self.db.get_notification_messages_by_offer(offer_id)
         group_rows = [r for r in rows if getattr(r, "kind", "group") == "group"]
         subscriber_rows = [r for r in rows if getattr(r, "kind", "group") == "subscriber"]
 
+        # The group message does not show order buttons. Subscriber messages show them when the offer is active.
+        group_text, group_markup = self._build_offer_message(offer, cancelled, with_buttons=False)
+
         # Group first: single, most-important surface, always inline.
         for row in group_rows:
-            self._edit_tracked_message(row, text, reply_markup)
+            self._edit_tracked_message(row, group_text, group_markup)
 
         if not subscriber_rows:
             return
 
+        sub_text, sub_markup = self._build_offer_message(offer, cancelled, with_buttons=True)
+
         # Small batches inline; large batches off to the async Lambda.
         if len(subscriber_rows) <= 10:
             for row in subscriber_rows:
-                self._edit_tracked_message(row, text, reply_markup)
+                self._edit_tracked_message(row, sub_text, sub_markup)
         else:
             self._sync_subscriber_messages_async(offer_id, cancelled)
 
-    def _build_offer_message(self, offer, cancelled: bool):
-        """Build (text, reply_markup) for the offer using the shared builder.
+    def _build_offer_message(self, offer, cancelled: bool, with_buttons: bool = True):
+        """Build the text and reply_markup with the shared builder.
 
-        Group/channel messages are always Dutch per the i18n rules, so the
-        translate callable forces the group language.
+        Group messages use Dutch. Group messages do not show order buttons.
         """
         from services.offer_message_builder import OfferMessageBuilder
 
         bot_username = self._get_bot_username()
         builder = OfferMessageBuilder(bot_username, lambda key: self._t(key, force_group_lang=True))
-        return builder.build(offer, cancelled=cancelled)
+        return builder.build(offer, cancelled=cancelled, with_buttons=with_buttons)
 
     def _edit_tracked_message(self, row, text, reply_markup, prune: bool = True) -> bool:
         """Edit one tracked message; prune its row if Telegram says it's gone.
