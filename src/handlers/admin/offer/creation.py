@@ -194,9 +194,9 @@ class OfferCreationHandler(OfferBaseHandler):
         """Announce new offer to default group and subscribers using rich format"""
         default_group_id = os.environ.get("DEFAULT_GROUP_ID")
 
-        # Send rich offer message to default group (without buttons)
+        # Send rich offer message to default group (with order buttons)
         if default_group_id:
-            self._send_rich_offer_message(int(default_group_id), offer, force_group=True, include_buttons=False)
+            self._send_rich_offer_message(int(default_group_id), offer, force_group=True, include_buttons=True)
 
         # Send to subscribers in batches
         self._notify_subscribers_rich(offer)

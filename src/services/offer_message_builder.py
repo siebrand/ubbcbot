@@ -25,12 +25,11 @@ class OfferMessageBuilder:
         self.bot_username = bot_username
         self._t = translate
 
-    def build(self, offer, cancelled: bool = False, with_buttons: bool = True):
+    def build(self, offer, cancelled: bool = False):
         """Return the text and reply_markup for the offer.
 
         reply_markup is the order keyboard when the offer is active. It is None
-        when the offer is sold out, when the offer is cancelled, or when
-        with_buttons is False. The group message uses with_buttons=False.
+        when the offer is sold out or when the offer is cancelled.
         """
         name = html.escape(offer.name or "")
         title = (
@@ -45,7 +44,7 @@ class OfferMessageBuilder:
         text = f"{title}\n\n{offer.description or ''}\n"
 
         reply_markup = None
-        if active and with_buttons:
+        if active:
             reply_markup = {
                 "inline_keyboard": [
                     [

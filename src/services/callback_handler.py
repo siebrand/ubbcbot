@@ -107,7 +107,7 @@ class CallbackHandler:
         self.router.register(
             r"^confirm_order_(\d+)_(\d+)$",
             lambda match, ctx: self.handlers["customer_order"].handle_confirm_order(
-                ctx["chat_id"], ctx["user_id"], [match.group(1), match.group(2)]
+                ctx["reply_chat_id"], ctx["user_id"], [match.group(1), match.group(2)]
             ),
         )
 
@@ -154,7 +154,7 @@ class CallbackHandler:
         self.router.register(
             r"^order_(\d+)_(\d+)$",
             lambda match, ctx: self.handlers["customer_order"].handle_create_order(
-                ctx["chat_id"], ctx["user_id"], [match.group(1), match.group(2)]
+                ctx["reply_chat_id"], ctx["user_id"], [match.group(1), match.group(2)]
             ),
         )
 
@@ -357,16 +357,32 @@ class CallbackHandler:
 
             logger.info(f"Processing callback: {data}")
 
-            # Answer the callback query to remove loading state
-            self._answer_callback_query(query_id)
+            # Answer the callback query to remove loading state. For order taps in a
+            # group, the personal reply goes to the user's private chat, so the toast
+            # tells the user where to look (the group sees no personal message).
+            is_group = chat_id < 0
+            is_order_tap = bool(re.match(r"^(?:confirm_)?order_\d+_\d+$", data))
+            if is_group and is_order_tap:
+                self._answer_callback_query(query_id, text=self._t("order_toast_check_dm", user_id))
+            else:
+                self._answer_callback_query(query_id)
 
             # Authorize before routing or touching the keyboard of the clicked message
             denied = self._authorize_callback(user_id, data)
             if denied:
                 return denied
 
+            # reply_chat_id is where personal responses go: the group button taps
+            # must reply in the user's private chat, not the group, to avoid noise.
+            reply_chat_id = user_id if is_group else chat_id
+
             # Try router first (Phase 3 complete: all patterns migrated)
-            context = {"chat_id": chat_id, "user_id": user_id, "message_id": message_id}
+            context = {
+                "chat_id": chat_id,
+                "user_id": user_id,
+                "message_id": message_id,
+                "reply_chat_id": reply_chat_id,
+            }
             router_handled = self.router.dispatch(data, context)
 
             # Determine if we should remove the keyboard
@@ -617,11 +633,16 @@ class CallbackHandler:
         """Store edit context in DynamoDB for processing replies"""
         self.edit_context_manager.store_edit_context(chat_id, edit_type, entity_id)
 
-    def _answer_callback_query(self, query_id: str) -> bool:
-        """Answer callback query to remove loading state"""
+    def _answer_callback_query(self, query_id: str, text: str = None) -> bool:
+        """Answer callback query to remove loading state; optional toast text.
+
+        text shows a short popup to the tapping user only. The group sees nothing.
+        """
         try:
             url = f"https://api.telegram.org/bot{self.telegram_token}/answerCallbackQuery"
             data = {"callback_query_id": query_id}
+            if text:
+                data["text"] = text
             response = requests.post(url, json=data, timeout=20)
             return response.status_code == 200
         except Exception as e:

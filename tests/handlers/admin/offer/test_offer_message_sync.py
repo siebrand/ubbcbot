@@ -116,14 +116,12 @@ class TestSyncOfferMessages:
         assert first_chat == -500
         assert sync_handler._edit_message_text.call_count == 2
 
-    def test_active_offer_group_has_no_buttons(self, sync_handler):
-        # The group announcement is published without order buttons, so a re-render
-        # of an active offer must NOT add them (regression: buttons appeared on a
-        # group message after a description edit).
+    def test_active_offer_group_has_buttons(self, sync_handler):
+        # Group order buttons are enabled; an active offer re-render keeps them.
         sync_handler.db.get_notification_messages_by_offer.return_value = [_row("g1", -500, 200, "group")]
         sync_handler.sync_offer_messages(7)
         markup = sync_handler._edit_message_text.call_args.kwargs["reply_markup"]
-        assert markup == {"inline_keyboard": []}
+        assert markup["inline_keyboard"]  # non-empty = order buttons present
 
     def test_active_offer_subscriber_keeps_buttons(self, sync_handler):
         sync_handler.db.get_notification_messages_by_offer.return_value = [_row("s1", 55, 200, "subscriber")]

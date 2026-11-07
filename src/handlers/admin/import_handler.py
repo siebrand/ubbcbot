@@ -280,7 +280,7 @@ class ImportHandler(NotificationHandler):
 
         # Send to default group
         if default_group_id:
-            self._send_rich_offer_message(int(default_group_id), offer, force_group=True, include_buttons=False)
+            self._send_rich_offer_message(int(default_group_id), offer, force_group=True, include_buttons=True)
 
         # Send to subscribers
         self._notify_subscribers_rich(offer)

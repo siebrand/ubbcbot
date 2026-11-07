@@ -183,6 +183,7 @@
   "order_with_command": "Order with: /order {offer_id} [quantity]",
   "order_1": "🍺 Order 1",
   "order_2": "🍺🍺 Order 2",
+  "order_toast_check_dm": "Your order is being processed. Check your private chat with the bot.",
   "preview_how_offer_looks": "👁️ PREVIEW - How offer will look:\n\n",
   "usage_update_offer_name": "Usage: /update_offer_name [offer_id] [new_name]",
   "offer_name_updated": "✅ Offer name updated: '{old_name}' → '{new_name}'",

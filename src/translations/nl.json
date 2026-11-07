@@ -182,6 +182,7 @@
   "order_with_command": "Bestel met: /order {offer_id} [aantal]",
   "order_1": "🍺 Bestel 1",
   "order_2": "🍺🍺 Bestel 2",
+  "order_toast_check_dm": "Je bestelling wordt verwerkt. Kijk in je privéchat met de bot.",
   "preview_how_offer_looks": "👁️ VOORBEELD - Hoe aanbieding eruit ziet:\n\n",
   "usage_update_offer_name": "Gebruik: /update_offer_name [aanbieding_id] [nieuwe_naam]",
   "offer_name_updated": "✅ Aanbieding naam bijgewerkt: '{old_name}' → '{new_name}'",

@@ -214,6 +214,29 @@ class TestCallbackRouting:
         callback_handler.handle_callback_query(query)
         mock_handlers["customer_order"].handle_confirm_order.assert_called_once()
 
+    # Test 6b: Group order taps reply in the user's private chat, not the group
+    def test_group_order_tap_replies_in_dm(self, callback_handler, mock_handlers):
+        """An order button tapped in a group routes the personal reply to the user's DM."""
+        query = self._create_callback_query("order_123_2", user_id=777, chat_id=-100200300)
+        callback_handler.handle_callback_query(query)
+        call_args = mock_handlers["customer_order"].handle_create_order.call_args[0]
+        # First positional arg is the reply chat: must be the user's id, not the group.
+        assert call_args[0] == 777
+
+    def test_private_order_tap_replies_in_chat(self, callback_handler, mock_handlers):
+        """An order button tapped in a private chat replies in that same chat."""
+        query = self._create_callback_query("order_123_2", user_id=777, chat_id=777)
+        callback_handler.handle_callback_query(query)
+        call_args = mock_handlers["customer_order"].handle_create_order.call_args[0]
+        assert call_args[0] == 777
+
+    def test_group_confirm_order_tap_replies_in_dm(self, callback_handler, mock_handlers):
+        """A duplicate-confirm tap in a group also replies in the user's DM."""
+        query = self._create_callback_query("confirm_order_123_2", user_id=777, chat_id=-100200300)
+        callback_handler.handle_callback_query(query)
+        call_args = mock_handlers["customer_order"].handle_confirm_order.call_args[0]
+        assert call_args[0] == 777
+
     # Test 7a: Cancel Patterns (Phase 2)
     @pytest.mark.parametrize(
         "callback_data,handler,method",
