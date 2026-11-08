@@ -141,6 +141,7 @@
   "price_must_positive": "❌ Prijs moet positief zijn",
   "product_name_too_long": "❌ Product naam te lang (max 100 tekens)",
   "product_name_invalid_chars": "❌ Product naam mag geen < of > tekens bevatten",
+  "html_unsupported_tag": "❌ Niet-ondersteunde HTML-tag. Telegram ondersteunt alleen: <b>, <i>, <u>, <s>, <a>, <code>, <pre>, <span>, <tg-spoiler>, <blockquote>. Gebruik • voor lijsten in plaats van <ul>/<li>.",
   "failed_create_offer": "❌ Kon aanbieding niet aanmaken",
   "usage_publish_offer": "Gebruik: /publish_offer <aanbieding_id>",
   "offer_not_draft": "❌ Aanbieding is niet in concept status (huidige: {status})",

@@ -16,16 +16,40 @@ class OfferBaseHandler(BaseHandler):
             return False, "product_name_too_long"
         return self._validate_html_content(name)
 
+    # Tags Telegram accepts in parse_mode=HTML. Any other tag makes Telegram
+    # reject the whole message, so the content must not be stored.
+    TELEGRAM_ALLOWED_TAGS = {
+        "b",
+        "strong",
+        "i",
+        "em",
+        "u",
+        "ins",
+        "s",
+        "strike",
+        "del",
+        "a",
+        "code",
+        "pre",
+        "span",
+        "tg-spoiler",
+        "blockquote",
+    }
+
     def _validate_html_content(self, content: str) -> tuple[bool, str]:
         """Validate HTML content to prevent parse errors. Returns (is_valid, error_key)"""
         # Test if Telegram would accept this HTML by checking tag balance
         import re
 
         # Find all HTML tags
-        tags = re.findall(r"<(/?)([a-zA-Z]+)[^>]*>", content)
+        tags = re.findall(r"<(/?)([a-zA-Z][a-zA-Z0-9-]*)[^>]*>", content)
         stack = []
 
         for is_closing, tag_name in tags:
+            # Reject any tag Telegram does not support (e.g. <ul>, <li>, <p>, <br>).
+            if tag_name.lower() not in self.TELEGRAM_ALLOWED_TAGS:
+                return False, "html_unsupported_tag"
+
             if is_closing == "/":
                 # Closing tag
                 if not stack or stack[-1] != tag_name:

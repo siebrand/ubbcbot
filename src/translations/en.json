@@ -141,6 +141,7 @@
   "price_must_positive": "❌ Price must be positive",
   "product_name_too_long": "❌ Product name too long (max 100 characters)",
   "product_name_invalid_chars": "❌ Product name cannot contain < or > characters",
+  "html_unsupported_tag": "❌ Unsupported HTML tag. Telegram only supports: <b>, <i>, <u>, <s>, <a>, <code>, <pre>, <span>, <tg-spoiler>, <blockquote>. Use • for lists instead of <ul>/<li>.",
   "failed_create_offer": "❌ Failed to create offer",
   "usage_publish_offer": "Usage: /publish_offer <offer_id>",
   "offer_not_draft": "❌ Offer is not in draft status (current: {status})",
