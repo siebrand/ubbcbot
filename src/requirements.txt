@@ -1,5 +1,5 @@
-boto3==1.43.122
-botocore[crt]==1.43.122
-markdown==3.11.2
+boto3==1.43.125
+botocore[crt]==1.43.125
+markdown==3.11.3
 requests==2.34.2
 telethon==1.45.0
