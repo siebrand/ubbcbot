@@ -137,6 +137,13 @@ class NotificationMessage:
     ttl: int | None = None
 
     def __post_init__(self):
+        # DynamoDB returns numbers as Decimal. The Telegram request needs plain ints.
+        self.offer_id = int(self.offer_id)
+        self.chat_id = int(self.chat_id)
+        self.message_id = int(self.message_id)
+        if self.ttl is not None:
+            self.ttl = int(self.ttl)
+
         if not self.ttl:
             from datetime import timedelta
 

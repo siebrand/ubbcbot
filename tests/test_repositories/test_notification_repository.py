@@ -24,6 +24,20 @@ class TestNotificationRepository:
         notifications = notification_repo.get_notification_messages_by_offer(2)
         assert len(notifications) == 2
 
+    def test_loaded_numbers_are_plain_ints(self, notification_repo):
+        # DynamoDB returns Decimal; the Telegram request can only send plain ints.
+        notification_repo.create_notification_message(
+            NotificationMessage(notification_id="notif-5", offer_id=4, chat_id=-1001662432692, message_id=777)
+        )
+
+        loaded = notification_repo.get_notification_messages_by_offer(4)[0]
+
+        assert type(loaded.offer_id) is int
+        assert type(loaded.chat_id) is int
+        assert type(loaded.message_id) is int
+        assert type(loaded.ttl) is int
+        assert loaded.chat_id == -1001662432692
+
     def test_delete_notification_message(self, notification_repo):
         notification = NotificationMessage(notification_id="notif-4", offer_id=3, chat_id=555, message_id=666)
         notification_repo.create_notification_message(notification)
