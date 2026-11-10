@@ -51,6 +51,19 @@ class TestOfferMessageBuilder(unittest.TestCase):
         self.assertIn("status_cancelled", text)
         self.assertIsNone(markup)
 
+    def test_inactive_without_flag_renders_cancelled(self):
+        # A later name/price/description edit calls the sync without cancelled=True.
+        self.offer.status = OfferStatus.INACTIVE.value
+        text, markup = self.builder.build(self.offer)
+        self.assertTrue(text.startswith("⛔"))
+        self.assertIsNone(markup)
+
+    def test_completed_renders_sold_out_without_buttons(self):
+        self.offer.status = OfferStatus.COMPLETED.value
+        text, markup = self.builder.build(self.offer)
+        self.assertTrue(text.startswith("🔴"))
+        self.assertIsNone(markup)
+
     def test_description_included(self):
         text, _ = self.builder.build(self.offer)
         self.assertIn("Tasty", text)

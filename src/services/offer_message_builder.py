@@ -5,11 +5,11 @@ unit-tested without any Telegram or DB access.
 
 The status is reflected by a single leading icon in the title line:
   - active     : (no icon), order buttons present
-  - sold_out   : 🔴 + "sold out" suffix, no buttons
-  - cancelled  : ⛔ + "cancelled" suffix, no buttons
+  - sold_out   : 🔴 + "sold out" suffix, no buttons (also used for completed)
+  - cancelled  : ⛔ + "cancelled" suffix, no buttons (also used for inactive)
 
-For cancelled offers the stored status is INACTIVE, so callers pass
-``cancelled=True`` explicitly.
+The stored status of a cancelled offer is INACTIVE. The builder shows it as
+cancelled even when the caller does not pass ``cancelled=True``.
 """
 
 import html
@@ -58,8 +58,8 @@ class OfferMessageBuilder:
     @staticmethod
     def _state(offer, cancelled: bool):
         """Return (icon, suffix_translation_key, is_active)."""
-        if cancelled:
+        if cancelled or offer.status == OfferStatus.INACTIVE.value:
             return _CANCELLED_ICON, "status_cancelled", False
-        if offer.status == OfferStatus.SOLD_OUT.value:
+        if offer.status in (OfferStatus.SOLD_OUT.value, OfferStatus.COMPLETED.value):
             return _SOLD_OUT_ICON, "status_sold_out", False
         return "", "", True
