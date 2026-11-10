@@ -122,7 +122,8 @@ class TestTriggerRouting:
         h.handle_offer_status(123, ["9", "soldout"])
         h.sync_offer_messages.assert_called_once_with(9)
 
-    def test_offer_status_active_does_not_sync(self):
+    def test_offer_status_active_syncs(self):
+        # Manual sold_out -> active must clear the marker and restore the buttons.
         from handlers.admin.offer.editing import OfferEditingHandler
 
         h = OfferEditingHandler(MagicMock(), 1, "test", "token")
@@ -133,6 +134,32 @@ class TestTriggerRouting:
         h.db.update_offer.return_value = True
 
         h.handle_offer_status(123, ["9", "active"])
+        h.sync_offer_messages.assert_called_once_with(9)
+
+    def test_offer_status_completed_syncs(self):
+        from handlers.admin.offer.editing import OfferEditingHandler
+
+        h = OfferEditingHandler(MagicMock(), 1, "test", "token")
+        h.sync_offer_messages = MagicMock()
+        h._send_success = MagicMock(return_value={"status": "success"})
+        offer = Offer(offer_id=9, name="X", price_per_unit=Decimal("1"), status=OfferStatus.ACTIVE.value)
+        h._validate_and_get_offer = MagicMock(return_value=(offer, None))
+        h.db.update_offer.return_value = True
+
+        h.handle_offer_status(123, ["9", "completed"])
+        h.sync_offer_messages.assert_called_once_with(9)
+
+    def test_offer_status_import_does_not_sync(self):
+        from handlers.admin.offer.editing import OfferEditingHandler
+
+        h = OfferEditingHandler(MagicMock(), 1, "test", "token")
+        h.sync_offer_messages = MagicMock()
+        h._send_success = MagicMock(return_value={"status": "success"})
+        offer = Offer(offer_id=9, name="X", price_per_unit=Decimal("1"), status=OfferStatus.DRAFT.value)
+        h._validate_and_get_offer = MagicMock(return_value=(offer, None))
+        h.db.update_offer.return_value = True
+
+        h.handle_offer_status(123, ["9", "import"])
         h.sync_offer_messages.assert_not_called()
 
     def test_update_offer_name_syncs(self):

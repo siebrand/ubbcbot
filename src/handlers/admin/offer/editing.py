@@ -37,11 +37,9 @@ class OfferEditingHandler(OfferBaseHandler):
             return self._send_error(chat_id, "offer_status_must_be_draft", "wrong_status", current_status=offer.status)
 
         if self.db.update_offer(offer.offer_id, {"status": target_status.value}):
-            # The manual sold_out path is the admin's fallback when the automatic
-            # active -> sold_out transition failed; it must update the channel and
-            # subscriber messages just like the automatic transition would. Other
-            # status changes here do not re-render the announcements.
-            if target_status == OfferStatus.SOLD_OUT:
+            # These statuses change the announcement (marker and order buttons).
+            # The import status does not, so it does not sync.
+            if target_status in (OfferStatus.SOLD_OUT, OfferStatus.ACTIVE, OfferStatus.COMPLETED):
                 self.sync_offer_messages(offer.offer_id)
             return self._send_success(
                 chat_id,
