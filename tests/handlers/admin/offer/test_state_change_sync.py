@@ -31,6 +31,36 @@ def _order(order_id, quantity, status):
     )
 
 
+class TestAuditBoxChangesRecomputeStatus:
+    def _handler(self):
+        h = BoxManagementHandler(MagicMock(), 1, "test", "token")
+        h._check_offer_status_after_change = MagicMock()
+        h._send_message = MagicMock()
+        h.box_status_manager = MagicMock()
+        h.db.get_offer.return_value = _offer()
+        return h
+
+    def test_fill_boxes_recomputes_status(self):
+        h = self._handler()
+        box = MagicMock(status="open", max_capacity=12, current_quantity=10, box_id="b1")
+        h.db.get_boxes_by_offer.return_value = [box]
+        h._execute_fill_boxes(123, 933, 2)
+        h._check_offer_status_after_change.assert_called_once_with(933)
+
+    def test_fill_boxes_without_free_capacity_does_not_recompute(self):
+        h = self._handler()
+        box = MagicMock(status="open", max_capacity=12, current_quantity=12, box_id="b1")
+        h.db.get_boxes_by_offer.return_value = [box]
+        h._execute_fill_boxes(123, 933, 2)
+        h._check_offer_status_after_change.assert_not_called()
+
+    def test_create_boxes_recomputes_status(self):
+        h = self._handler()
+        h.db.create_box.return_value = MagicMock(box_id="new")
+        h._add_box_capacity(123, _offer(), 5)
+        h._check_offer_status_after_change.assert_called_once_with(933)
+
+
 class TestCreateBoxSync:
     def _handler(self, status):
         h = BoxManagementHandler(MagicMock(), 1, "test", "token")

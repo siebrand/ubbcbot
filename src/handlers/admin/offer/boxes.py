@@ -489,6 +489,9 @@ class BoxManagementHandler(OfferBaseHandler):
                 self.box_status_manager.update_box_after_order_placement(box.box_id, fill_amount)
                 filled_units += fill_amount
 
+        if filled_units > 0:
+            self._check_offer_status_after_change(offer_id)
+
         self._send_message(chat_id, self._t("audit_boxes_filled", chat_id, offer_id=offer_id, filled=filled_units))
         return {"status": "boxes_filled", "filled": filled_units}
 
@@ -562,6 +565,7 @@ class BoxManagementHandler(OfferBaseHandler):
                 created_boxes += 1
 
         if created_boxes > 0:
+            self._check_offer_status_after_change(offer.offer_id)
             self._send_message(
                 chat_id,
                 self._t(
