@@ -1,0 +1,59 @@
+"""State changes that must re-render the announcements (RCA offer 933)."""
+
+from datetime import UTC, datetime
+from decimal import Decimal
+from unittest.mock import MagicMock
+
+from handlers.admin.offer.management import OfferManagementHandler
+from models.entities import Offer, OfferStatus, Order
+
+
+def _offer(status=OfferStatus.ACTIVE.value, box_size=12):
+    return Offer(
+        offer_id=933,
+        name="Beer",
+        price_per_unit=Decimal("4.00"),
+        wholesale_box_size=box_size,
+        status=status,
+    )
+
+
+def _order(order_id, quantity, status):
+    return Order(
+        order_id=order_id,
+        offer_id=933,
+        box_id="box-1",
+        customer_id="c1",
+        quantity=quantity,
+        status=status,
+        created_at=datetime(2026, 11, 9, tzinfo=UTC),
+    )
+
+
+class TestWholesaleConfirmSync:
+    def _handler(self, pending_after):
+        h = OfferManagementHandler(MagicMock(), 1, "test", "token")
+        h.sync_offer_messages = MagicMock()
+        h._send_message = MagicMock()
+        h.box_status_manager = MagicMock()
+        h.box_deletion_service = MagicMock()
+        h.box_deletion_service.delete_empty_boxes.return_value = 0
+        h._validate_and_get_offer = MagicMock(return_value=(_offer(), None))
+        before = [_order("o1", 6, "pending"), _order("o2", 6, "pending")]
+        h.db.get_orders_by_offer.side_effect = [before, pending_after, []]
+        h.db.get_boxes_by_offer.return_value = []
+        h.db.list_offers.return_value = []
+        return h
+
+    def test_sold_out_after_wholesale_syncs_messages(self):
+        h = self._handler([_order("o1", 6, "ordered"), _order("o2", 6, "ordered")])
+        h.handle_confirm_process_wholesale(123, ["933", "1"])
+        h.db.update_offer.assert_called_once_with(933, {"status": "sold_out"})
+        h.sync_offer_messages.assert_called_once_with(933)
+
+    def test_remaining_capacity_does_not_sync(self):
+        h = self._handler([_order("o1", 6, "ordered")])
+        h.db.get_orders_by_offer.side_effect = [[_order("o1", 6, "pending")], [_order("o1", 6, "ordered")], []]
+        h.handle_confirm_process_wholesale(123, ["933", "1"])
+        h.db.update_offer.assert_not_called()
+        h.sync_offer_messages.assert_not_called()

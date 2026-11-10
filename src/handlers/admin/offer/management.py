@@ -252,7 +252,8 @@ class OfferManagementHandler(OfferBaseHandler):
         units_text = self._t("unit", chat_id) if remaining_capacity == 1 else self._t("units", chat_id)
 
         if not remaining_pending and remaining_capacity == 0:
-            self.db.update_offer(offer.offer_id, {"status": "sold_out"})
+            self.db.update_offer(offer.offer_id, {"status": OfferStatus.SOLD_OUT.value})
+            self.sync_offer_messages(offer.offer_id)
             offer_status_msg = self._t("offer_is_sold_out", chat_id)
         elif not remaining_pending:
             offer_status_msg = self._t(
