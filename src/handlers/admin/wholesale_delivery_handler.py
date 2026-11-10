@@ -159,11 +159,22 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         elif action == DeliveryAction.INCOMPLETE.value:
             return self._handle_incomplete_delivery(chat_id, box.box_id, total_units, offer_id, supplier_id_short)
 
+    def _process_box_delivery(self, box_id: str, units_received: int, is_delayed: bool) -> bool:
+        """Process a box delivery, then recompute the offer status.
+
+        A delivery changes which boxes count for availability. The status check
+        syncs the announcements when the status changes.
+        """
+        success = self.delivery_service.process_wholesaler_delivery(box_id, units_received, is_delayed)
+        if success:
+            box = self.db.get_box(box_id)
+            if box:
+                self._check_offer_status_after_change(box.offer_id)
+        return success
+
     def _handle_full_delivery(self, chat_id: int, box_id: str, orders: list[Order]) -> dict[str, Any]:
         """Handle full delivery - all units received"""
-        success = self.delivery_service.process_wholesaler_delivery(
-            box_id, sum(order.quantity for order in orders), False
-        )
+        success = self._process_box_delivery(box_id, sum(order.quantity for order in orders), False)
 
         if success:
             self._send_message(chat_id, self._t("full_delivery_processed", box_id=box_id[:8]))
@@ -174,7 +185,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
 
     def _handle_delayed_delivery(self, chat_id: int, box_id: str, orders: list[Order]) -> dict[str, Any]:
         """Handle delayed delivery - no units received but coming later"""
-        success = self.delivery_service.process_wholesaler_delivery(box_id, 0, True)
+        success = self._process_box_delivery(box_id, 0, True)
 
         if success:
             self._send_message(chat_id, self._t("delayed_delivery_processed", box_id=box_id[:8]))
@@ -185,7 +196,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
 
     def _handle_cancelled_delivery(self, chat_id: int, box_id: str, orders: list[Order]) -> dict[str, Any]:
         """Handle cancelled delivery - no units received and won't come"""
-        success = self.delivery_service.process_wholesaler_delivery(box_id, 0, False)
+        success = self._process_box_delivery(box_id, 0, False)
 
         if success:
             self._send_message(chat_id, self._t("cancelled_delivery_processed", box_id=box_id[:8]))
@@ -299,7 +310,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
             return self._send_message(chat_id, self._t("box_not_found"))
 
         is_delayed = action == "delayed"
-        success = self.delivery_service.process_wholesaler_delivery(box.box_id, received_units, is_delayed)
+        success = self._process_box_delivery(box.box_id, received_units, is_delayed)
 
         if success:
             action_text = "delayed" if is_delayed else "cancelled"
@@ -361,7 +372,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
             orders = self.db.get_orders_by_box(box.box_id)
             total_units = sum(order.quantity for order in orders)
 
-            success = self.delivery_service.process_wholesaler_delivery(
+            success = self._process_box_delivery(
                 box.box_id,
                 total_units,  # Full delivery
                 False,

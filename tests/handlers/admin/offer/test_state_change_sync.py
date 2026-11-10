@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 from handlers.admin.offer.boxes import BoxManagementHandler
 from handlers.admin.offer.management import OfferManagementHandler
+from handlers.admin.wholesale_delivery_handler import WholesaleDeliveryHandler
 from models.entities import Offer, OfferStatus, Order
 
 
@@ -29,6 +30,32 @@ def _order(order_id, quantity, status):
         status=status,
         created_at=datetime(2026, 11, 9, tzinfo=UTC),
     )
+
+
+class TestDeliveryRecomputesStatus:
+    def _handler(self, success=True):
+        h = WholesaleDeliveryHandler(MagicMock(), 1, "test", "token")
+        h.delivery_service = MagicMock()
+        h.delivery_service.process_wholesaler_delivery.return_value = success
+        h._check_offer_status_after_change = MagicMock()
+        h.db.get_box.return_value = MagicMock(offer_id=933)
+        return h
+
+    def test_successful_delivery_recomputes_offer_status(self):
+        h = self._handler()
+        assert h._process_box_delivery("box-1", 12, False) is True
+        h._check_offer_status_after_change.assert_called_once_with(933)
+
+    def test_failed_delivery_does_not_recompute(self):
+        h = self._handler(success=False)
+        assert h._process_box_delivery("box-1", 12, False) is False
+        h._check_offer_status_after_change.assert_not_called()
+
+    def test_missing_box_does_not_recompute(self):
+        h = self._handler()
+        h.db.get_box.return_value = None
+        assert h._process_box_delivery("box-1", 12, False) is True
+        h._check_offer_status_after_change.assert_not_called()
 
 
 class TestAuditBoxChangesRecomputeStatus:
