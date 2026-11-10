@@ -36,6 +36,7 @@ class BoxManagementHandler(OfferBaseHandler):
                 # Update offer status from sold_out to active if needed
                 if offer.status == OfferStatus.SOLD_OUT.value:
                     self.db.update_offer(offer_id, {"status": OfferStatus.ACTIVE.value})
+                    self.sync_offer_messages(offer_id)
                     self._send_message(chat_id, self._t("box_added_offer_active", chat_id, offer_id=offer_id))
                 else:
                     self._send_message(chat_id, self._t("box_added", chat_id, offer_id=offer_id))

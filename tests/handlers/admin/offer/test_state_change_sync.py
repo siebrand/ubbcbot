@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
 
+from handlers.admin.offer.boxes import BoxManagementHandler
 from handlers.admin.offer.management import OfferManagementHandler
 from models.entities import Offer, OfferStatus, Order
 
@@ -28,6 +29,27 @@ def _order(order_id, quantity, status):
         status=status,
         created_at=datetime(2026, 11, 9, tzinfo=UTC),
     )
+
+
+class TestCreateBoxSync:
+    def _handler(self, status):
+        h = BoxManagementHandler(MagicMock(), 1, "test", "token")
+        h.sync_offer_messages = MagicMock()
+        h._send_message = MagicMock()
+        h.db.get_offer.return_value = _offer(status=status)
+        h.db.create_box.return_value = MagicMock()
+        return h
+
+    def test_reopening_sold_out_offer_syncs_messages(self):
+        h = self._handler(OfferStatus.SOLD_OUT.value)
+        h.handle_create_box(123, ["933"])
+        h.db.update_offer.assert_called_once_with(933, {"status": "active"})
+        h.sync_offer_messages.assert_called_once_with(933)
+
+    def test_box_on_active_offer_does_not_sync(self):
+        h = self._handler(OfferStatus.ACTIVE.value)
+        h.handle_create_box(123, ["933"])
+        h.sync_offer_messages.assert_not_called()
 
 
 class TestWholesaleConfirmSync:
