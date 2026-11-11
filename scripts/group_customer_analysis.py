@@ -5,6 +5,11 @@ Group Customer Analysis Script
 This script compares registered customers with members of the default Telegram group to identify:
 A) Customers not in the default group
 B) Group members not registered as customers
+C) With --show-unapproved: group members the bot has not approved
+   (registered customers whose status is not "approved", plus unregistered members).
+   The member list comes from the admin user account in Parameter Store, because the
+   Bot API cannot list group members. If that fails, the script falls back to the
+   members the Bot API can see.
 """
 
 import os
@@ -17,6 +22,7 @@ import requests
 # Add src directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from models.entities import AuthorizationStatus
 from services.database import DynamoDBService
 
 
@@ -180,7 +186,124 @@ class GroupCustomerAnalyzer:
             print(f"Error getting customer details for {telegram_user_id}: {e}")
             return {}
 
-    def analyze(self):
+    def _get_user_credentials(self) -> dict[str, str]:
+        """Get the admin user-account credentials from Parameter Store"""
+        names = [
+            f"/ubbc-bot/{self.environment}/telegram-api-id",
+            f"/ubbc-bot/{self.environment}/telegram-api-hash",
+            f"/ubbc-bot/{self.environment}/telegram-session",
+        ]
+        response = boto3.client("ssm").get_parameters(Names=names, WithDecryption=True)
+        params = {p["Name"].split("/")[-1]: p["Value"] for p in response["Parameters"]}
+        missing = [n for n in ("telegram-api-id", "telegram-api-hash", "telegram-session") if not params.get(n)]
+        if missing:
+            raise RuntimeError(f"Missing user-account parameters: {', '.join(missing)}")
+        return {
+            "api_id": params["telegram-api-id"],
+            "api_hash": params["telegram-api-hash"],
+            "session": params["telegram-session"],
+        }
+
+    @staticmethod
+    def normalize_participants(participants) -> tuple[dict[int, dict[str, str]], dict[str, int]]:
+        """Turn Telethon participants into {user_id: info}. Bots and deleted accounts are skipped."""
+        members: dict[int, dict[str, str]] = {}
+        skipped = {"bots": 0, "deleted": 0}
+        for p in participants:
+            if getattr(p, "bot", False):
+                skipped["bots"] += 1
+            elif getattr(p, "deleted", False):
+                skipped["deleted"] += 1
+            else:
+                members[int(p.id)] = {
+                    "first_name": getattr(p, "first_name", None) or "",
+                    "last_name": getattr(p, "last_name", None) or "",
+                    "username": getattr(p, "username", None) or "",
+                }
+        return members, skipped
+
+    async def _fetch_participants(self):
+        """List all participants of the default group with the admin user account (read-only)"""
+        from telethon import TelegramClient
+        from telethon.sessions import StringSession
+
+        creds = self._get_user_credentials()
+        client = TelegramClient(StringSession(creds["session"]), int(creds["api_id"]), creds["api_hash"])
+        await client.connect()
+        try:
+            if not await client.is_user_authorized():
+                raise RuntimeError("User account session is not authorized")
+            await client.get_dialogs()  # fill the entity cache so the group can be resolved
+            group = await client.get_entity(int(self.default_group_id))
+            return await client.get_participants(group)
+        finally:
+            await client.disconnect()
+
+    def get_user_account_participants(self) -> tuple[dict[int, dict[str, str]], dict[str, int]]:
+        """All group members as seen by the admin user account"""
+        import asyncio
+
+        return self.normalize_participants(asyncio.run(self._fetch_participants()))
+
+    def get_unapproved_group_members(
+        self, members: dict[int, dict[str, str]], registered_customers: set[int]
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """Split group members the bot has not approved.
+
+        Returns (registered customers whose status is not approved, unregistered members).
+        """
+        unapproved_customers = []
+        for user_id in sorted(set(members) & registered_customers):
+            details = self.get_customer_details(user_id)
+            if details and details["authorization_status"] != AuthorizationStatus.APPROVED.value:
+                unapproved_customers.append(details)
+
+        unregistered = [{"id": user_id, **members[user_id]} for user_id in sorted(set(members) - registered_customers)]
+        return unapproved_customers, unregistered
+
+    def _print_unapproved_members(self, group_members: set[int], registered_customers: set[int]):
+        """Print group members that the bot has not approved (section C)"""
+        print("\n=== (C) GROUP MEMBERS NOT APPROVED IN THE BOT ===")
+
+        skipped = {"bots": 0, "deleted": 0}
+        try:
+            members, skipped = self.get_user_account_participants()
+            print(f"Source: admin user account ({len(members)} members, excluding bots and deleted accounts)")
+            complete = True
+        except Exception as e:
+            print(f"Could not list members with the user account ({e}).")
+            print("Falling back to the members the Bot API can see.")
+            members = {user_id: {} for user_id in group_members}
+            complete = False
+
+        unapproved_customers, unregistered = self.get_unapproved_group_members(members, registered_customers)
+        print(f"Count: {len(unapproved_customers) + len(unregistered)}")
+
+        if unapproved_customers:
+            print(f"\nRegistered, not approved ({len(unapproved_customers)}):")
+            for details in unapproved_customers:
+                name = f"{details['first_name']} {details['last_name']}".strip()
+                print(
+                    f"  • {name} (@{details['username']}) - ID: {details['telegram_user_id']} - "
+                    f"Status: {details['authorization_status']}"
+                )
+
+        if unregistered:
+            print(f"\nNot registered ({len(unregistered)}):")
+            for member in unregistered:
+                name = f"{member.get('first_name', '')} {member.get('last_name', '')}".strip() or "N/A"
+                username = member.get("username") or "no_username"
+                print(f"  • {name} (@{username}) - ID: {member['id']}")
+
+        if complete:
+            print(f"\nSkipped: {skipped['bots']} bots, {skipped['deleted']} deleted accounts.")
+        else:
+            print(
+                "\nNote: without the user account, members who are neither administrators nor "
+                "registered customers cannot be listed, so they are missing here."
+            )
+
+    def analyze(self, show_unapproved: bool = False):
         """Perform the analysis and print results"""
         print(f"=== Group Customer Analysis for {self.environment.upper()} environment ===\n")
         print(f"Default Group ID: {self.default_group_id}")
@@ -229,6 +352,9 @@ class GroupCustomerAnalyzer:
         else:
             print("All accessible group members are registered customers.")
 
+        if show_unapproved:
+            self._print_unapproved_members(group_members, registered_customers)
+
         print("\n=== SUMMARY ===")
         print(f"• Registered customers: {len(registered_customers)}")
         print(f"• Accessible group members: {len(group_members)}")
@@ -249,6 +375,12 @@ def main():
         "--env", choices=["test", "prod"], default="test", help="Environment to analyze (default: test)"
     )
 
+    parser.add_argument(
+        "--show-unapproved",
+        action="store_true",
+        help="Also list group members the bot has not approved (default: off)",
+    )
+
     args = parser.parse_args()
 
     # Set environment variables
@@ -256,7 +388,7 @@ def main():
     os.environ["DYNAMODB_TABLE_PREFIX"] = f"ubbc-bot-{args.env}"
 
     analyzer = GroupCustomerAnalyzer(args.env)
-    analyzer.analyze()
+    analyzer.analyze(show_unapproved=args.show_unapproved)
 
 
 if __name__ == "__main__":
