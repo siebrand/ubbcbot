@@ -230,6 +230,8 @@ class CommandRouter:
                 return self.handlers["user"].handle_delete_user(admin_target_chat, parts[1:])
             elif command == "/export_user_data":
                 return self.handlers["data_export"].handle_export_user_data(admin_target_chat, parts[1:])
+            elif command == "/clear_data_export":
+                return self.handlers["data_export"].handle_clear_data_export(admin_target_chat, parts[1:])
             elif command == "/update_user_first_name":
                 return self.handlers["user"].handle_update_user_first_name(admin_target_chat, parts[1:])
             elif command == "/update_user_last_name":

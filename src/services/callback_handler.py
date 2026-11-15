@@ -216,6 +216,12 @@ class CallbackHandler:
             lambda match, ctx: self.handlers["user"].handle_user_status_select(ctx["chat_id"], match.group(1)),
         )
         self.router.register(
+            r"^clear_data_export_select_(.+)$",
+            lambda match, ctx: self.handlers["data_export"].handle_clear_data_export_select(
+                ctx["chat_id"], match.group(1)
+            ),
+        )
+        self.router.register(
             r"^export_user_data_select_(.+)$",
             lambda match, ctx: self.handlers["data_export"].handle_export_user_data_select(
                 ctx["chat_id"], match.group(1)

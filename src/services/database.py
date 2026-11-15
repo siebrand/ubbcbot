@@ -351,6 +351,9 @@ class DynamoDBService:
     def release_data_export_claim(self, customer_id: str, claimed_at: int, previous: int | None) -> bool:
         return self.customer_repo.release_data_export_claim(customer_id, claimed_at, previous)
 
+    def clear_data_export(self, customer_id: str) -> bool:
+        return self.customer_repo.clear_data_export(customer_id)
+
     def get_subscribers(self) -> list[Customer]:
         """Get subscribers with caching"""
         return self.customer_repo.get_subscribers()

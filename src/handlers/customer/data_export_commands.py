@@ -79,9 +79,50 @@ class DataExportCommands(BaseHandler):
             self._send_message(chat_id, self._t("data_export_failed", chat_id))
             return {"status": "error"}
 
+        self._send_message(chat_id, self._t("export_user_data_started", chat_id, label=self._customer_label(customer)))
+        return {"status": "success"}
+
+    def _customer_label(self, customer) -> str:
+        """Plain-text label for admin messages: the name plus the short customer ID to tell namesakes apart"""
         name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t("unknown", user_id=None)
-        label = f"{name} ({customer.customer_id[:8]})"
-        self._send_message(chat_id, self._t("export_user_data_started", chat_id, label=label))
+        return f"{name} ({customer.customer_id[:8]})"
+
+    def handle_clear_data_export(self, chat_id: int, args: list) -> dict[str, Any]:
+        """Handle /clear_data_export (admin): let a customer use /my_data again before the 30 days are over"""
+        if not args:
+            self._send_message(chat_id, self._t("usage_clear_data_export", chat_id))
+            return {"status": "invalid_args"}
+
+        customer, error = self._find_customer_with_disambiguation(" ".join(args), chat_id, "clear_data_export_select")
+        if error:
+            return error
+
+        return self._clear_data_export(chat_id, customer)
+
+    def handle_clear_data_export_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
+        """Handle user selection from disambiguation for /clear_data_export"""
+        customer = self.db.get_customer(customer_id)
+        if not customer:
+            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
+            return {"status": "user_not_found"}
+
+        return self._clear_data_export(chat_id, customer)
+
+    def _clear_data_export(self, chat_id: int, customer) -> dict[str, Any]:
+        # The customer found by name comes from a cached list; read the record itself for the export time
+        current = self.db.get_customer(customer.customer_id)
+        label = self._customer_label(customer)
+
+        if current is None or current.last_data_export_at is None:
+            self._send_message(chat_id, self._t("clear_data_export_nothing", chat_id, label=label))
+            return {"status": "nothing_to_clear"}
+
+        if not self.db.clear_data_export(customer.customer_id):
+            self._send_message(chat_id, self._t("clear_data_export_failed", chat_id, label=label))
+            return {"status": "error"}
+
+        logger.info(f"Cleared the last data export time of customer {customer.customer_id}")
+        self._send_message(chat_id, self._t("clear_data_export_done", chat_id, label=label))
         return {"status": "success"}
 
     def _invoke_exporter(self, customer_id: str, chat_id: int, claimed_at: int | None, previous: int | None) -> bool:

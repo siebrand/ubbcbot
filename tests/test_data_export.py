@@ -536,6 +536,109 @@ class TestAdminExport:
             yield calls
 
 
+class TestClearDataExport:
+    """/clear_data_export: the admin lets a customer use /my_data again before the 30 days are over"""
+
+    @pytest.fixture
+    def handler(self, db):
+        handler = DataExportCommands(db, ADMIN_ID, "test", "token")
+        handler._send_message = Mock(return_value={"success": True})
+        return handler
+
+    @pytest.fixture
+    def lambda_client(self):
+        with patch("boto3.client") as client:
+            yield client.return_value
+
+    def test_without_arguments_shows_usage(self, handler):
+        assert handler.handle_clear_data_export(ADMIN_ID, []) == {"status": "invalid_args"}
+
+    def test_unknown_customer_is_reported(self, handler):
+        assert handler.handle_clear_data_export(ADMIN_ID, ["nobody-like-this"])["status"] == "user_not_found"
+
+    def test_clears_the_time_and_the_customer_can_export_again(self, handler, db, customer, lambda_client):
+        handler.handle_my_data(USER_ID)
+        assert handler.handle_my_data(USER_ID) == {"status": "rate_limited"}
+
+        result = handler.handle_clear_data_export(ADMIN_ID, ["jantje"])
+
+        assert result == {"status": "success"}
+        assert db.get_customer(customer.customer_id).last_data_export_at is None
+        assert handler.handle_my_data(USER_ID) == {"status": "success"}
+
+    def test_nothing_else_of_the_customer_changes(self, handler, db, customer):
+        db.claim_data_export(customer.customer_id, 1_800_000_000, MONTH)
+
+        handler.handle_clear_data_export(ADMIN_ID, ["jantje"])
+
+        after = db.get_customer(customer.customer_id)
+        assert (after.first_name, after.username, after.language) == ("Jantje", f"user{USER_ID}", "nl")
+        assert after.authorization_status == AuthorizationStatus.APPROVED.value
+
+    def test_a_customer_who_never_exported_has_nothing_to_clear(self, handler, customer):
+        result = handler.handle_clear_data_export(ADMIN_ID, ["jantje"])
+
+        assert result == {"status": "nothing_to_clear"}
+
+    def test_clearing_twice_reports_nothing_to_clear_the_second_time(self, handler, db, customer):
+        db.claim_data_export(customer.customer_id, 1_800_000_000, MONTH)
+
+        assert handler.handle_clear_data_export(ADMIN_ID, ["jantje"]) == {"status": "success"}
+        assert handler.handle_clear_data_export(ADMIN_ID, ["jantje"]) == {"status": "nothing_to_clear"}
+
+    def test_a_stale_cached_customer_does_not_hide_a_recent_export(self, handler, db, customer):
+        # The name lookup uses cached customer lists. Warm the cache first, then export.
+        assert db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+        db.claim_data_export(customer.customer_id, 1_800_000_000, MONTH)
+
+        result = handler.handle_clear_data_export(ADMIN_ID, ["jantje"])
+
+        assert result == {"status": "success"}
+        assert db.get_customer(customer.customer_id).last_data_export_at is None
+
+    def test_resolves_a_partial_customer_id(self, handler, db, customer):
+        db.claim_data_export(customer.customer_id, 1_800_000_000, MONTH)
+
+        assert handler.handle_clear_data_export(ADMIN_ID, [customer.customer_id[:8]]) == {"status": "success"}
+
+    def test_ambiguous_names_show_a_choice_that_leads_to_the_clear(self, handler, db, customer):
+        other = _customer(db, telegram_id=7, first_name="Jantje")
+        db.claim_data_export(other.customer_id, 1_800_000_000, MONTH)
+
+        result = handler.handle_clear_data_export(ADMIN_ID, ["jantje"])
+
+        assert result["status"] == "disambiguation_shown"
+        markup = handler._send_message.call_args.kwargs["reply_markup"]
+        callbacks = [b["callback_data"] for row in markup["inline_keyboard"] for b in row]
+        assert f"clear_data_export_select_{other.customer_id}" in callbacks
+
+        assert handler.handle_clear_data_export_select(ADMIN_ID, other.customer_id) == {"status": "success"}
+        assert db.get_customer(other.customer_id).last_data_export_at is None
+
+    def test_a_failing_update_is_reported_and_leaves_the_time(self, handler, db, customer):
+        db.claim_data_export(customer.customer_id, 1_800_000_000, MONTH)
+        db.clear_data_export = Mock(return_value=False)
+
+        assert handler.handle_clear_data_export(ADMIN_ID, ["jantje"]) == {"status": "error"}
+        assert int(db.get_customer(customer.customer_id).last_data_export_at) == 1_800_000_000
+
+    def test_the_repository_ignores_a_missing_customer(self, db):
+        assert db.clear_data_export("does-not-exist") is False
+        assert db.get_customer("does-not-exist") is None
+
+    def test_log_names_the_customer_id_only(self, handler, db, customer, caplog):
+        import logging
+
+        db.claim_data_export(customer.customer_id, 1_800_000_000, MONTH)
+        caplog.set_level(logging.INFO)
+
+        handler.handle_clear_data_export(ADMIN_ID, ["jantje"])
+
+        logs = "\n".join(r.getMessage() for r in caplog.records)
+        assert customer.customer_id in logs
+        assert "Jantje" not in logs
+
+
 class TestAuthorization:
     def _router(self, status):
         db = Mock()
@@ -591,6 +694,41 @@ class TestAuthorization:
         router.route_command(USER_ID, USER_ID, "/export_user_data jantje")
 
         handlers["data_export"].handle_export_user_data.assert_not_called()
+
+    def test_clear_command_is_routed_for_the_admin(self):
+        router, handlers = self._router("approved")
+
+        router.route_command(ADMIN_ID, ADMIN_ID, "/clear_data_export jantje beton")
+
+        handlers["data_export"].handle_clear_data_export.assert_called_once_with(ADMIN_ID, ["jantje", "beton"])
+
+    def test_customers_cannot_clear_their_own_limit(self):
+        router, handlers = self._router("approved")
+
+        router.route_command(USER_ID, USER_ID, "/clear_data_export jantje")
+
+        handlers["data_export"].handle_clear_data_export.assert_not_called()
+
+    def test_the_clear_selection_button_is_admin_only(self):
+        from services.callback_handler import CUSTOMER_CALLBACK_PATTERN
+
+        assert CUSTOMER_CALLBACK_PATTERN.match("clear_data_export_select_abc-123") is None
+
+    def test_the_clear_selection_button_routes_to_the_handler_for_the_admin(self):
+        from services.callback_handler import CallbackHandler
+
+        handlers = {name: Mock() for name in ("data_export", "user", "admin_commands", "admin_order", "credit")}
+        callback_handler = CallbackHandler(Mock(), ADMIN_ID, "test", "token", handlers, Mock())
+        query = {
+            "id": "q",
+            "from": {"id": ADMIN_ID},
+            "message": {"chat": {"id": ADMIN_ID}, "message_id": 1},
+            "data": "clear_data_export_select_abc-123",
+        }
+
+        callback_handler.handle_callback_query(query)
+
+        handlers["data_export"].handle_clear_data_export_select.assert_called_once_with(ADMIN_ID, "abc-123")
 
     @pytest.mark.parametrize("data", ["export_user_data_select_abc-123"])
     def test_the_selection_button_is_admin_only(self, data):

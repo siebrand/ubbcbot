@@ -170,6 +170,24 @@ class CustomerRepository(BaseRepository):
             logger.error(f"Error releasing data export claim for {customer_id}: {e}")
             return False
 
+    def clear_data_export(self, customer_id: str) -> bool:
+        """Forget when the customer last exported their data, so they can export again right away.
+
+        Returns False when the customer does not exist or the update failed.
+        """
+        try:
+            self.table.update_item(
+                Key={"customer_id": customer_id},
+                UpdateExpression="REMOVE last_data_export_at",
+                ConditionExpression="attribute_exists(customer_id)",
+            )
+            return True
+        except self.dynamodb.meta.client.exceptions.ConditionalCheckFailedException:
+            return False
+        except Exception as e:
+            logger.error(f"Error clearing data export time for {customer_id}: {e}")
+            return False
+
     def get_customer_by_telegram_id(self, telegram_user_id: int) -> Customer | None:
         """Get customer by telegram ID with caching"""
         return UserCache.get_customer_by_telegram_id(telegram_user_id, self)
