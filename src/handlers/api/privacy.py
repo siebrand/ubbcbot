@@ -13,8 +13,11 @@ from typing import Any
 
 import markdown
 
+from utils.log_redaction import install_pii_redaction
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+install_pii_redaction()
 
 _BASE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources")
 _STATEMENT_PATH = os.path.join(_BASE_DIR, "privacy_statement.md")

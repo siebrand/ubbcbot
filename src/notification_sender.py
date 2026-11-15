@@ -3,10 +3,12 @@ import logging
 
 from handlers.base_handler import BaseHandler
 from services.database import DynamoDBService
+from utils.log_redaction import install_pii_redaction
 from utils.s3_url import is_s3_url
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+install_pii_redaction()
 
 
 def lambda_handler(event, context):

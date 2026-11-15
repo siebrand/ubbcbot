@@ -12,9 +12,11 @@ import boto3
 import requests
 
 from services.user_client import UserClient
+from utils.log_redaction import install_pii_redaction
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+install_pii_redaction()
 
 # Module-level event loop for Lambda container reuse
 _loop = None
