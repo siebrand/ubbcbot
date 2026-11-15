@@ -104,6 +104,22 @@ class TestMenuContents:
         assert sorted(_names("admin") - ADMIN_ONLY - _names("customer")) == []
 
 
+class TestMenuOrder:
+    """Telegram shows the commands in the order of the list"""
+
+    @pytest.mark.parametrize("menu", ["group", "admin"])
+    def test_the_group_and_admin_menus_are_alphabetical(self, menu):
+        commands = [entry["command"] for entry in MENUS[menu]]
+
+        assert commands == sorted(commands)
+
+    def test_the_customer_menu_has_start_and_help_on_top_then_alphabetical(self):
+        commands = [entry["command"] for entry in MENUS["customer"]]
+
+        assert commands[:2] == ["start", "help"]
+        assert commands[2:] == sorted(commands[2:])
+
+
 # --- what the script sends ----------------------------------------------------------------------------------
 
 
