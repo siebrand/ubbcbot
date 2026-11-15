@@ -176,8 +176,8 @@ WD = [
     ),
     ("wd_confirm_complete:7", Says("invalid_format")),
     ("wd_unknown:1", Says("unknown_callback")),
-    ("wd_sup", Fails()),  # no value after the prefix
-    ("wd_off:notanumber:abc", Fails()),
+    ("wd_sup", Says("unknown_callback")),  # no value after the prefix
+    ("wd_off:notanumber:abc", Says("unknown_callback")),
 ]
 
 LC = [
@@ -191,7 +191,7 @@ LC = [
     ("lc_back:boxes:7:abc", C("labeling", call.handle_back_navigation(CHAT, "boxes", "7", "abc"))),
     ("lc_back:offers", C("labeling", call.handle_back_navigation(CHAT, "offers"))),
     ("lc_unknown:1", Says("unknown_callback")),
-    ("lc_off:notanumber:abc", Fails()),
+    ("lc_off:notanumber:abc", Says("unknown_callback")),
 ]
 
 ADMIN_PANEL = [

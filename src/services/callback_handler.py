@@ -339,6 +339,89 @@ class CallbackHandler:
         )
         self.router.register(r"^create_supplier_start$", lambda match, ctx: self._start_add_supplier(ctx["chat_id"]))
 
+        # Delivery (wd_) and labeling (lc_) workflows
+        self._register_workflow_routes()
+
+    def _register_workflow_routes(self):
+        """The wholesale delivery (wd_) and labeling (lc_) workflows share one grammar: ``<prefix>_<verb>:<arg>:...``.
+
+        Authorization happens before routing (``_authorize_callback``): these are admin-only by default.
+        Anything with the prefix that matches no verb gets the "unknown callback" message.
+        """
+        workflows = (
+            (
+                "wd",
+                "wholesale_delivery",
+                "handle_delivery_action",
+                "handle_complete_delivery",
+                "handle_confirm_complete_delivery",
+            ),
+            (
+                "lc",
+                "labeling",
+                "handle_labeling_action",
+                "handle_complete_labeling",
+                "handle_confirm_complete_labeling",
+            ),
+        )
+        for prefix, key, action_method, complete_method, confirm_method in workflows:
+            self._register_workflow(prefix, key, action_method, complete_method, confirm_method)
+
+        # Partial deliveries only exist for wholesale delivery
+        self.router.register(
+            r"^wd_partial:([^:]+):([^:]+):(\d+)$",
+            lambda m, ctx: self.handlers["wholesale_delivery"].handle_partial_action(
+                ctx["chat_id"], m.group(1), m.group(2), int(m.group(3))
+            ),
+        )
+
+        for prefix, *_ in workflows:
+            self.router.register(
+                rf"^{prefix}_",
+                lambda m, ctx: self._send_message(ctx["chat_id"], self._t("unknown_callback", ctx["user_id"])),
+            )
+
+    def _register_workflow(self, prefix: str, key: str, action_method: str, complete_method: str, confirm_method: str):
+        register = self.router.register
+        handlers = self.handlers
+
+        register(
+            rf"^{prefix}_sup:([^:]+)$",
+            lambda m, ctx: handlers[key].handle_supplier_selection(ctx["chat_id"], m.group(1)),
+        )
+        register(
+            rf"^{prefix}_off:(\d+):([^:]+)$",
+            lambda m, ctx: handlers[key].handle_offer_selection(ctx["chat_id"], int(m.group(1)), m.group(2)),
+        )
+        register(
+            rf"^{prefix}_box:([^:]+):(\d+):([^:]+)$",
+            lambda m, ctx: handlers[key].handle_box_selection(ctx["chat_id"], m.group(1), int(m.group(2)), m.group(3)),
+        )
+        register(
+            rf"^{prefix}_action:([^:]+):([^:]+):(\d+):([^:]+)$",
+            lambda m, ctx: getattr(handlers[key], action_method)(
+                ctx["chat_id"], m.group(1), m.group(2), int(m.group(3)), m.group(4)
+            ),
+        )
+        register(
+            rf"^{prefix}_back:([^:]+)(?::(.*))?$",
+            lambda m, ctx: handlers[key].handle_back_navigation(
+                ctx["chat_id"], m.group(1), *(m.group(2).split(":") if m.group(2) is not None else [])
+            ),
+        )
+        register(
+            rf"^{prefix}_complete:(\d+):([^:]+)$",
+            lambda m, ctx: getattr(handlers[key], complete_method)(ctx["chat_id"], int(m.group(1)), m.group(2)),
+        )
+        register(
+            rf"^{prefix}_confirm_complete:(\d+):([^:]+)$",
+            lambda m, ctx: getattr(handlers[key], confirm_method)(ctx["chat_id"], int(m.group(1)), m.group(2)),
+        )
+        register(
+            rf"^{prefix}_confirm_complete(?::.*)?$",
+            lambda m, ctx: self._send_message(ctx["chat_id"], self._t("invalid_format")),
+        )
+
     def _handle_confirm_wholesale_wrapper(self, chat_id: int, offer_id: str, boxes: str) -> dict[str, Any]:
         """Wrapper for confirm_process_wholesale with error handling"""
         try:
@@ -419,11 +502,7 @@ class CallbackHandler:
                 return {"status": "handled_by_router"}
 
             # Special handlers for complex patterns
-            if data.startswith("wd_"):
-                return self._handle_process_delivery_callbacks(handler_chat_id, user_id, data)
-            elif data.startswith("lc_"):
-                return self._handle_labeling_completion_callbacks(handler_chat_id, user_id, data)
-            elif data.startswith("admin"):
+            if data.startswith("admin"):
                 return self._handle_admin_callbacks(handler_chat_id, user_id, data)
             elif data.startswith("cmd"):
                 return self._handle_command_callbacks(handler_chat_id, user_id, data)
@@ -694,85 +773,6 @@ class CallbackHandler:
         except Exception as e:
             logger.error(f"Error deleting message: {e}")
             return False
-
-    def _handle_process_delivery_callbacks(self, chat_id: int, user_id: int, data: str) -> dict[str, Any]:
-        """Handle wholesale delivery callbacks"""
-        if not self._is_admin(user_id):
-            return self._send_message(chat_id, self._t("admin_only", user_id))
-
-        parts = data.split(":")
-
-        if parts[0] == "wd_sup":  # Supplier selection
-            supplier_id = parts[1]
-            return self.handlers["wholesale_delivery"].handle_supplier_selection(chat_id, supplier_id)
-        elif parts[0] == "wd_off":  # Offer selection
-            offer_id, supplier_id = int(parts[1]), parts[2]
-            return self.handlers["wholesale_delivery"].handle_offer_selection(chat_id, offer_id, supplier_id)
-        elif parts[0] == "wd_box":  # Box selection
-            box_id, offer_id, supplier_id = parts[1], int(parts[2]), parts[3]
-            return self.handlers["wholesale_delivery"].handle_box_selection(chat_id, box_id, offer_id, supplier_id)
-        elif parts[0] == "wd_action":  # Delivery action
-            action, box_id, offer_id, supplier_id = parts[1], parts[2], int(parts[3]), parts[4]
-            return self.handlers["wholesale_delivery"].handle_delivery_action(
-                chat_id, action, box_id, offer_id, supplier_id
-            )
-        elif parts[0] == "wd_partial":  # Partial delivery action
-            action, box_id, received_units = parts[1], parts[2], int(parts[3])
-            return self.handlers["wholesale_delivery"].handle_partial_action(chat_id, action, box_id, received_units)
-        elif parts[0] == "wd_back":  # Back navigation
-            target = parts[1]
-            args = parts[2:] if len(parts) > 2 else []
-            return self.handlers["wholesale_delivery"].handle_back_navigation(chat_id, target, *args)
-        elif parts[0] == "wd_complete":  # Complete delivery
-            offer_id, supplier_id_short = int(parts[1]), parts[2]
-            return self.handlers["wholesale_delivery"].handle_complete_delivery(chat_id, offer_id, supplier_id_short)
-        elif parts[0] == "wd_confirm_complete":  # Confirm complete delivery
-            if len(parts) >= 3:
-                offer_id, supplier_id_short = int(parts[1]), parts[2]
-                return self.handlers["wholesale_delivery"].handle_confirm_complete_delivery(
-                    chat_id, offer_id, supplier_id_short
-                )
-            else:
-                return self._send_message(chat_id, self._t("invalid_format"))
-
-        return self._send_message(chat_id, self._t("unknown_callback", user_id))
-
-    def _handle_labeling_completion_callbacks(self, chat_id: int, user_id: int, data: str) -> dict[str, Any]:
-        """Handle labeling completion callbacks"""
-        if not self._is_admin(user_id):
-            return self._send_message(chat_id, self._t("admin_only", user_id))
-
-        parts = data.split(":")
-
-        if parts[0] == "lc_sup":  # Supplier selection
-            supplier_id_short = parts[1]
-            return self.handlers["labeling"].handle_supplier_selection(chat_id, supplier_id_short)
-        elif parts[0] == "lc_off":  # Offer selection
-            offer_id, supplier_id_short = int(parts[1]), parts[2]
-            return self.handlers["labeling"].handle_offer_selection(chat_id, offer_id, supplier_id_short)
-        elif parts[0] == "lc_box":  # Box selection
-            box_id_short, offer_id, supplier_id_short = parts[1], int(parts[2]), parts[3]
-            return self.handlers["labeling"].handle_box_selection(chat_id, box_id_short, offer_id, supplier_id_short)
-        elif parts[0] == "lc_action":  # Labeling action
-            action, box_id_short, offer_id, supplier_id_short = parts[1], parts[2], int(parts[3]), parts[4]
-            return self.handlers["labeling"].handle_labeling_action(
-                chat_id, action, box_id_short, offer_id, supplier_id_short
-            )
-        elif parts[0] == "lc_complete":  # Complete labeling
-            offer_id, supplier_id_short = int(parts[1]), parts[2]
-            return self.handlers["labeling"].handle_complete_labeling(chat_id, offer_id, supplier_id_short)
-        elif parts[0] == "lc_confirm_complete":  # Confirm complete labeling
-            if len(parts) >= 3:
-                offer_id, supplier_id_short = int(parts[1]), parts[2]
-                return self.handlers["labeling"].handle_confirm_complete_labeling(chat_id, offer_id, supplier_id_short)
-            else:
-                return self._send_message(chat_id, self._t("invalid_format"))
-        elif parts[0] == "lc_back":  # Back navigation
-            target = parts[1]
-            args = parts[2:] if len(parts) > 2 else []
-            return self.handlers["labeling"].handle_back_navigation(chat_id, target, *args)
-
-        return self._send_message(chat_id, self._t("unknown_callback", user_id))
 
     def _handle_admin_callbacks(self, chat_id: int, user_id: int, data: str) -> dict[str, Any]:
         """Handle admin panel navigation callbacks"""
