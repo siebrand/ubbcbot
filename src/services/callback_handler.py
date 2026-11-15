@@ -216,6 +216,14 @@ class CallbackHandler:
             lambda match, ctx: self.handlers["user"].handle_user_status_select(ctx["chat_id"], match.group(1)),
         )
         self.router.register(
+            r"^delete_user_select_(.+)$",
+            lambda match, ctx: self.handlers["user"].handle_delete_user_select(ctx["chat_id"], match.group(1)),
+        )
+        self.router.register(
+            r"^delete_user_confirm_(.+)$",
+            lambda match, ctx: self.handlers["user"].handle_delete_user_confirm(ctx["chat_id"], match.group(1)),
+        )
+        self.router.register(
             r"^credit_customer_(.+)$",
             lambda match, ctx: self.handlers["credit"].handle_credit_customer_select(ctx["chat_id"], match.group(1)),
         )

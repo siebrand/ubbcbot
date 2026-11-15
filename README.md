@@ -202,6 +202,7 @@ Download CSV of all orders (default: active, full exports all fields)
 - `/update_user <username|customer_id> <new_first_name> [new_last_name]` - Update customer name (customer_id may be a partial UUID of 8+ characters, like order IDs)
 - `/update_user_first_name <customer_id> <new_first_name>` - Update customer first name
 - `/update_user_last_name <customer_id> <new_last_name>` - Update customer last name
+- `/delete_user <username|customer_id>` - Delete a customer record (right to be forgotten). Refused while the customer has orders that are not completed or cancelled (not yet delivered and/or unpaid) or a non-zero credit balance. Orders, credit transactions and purchase history are kept
 - `/process_delivery` - Process wholesale deliveries and manage delivery status
 - `/process_labeling` - Complete labeling process for delivered orders
 - `/send_delivery_overviews` - Send delivery overviews to customers

@@ -97,6 +97,26 @@ class CustomerRepository(BaseRepository):
             logger.error(f"Error updating customer: {e}")
             return False
 
+    def delete_customer(self, customer_id: str) -> bool:
+        """Delete the customer record and invalidate all user caches.
+
+        Only the customers table row is removed. Orders, credit transactions and order
+        history reference customer_id only and are deliberately kept.
+        Returns False if the customer does not exist or the delete fails.
+        """
+        try:
+            self.table.delete_item(
+                Key={"customer_id": customer_id}, ConditionExpression="attribute_exists(customer_id)"
+            )
+        except self.dynamodb.meta.client.exceptions.ConditionalCheckFailedException:
+            return False
+        except Exception as e:
+            logger.error(f"Error deleting customer {customer_id}: {e}")
+            return False
+
+        UserCache.invalidate_cache()
+        return True
+
     def get_customer_by_telegram_id(self, telegram_user_id: int) -> Customer | None:
         """Get customer by telegram ID with caching"""
         return UserCache.get_customer_by_telegram_id(telegram_user_id, self)

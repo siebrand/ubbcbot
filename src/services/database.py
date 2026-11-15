@@ -342,6 +342,9 @@ class DynamoDBService:
     def update_customer(self, customer_id: str, updates: dict[str, Any]) -> bool:
         return self.customer_repo.update_customer(customer_id, updates)
 
+    def delete_customer(self, customer_id: str) -> bool:
+        return self.customer_repo.delete_customer(customer_id)
+
     def get_subscribers(self) -> list[Customer]:
         """Get subscribers with caching"""
         return self.customer_repo.get_subscribers()

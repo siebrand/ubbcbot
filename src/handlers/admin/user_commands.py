@@ -1,10 +1,14 @@
+import logging
 from typing import Any
 
 from handlers.base_handler import BaseHandler
 from models.entities import AuthorizationStatus
+from services.customer_deletion import CustomerDeletionService
 from services.user_cache import UserCache
 from utils.pagination import PaginationUtils
 from utils.update_utils import UpdateUtils
+
+logger = logging.getLogger()
 
 
 class UserCommands(BaseHandler):
@@ -17,6 +21,7 @@ class UserCommands(BaseHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.deletion_service = CustomerDeletionService(self.db)
         self.update_utils = UpdateUtils(self.db, self._t, self._send_message)
         self.update_utils._show_customer_edit_interface = lambda chat_id, customer: self._show_user_edit_interface(
             customer, chat_id
@@ -261,6 +266,99 @@ class UserCommands(BaseHandler):
             return error
 
         return self._show_user_edit_interface(customer, chat_id)
+
+    def _deletion_label(self, customer) -> str:
+        """HTML-safe label for deletion messages: name plus short customer ID to tell namesakes apart"""
+        name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t("unknown", user_id=None)
+        return f"{self._escape_html(name)} ({customer.customer_id[:8]})"
+
+    def _send_deletion_blocked(self, chat_id: int, customer, blockers) -> dict[str, Any]:
+        """Explain why a customer cannot be deleted yet"""
+        message = self._t("delete_user_blocked", chat_id, label=self._deletion_label(customer)) + "\n\n"
+
+        if blockers.open_orders:
+            lines = []
+            for order in blockers.open_orders:
+                offer = self.db.get_offer(order.offer_id)
+                offer_name = self._escape_html(offer.name) if offer else self._t("unknown", user_id=None)
+                lines.append(f"  – {order.order_id[:8]}: {order.quantity}x {offer_name} ({order.status})")
+            message += (
+                self._t("delete_user_blocked_orders", chat_id, count=len(blockers.open_orders), orders="\n".join(lines))
+                + "\n"
+            )
+
+        if blockers.credit_balance != 0:
+            message += self._t("delete_user_blocked_credit", chat_id, balance=f"{blockers.credit_balance:.2f}") + "\n"
+
+        self._send_message(chat_id, message.rstrip(), parse_mode="HTML")
+        return {"status": "delete_blocked"}
+
+    def _show_delete_user_confirmation(self, chat_id: int, customer) -> dict[str, Any]:
+        """Ask for confirmation, or explain what blocks the deletion"""
+        blockers = self.deletion_service.get_blockers(customer)
+        if blockers.blocked:
+            return self._send_deletion_blocked(chat_id, customer, blockers)
+
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": self._t("delete_user_confirm_btn", chat_id),
+                        "callback_data": f"delete_user_confirm_{customer.customer_id}",
+                    },
+                    {"text": self._t("cancel", chat_id), "callback_data": "cancel_confirmation"},
+                ]
+            ]
+        }
+        message = self._t("delete_user_confirm", chat_id, label=self._deletion_label(customer))
+        self._send_message(chat_id, message, parse_mode="HTML", reply_markup=keyboard)
+        return {"status": "confirmation_required"}
+
+    def handle_delete_user(self, chat_id: int, args: list) -> dict[str, Any]:
+        """Handle /delete_user command: remove a customer record (right to be forgotten)"""
+        if not args:
+            self._send_message(chat_id, self._t("usage_delete_user", chat_id))
+            return {"status": "invalid_args"}
+
+        identifier = " ".join(args)
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "delete_user_select")
+
+        if error:
+            return error
+
+        return self._show_delete_user_confirmation(chat_id, customer)
+
+    def handle_delete_user_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
+        """Handle user selection from disambiguation for delete user"""
+        customer = self.db.get_customer(customer_id)
+
+        if not customer:
+            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
+            return {"status": "user_not_found"}
+
+        return self._show_delete_user_confirmation(chat_id, customer)
+
+    def handle_delete_user_confirm(self, chat_id: int, customer_id: str) -> dict[str, Any]:
+        """Delete the customer after confirmation. Blockers are checked again: state may have changed."""
+        customer = self.db.get_customer(customer_id)
+
+        if not customer:
+            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
+            return {"status": "user_not_found"}
+
+        label = self._deletion_label(customer)
+        deleted, blockers = self.deletion_service.delete(customer)
+
+        if blockers.blocked:
+            return self._send_deletion_blocked(chat_id, customer, blockers)
+
+        if not deleted:
+            self._send_message(chat_id, self._t("delete_user_failed", chat_id, label=label), parse_mode="HTML")
+            return {"status": "error"}
+
+        logger.info(f"Customer {customer_id} deleted")
+        self._send_message(chat_id, self._t("delete_user_done", chat_id, label=label), parse_mode="HTML")
+        return {"status": "success"}
 
     def handle_update_user_first_name(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /update_user_first_name command"""
