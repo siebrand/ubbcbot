@@ -1,6 +1,6 @@
 # Privacyverklaring UBBC Bot
 
-_Laatst bijgewerkt: 2026-11-02_
+_Laatst bijgewerkt: 2026-11-15_
 
 De UBBC Bot is een Telegram-bot waarmee leden van UBBC gezamenlijk bier
 bestellen. Deze verklaring legt uit welke persoonsgegevens de bot verwerkt,
@@ -31,6 +31,7 @@ Wanneer je de bot gebruikt, verwerken we:
 | Taalvoorkeur | Telegram | Berichten in de juiste taal tonen |
 | Contactgegevens (optioneel) | Door beheerder ingevoerd | Contact bij gastgebruikers zonder Telegram |
 | Bestel- en betaalgeschiedenis | Jouw gebruik van de bot | Bestellingen, levering, facturatie en tegoeden |
+| Telegram-gebruikers-ID in technische logbestanden | Telegram | Foutopsporing en beveiliging (geen namen, gebruikersnamen of ingevoerde tekst) |
 
 De ophaal-/leverlocatie die de bot gebruikt is een vaste, gedeelde locatie voor
 de groep en is **geen** persoonsgegeven.
@@ -69,7 +70,9 @@ marketingdoeleinden.
   worden verwijderd. Deze termijn is gekozen om te voldoen aan de wettelijke
   fiscale bewaarplicht voor administratie en betaalgegevens.
 - **Profielgegevens** worden bewaard zolang je account actief is en worden op
-  verzoek verwijderd of geanonimiseerd (zie hieronder).
+  verzoek verwijderd (zie hieronder).
+- **Technische logbestanden** (met je Telegram-gebruikers-ID) worden maximaal
+  7 dagen bewaard.
 
 ## Jouw rechten
 
@@ -79,9 +82,18 @@ intrekken.
 
 - **Afmelden voor meldingen:** stuur `/unsubscribe` naar de bot.
 - **Inzage, correctie of verwijdering:** neem contact op via het adres
-  hierboven. Bij verwijdering worden je identificeerbare gegevens gewist of
-  gepseudonimiseerd; transactiegegevens kunnen in geanonimiseerde vorm bewaard
-  blijven voor een correcte administratie.
+  hierboven. Je verzoek is kosteloos. Om te controleren dat het van jou komt,
+  vragen we je je Telegram-gebruikersnaam te noemen en het verzoek vanuit je
+  Telegram-account te bevestigen. We reageren binnen een maand. Bij
+  verwijdering wordt je klantrecord (naam, gebruikersnaam, contactgegevens en
+  taalvoorkeur) volledig gewist. Staat er nog een bestelling open, of moet je
+  nog een betaling aan ons doen, dan hebben we je gegevens nog nodig om de
+  overeenkomst uit te voeren. We stellen de verwijdering dan uit en laten je
+  weten wat er nog openstaat. Zodra alles is afgehandeld, wissen we je
+  klantrecord alsnog. Bestel-, betaal- en tegoedgegevens blijven daarna tot 8
+  jaar bewaard voor de fiscale bewaarplicht, zonder naam of andere gegevens
+  waarmee de bot jou kan herkennen. Gebruik je de bot daarna opnieuw, dan word
+  je als nieuwe gebruiker geregistreerd.
 - **Klacht:** je kunt een klacht indienen bij de Autoriteit Persoonsgegevens
   ([autoriteitpersoonsgegevens.nl](https://autoriteitpersoonsgegevens.nl)).
 
@@ -90,6 +102,10 @@ intrekken.
 Gegevens worden versleuteld opgeslagen en de toegang is beperkt tot de beheerder
 en de bot zelf, volgens het principe van minimale rechten. Secrets (zoals
 tokens) worden apart en versleuteld bewaard.
+
+Exports van bestelgegevens worden alleen naar de privéchat van de beheerder
+gestuurd en na een uur uit die chat verwijderd. Een kopie die de beheerder zelf
+heeft gedownload valt onder de zorg van de beheerder.
 
 ## Wijzigingen
 

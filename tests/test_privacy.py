@@ -26,6 +26,44 @@ class TestPrivacyApi:
         assert "Kitano ICT" in body
         assert "30197597" in body  # KVK
 
+    def test_deletion_matches_what_the_bot_does(self):
+        # Line wrapping in the source must not matter, so compare on whitespace-normalised text
+        body = " ".join(privacy_api.handler({}, None)["body"].split())
+        # /delete_user wipes the customer record
+        assert "klantrecord" in body
+        assert "volledig gewist" in body
+        # Deletion is postponed (not refused) while an order is open or a payment is due to us
+        assert "een bestelling open" in body
+        assert "nog een betaling aan ons doen" in body
+        assert "We stellen de verwijdering dan uit" in body
+        assert "binnen een maand" in body
+        assert "tegoedsaldo" not in body
+
+    def test_explains_how_to_exercise_the_right_to_be_forgotten(self):
+        body = " ".join(privacy_api.handler({}, None)["body"].split())
+        assert "neem contact op via het adres hierboven" in body
+        assert "Je verzoek is kosteloos" in body
+        assert "Telegram-gebruikersnaam te noemen" in body
+        assert "We reageren binnen een maand" in body
+        # Customers cannot run /delete_user themselves, so the statement must not point them to it
+        assert "/delete_user" not in body
+
+    def test_deletion_keeps_records_without_a_name(self):
+        body = " ".join(privacy_api.handler({}, None)["body"].split())
+        # Orders and payments are kept for the fiscal retention duty, without a name
+        assert "tot 8 jaar" in body
+        assert "fiscale" in body
+        # The old claims no longer hold, so they must not come back
+        assert "geanonimiseerde vorm" not in body
+        assert "gewist of gepseudonimiseerd" not in body
+
+    def test_describes_exports_and_logs(self):
+        body = " ".join(privacy_api.handler({}, None)["body"].split())
+        assert "privéchat van de beheerder" in body
+        assert "na een uur" in body
+        assert "technische logbestanden" in body.lower()
+        assert "7 dagen" in body
+
     def test_embeds_logo_as_data_uri(self):
         body = privacy_api.handler({}, None)["body"]
         # Logo is inlined as a base64 JPEG data URI in the top-right corner.
