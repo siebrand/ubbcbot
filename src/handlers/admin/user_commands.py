@@ -579,7 +579,7 @@ class UserCommands(BaseHandler):
 
     def handle_list_guests(self, chat_id: int, page: int = 1) -> dict[str, Any]:
         """Handle /list_guests command with pagination"""
-        all_customers = self.db.get_all_customers()
+        all_customers = UserCache.get_all_customers(self.db)
         guests = [c for c in all_customers if c.is_guest]
 
         if not guests:
