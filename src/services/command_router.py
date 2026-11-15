@@ -52,8 +52,10 @@ class CommandRouter:
 
         # In production, redirect group commands to PM (except group-specific ones).
         # /fomo is handled specially for groups below (react 👍 + reply in 1:1).
+        # Ordering is not allowed in a production group: the bot does not send messages to a production group
+        # (see BaseHandler._send_message), so the customer would get no confirmation and no error.
         is_group_chat = chat_id < 0
-        group_allowed_commands = {"/start", "/order", "/confirm_order", "/fomo"}
+        group_allowed_commands = {"/start", "/fomo"}
 
         if self.environment == "prod" and is_group_chat and command not in group_allowed_commands:
             base_handler = self.base_handler

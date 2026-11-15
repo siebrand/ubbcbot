@@ -237,9 +237,10 @@ NOT_START = [row for row in CORPUS if row.command != "/start"]
 # Commands that the router answers differently from a plain "call one handler method"
 SPECIAL_COMMANDS = {"/fomo", "/cancel", "/start"}
 
-# In a production group only these commands are answered there. "/order" is on the list, but the alias is
-# resolved first, so it never matches: /order in a production group is redirected like everything else.
-GROUP_ALLOWED_IN_PROD = {"/start", "/confirm_order", "/fomo"}
+# In a production group only these commands are answered there. Ordering is not one of them: the bot cannot
+# send the customer's confirmation or an error to a production group, so /order and /confirm_order are
+# redirected to the private chat.
+GROUP_ALLOWED_IN_PROD = {"/start", "/fomo"}
 
 # --- harness ----------------------------------------------------------------------------------------
 
