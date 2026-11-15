@@ -342,6 +342,81 @@ class CallbackHandler:
         # Delivery (wd_) and labeling (lc_) workflows
         self._register_workflow_routes()
 
+        # Admin panel navigation (admin:*) and the command buttons on it (cmd:*)
+        self._register_admin_panel_routes()
+        self._register_panel_command_routes()
+
+    def _register_admin_panel_routes(self):
+        """Admin panel navigation. Both ``admin:main`` and the older ``admin_main`` form are accepted."""
+
+        def panel(method: str):
+            return lambda ctx: getattr(self.handlers["admin_commands"], method)(ctx["chat_id"], ctx["user_id"])
+
+        actions = {
+            "main": panel("handle_admin"),
+            "workflow": panel("handle_admin_workflow"),
+            "suppliers": panel("handle_admin_suppliers"),
+            "offers": panel("handle_admin_offers"),
+            "orders": panel("handle_admin_orders"),
+            "users": panel("handle_admin_users"),
+            "system": panel("handle_admin_system"),
+            "close": lambda ctx: self._send_message(ctx["chat_id"], self._t("close_panel")),
+            # Legacy names of sections that were merged
+            "delivery": panel("handle_admin_workflow"),
+            "import": panel("handle_admin_offers"),
+        }
+        for action, run in actions.items():
+            self.router.register(rf"^admin[:_]{action}$", lambda match, ctx, run=run: run(ctx))
+
+        # Anything else that starts with "admin" is not a panel action
+        self.router.register(r"^admin", self._unknown_callback)
+
+    def _register_panel_command_routes(self):
+        """The buttons of the admin panel menus. Both ``cmd:list_pending`` and the older ``cmd_list_pending`` work."""
+        h = self.handlers
+        commands = {
+            "create_supplier": lambda chat, user: h["supplier"].handle_create_supplier(chat, []),
+            "list_suppliers": lambda chat, user: h["supplier"].handle_list_suppliers(chat, 1, "active"),
+            "update_supplier": lambda chat, user: h["supplier"].handle_list_suppliers(chat, 1, "active"),
+            "create_offer": lambda chat, user: h["offer"].handle_create_offer(chat, []),
+            "publish_offer": lambda chat, user: self._send_usage_message(chat, "usage_publish_offer"),
+            "list_offers": lambda chat, user: h["info"].handle_list_offers(chat, user, []),
+            "list_boxes": lambda chat, user: h["offer"].handle_list_boxes(chat),
+            "audit_offer": lambda chat, user: h["offer"].handle_audit_offer(chat, []),
+            "process_wholesale": lambda chat, user: h["offer"].handle_process_wholesale(chat, []),
+            "export_orders": lambda chat, user: h["admin_order"].handle_export_orders(chat, []),
+            "list_user_orders": lambda chat, user: self._start_user_orders_input(chat),
+            "list_offer_orders": lambda chat, user: h["admin_order"].handle_list_offer_orders(chat, []),
+            "cancel_order": lambda chat, user: h["admin_order"].handle_cancel_order(chat, []),
+            "create_order_for": lambda chat, user: h["admin_order"].handle_create_order_for(chat, user, []),
+            "list_pending": lambda chat, user: h["user"].handle_list_pending(chat),
+            "list_users": lambda chat, user: h["user"].handle_list_users(chat, 1, "all"),
+            "create_guest": lambda chat, user: self._send_usage_message(chat, "usage_add_guest"),
+            "list_guests": lambda chat, user: h["user"].handle_list_guests(chat),
+            "approve_user": lambda chat, user: self._start_approve_user_input(chat),
+            "user_status": lambda chat, user: self._start_user_status_input(chat),
+            "process_delivery": lambda chat, user: h["wholesale_delivery"].handle_process_delivery(chat, user, []),
+            "process_labeling": lambda chat, user: h["labeling"].handle_process_labeling(chat, user, []),
+            "send_delivery_overviews": lambda chat, user: h["admin_order"].handle_send_delivery_overviews(chat, []),
+            "process_payment": lambda chat, user: h["admin_order"].handle_process_payment(chat, []),
+            "send_payment_reminder": lambda chat, user: h["admin_order"].handle_send_payment_reminder(chat, []),
+            "setup_test_data": lambda chat, user: h["test"].handle_setup_test_data(chat),
+            "failed_notifications": lambda chat, user: h["admin_order"].handle_failed_notifications(chat, []),
+            "delete_old_orders": lambda chat, user: h["admin_order"].handle_delete_old_orders(chat),
+            "audit_orders": lambda chat, user: h["admin_order"].handle_audit_orders(chat),
+            "import_orders": lambda chat, user: h["import"].handle_import_orders(chat, user),
+            "finalize_import": lambda chat, user: h["import"].handle_finalize_import(chat, []),
+        }
+        for action, run in commands.items():
+            self.router.register(rf"^cmd[:_]{action}$", lambda match, ctx, run=run: run(ctx["chat_id"], ctx["user_id"]))
+
+        # Anything else that starts with "cmd" is not a panel command
+        self.router.register(r"^cmd", self._unknown_callback)
+
+    def _unknown_callback(self, match, ctx):
+        """Tell the admin the button is not recognized (used for unknown actions inside a known callback family)"""
+        return self._send_message(ctx["chat_id"], self._t("unknown_callback", ctx["user_id"]))
+
     def _register_workflow_routes(self):
         """The wholesale delivery (wd_) and labeling (lc_) workflows share one grammar: ``<prefix>_<verb>:<arg>:...``.
 
@@ -502,11 +577,7 @@ class CallbackHandler:
                 return {"status": "handled_by_router"}
 
             # Special handlers for complex patterns
-            if data.startswith("admin"):
-                return self._handle_admin_callbacks(handler_chat_id, user_id, data)
-            elif data.startswith("cmd"):
-                return self._handle_command_callbacks(handler_chat_id, user_id, data)
-            elif data.startswith("page_"):
+            if data.startswith("page_"):
                 return self._handle_pagination_callbacks(handler_chat_id, user_id, data)
 
             return {"status": "unknown_callback"}
@@ -773,97 +844,6 @@ class CallbackHandler:
         except Exception as e:
             logger.error(f"Error deleting message: {e}")
             return False
-
-    def _handle_admin_callbacks(self, chat_id: int, user_id: int, data: str) -> dict[str, Any]:
-        """Handle admin panel navigation callbacks"""
-        if not self._is_admin(user_id):
-            self._send_message(chat_id, self._t("admin_only", user_id))
-            return {"status": "unauthorized"}
-
-        # Support both old format (admin_main) and new format (admin:main)
-        if ":" in data:
-            parts = data.split(":")
-            action = parts[1] if len(parts) > 1 else "main"
-        else:
-            action = data.replace("admin_", "")
-
-        if action == "main":
-            return self.handlers["admin_commands"].handle_admin(chat_id, user_id)
-        elif action == "close":
-            self._send_message(chat_id, self._t("close_panel"))
-            return {"status": "closed"}
-        elif action == "workflow":
-            return self.handlers["admin_commands"].handle_admin_workflow(chat_id, user_id)
-        elif action == "suppliers":
-            return self.handlers["admin_commands"].handle_admin_suppliers(chat_id, user_id)
-        elif action == "offers":
-            return self.handlers["admin_commands"].handle_admin_offers(chat_id, user_id)
-        elif action == "orders":
-            return self.handlers["admin_commands"].handle_admin_orders(chat_id, user_id)
-        elif action == "users":
-            return self.handlers["admin_commands"].handle_admin_users(chat_id, user_id)
-        elif action == "system":
-            return self.handlers["admin_commands"].handle_admin_system(chat_id, user_id)
-        # Legacy support
-        elif action == "delivery":
-            return self.handlers["admin_commands"].handle_admin_workflow(chat_id, user_id)
-        elif action == "import":
-            return self.handlers["admin_commands"].handle_admin_offers(chat_id, user_id)
-
-        self._send_message(chat_id, self._t("unknown_callback", user_id))
-        return {"status": "unknown_callback"}
-
-    def _handle_command_callbacks(self, chat_id: int, user_id: int, data: str) -> dict[str, Any]:
-        """Handle command execution callbacks from admin panel"""
-        if not self._is_admin(user_id):
-            self._send_message(chat_id, self._t("admin_only", user_id))
-            return {"status": "unauthorized"}
-
-        # Support both old format (cmd_action) and new format (cmd:action)
-        action = data.split(":", 1)[1] if ":" in data else data.replace("cmd_", "")
-
-        # Map callback data to command handlers
-        command_map = {
-            "create_supplier": lambda: self.handlers["supplier"].handle_create_supplier(chat_id, []),
-            "list_suppliers": lambda: self.handlers["supplier"].handle_list_suppliers(chat_id, 1, "active"),
-            "update_supplier": lambda: self.handlers["supplier"].handle_list_suppliers(chat_id, 1, "active"),
-            "create_offer": lambda: self.handlers["offer"].handle_create_offer(chat_id, []),
-            "publish_offer": lambda: self._send_usage_message(chat_id, "usage_publish_offer"),
-            "list_offers": lambda: self.handlers["info"].handle_list_offers(chat_id, user_id, []),
-            "list_boxes": lambda: self.handlers["offer"].handle_list_boxes(chat_id),
-            "audit_offer": lambda: self.handlers["offer"].handle_audit_offer(chat_id, []),
-            "process_wholesale": lambda: self.handlers["offer"].handle_process_wholesale(chat_id, []),
-            "export_orders": lambda: self.handlers["admin_order"].handle_export_orders(chat_id, []),
-            "list_user_orders": lambda: self._start_user_orders_input(chat_id),
-            "list_offer_orders": lambda: self.handlers["admin_order"].handle_list_offer_orders(chat_id, []),
-            "cancel_order": lambda: self.handlers["admin_order"].handle_cancel_order(chat_id, []),
-            "create_order_for": lambda: self.handlers["admin_order"].handle_create_order_for(chat_id, user_id, []),
-            "list_pending": lambda: self.handlers["user"].handle_list_pending(chat_id),
-            "list_users": lambda: self.handlers["user"].handle_list_users(chat_id, 1, "all"),
-            "create_guest": lambda: self._send_usage_message(chat_id, "usage_add_guest"),
-            "list_guests": lambda: self.handlers["user"].handle_list_guests(chat_id),
-            "approve_user": lambda: self._start_approve_user_input(chat_id),
-            "user_status": lambda: self._start_user_status_input(chat_id),
-            "process_delivery": lambda: self.handlers["wholesale_delivery"].handle_process_delivery(
-                chat_id, user_id, []
-            ),
-            "process_labeling": lambda: self.handlers["labeling"].handle_process_labeling(chat_id, user_id, []),
-            "send_delivery_overviews": lambda: self.handlers["admin_order"].handle_send_delivery_overviews(chat_id, []),
-            "process_payment": lambda: self.handlers["admin_order"].handle_process_payment(chat_id, []),
-            "send_payment_reminder": lambda: self.handlers["admin_order"].handle_send_payment_reminder(chat_id, []),
-            "setup_test_data": lambda: self.handlers["test"].handle_setup_test_data(chat_id),
-            "failed_notifications": lambda: self.handlers["admin_order"].handle_failed_notifications(chat_id, []),
-            "delete_old_orders": lambda: self.handlers["admin_order"].handle_delete_old_orders(chat_id),
-            "audit_orders": lambda: self.handlers["admin_order"].handle_audit_orders(chat_id),
-            "import_orders": lambda: self.handlers["import"].handle_import_orders(chat_id, user_id),
-            "finalize_import": lambda: self.handlers["import"].handle_finalize_import(chat_id, []),
-        }
-
-        if action in command_map:
-            return command_map[action]()
-
-        self._send_message(chat_id, self._t("unknown_callback", user_id))
-        return {"status": "unknown_callback"}
 
     def _start_add_supplier(self, chat_id: int) -> dict[str, Any]:
         """Start add supplier process with text input"""
