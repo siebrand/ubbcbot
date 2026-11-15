@@ -29,7 +29,8 @@ client for messages sent from the admin's own Telegram account.
   `CUSTOMER_CALLBACK_PATTERN` in `callback_handler.py`; everything else is admin-only by default.
 - Handlers that take only `chat_id` cannot check the caller: never expose them without a gate in front.
 - Customers must be `approved` to order; `handle_create_order` enforces this for every entry point.
-- Edit contexts are only consumed by the admin's replies.
+- Edit contexts (admin text prompts) are only created for, and consumed in, the admin's private chat. Admin
+  commands and admin button taps in a group are answered in the private chat, in every environment.
 
 ## Conventions
 - All user-facing text via `self._t(key, user_id, **params)`; the key must exist in both
@@ -46,5 +47,6 @@ client for messages sent from the admin's own Telegram account.
 - Customer data belongs to real people (GDPR): never export or print real data during development; use the test stack.
 - Box quantity and credit updates are read-modify-write without conditional writes; concurrent orders can
   overbook. Use DynamoDB `ConditionExpression`/transactions in new code that touches capacity or credits.
-- Prod redirects most group commands to a private chat and blocks non-forced group messages; the test env does not.
+- Prod redirects most group commands from customers to a private chat and blocks non-forced group messages; the test
+  env does not. Admin commands are answered privately in both.
 - `BotService` is rebuilt per request; only the Telegram token and webhook secret are cached per container.

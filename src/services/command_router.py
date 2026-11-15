@@ -143,7 +143,8 @@ class CommandRouter:
         elif command == "/changelog":
             return self.handlers["changelog"].handle_changelog(target_chat, user_id, 1)
         elif command == "/cancel":
-            return self._handle_cancel_command(target_chat, user_id)
+            # A pending prompt lives in the private chat only, so cancel there whatever chat this came from
+            return self._handle_cancel_command(user_id if is_group_chat else chat_id, user_id)
         elif command == "/fomo":
             return self.handlers["info"].handle_fomo(target_chat, user_id, parts[1:] or None)
         elif command == "/my_credit":
@@ -152,8 +153,10 @@ class CommandRouter:
             return self.handlers["data_export"].handle_my_data(user_id)
 
         # Admin-only commands
+        # Admin commands are always answered in the admin's private chat, also in the test environment.
+        # Admin flows ask for text input (edit contexts), and those are only ever read in a private chat.
         if self._is_admin(user_id):
-            admin_target_chat = chat_id if not is_group_chat or self.environment == "test" else user_id
+            admin_target_chat = user_id if is_group_chat else chat_id
 
             if command == "/setup_test_data":
                 return self.handlers["test"].handle_setup_test_data(admin_target_chat)

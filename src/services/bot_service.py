@@ -220,9 +220,12 @@ class BotService:
                 return self.command_router.route_command(chat_id, user_id, text, message_id)
 
             # Handle edit replies (when user responds to force reply).
-            # Edit contexts are keyed by chat and only created by admin flows, so in a
-            # group only the admin's reply may consume them.
-            context = self.db.get_edit_context_by_chat_id(chat_id) if user_id == self.admin_user_id else None
+            # Edit contexts are only created by admin flows and only ever read in the admin's private chat
+            # (positive chat id). In a group nothing is consumed, so a stray message there cannot be taken
+            # for the answer to an open prompt.
+            context = (
+                self.db.get_edit_context_by_chat_id(chat_id) if user_id == self.admin_user_id and chat_id > 0 else None
+            )
             if context:
                 logger.info(f"Found edit context for chat {chat_id}: {context.edit_type}")
                 # Handle multiple images in media group

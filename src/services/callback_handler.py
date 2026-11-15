@@ -392,9 +392,13 @@ class CallbackHandler:
             # must reply in the user's private chat, not the group, to avoid noise.
             reply_chat_id = user_id if is_group else chat_id
 
+            # Admin flows ask for text input in the admin's private chat only (edit contexts are never read
+            # in a group), so an admin tapping a button on an old message in a group continues there.
+            handler_chat_id = user_id if is_group and self._is_admin(user_id) else chat_id
+
             # Try router first (Phase 3 complete: all patterns migrated)
             context = {
-                "chat_id": chat_id,
+                "chat_id": handler_chat_id,
                 "user_id": user_id,
                 "message_id": message_id,
                 "reply_chat_id": reply_chat_id,
@@ -416,15 +420,15 @@ class CallbackHandler:
 
             # Special handlers for complex patterns
             if data.startswith("wd_"):
-                return self._handle_process_delivery_callbacks(chat_id, user_id, data)
+                return self._handle_process_delivery_callbacks(handler_chat_id, user_id, data)
             elif data.startswith("lc_"):
-                return self._handle_labeling_completion_callbacks(chat_id, user_id, data)
+                return self._handle_labeling_completion_callbacks(handler_chat_id, user_id, data)
             elif data.startswith("admin"):
-                return self._handle_admin_callbacks(chat_id, user_id, data)
+                return self._handle_admin_callbacks(handler_chat_id, user_id, data)
             elif data.startswith("cmd"):
-                return self._handle_command_callbacks(chat_id, user_id, data)
+                return self._handle_command_callbacks(handler_chat_id, user_id, data)
             elif data.startswith("page_"):
-                return self._handle_pagination_callbacks(chat_id, user_id, data)
+                return self._handle_pagination_callbacks(handler_chat_id, user_id, data)
 
             return {"status": "unknown_callback"}
 

@@ -340,6 +340,8 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
 
 - **Test**: All messages prefixed with "TEST - "
 - **Production**: Clean messages
+- Admin commands and admin button taps in a group are answered in the admin's private chat in both environments, so
+  text prompts (edit contexts) only ever exist in, and are only read from, the private chat
 - Environment-specific configuration via Parameter Store
 
 ## Resource Naming

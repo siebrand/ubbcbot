@@ -11,8 +11,28 @@ class EditContextRepository(BaseRepository):
     def __init__(self):
         super().__init__("edit-contexts")
 
+    def _contexts_for_chat(self, chat_id: int) -> list[dict]:
+        """All raw context items of a chat (follows pagination)"""
+        params: dict = {
+            "FilterExpression": "chat_id = :chat_id",
+            "ExpressionAttributeValues": {":chat_id": chat_id},
+        }
+        items: list[dict] = []
+        while True:
+            response = self.table.scan(**params)
+            items.extend(response.get("Items", []))
+            if "LastEvaluatedKey" not in response:
+                return items
+            params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+
     def create_edit_context(self, context: EditContext) -> bool:
+        """Store a context. A chat has at most one: a new prompt replaces any older one, so two open prompts
+        can never be mixed up (the answer always belongs to the latest prompt)."""
         try:
+            for old in self._contexts_for_chat(context.chat_id):
+                if old.get("context_id") != context.context_id:
+                    self.delete_edit_context(old["context_id"])
+
             item = self._prepare_item(context.__dict__)
             self.table.put_item(Item=item)
             return True
@@ -22,16 +42,15 @@ class EditContextRepository(BaseRepository):
 
     def get_edit_context_by_chat_id(self, chat_id: int) -> EditContext | None:
         try:
-            response = self.table.scan(
-                FilterExpression="chat_id = :chat_id", ExpressionAttributeValues={":chat_id": chat_id}
-            )
+            items = self._contexts_for_chat(chat_id)
+            if not items:
+                return None
 
-            if response["Items"]:
-                item = response["Items"][0]
-                if "created_at" in item and isinstance(item["created_at"], str):
-                    item["created_at"] = datetime.fromisoformat(item["created_at"])
-                return EditContext(**item)
-            return None
+            # Normally there is one. If an older leftover exists, the latest prompt wins.
+            item = max(items, key=lambda i: str(i.get("created_at", "")))
+            if "created_at" in item and isinstance(item["created_at"], str):
+                item["created_at"] = datetime.fromisoformat(item["created_at"])
+            return EditContext(**item)
         except Exception as e:
             logger.error(f"Error getting edit context: {e}")
             return None

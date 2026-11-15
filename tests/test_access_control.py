@@ -84,7 +84,8 @@ class TestWebhookSecretToken:
 
 
 class TestEditReplyAccess:
-    """Edit contexts belong to admin flows; other users' replies must not consume them"""
+    """Edit contexts belong to admin flows: other users' replies must not consume them, and nothing is
+    consumed in a group at all (only in the admin's private chat)"""
 
     @pytest.fixture
     def bot_service(self):
@@ -116,11 +117,18 @@ class TestEditReplyAccess:
         bot_service._handle_edit_reply.assert_not_called()
         bot_service.db.get_edit_context_by_chat_id.assert_not_called()
 
-    def test_admin_reply_handled(self, bot_service):
-        result = bot_service.process_update(self._message(user_id=ADMIN_ID))
+    def test_admin_reply_in_the_private_chat_handled(self, bot_service):
+        result = bot_service.process_update(self._message(user_id=ADMIN_ID, chat_id=ADMIN_ID))
 
         assert result == {"status": "handled"}
         bot_service._handle_edit_reply.assert_called_once()
+
+    def test_admin_message_in_a_group_is_never_taken_as_a_reply(self, bot_service):
+        result = bot_service.process_update(self._message(user_id=ADMIN_ID, chat_id=-100123))
+
+        assert result == {"status": "processed"}
+        bot_service._handle_edit_reply.assert_not_called()
+        bot_service.db.get_edit_context_by_chat_id.assert_not_called()
 
 
 class TestUpdateDeduplication:
