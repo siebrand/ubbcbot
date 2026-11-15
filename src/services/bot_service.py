@@ -188,12 +188,10 @@ class BotService:
             user_id = message["from"]["id"]
             message_id = message.get("message_id")
             text = message.get("text", "")
-            username = message["from"].get("username", "N/A")
-            first_name = message["from"].get("first_name", "N/A")
 
             # Log incoming command
             if text.startswith("/"):
-                logger.info(f"Command: {text.split()[0]} | User: {first_name} (@{username}) | ID: {user_id}")
+                logger.info(f"Command: {text.split()[0]} | User ID: {user_id}")
 
             # Register customer if not exists
             self._register_customer_if_needed(message["from"])
@@ -282,7 +280,7 @@ class BotService:
             username = user_data.get("username", "no_username")
             user_id = user_data.get("id")
 
-            logger.debug(f"Starting admin notification for user: {first_name} (@{username}) ID: {user_id}")
+            logger.debug(f"Starting admin notification for user ID: {user_id}")
 
             # Format display name
             display_name = first_name
@@ -322,9 +320,9 @@ class BotService:
             logger.info(f"Send message result to admin {self.admin_user_id}: {result}")
 
             if result.get("success"):
-                logger.info(f"Successfully sent new user notification to admin for user: {display_name} (@{username})")
+                logger.info(f"Successfully sent new user notification to admin for user ID: {user_id}")
             else:
-                logger.error(f"Failed to send new user notification to admin for user: {display_name} (@{username})")
+                logger.error(f"Failed to send new user notification to admin for user ID: {user_id}")
 
         except Exception as e:
             logger.error(f"Failed to send new user notification to admin: {e}")
@@ -341,7 +339,7 @@ class BotService:
         entity_id = context.entity_id
 
         # Log for debugging
-        logger.info(f"Processing edit reply: type={edit_type}, entity_id={entity_id}, text={text}")
+        logger.info(f"Processing edit reply: type={edit_type}, entity_id={entity_id}, text_length={len(text or '')}")
 
         # Handle image upload for offers
         if edit_type == "offer_image_upload" and message and "photo" in message:
@@ -373,11 +371,12 @@ class BotService:
             if message and "entities" in message and message["entities"]:
                 html_text = self.media_handler.convert_entities_to_html(text, message["entities"])
                 logger.info(
-                    f"Converting description - Original: {text}, HTML: {html_text}, Entities: {message['entities']}"
+                    f"Converting description: text_length={len(text or '')}, html_length={len(html_text)}, "
+                    f"entity_count={len(message['entities'])}"
                 )
                 return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, html_text])
             else:
-                logger.info(f"No entities found - storing plain text: {text}")
+                logger.info(f"No entities found - storing plain text: text_length={len(text or '')}")
                 return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, text])
         elif edit_type == "customer_first_name":
             return self.user_commands.handle_update_user_first_name(chat_id, [entity_id, text])

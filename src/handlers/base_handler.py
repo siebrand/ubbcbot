@@ -121,7 +121,7 @@ class BaseHandler:
         if self.environment == "prod" and chat_id < 0 and not force_group:
             # This is a group chat in production - we need user_id to send PM
             # For now, just log and don't send (caller should handle PM sending)
-            logger.info(f"Production group message blocked: {text[:50]}...")
+            logger.info(f"Production group message blocked: chat_id={chat_id}, text_length={len(text)}")
             return {"success": False}
 
         url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
@@ -134,10 +134,7 @@ class BaseHandler:
             data["reply_markup"] = reply_markup
 
         try:
-            if self.environment == "test":
-                logger.info(f"Sending message to chat {chat_id}: {text[:50]}...")
-
-            logger.info(f"DEBUG: message: chat_id: {chat_id}, force_group: {force_group}, text: {text[:100]}...")
+            logger.info(f"Sending message: chat_id={chat_id}, force_group={force_group}, text_length={len(text)}")
 
             response = requests.post(url, json=data, timeout=20)
             if self.environment == "test":
