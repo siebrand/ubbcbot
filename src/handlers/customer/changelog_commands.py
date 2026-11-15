@@ -14,6 +14,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Order Buttons in the Group</b> - Offer announcements in the group carry order buttons again; tapping one continues your order in your private chat, so the group itself stays quiet
 • <b>Announcements Stay Accurate</b> - Announcements are now also updated when wholesale processing sells an offer out, when a new box reopens a sold-out offer, when an admin changes the status by hand, and after an audit; cancelled and completed offers no longer show order buttons
 • <b>Privacy</b> - The privacy statement (<code>/privacy</code>) now explains how to request access and deletion of your data, and names, usernames and typed text are no longer written to the logs
+• <b>Ordering in the Group</b> - Typing <code>/order</code> or <code>/confirm_order</code> in the group now sends you to the private chat, where the bot can answer you
 
 <b>Admin-Facing Updates</b>
 • <b>New /delete_user Command</b> - Delete a customer record (right to be forgotten) after a confirmation. Refused while the customer has orders that are not delivered and paid, or a credit balance. Orders, credit transactions and purchase history are kept, without a name
@@ -22,11 +23,17 @@ class ChangelogCommands(BaseHandler):
 • <b>Private, Expiring Order Exports</b> - <code>/export_orders</code> now always sends the file to your private chat, also when asked in a group, and the file is removed from the chat again after about an hour
 • <b>Safer Offer Texts</b> - Offer names and descriptions with HTML tags that Telegram does not support are rejected up front with a hint, instead of failing when the offer is announced
 • <b>Clearer Admin Messages</b> - Customers without a name show as "Unknown" instead of "None", wholesale delivery buttons always give feedback, and a successful order update is no longer reported as failed
+• <b>Buttons Fixed</b> - Tapping an order in the <code>/cancel_order</code> list works again (it did nothing), the page buttons of <code>/list_boxes</code> work again, and <code>/list_guests</code> no longer fails
+• <b>/test_user_message</b> - Finds a customer by name, username or customer ID (approved customers only) and always answers, also when nothing or too many customers match
+• <b>/update_supplier_full_name</b> - Now also works as a typed command
+• <b>Safer CSV Import</b> - If a name in the file fits more than one customer, the whole file is refused and the lines are listed with the matching customers (name, username, ID); nothing is imported and no buttons are shown
+• <b>Paging Fixed</b> - The next-page button of <code>/list_offers sold_out</code> works again
 
 <b>Behind the Scenes</b>
 • <b>Data Export Service</b> - A separate DataExporter function builds the exports, backed by a new customer index on the purchase history
 • <b>Log Hygiene</b> - A central filter masks personal data in logs, and production logs only warnings and errors
 • <b>Quality Checks</b> - CI now runs type checking (blocking), security scanning and dependency auditing next to the tests, and dependency and tool updates are automated
+• <b>One Router, One Admin Check</b> - Every button and every typed command now goes through one router with a single admin check, and tests try each of them as every kind of user (admin, customer, not approved) in private chats and groups
 • <b>Group Member Check</b> - The group analysis script lists unapproved group members through the admin account""",
             },
             {
