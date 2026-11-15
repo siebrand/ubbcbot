@@ -262,7 +262,6 @@ class TestCallbackRouting:
         [
             ("confirm_process_wholesale_123_6", "offer", "handle_confirm_process_wholesale"),
             ("confirm_cancel_offer_456", "offer", "handle_confirm_cancel_offer"),
-            ("confirm_cancel_order_order789", "admin_order", "handle_confirm_cancel"),
             ("confirm_fulfill_123_12", "offer", "handle_confirm_fulfill"),
         ],
     )

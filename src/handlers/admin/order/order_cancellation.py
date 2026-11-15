@@ -218,26 +218,6 @@ class OrderCancellation(BaseOrderHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {"status": "success"}
 
-    def handle_confirm_cancel(self, chat_id: int, args: list) -> dict[str, Any]:
-        """Handle /confirm_cancel command - now called from button callback"""
-        error = self._validate_args(args, 1, "usage_confirm_cancel", chat_id)
-        if error:
-            return error
-
-        order_id = args[0]
-        order = self.db.get_order(order_id)
-
-        if not order:
-            self._send_message(chat_id, self._t("order_not_found"))
-            return {"status": "order_not_found"}
-
-        box = self.db.get_box(order.box_id)
-        if not box:
-            self._send_message(chat_id, self._t("box_not_found"))
-            return {"status": "box_not_found"}
-
-        return self._execute_cancel(order, box, chat_id)
-
     def handle_confirm_cancel_with_reason(self, chat_id: int, order_id: str, reason: str) -> dict[str, Any]:
         """Handle order cancellation with reason"""
         order = self.db.get_order(order_id)

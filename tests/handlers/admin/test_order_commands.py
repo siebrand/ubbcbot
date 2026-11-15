@@ -35,7 +35,6 @@ class TestAdminOrderCommands(unittest.TestCase):
         """Test that all cancellation methods are properly delegated"""
         methods = [
             "handle_cancel_order",
-            "handle_confirm_cancel",
             "handle_confirm_cancel_with_reason",
             "handle_cancel_order_user_select",
             "handle_cancel_orders_page",

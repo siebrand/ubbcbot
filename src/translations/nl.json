@@ -229,7 +229,6 @@
   "order_not_found": "❌ Bestelling niet gevonden",
   "order_already_cancelled": "❌ Bestelling al geannuleerd",
   "box_not_found": "❌ Colli niet gevonden",
-  "usage_confirm_cancel": "Gebruik: /confirm_cancel <bestelling_id>",
   "usage_order_for": "Gebruik: /order_for <gebruikersnaam> <aanbieding_id> [aantal]",
   "quantity_must_positive": "❌ Aantal moet positief zijn",
   "user_not_found_username": "❌ Gebruiker '{username}' niet gevonden",

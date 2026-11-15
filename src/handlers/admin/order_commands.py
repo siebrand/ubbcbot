@@ -32,9 +32,6 @@ class AdminOrderCommands(BaseHandler):
     def handle_cancel_order(self, chat_id: int, args: list) -> dict[str, Any]:
         return self.cancellation.handle_cancel_order(chat_id, args)
 
-    def handle_confirm_cancel(self, chat_id: int, args: list) -> dict[str, Any]:
-        return self.cancellation.handle_confirm_cancel(chat_id, args)
-
     def handle_confirm_cancel_with_reason(self, chat_id: int, order_id: str, reason: str) -> dict[str, Any]:
         return self.cancellation.handle_confirm_cancel_with_reason(chat_id, order_id, reason)
 

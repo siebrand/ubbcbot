@@ -165,42 +165,6 @@ class TestOrderCancellation(unittest.TestCase):
         # Verify cancel_order was called
         self.mock_db.cancel_order.assert_called()
 
-    @patch.object(OrderCancellation, "_send_message")
-    def test_handle_confirm_cancel_order_not_found(self, mock_send):
-        """/confirm_cancel for an unknown order reports it and cancels nothing"""
-        self.mock_db.get_order.return_value = None
-
-        result = self.handler.handle_confirm_cancel(123, ["missing"])
-
-        self.assertEqual(result["status"], "order_not_found")
-        mock_send.assert_called_once()
-        self.mock_db.cancel_order.assert_not_called()
-
-    @patch.object(OrderCancellation, "_send_message")
-    def test_handle_confirm_cancel_box_not_found(self, mock_send):
-        """/confirm_cancel for an order whose box is gone reports it and cancels nothing"""
-        self.mock_db.get_order.return_value = Mock(order_id="o1", box_id="b1")
-        self.mock_db.get_box.return_value = None
-
-        result = self.handler.handle_confirm_cancel(123, ["o1"])
-
-        self.assertEqual(result["status"], "box_not_found")
-        mock_send.assert_called_once()
-        self.mock_db.cancel_order.assert_not_called()
-
-    def test_handle_confirm_cancel_cancels_the_order(self):
-        """/confirm_cancel with a valid order and box must cancel the order"""
-        order = Mock(order_id="o1", box_id="b1")
-        box = Mock(box_id="b1")
-        self.mock_db.get_order.return_value = order
-        self.mock_db.get_box.return_value = box
-
-        with patch.object(OrderCancellation, "_execute_cancel", return_value={"status": "success"}) as mock_execute:
-            result = self.handler.handle_confirm_cancel(123, ["o1"])
-
-        mock_execute.assert_called_once_with(order, box, 123)
-        self.assertEqual(result, {"status": "success"})
-
 
 if __name__ == "__main__":
     unittest.main()

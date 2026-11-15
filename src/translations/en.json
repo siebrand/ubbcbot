@@ -230,7 +230,6 @@
   "order_not_found": "❌ Order not found",
   "order_already_cancelled": "❌ Order already cancelled",
   "box_not_found": "❌ Box not found",
-  "usage_confirm_cancel": "Usage: /confirm_cancel <order_id>",
   "usage_order_for": "Usage: /order_for <username> <offer_id> [quantity]",
   "quantity_must_positive": "❌ Quantity must be positive",
   "user_not_found_username": "❌ User '{username}' not found",
