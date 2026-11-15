@@ -32,7 +32,9 @@ class OrderRepository(BaseRepository):
             logger.error(f"Error getting order: {e}")
             return None
 
-    def get_orders_by_customer(self, customer_id: str) -> list[Order]:
+    def get_orders_by_customer(self, customer_id: str, strict: bool = False) -> list[Order]:
+        """Orders of a customer. ``strict`` re-raises database errors instead of returning an empty list,
+        for callers (the data export) that must not mistake a failed read for "no orders"."""
         try:
             # Follow pagination: a data export must contain every order, not just the first 1 MB
             params: dict[str, Any] = {
@@ -49,6 +51,8 @@ class OrderRepository(BaseRepository):
             return [Order(**item) for item in items]
         except Exception as e:
             logger.error(f"Error getting orders by customer: {e}")
+            if strict:
+                raise
             return []
 
     def get_orders_by_offer(self, offer_id: int) -> list[Order]:

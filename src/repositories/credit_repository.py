@@ -38,7 +38,9 @@ class CreditRepository(BaseRepository):
             logger.error(f"Error creating customer credit: {e}")
             return False
 
-    def get_customer_credit(self, customer_id: str) -> CustomerCredit | None:
+    def get_customer_credit(self, customer_id: str, strict: bool = False) -> CustomerCredit | None:
+        """Get the credit record. ``strict`` re-raises database errors instead of returning None,
+        for callers (the data export) that must not mistake a failed read for "no credit record"."""
         try:
             response = self.table.get_item(Key={"customer_id": customer_id})
             if "Item" in response:
@@ -46,6 +48,8 @@ class CreditRepository(BaseRepository):
             return None
         except Exception as e:
             logger.error(f"Error getting customer credit: {e}")
+            if strict:
+                raise
             return None
 
     def update_customer_credit(self, customer_id: str, updates: dict[str, Any]) -> bool:
@@ -131,7 +135,11 @@ class CreditRepository(BaseRepository):
             return []
 
     def get_all_credit_transactions_by_customer(self, customer_id: str) -> list[CreditTransaction]:
-        """Every credit transaction of a customer, oldest first (no limit, follows pagination)"""
+        """Every credit transaction of a customer, oldest first (no limit, follows pagination).
+
+        Database errors are raised, not turned into an empty list: the data export must fail
+        instead of silently leaving transactions out.
+        """
         try:
             params = {
                 "IndexName": "customer-index",
@@ -148,7 +156,7 @@ class CreditRepository(BaseRepository):
             return sorted(transactions, key=lambda t: str(t.created_at))
         except Exception as e:
             logger.error(f"Error getting all credit transactions: {e}")
-            return []
+            raise
 
     def get_customers_with_credit_balance(self, min_amount: Decimal | None = None) -> list[CustomerCredit]:
         try:

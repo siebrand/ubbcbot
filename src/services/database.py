@@ -236,8 +236,8 @@ class DynamoDBService:
 
         return order
 
-    def get_orders_by_customer(self, customer_id: str) -> list[Order]:
-        return self.order_repo.get_orders_by_customer(customer_id)
+    def get_orders_by_customer(self, customer_id: str, strict: bool = False) -> list[Order]:
+        return self.order_repo.get_orders_by_customer(customer_id, strict=strict)
 
     def get_orders_by_offer(self, offer_id: int) -> list[Order]:
         return self.order_repo.get_orders_by_offer(offer_id)
@@ -667,8 +667,8 @@ class DynamoDBService:
     def create_customer_credit(self, credit) -> bool:
         return self.credit_repo.create_customer_credit(credit)
 
-    def get_customer_credit(self, customer_id: str):
-        return self.credit_repo.get_customer_credit(customer_id)
+    def get_customer_credit(self, customer_id: str, strict: bool = False):
+        return self.credit_repo.get_customer_credit(customer_id, strict=strict)
 
     def update_customer_credit(self, customer_id: str, updates: dict[str, Any]) -> bool:
         return self.credit_repo.update_customer_credit(customer_id, updates)

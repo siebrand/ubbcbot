@@ -55,7 +55,12 @@ class OrderHistoryRepository(BaseRepository):
             return 0
 
     def get_events_by_customer(self, customer_id: str) -> list[OrderHistory]:
-        """All events of one customer, oldest first, via the customer-index (hash customer_id, range changed_at)"""
+        """All events of one customer, oldest first, via the customer-index (hash customer_id, range changed_at).
+
+        Database errors are raised, not turned into an empty list: right after the index is added to a
+        table with data it is still backfilling and cannot be read, and the data export must fail
+        then instead of delivering an export without purchase history.
+        """
         try:
             params = {
                 "IndexName": "customer-index",
@@ -71,7 +76,7 @@ class OrderHistoryRepository(BaseRepository):
             return [self._item_to_history(item) for item in items]
         except Exception as e:
             logger.error(f"Error getting events by customer: {e}")
-            return []
+            raise
 
     def get_events_by_type(
         self, event_type: str, start_date: datetime | None = None, end_date: datetime | None = None

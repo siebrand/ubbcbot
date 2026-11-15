@@ -70,8 +70,9 @@ class DataExportService:
         profile["last_data_export_at"] = _epoch_to_iso(customer.last_data_export_at)
 
         offer_names: dict[int, str | None] = {}
+        # Every read must succeed: a failed read must not turn into an export that looks complete
         orders = []
-        for order in sorted(self.db.get_orders_by_customer(customer_id), key=lambda o: str(o.created_at)):
+        for order in sorted(self.db.get_orders_by_customer(customer_id, strict=True), key=lambda o: str(o.created_at)):
             if order.offer_id not in offer_names:
                 offer = self.db.get_offer(order.offer_id)
                 offer_names[order.offer_id] = offer.name if offer else None
@@ -79,7 +80,7 @@ class DataExportService:
             entry["offer_name"] = offer_names[order.offer_id]
             orders.append(entry)
 
-        credit = self.db.get_customer_credit(customer_id)
+        credit = self.db.get_customer_credit(customer_id, strict=True)
         transactions = [
             {k: v for k, v in asdict(t).items() if k not in OMITTED_TRANSACTION_FIELDS}
             for t in self.db.get_all_credit_transactions_by_customer(customer_id)

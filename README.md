@@ -272,7 +272,12 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
 - **Expiry**: the sent file is tracked and deleted after an hour, exactly like the admin order exports (see "Export
   Expiry"). Customers should save the file first.
 - **Lookup by customer**: purchase history is read through the `customer-index` on the order history table. Adding that
-  index is the only table change; DynamoDB builds it for the existing rows on the first deploy.
+  index is the only table change; DynamoDB builds it for the existing rows on the first deploy. Until that backfill has
+  finished the index cannot be read ("Cannot read from backfilling global secondary index"): an export then fails with
+  an error message and does not count towards the monthly limit. Wait for the index to become ACTIVE before announcing
+  `/my_data`.
+- **Never incomplete**: every source (orders, credit balance, credit transactions, purchase history) must be read
+  successfully. A failed read fails the whole export instead of leaving that part out.
 - **Not included**: data Telegram keeps itself, technical logs (7 days) and short-lived message tracking records.
 
 ### Export Expiry

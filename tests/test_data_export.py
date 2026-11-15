@@ -22,6 +22,9 @@ from models.entities import (
     OrderHistory,
     OrderStatus,
 )
+from repositories.credit_repository import CreditRepository
+from repositories.order_history_repository import OrderHistoryRepository
+from repositories.order_repository import OrderRepository
 from services.command_router import CommandRouter
 from services.data_export import DATA_EXPORT_MIN_INTERVAL_SECONDS, DataExportService
 from services.database import DynamoDBService
@@ -204,6 +207,47 @@ class TestZipContents:
 
         assert customer.customer_id in readme
         assert "2026-11-15T12:00:00+00:00" in readme
+
+
+class TestStrictReads:
+    """A failed read must raise for the data export, never look like "no data"."""
+
+    @staticmethod
+    def _boom(*args, **kwargs):
+        raise RuntimeError("Cannot read from backfilling global secondary index: customer-index")
+
+    def test_history_by_customer_raises_when_the_index_cannot_be_read(self, db, customer):
+        db.order_history_repo.table = Mock(query=self._boom)
+
+        with pytest.raises(RuntimeError, match="backfilling"):
+            db.get_order_history_by_customer(customer.customer_id)
+
+    def test_all_credit_transactions_raise_when_they_cannot_be_read(self, db, customer):
+        db.credit_repo.transactions_table = Mock(query=self._boom)
+
+        with pytest.raises(RuntimeError):
+            db.get_all_credit_transactions_by_customer(customer.customer_id)
+
+    def test_strict_orders_raise_but_the_default_stays_forgiving(self, db, customer):
+        db.order_repo.table = Mock(query=self._boom)
+
+        with pytest.raises(RuntimeError):
+            db.get_orders_by_customer(customer.customer_id, strict=True)
+        assert db.get_orders_by_customer(customer.customer_id) == []  # existing callers are unaffected
+
+    def test_strict_credit_raises_but_the_default_stays_forgiving(self, db, customer):
+        db.credit_repo.table = Mock(get_item=self._boom)
+
+        with pytest.raises(RuntimeError):
+            db.get_customer_credit(customer.customer_id, strict=True)
+        assert db.get_customer_credit(customer.customer_id) is None
+
+    def test_the_export_service_does_not_swallow_a_failed_read(self, db, customer):
+        db.order_history_repo.table = Mock(query=self._boom)
+        service = DataExportService(db, lambda key, **p: key)
+
+        with pytest.raises(RuntimeError, match="backfilling"):
+            service.build_zip(customer)
 
 
 class TestMyDataCommand:
@@ -405,6 +449,33 @@ class TestDataExporterLambda:
             data_exporter.lambda_handler(later, None)
 
         assert int(db.get_customer(event["customer_id"]).last_data_export_at) == 1_000
+
+    @pytest.mark.parametrize(
+        "repository, method, message",
+        [
+            (
+                OrderHistoryRepository,
+                "get_events_by_customer",
+                "Cannot read from backfilling global secondary index: customer-index",
+            ),
+            (CreditRepository, "get_all_credit_transactions_by_customer", "throttled"),
+            (CreditRepository, "get_customer_credit", "throttled"),
+            (OrderRepository, "get_orders_by_customer", "throttled"),
+        ],
+        ids=["history-index-backfilling", "credit-transactions", "credit-balance", "orders"],
+    )
+    def test_an_unreadable_source_fails_the_export_instead_of_sending_it_incomplete(
+        self, db, populated, event, telegram, repository, method, message
+    ):
+        with patch.object(repository, method, side_effect=RuntimeError(message)):
+            result = data_exporter.lambda_handler(event, None)
+
+        assert result["statusCode"] == 500
+        assert self._documents(telegram) == []  # no zip, so no "complete looking" export with a hole in it
+        assert db.get_customer(event["customer_id"]).last_data_export_at is None  # the month is not used up
+        assert db.get_notification_messages_by_offer(EXPORT_OFFER_ID) == []
+        sent = [kw for url, kw in telegram if url.endswith("/sendMessage")]
+        assert sent and sent[0]["json"]["chat_id"] == USER_ID  # the customer is told it failed
 
     def test_customer_deleted_in_the_meantime_sends_nothing(self, db, populated, event, telegram):
         db.delete_customer(event["customer_id"])
