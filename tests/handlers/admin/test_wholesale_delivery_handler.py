@@ -1,7 +1,6 @@
 """Wholesale delivery handler: paths that used to fall through and return None.
 
-Every handler must return a result dict. The tests marked ``expectedFailure``
-document behavior that is fixed in the follow-up commit.
+Every handler must return a result dict.
 """
 
 import os
