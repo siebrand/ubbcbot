@@ -236,7 +236,7 @@ class BaseBoxWorkflowHandler(BaseHandler):
         logger.warning(f"Unknown back navigation target: {target} (args: {args})")
         return {"status": "unknown_target"}
 
-    def _edit_message(self, chat_id: int, text: str, reply_markup: dict[str, Any] = None) -> dict[str, Any]:
+    def _edit_message(self, chat_id: int, text: str, reply_markup: dict[str, Any] | None = None) -> dict[str, Any]:
         """Edit message with new content and keyboard - placeholder that sends new message
 
         Note: This is a simplified implementation. For proper message editing,

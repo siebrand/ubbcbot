@@ -246,7 +246,7 @@ class DynamoDBService:
         """Scan all boxes from DynamoDB with minimal fields for list_offers"""
         return self.box_repo.get_all_boxes()
 
-    def get_all_orders(self, statuses: list[str] = None) -> list[Order]:
+    def get_all_orders(self, statuses: list[str] | None = None) -> list[Order]:
         """Scan all orders with minimal fields for list_offers"""
         return self.order_repo.get_all_orders(statuses)
 

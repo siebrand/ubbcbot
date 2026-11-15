@@ -49,7 +49,7 @@ class BoxManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t("invalid_offer_id", chat_id))
             return {"status": "invalid_format"}
 
-    def handle_list_boxes(self, chat_id: int, args: list = None) -> dict[str, Any]:
+    def handle_list_boxes(self, chat_id: int, args: list | None = None) -> dict[str, Any]:
         """Handle /list_boxes command with pagination and optional status/offer filter"""
         # Handle None args for backward compatibility
         if args is None:

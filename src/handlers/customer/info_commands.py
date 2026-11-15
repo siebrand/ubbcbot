@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class InfoCommands(BaseHandler):
-    def handle_privacy(self, chat_id: int, user_id: int, args: list = None) -> dict[str, Any]:
+    def handle_privacy(self, chat_id: int, user_id: int, args: list | None = None) -> dict[str, Any]:
         """Handle /privacy command: reply with a link to the rendered privacy statement."""
         import os
 
@@ -20,7 +20,7 @@ class InfoCommands(BaseHandler):
         self._send_message(chat_id, message, parse_mode="HTML")
         return {"status": "success"}
 
-    def handle_start(self, chat_id: int, user_id: int, args: list = None) -> dict[str, Any]:
+    def handle_start(self, chat_id: int, user_id: int, args: list | None = None) -> dict[str, Any]:
         """Handle /start command with optional help section parameter"""
         import logging
 
@@ -48,7 +48,7 @@ class InfoCommands(BaseHandler):
 
         return {"status": "success"}
 
-    def handle_help(self, chat_id: int, user_id: int, args: list = None) -> dict[str, Any]:
+    def handle_help(self, chat_id: int, user_id: int, args: list | None = None) -> dict[str, Any]:
         """Handle /help command with optional section parameter"""
         section = args[0].lower() if args and len(args) > 0 else None
 
@@ -159,7 +159,11 @@ class InfoCommands(BaseHandler):
             )
 
     def _get_offer_capacity_info(
-        self, offer_id: int, user_id: int = None, boxes_by_offer: dict = None, orders_by_offer: dict = None
+        self,
+        offer_id: int,
+        user_id: int | None = None,
+        boxes_by_offer: dict | None = None,
+        orders_by_offer: dict | None = None,
     ):
         """Get order and capacity information for an offer using BoxStatusManager
 
@@ -271,7 +275,7 @@ class InfoCommands(BaseHandler):
             self._send_message(chat_id, self._t("failed_unsubscribe", user_id))
             return {"status": "error"}
 
-    def handle_list_offers(self, chat_id: int, user_id: int, args: list = None, page: int = 1) -> dict[str, Any]:
+    def handle_list_offers(self, chat_id: int, user_id: int, args: list | None = None, page: int = 1) -> dict[str, Any]:
         """Handle /list_offers command with optional status filtering"""
         offers = self.db.list_offers()
 
@@ -562,7 +566,9 @@ class InfoCommands(BaseHandler):
         self._send_message(chat_id, message, parse_mode="HTML")
         return {"status": "success"}
 
-    def handle_list_my_orders(self, chat_id: int, user_id: int, args: list = None, page: int = 1) -> dict[str, Any]:
+    def handle_list_my_orders(
+        self, chat_id: int, user_id: int, args: list | None = None, page: int = 1
+    ) -> dict[str, Any]:
         """Handle /list_my_orders command"""
         show_ids = args and len(args) > 0 and args[0].lower() == "id"
 
@@ -577,7 +583,7 @@ class InfoCommands(BaseHandler):
         base_handler = BaseOrderHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         return base_handler._show_customer_orders(chat_id, customer, page, show_order_ids=show_ids, user_id=user_id)
 
-    def handle_view_offer(self, chat_id: int, user_id: int, args: list = None) -> dict[str, Any]:
+    def handle_view_offer(self, chat_id: int, user_id: int, args: list | None = None) -> dict[str, Any]:
         """Handle offer details display and editing from deep link or command"""
         if not args:
             # Return same as list_offers without parameters

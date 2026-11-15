@@ -279,7 +279,7 @@ class UserCommands(BaseHandler):
         return self.update_utils.handle_customer_update(chat_id, args, "location")
 
     def handle_list_users(
-        self, chat_id: int, page: int = 1, status_filter: str = "all", search_string: str = None
+        self, chat_id: int, page: int = 1, status_filter: str = "all", search_string: str | None = None
     ) -> dict[str, Any]:
         """Handle /list_users command with pagination, filtering, and optional search"""
         # Get customers based on filter using cache

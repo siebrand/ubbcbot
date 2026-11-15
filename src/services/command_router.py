@@ -34,7 +34,7 @@ class CommandRouter:
         """Check if user is admin"""
         return user_id == self.admin_user_id
 
-    def route_command(self, chat_id: int, user_id: int, text: str, message_id: int = None) -> dict[str, Any]:
+    def route_command(self, chat_id: int, user_id: int, text: str, message_id: int | None = None) -> dict[str, Any]:
         """Route commands to appropriate handlers"""
         parts = text.split()
         command = parts[0].lower()

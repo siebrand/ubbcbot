@@ -60,7 +60,7 @@ class OrderRepository(BaseRepository):
             logger.error(f"Error getting orders by box: {e}")
             return []
 
-    def get_all_orders(self, statuses: list[str] = None) -> list[Order]:
+    def get_all_orders(self, statuses: list[str] | None = None) -> list[Order]:
         projection = "order_id, offer_id, quantity, #status, customer_id, box_id, unit_price, total_price"
         try:
             if statuses:

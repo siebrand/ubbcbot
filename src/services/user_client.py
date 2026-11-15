@@ -45,7 +45,7 @@ class UserClient:
         return _client
 
     async def send_message(
-        self, user_id: int, message: str, parse_mode: str = None, disable_web_page_preview: bool = False
+        self, user_id: int, message: str, parse_mode: str | None = None, disable_web_page_preview: bool = False
     ):
         """Send message from admin account to user"""
         client = await self.get_client()

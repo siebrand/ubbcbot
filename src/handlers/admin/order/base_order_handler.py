@@ -36,7 +36,7 @@ class BaseOrderHandler(BaseHandler):
         return name or self._t("unknown", user_id=None)
 
     def _show_customer_orders(
-        self, chat_id: int, customer, page: int = 1, show_order_ids: bool = False, user_id: int = None
+        self, chat_id: int, customer, page: int = 1, show_order_ids: bool = False, user_id: int | None = None
     ) -> dict[str, Any]:
         """Shared method to display customer orders with pagination"""
         orders = self.db.get_orders_by_customer(customer.customer_id)

@@ -62,7 +62,7 @@ class ValidationUtils:
         return matches
 
     def find_customer_with_disambiguation(
-        self, identifier: str, chat_id: int, callback_prefix: str, status_filter: str = None
+        self, identifier: str, chat_id: int, callback_prefix: str, status_filter: str | None = None
     ) -> tuple[Any | None, dict[str, Any] | None]:
         """Find customer with disambiguation UI if multiple matches"""
         if status_filter:

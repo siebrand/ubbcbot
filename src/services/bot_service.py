@@ -330,7 +330,7 @@ class BotService:
             logger.error(f"Failed to send new user notification to admin: {e}")
 
     def _handle_edit_reply(
-        self, chat_id: int, user_id: int, text: str, message: dict[str, Any] = None
+        self, chat_id: int, user_id: int, text: str, message: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Handle reply to edit prompt"""
         context = self.db.get_edit_context_by_chat_id(chat_id)

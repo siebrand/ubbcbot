@@ -44,7 +44,7 @@ class BaseHandler:
                 return self._load_translations("en")
             return {}
 
-    def _t(self, key: str, user_id: int = None, force_group_lang: bool = False, **params) -> str:
+    def _t(self, key: str, user_id: int | None = None, force_group_lang: bool = False, **params) -> str:
         """Translate message key to user language"""
         # Force Dutch for group messages
         if force_group_lang:
@@ -96,7 +96,12 @@ class BaseHandler:
         )
 
     def _send_message(
-        self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False
+        self,
+        chat_id: int,
+        text: str,
+        parse_mode: str | None = None,
+        reply_markup: dict | None = None,
+        force_group: bool = False,
     ) -> dict:
         """Send message to Telegram chat and return response with message_id"""
 
@@ -183,7 +188,7 @@ class BaseHandler:
             return False
 
     def _edit_message_text(
-        self, chat_id: int, message_id: int, text: str, parse_mode: str = None, reply_markup: dict = None
+        self, chat_id: int, message_id: int, text: str, parse_mode: str | None = None, reply_markup: dict | None = None
     ) -> dict:
         """Edit the text (and optionally inline keyboard) of an existing message.
 
@@ -230,13 +235,18 @@ class BaseHandler:
             return {"success": False, "not_found": False}
 
     def _send_message_simple(
-        self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False
+        self,
+        chat_id: int,
+        text: str,
+        parse_mode: str | None = None,
+        reply_markup: dict | None = None,
+        force_group: bool = False,
     ) -> bool:
         """Send message and return simple boolean for backward compatibility"""
         result = self._send_message(chat_id, text, parse_mode, reply_markup, force_group)
         return result.get("success", False)
 
-    def _send_document(self, chat_id: int, content: str, filename: str, caption: str = None) -> bool:
+    def _send_document(self, chat_id: int, content: str, filename: str, caption: str | None = None) -> bool:
         """Send document to Telegram chat"""
         from io import BytesIO
 
@@ -325,7 +335,7 @@ class BaseHandler:
         self._send_message(chat_id, self._t(success_key, user_id, **kwargs))
         return {"status": status}
 
-    def _send_photo(self, chat_id: int, photo_url: str, caption: str = None, force_group: bool = False) -> dict:
+    def _send_photo(self, chat_id: int, photo_url: str, caption: str | None = None, force_group: bool = False) -> dict:
         """Send photo to Telegram chat"""
         # Skip sending to guest users (they don't have Telegram)
         if chat_id == -1:
@@ -400,7 +410,7 @@ class BaseHandler:
             return {"success": False}
 
     def _find_customer_with_disambiguation(
-        self, identifier: str, chat_id: int, callback_prefix: str, status_filter: str = None
+        self, identifier: str, chat_id: int, callback_prefix: str, status_filter: str | None = None
     ):
         """Find customer with disambiguation UI if multiple matches"""
         customer, error = self.validator.find_customer_with_disambiguation(

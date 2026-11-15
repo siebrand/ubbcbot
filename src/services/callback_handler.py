@@ -633,7 +633,7 @@ class CallbackHandler:
         """Store edit context in DynamoDB for processing replies"""
         self.edit_context_manager.store_edit_context(chat_id, edit_type, entity_id)
 
-    def _answer_callback_query(self, query_id: str, text: str = None) -> bool:
+    def _answer_callback_query(self, query_id: str, text: str | None = None) -> bool:
         """Answer callback query to remove loading state; optional toast text.
 
         text shows a short popup to the tapping user only. The group sees nothing.
@@ -883,12 +883,17 @@ class CallbackHandler:
             self._base_handler = BaseHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         return self._base_handler
 
-    def _t(self, key: str, user_id: int = None, **params) -> str:
+    def _t(self, key: str, user_id: int | None = None, **params) -> str:
         """Translation helper for EditContextManager"""
         return self.base_handler._t(key, user_id, **params)
 
     def _send_message(
-        self, chat_id: int, text: str, parse_mode: str = None, reply_markup: dict = None, force_group: bool = False
+        self,
+        chat_id: int,
+        text: str,
+        parse_mode: str | None = None,
+        reply_markup: dict | None = None,
+        force_group: bool = False,
     ) -> dict:
         """Send message helper for EditContextManager"""
         return self.base_handler._send_message(chat_id, text, parse_mode, reply_markup, force_group)
