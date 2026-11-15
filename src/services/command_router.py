@@ -177,6 +177,8 @@ class CommandRouter:
                 return self.handlers["supplier"].handle_update_supplier_name(admin_target_chat, parts[1:])
             elif command == "/update_supplier_contact":
                 return self.handlers["supplier"].handle_update_supplier_contact(admin_target_chat, parts[1:])
+            elif command == "/update_supplier_full_name":
+                return self.handlers["supplier"].handle_update_supplier_full_name(admin_target_chat, parts[1:])
             elif command == "/create_offer":
                 return self.handlers["offer"].handle_create_offer(admin_target_chat, parts[1:])
             elif command == "/cancel_offer":
@@ -279,6 +281,8 @@ class CommandRouter:
             elif command == "/credit":
                 return self.handlers["credit"].handle_credit(admin_target_chat, parts[1:])
 
+        # Reached for a command that does not exist, and for an admin command typed by anyone but the admin.
+        # Both get no reply at all, so the bot does not reveal which admin commands exist.
         return {"status": "unknown_command"}
 
     def _handle_cancel_command(self, chat_id: int, user_id: int) -> dict[str, Any]:

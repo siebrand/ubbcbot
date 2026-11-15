@@ -176,6 +176,9 @@ ADMIN_COMMANDS = [
     admin_row("/update_supplier Acme", "supplier", "handle_update_supplier", AD, ARGS),
     admin_row("/update_supplier_name s1 New", "supplier", "handle_update_supplier_name", AD, ARGS),
     admin_row("/update_supplier_contact s1 a@b.c", "supplier", "handle_update_supplier_contact", AD, ARGS),
+    admin_row(
+        "/update_supplier_full_name s1 Acme Brewery BV", "supplier", "handle_update_supplier_full_name", AD, ARGS
+    ),
     admin_row("/create_offer Acme Pils 2.5 24", "offer", "handle_create_offer", AD, ARGS),
     admin_row("/cancel_offer 7", "offer", "handle_cancel_offer", AD, ARGS),
     admin_row("/create_box 7", "offer", "handle_create_box", AD, ARGS),
@@ -640,16 +643,6 @@ class TestCompleteness:
         )
 
         assert unrouted == []
-
-    @pytest.mark.xfail(
-        strict=True,
-        reason="BUG: /update_supplier_full_name is in the README, the help text and has a handler and a usage "
-        "message, but the router has no route for it (only the edit button reaches the handler)",
-    )
-    def test_update_supplier_full_name_is_routed(self):
-        env = make_router()
-
-        assert send(env, "/update_supplier_full_name s1 Acme Brewery BV") != UNKNOWN_COMMAND
 
     def test_handler_keys_used_by_the_router_exist(self):
         source = (ROOT / "src" / "services" / "command_router.py").read_text()
