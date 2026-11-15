@@ -49,7 +49,6 @@ class TestHandleDeliveryAction(WholesaleDeliveryHandlerTestBase):
         send.assert_called_once_with(CHAT_ID, self.handler._t("box_not_found"))
         self.assertEqual(result, {"status": "sent"})
 
-    @unittest.expectedFailure
     def test_unknown_action_returns_status(self):
         with patch.object(self.handler, "_send_message") as send:
             result = self.handler.handle_delivery_action(CHAT_ID, "bogus", "abcdef12", 1, "sup")
@@ -82,7 +81,6 @@ class TestHandlePartialAction(WholesaleDeliveryHandlerTestBase):
         send.assert_called_once_with(CHAT_ID, self.handler._t("box_not_found"))
         self.assertEqual(result, {"status": "sent"})
 
-    @unittest.expectedFailure
     def test_failed_delivery_is_reported_to_admin(self):
         with (
             patch.object(self.handler, "_process_box_delivery", return_value=False),
@@ -103,7 +101,6 @@ class TestHandleBackNavigation(WholesaleDeliveryHandlerTestBase):
         edit.assert_called_once()
         self.assertEqual(result, {"status": "edited"})
 
-    @unittest.expectedFailure
     def test_unknown_target_returns_status(self):
         with patch.object(self.handler, "_edit_message") as edit, patch.object(self.handler, "_send_message") as send:
             result = self.handler.handle_back_navigation(CHAT_ID, "nowhere")
@@ -112,7 +109,6 @@ class TestHandleBackNavigation(WholesaleDeliveryHandlerTestBase):
         edit.assert_not_called()
         send.assert_not_called()
 
-    @unittest.expectedFailure
     def test_target_with_missing_arguments_returns_status(self):
         for target in ("offers", "boxes"):
             with self.subTest(target), patch.object(self.handler, "_edit_message"):

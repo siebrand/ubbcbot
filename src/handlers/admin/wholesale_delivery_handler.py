@@ -159,6 +159,9 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         elif action == DeliveryAction.INCOMPLETE.value:
             return self._handle_incomplete_delivery(chat_id, box.box_id, total_units, offer_id, supplier_id_short)
 
+        logger.warning(f"Unknown delivery action: {action}")
+        return {"status": "unknown_action"}
+
     def _process_box_delivery(self, box_id: str, units_received: int, is_delayed: bool) -> bool:
         """Process a box delivery, then recompute the offer status.
 
@@ -325,6 +328,8 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
             )
             # Continue workflow by showing remaining boxes
             return self._continue_workflow_after_action(chat_id, box.box_id)
+
+        return self._send_message(chat_id, self._t("delivery_processing_failed"))
 
     def handle_complete_delivery(self, chat_id: int, offer_id: int, supplier_id_short: str) -> dict[str, Any]:
         """Handle complete delivery for all boxes in an offer"""
