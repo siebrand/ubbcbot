@@ -7,7 +7,7 @@ from typing import Any
 import boto3
 
 from handlers.base_handler import BaseHandler
-from models.entities import Box, Offer, Order, Supplier
+from models.entities import AuthorizationStatus, Box, Offer, Order, Supplier
 from services.box_status_manager import BoxStatusManager
 
 logger = logging.getLogger()
@@ -99,15 +99,17 @@ class TestCommands(BaseHandler):
         """Handle /test_user_message <customer> <text> - sends a message from the admin's own account.
 
         The customer is found like in the other admin commands (name, username, customer ID prefix, partial
-        match). A Telegram user ID that is not a customer still works. Several matches are refused with a list:
-        a button cannot carry the message text, so the admin repeats the command with a more specific name.
+        match), among approved customers only. A Telegram user ID that is not a customer still works. Several
+        matches are refused with a list: a button cannot carry the message text, so the admin repeats the
+        command with a more specific name.
         """
         if len(args) < 2:
             self._send_message(chat_id, self._t("usage_test_user_message"))
             return {"status": "invalid_args"}
 
         identifier = args[0]
-        matches = self.validator.match_customers(identifier, self.validator.load_customers())
+        approved = self.validator.load_customers(AuthorizationStatus.APPROVED.value)
+        matches = self.validator.match_customers(identifier, approved)
         if len(matches) > 1:
             self._send_message(
                 chat_id,

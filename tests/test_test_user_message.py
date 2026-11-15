@@ -38,15 +38,32 @@ ALICE_B = Customer(
     first_name="Alice",
     last_name="Bakker",
     username="alice_b",
+    authorization_status=AuthorizationStatus.APPROVED.value,
+)
+CAREL_PENDING = Customer(
+    customer_id="dddddddd-4444-4444-8444-444444444444",
+    telegram_user_id=6001,
+    first_name="Carel",
+    last_name="Dekker",
+    username="carel",
     authorization_status=AuthorizationStatus.UNAUTHORIZED.value,
+)
+DIRK_REJECTED = Customer(
+    customer_id="eeeeeeee-5555-4555-8555-555555555555",
+    telegram_user_id=6002,
+    first_name="Dirk",
+    last_name="Evers",
+    username="dirk",
+    authorization_status=AuthorizationStatus.REJECTED.value,
 )
 
 
 @pytest.fixture
 def handler():
     customers = {
-        AuthorizationStatus.APPROVED.value: [SIEBRAND, ALICE_A],
-        AuthorizationStatus.UNAUTHORIZED.value: [ALICE_B],
+        AuthorizationStatus.APPROVED.value: [SIEBRAND, ALICE_A, ALICE_B],
+        AuthorizationStatus.UNAUTHORIZED.value: [CAREL_PENDING],
+        AuthorizationStatus.REJECTED.value: [DIRK_REJECTED],
     }
     db = Mock()
     db.get_customers_by_status.side_effect = lambda status: customers.get(status, [])
@@ -91,10 +108,26 @@ class TestFindingTheRecipient:
         assert result == {"status": "success"}
         assert _sent_to(handler) == SIEBRAND.telegram_user_id
 
-    def test_a_customer_who_is_not_approved_is_found_too(self, handler):
-        handler.handle_test_user_message(CHAT_ID, ["alice_b", "test"])
+    @pytest.mark.parametrize("identifier", ["carel", "Dekker", CAREL_PENDING.customer_id[:8], "dirk", "Evers"])
+    def test_only_approved_customers_are_taken_into_account(self, handler, identifier):
+        result = handler.handle_test_user_message(CHAT_ID, [identifier, "test"])
 
-        assert _sent_to(handler) == ALICE_B.telegram_user_id
+        assert result == {"status": "user_not_found"}
+        handler.lambda_client.invoke.assert_not_called()
+
+    def test_a_name_shared_with_a_customer_who_is_not_approved_is_not_ambiguous(self, handler):
+        handler._send_message.reset_mock()
+        handler.db.get_customers_by_status.side_effect = lambda status: {
+            AuthorizationStatus.APPROVED.value: [SIEBRAND],
+            AuthorizationStatus.UNAUTHORIZED.value: [
+                Customer(telegram_user_id=1, first_name="Siebrand", username="siebrand2")
+            ],
+        }.get(status, [])
+
+        result = handler.handle_test_user_message(CHAT_ID, ["siebrand", "test"])
+
+        assert result == {"status": "success"}
+        assert _sent_to(handler) == SIEBRAND.telegram_user_id
 
     def test_a_telegram_user_id_that_is_not_a_customer_is_used_as_it_is(self, handler):
         result = handler.handle_test_user_message(CHAT_ID, ["777000", "test"])
