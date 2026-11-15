@@ -14,8 +14,9 @@ client for messages sent from the admin's own Telegram account.
 ## Architecture
 - Entry: `src/handlers/webhook.py` (verifies `X-Telegram-Bot-Api-Secret-Token`) → `services/bot_service.py::process_update`
   - commands → `services/command_router.py` (authorization + admin check, then if/elif dispatch)
-  - inline buttons → `services/callback_handler.py`: `_authorize_callback` first, then regex routes in
-    `_register_routes`, then prefix fallbacks (`wd_`, `lc_`, `admin`, `cmd`, `page_`)
+  - inline buttons → `services/callback_handler.py`: `_authorize_callback` first, then every button through the
+    `CallbackRouter` (first match wins, so register specific patterns before broad ones). A callback that matches no
+    route returns `unknown_callback`. `tests/test_callback_dispatch.py` taps every button and checks the result.
   - free-text replies → edit contexts (`utils/edit_context.py`, table `edit-contexts`, keyed by chat) → `BotService._handle_edit_reply`
 - Handlers: `src/handlers/admin/**`, `src/handlers/customer/**`, all subclass `handlers/base_handler.py`
 - Data: `services/database.py` facade → `repositories/*` (one per DynamoDB table); models and status enums in `models/entities.py`

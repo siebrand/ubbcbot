@@ -442,6 +442,43 @@ class TestKeyboardRemoval:
         env.handler._edit_message_remove_keyboard.assert_called_once_with(CHAT, 9)
 
 
+# --- the route table itself -------------------------------------------------------------------------
+
+
+class TestRouteTable:
+    """The router takes the first pattern that matches, so a route can be dead because an earlier one shadows it"""
+
+    MIGRATED = re.compile(r"^\^(wd_|lc_|admin|cmd|edit_|page_)")
+
+    @staticmethod
+    def _samples() -> list[str]:
+        rows = WD + LC + ADMIN_PANEL + CMD + EDIT + PAGE_ADMIN + PAGE_BOXES + PAGE_CUSTOMER
+        samples = [data for data, _ in rows] + _callback_literals()
+        for param in ROUND_TRIPS:
+            prefix, enhanced = param.values[0], param.values[1]
+            keyboard = PaginationUtils.build_pagination_keyboard(3, 7, prefix, enhanced=enhanced)
+            samples += [b["callback_data"] for row in keyboard["inline_keyboard"] for b in row]
+        return samples
+
+    def test_every_migrated_route_is_the_first_match_for_some_real_callback(self):
+        routes = make_env().handler.router.routes
+        first_matches = set()
+        for data in self._samples():
+            for regex, _, pattern in routes:
+                if regex.match(data):
+                    first_matches.add(pattern)
+                    break
+
+        migrated = [pattern for _, _, pattern in routes if self.MIGRATED.match(pattern)]
+        assert len(migrated) > 90
+        assert [pattern for pattern in migrated if pattern not in first_matches] == []
+
+    def test_no_pattern_is_registered_twice(self):
+        patterns = [pattern for _, _, pattern in make_env().handler.router.routes]
+
+        assert len(patterns) == len(set(patterns))
+
+
 # --- startup ----------------------------------------------------------------------------------------
 
 
