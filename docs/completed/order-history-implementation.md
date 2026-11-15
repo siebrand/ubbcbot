@@ -84,10 +84,9 @@ events = audit_service.get_customer_events("cust-123")
 ```python
 # Get all payments in January 2024
 from datetime import datetime
+
 events = audit_service.get_events_by_type(
-    "PAYMENT_RECEIVED",
-    start_date=datetime(2024, 1, 1),
-    end_date=datetime(2024, 1, 31)
+    "PAYMENT_RECEIVED", start_date=datetime(2024, 1, 1), end_date=datetime(2024, 1, 31)
 )
 ```
 
@@ -108,8 +107,7 @@ revenue_by_customer = {}
 for event in payments:
     # Get order details from order_id
     order = db.get_order(event.order_id)
-    revenue_by_customer[event.customer_id] = \
-        revenue_by_customer.get(event.customer_id, 0) + order.total_price
+    revenue_by_customer[event.customer_id] = revenue_by_customer.get(event.customer_id, 0) + order.total_price
 
 # Sort and get top 10
 top_customers = sorted(revenue_by_customer.items(), key=lambda x: x[1], reverse=True)[:10]
@@ -204,6 +202,7 @@ top_customers = sorted(revenue_by_customer.items(), key=lambda x: x[1], reverse=
 4. **Query audit trail:**
    ```python
    from services.audit_service import AuditService
+
    audit = AuditService(db)
    history = audit.get_order_history("order-id")
    ```

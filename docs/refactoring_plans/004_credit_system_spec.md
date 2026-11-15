@@ -60,9 +60,9 @@ Customers may need credits for various reasons:
 @dataclass
 class CustomerCredit:
     customer_id: str  # Primary key
-    current_balance: Decimal = Decimal('0.0')  # Current credit balance
-    total_credits_issued: Decimal = Decimal('0.0')  # Lifetime total credits
-    total_credits_used: Decimal = Decimal('0.0')  # Lifetime total used
+    current_balance: Decimal = Decimal("0.0")  # Current credit balance
+    total_credits_issued: Decimal = Decimal("0.0")  # Lifetime total credits
+    total_credits_used: Decimal = Decimal("0.0")  # Lifetime total used
     last_updated: datetime = field(default_factory=lambda: datetime.now(UTC))
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 ```
@@ -81,9 +81,9 @@ class CreditTransaction:
     transaction_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     customer_id: str = ""
     transaction_type: str = ""  # CREDIT_ISSUED, ADJUSTMENT, APPLIED, MANUAL_ADD, MANUAL_SUBTRACT
-    amount: Decimal = Decimal('0.0')  # Positive for credits, negative for usage
-    balance_before: Decimal = Decimal('0.0')
-    balance_after: Decimal = Decimal('0.0')
+    amount: Decimal = Decimal("0.0")  # Positive for credits, negative for usage
+    balance_before: Decimal = Decimal("0.0")
+    balance_after: Decimal = Decimal("0.0")
     reason: str = ""  # Admin-provided reason
     created_by: int = 0  # Admin user ID
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -224,14 +224,9 @@ credit_actions = get_credit_transactions_by_admin(admin_id)
 def log_order_change(order_id, field, old, new, reason, admin_id):
     # Create order history entry
     history = OrderHistory(
-        order_id=order_id,
-        field_name=field,
-        old_value=str(old),
-        new_value=str(new),
-        reason=reason,
-        changed_by=admin_id
+        order_id=order_id, field_name=field, old_value=str(old), new_value=str(new), reason=reason, changed_by=admin_id
     )
-    
+
     # Save history
     create_order_history(history)
 ```
@@ -468,37 +463,37 @@ Payment Link: [link]
 def apply_credit_to_delivery(customer_id: str, delivery_total: Decimal) -> Dict:
     """Apply credit when orders transition LABELING_COMPLETED → AWAITING_PAYMENT"""
     credit_balance = get_customer_credit_balance(customer_id)
-    
+
     if credit_balance <= 0:
         return {
-            'original_total': delivery_total,
-            'credit_applied': Decimal('0.0'),
-            'payment_required': delivery_total,
-            'remaining_credit': Decimal('0.0')
+            "original_total": delivery_total,
+            "credit_applied": Decimal("0.0"),
+            "payment_required": delivery_total,
+            "remaining_credit": Decimal("0.0"),
         }
-    
+
     credit_to_apply = min(credit_balance, delivery_total)
     payment_required = delivery_total - credit_to_apply
     remaining_credit = credit_balance - credit_to_apply
-    
+
     # Create APPLIED transaction
     create_credit_transaction(
         customer_id=customer_id,
-        transaction_type='APPLIED',
+        transaction_type="APPLIED",
         amount=-credit_to_apply,  # Negative for usage
         balance_before=credit_balance,
         balance_after=remaining_credit,
-        reason=f"Applied to delivery"
+        reason=f"Applied to delivery",
     )
-    
+
     # Update customer credit balance
     update_customer_credit_balance(customer_id, remaining_credit)
-    
+
     return {
-        'original_total': delivery_total,
-        'credit_applied': credit_to_apply,
-        'payment_required': payment_required,
-        'remaining_credit': remaining_credit
+        "original_total": delivery_total,
+        "credit_applied": credit_to_apply,
+        "payment_required": payment_required,
+        "remaining_credit": remaining_credit,
     }
 ```
 
@@ -757,38 +752,35 @@ Customer has been notified.
 ```python
 class CreditCache:
     """In-memory cache for customer credit balances"""
-    
+
     _cache = {}  # {customer_id: {'balance': Decimal, 'timestamp': datetime}}
     _ttl_seconds = 300  # 5 minutes
-    
+
     @classmethod
     def get_balance(cls, customer_id: str, db_service) -> Optional[Decimal]:
         """Get credit balance from cache or database"""
         # Check cache
         if customer_id in cls._cache:
             cached = cls._cache[customer_id]
-            age = (datetime.now(UTC) - cached['timestamp']).total_seconds()
+            age = (datetime.now(UTC) - cached["timestamp"]).total_seconds()
             if age < cls._ttl_seconds:
-                return cached['balance']
-        
+                return cached["balance"]
+
         # Cache miss - fetch from database
         credit = db_service.get_customer_credit(customer_id)
-        balance = credit.current_balance if credit else Decimal('0.0')
-        
+        balance = credit.current_balance if credit else Decimal("0.0")
+
         # Update cache
-        cls._cache[customer_id] = {
-            'balance': balance,
-            'timestamp': datetime.now(UTC)
-        }
-        
+        cls._cache[customer_id] = {"balance": balance, "timestamp": datetime.now(UTC)}
+
         return balance
-    
+
     @classmethod
     def invalidate(cls, customer_id: str):
         """Invalidate cache for specific customer"""
         if customer_id in cls._cache:
             del cls._cache[customer_id]
-    
+
     @classmethod
     def invalidate_all(cls):
         """Clear entire cache"""

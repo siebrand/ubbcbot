@@ -57,8 +57,7 @@ db.mark_order_paid_with_audit(order_id, admin_id=<ADMIN_USER_ID>)
 db.cancel_order_with_audit(order_id, admin_id, "Customer changed mind")
 
 # Price adjustment with refund
-db.adjust_order_price_with_audit(order_id, new_price, admin_id, 
-                                  "Defective product", credit_txn_id)
+db.adjust_order_price_with_audit(order_id, new_price, admin_id, "Defective product", credit_txn_id)
 
 # Payment processing
 db.mark_order_paid_with_audit(order_id, admin_id)
@@ -76,7 +75,7 @@ db.update_order(order_id, {'status': 'ready_for_labeling'},
 
 ```python
 # System updates (delivery notifications, etc.)
-db.update_order(order_id, {'delivery_notification_sent': True})
+db.update_order(order_id, {"delivery_notification_sent": True})
 # admin_id defaults to 0 (system), no audit log created for non-significant fields
 ```
 
@@ -91,7 +90,7 @@ db.orders_table.update_item(Key={'order_id': order_id}, ...)
 
 ```python
 # WRONG - no audit context
-db.update_order(order_id, {'status': 'cancelled'})
+db.update_order(order_id, {"status": "cancelled"})
 
 # RIGHT - use transaction method
 db.cancel_order_with_audit(order_id, admin_id, reason)
@@ -120,7 +119,7 @@ db.cancel_order_with_audit(order_id, admin_id, reason)
 
 **Before:**
 ```python
-db.update_order(order_id, {'status': 'cancelled'})
+db.update_order(order_id, {"status": "cancelled"})
 ```
 
 **After:**

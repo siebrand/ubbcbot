@@ -18,7 +18,7 @@ Create a `BaseRepository` class to handle common DynamoDB operations (connection
 ```python
 class BaseRepository:
     def __init__(self, table_name: str):
-        self.dynamodb = boto3.resource('dynamodb')
+        self.dynamodb = boto3.resource("dynamodb")
         self.table = self.dynamodb.Table(table_name)
 
     def _prepare_item(self, item: Dict) -> Dict:

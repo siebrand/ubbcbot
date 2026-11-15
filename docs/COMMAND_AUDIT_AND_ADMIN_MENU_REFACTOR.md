@@ -7,6 +7,7 @@
 Add dynamic counts to menu titles:
 ```python
 "⏳ Pending Approvals (3)"
+
 "📦 Process Wholesale Order (2 ready)"
 "🚚 Process Delivery (5 boxes)"
 "⚠️ Failed Notifications (1)"
@@ -40,15 +41,15 @@ Shorter commands for frequent operations:
 ```python
 def handle_admin_users(self, chat_id: int, user_id: int) -> Dict[str, Any]:
     """Show user management options with status indicators"""
-    
+
     # Get counts
     pending_count = self.db.count_pending_users()
-    
+
     # Build message with status
-    message = self._t('admin_users_menu_enhanced', user_id)
+    message = self._t("admin_users_menu_enhanced", user_id)
     if pending_count > 0:
         message += f"\n\n⏳ Pending Approvals: {pending_count}"
-    
+
     # ... rest of implementation
 ```
 

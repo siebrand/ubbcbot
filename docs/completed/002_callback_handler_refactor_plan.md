@@ -66,8 +66,8 @@ Handlers (e.g., in `src/handlers/admin/order_commands.py`) should register their
     pattern=r"^order_for_quantity_(\d+)_(\d+)_(\d+)$",
     aliases=[
         r"^ofq_(\d+)_(\d+)_(\d+)$",  # Short form
-        r"^oq_(\d+)_(\d+)_(\d+)$"    # Ultra-short form
-    ]
+        r"^oq_(\d+)_(\d+)_(\d+)$",  # Ultra-short form
+    ],
 )
 def handle_order_quantity(self, match, chat_id, user_id):
     customer_id, offer_id, qty = match.groups()
@@ -135,7 +135,7 @@ This allows:
     Replace the giant `if/elif` in `CallbackHandler.handle_callback_query` with:
     ```python
     def handle_callback_query(self, callback_query):
-        data = callback_query['data']
+        data = callback_query["data"]
         if self.router.dispatch(data, context):
             return
         # fallback to legacy handler (remove after full migration)
@@ -174,11 +174,11 @@ For every block of logic moved from the `if/elif` chain:
         router = CallbackRouter()
         handler = Mock()
         router.register(r"^order_for_quantity_(\d+)_(\d+)_(\d+)$", handler)
-        
+
         router.dispatch("order_for_quantity_123_456_5", context)
-        
+
         handler.assert_called_with(match_object, context)
-        assert match_object.groups() == ('123', '456', '5')
+        assert match_object.groups() == ("123", "456", "5")
     ```
 3.  **Implement Handler:** Move the logic to the registered function.
 4.  **Verify Integration:** Ensure the `CallbackHandler` delegates to the router for this pattern.

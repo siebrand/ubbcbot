@@ -107,7 +107,7 @@ db.mark_order_paid_with_audit(order_id, admin_id=<ADMIN_USER_ID>)
 **Order cancellation handlers:**
 ```python
 # OLD
-db.update_order(order_id, {'status': 'cancelled'})
+db.update_order(order_id, {"status": "cancelled"})
 
 # NEW
 db.cancel_order_with_audit(order_id, admin_id, reason)
@@ -116,7 +116,7 @@ db.cancel_order_with_audit(order_id, admin_id, reason)
 **Payment processing:**
 ```python
 # OLD
-db.update_order(order_id, {'status': 'completed'})
+db.update_order(order_id, {"status": "completed"})
 
 # NEW
 db.mark_order_paid_with_audit(order_id, admin_id)

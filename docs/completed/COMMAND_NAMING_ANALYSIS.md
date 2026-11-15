@@ -489,9 +489,9 @@ All phases of the command naming standardization project have been successfully 
 
 ```python
 PERMANENT_ALIASES = {
-    'order': 'create_order',  # High-frequency customer command
-    'my_orders': 'list_my_orders',  # High-frequency customer command
-    'order_for': 'create_order_for',  # High-frequency admin command
+    "order": "create_order",  # High-frequency customer command
+    "my_orders": "list_my_orders",  # High-frequency customer command
+    "order_for": "create_order_for",  # High-frequency admin command
 }
 ```
 
@@ -554,26 +554,29 @@ Users and admins will need to use the new command names immediately after deploy
 ```python
 def test_create_supplier_routing():
     """Test /create_supplier routes correctly with parameters"""
-    assert route_command('create_supplier', ['TestSupplier']) == 'handle_create_supplier'
-    assert validate_params('create_supplier', ['TestSupplier']) == True
-    assert validate_params('create_supplier', []) == False  # Missing required param
+    assert route_command("create_supplier", ["TestSupplier"]) == "handle_create_supplier"
+    assert validate_params("create_supplier", ["TestSupplier"]) == True
+    assert validate_params("create_supplier", []) == False  # Missing required param
+
 
 def test_create_order_with_alias():
     """Test /order alias routes to create_order"""
-    assert route_command('order', ['123', '2']) == 'handle_create_order'
-    assert route_command('create_order', ['123', '2']) == 'handle_create_order'
+    assert route_command("order", ["123", "2"]) == "handle_create_order"
+    assert route_command("create_order", ["123", "2"]) == "handle_create_order"
+
 
 def test_list_boxes_with_filters():
     """Test /list_boxes with optional filter parameters"""
-    assert route_command('list_boxes', []) == 'handle_list_boxes'
-    assert route_command('list_boxes', ['active']) == 'handle_list_boxes'
-    assert route_command('list_boxes', ['123']) == 'handle_list_boxes'
-    assert validate_params('list_boxes', ['invalid_filter']) == False
+    assert route_command("list_boxes", []) == "handle_list_boxes"
+    assert route_command("list_boxes", ["active"]) == "handle_list_boxes"
+    assert route_command("list_boxes", ["123"]) == "handle_list_boxes"
+    assert validate_params("list_boxes", ["invalid_filter"]) == False
+
 
 def test_old_command_rejected():
     """Test old command names are rejected"""
-    assert route_command('add_supplier', ['Test']) == None
-    assert route_command('box_status', []) == None
+    assert route_command("add_supplier", ["Test"]) == None
+    assert route_command("box_status", []) == None
 ```
 
 ---
