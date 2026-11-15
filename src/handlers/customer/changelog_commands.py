@@ -8,6 +8,28 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2026-11-15",
+                "content": """<b>User-Facing Updates</b>
+• <b>New /my_data Command</b> - Download all the data the bot has about you as a zip with JSON files (profile, orders, credit, purchase history and a README). Available once every 30 days, sent to your private chat and removed again after about an hour, so save it first
+• <b>Order Buttons in the Group</b> - Offer announcements in the group carry order buttons again; tapping one continues your order in your private chat, so the group itself stays quiet
+• <b>Announcements Stay Accurate</b> - Announcements are now also updated when wholesale processing sells an offer out, when a new box reopens a sold-out offer, when an admin changes the status by hand, and after an audit; cancelled and completed offers no longer show order buttons
+• <b>Privacy</b> - The privacy statement (<code>/privacy</code>) now explains how to request access and deletion of your data, and names, usernames and typed text are no longer written to the logs
+
+<b>Admin-Facing Updates</b>
+• <b>New /delete_user Command</b> - Delete a customer record (right to be forgotten) after a confirmation. Refused while the customer has orders that are not delivered and paid, or a credit balance. Orders, credit transactions and purchase history are kept, without a name
+• <b>New /export_user_data and /clear_data_export Commands</b> - Build the data export for a customer who asked by email (sent to you privately), and reset a customer's 30-day limit when needed
+• <b>Customer ID Lookup</b> - <code>/update_user</code>, <code>/approve_user</code>, <code>/reject_user</code> and <code>/user_status</code> also accept a full or partial (8+ characters) customer ID, like order IDs
+• <b>Private, Expiring Order Exports</b> - <code>/export_orders</code> now always sends the file to your private chat, also when asked in a group, and the file is removed from the chat again after about an hour
+• <b>Safer Offer Texts</b> - Offer names and descriptions with HTML tags that Telegram does not support are rejected up front with a hint, instead of failing when the offer is announced
+• <b>Clearer Admin Messages</b> - Customers without a name show as "Unknown" instead of "None", wholesale delivery buttons always give feedback, and a successful order update is no longer reported as failed
+
+<b>Behind the Scenes</b>
+• <b>Data Export Service</b> - A separate DataExporter function builds the exports, backed by a new customer index on the purchase history
+• <b>Log Hygiene</b> - A central filter masks personal data in logs, and production logs only warnings and errors
+• <b>Quality Checks</b> - CI now runs type checking (blocking), security scanning and dependency auditing next to the tests, and dependency and tool updates are automated
+• <b>Group Member Check</b> - The group analysis script lists unapproved group members through the admin account""",
+            },
+            {
                 "title": "Up to 2026-11-06",
                 "content": """<b>User-Facing Updates</b>
 • <b>Offer Announcements Stay Up To Date</b> - When an offer sells out, is cancelled, or becomes available again, the announcement in the group and the one sent to you is updated automatically: a 🔴 marker appears for sold out, ⛔ for cancelled, and the order buttons are removed so you can't tap "order" on something that's gone
