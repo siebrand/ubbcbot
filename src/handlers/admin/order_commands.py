@@ -38,6 +38,9 @@ class AdminOrderCommands(BaseHandler):
     def handle_cancel_order_user_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
         return self.cancellation.handle_cancel_order_user_select(chat_id, customer_id)
 
+    def handle_cancel_order_by_id(self, chat_id: int, order_id: str) -> dict[str, Any]:
+        return self.cancellation.handle_cancel_order_by_id(chat_id, order_id)
+
     def handle_cancel_orders_page(self, chat_id: int, customer_id: str, page: int) -> dict[str, Any]:
         return self.cancellation.handle_cancel_orders_page(chat_id, customer_id, page)
 

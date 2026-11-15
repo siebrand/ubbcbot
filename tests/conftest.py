@@ -6,6 +6,9 @@ import pytest
 from moto import mock_aws
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
+sys.path.append(
+    os.path.abspath(os.path.dirname(__file__))
+)  # helper modules next to the tests (after src: tests/handlers must not shadow it)
 
 
 @pytest.fixture(scope="function")

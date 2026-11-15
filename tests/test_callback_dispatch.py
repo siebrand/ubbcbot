@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, call
 
 import pytest
+from handler_classes import handler_mock_spec
 
 from services.callback_handler import CUSTOMER_CALLBACK_PATTERN, CallbackHandler
 from utils.pagination import PaginationUtils
@@ -98,7 +99,8 @@ def C(key: str, *calls) -> Calls:
 
 
 def make_env(approved: bool = True):
-    handlers = {key: Mock(name=key) for key in HANDLER_KEYS}
+    # A mock that only has the methods of the real class: a route to a method that does not exist fails here
+    handlers = {key: Mock(name=key, spec=handler_mock_spec(key)) for key in HANDLER_KEYS}
     db = Mock()
     status = "approved" if approved else "unauthorized"
     db.get_customer_by_telegram_id.return_value = Mock(authorization_status=status, language="nl")
@@ -641,6 +643,17 @@ def _callback_literals() -> list[str]:
 
 
 UNKNOWN_STATUSES = {"unknown_callback", "unknown_edit", "unknown_pagination_type", "invalid_pagination", "error"}
+
+
+class TestRoutesCallExistingMethods:
+    def test_every_handler_method_that_a_route_calls_exists_on_the_real_class(self):
+        """A route to a method that does not exist only fails when a button is tapped, and the error is just logged"""
+        source = (SRC / "services" / "callback_handler.py").read_text()
+
+        called = set(re.findall(r'self\.handlers\["(\w+)"\]\.(\w+)', source))
+
+        assert len(called) > 50
+        assert sorted(f"{key}.{method}" for key, method in called if method not in handler_mock_spec(key)) == []
 
 
 class TestEveryBuiltButtonIsDispatched:

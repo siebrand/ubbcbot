@@ -95,12 +95,6 @@ class CallbackHandler:
             lambda match, ctx: self.handlers["offer"].handle_confirm_cancel_offer(ctx["chat_id"], [match.group(1)]),
         )
         self.router.register(
-            r"^confirm_fulfill_(\d+)_(\d+)$",
-            lambda match, ctx: self.handlers["offer"].handle_confirm_fulfill(
-                ctx["chat_id"], [match.group(1), match.group(2)]
-            ),
-        )
-        self.router.register(
             r"^confirm_order_(\d+)_(\d+)$",
             lambda match, ctx: self.handlers["customer_order"].handle_confirm_order(
                 ctx["reply_chat_id"], ctx["user_id"], [match.group(1), match.group(2)]
