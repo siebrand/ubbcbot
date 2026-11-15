@@ -97,6 +97,16 @@ class BaseHandler:
             .replace("'", "&#x27;")
         )
 
+    def _html_customer_name(self, customer) -> str:
+        """Full name of a customer, escaped for use in an HTML message (parse_mode HTML).
+
+        Names come from Telegram or from the admin, so they must never reach an HTML message raw: a
+        "<" makes Telegram reject the whole message and markup in a name could inject formatting or
+        links. Falls back to the localized "Unknown" when the customer has no name.
+        """
+        name = " ".join(part for part in (customer.first_name, customer.last_name) if part) if customer else ""
+        return self._escape_html(name) if name else self._t("unknown", user_id=None)
+
     def _send_message(
         self,
         chat_id: int,

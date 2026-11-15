@@ -251,10 +251,9 @@ class OrderStatusManagement(BaseOrderHandler):
 
         # Send from admin account (not bot) for regular customers
         if customer.is_guest:
-            # For guests, send to admin with customer context
-            admin_message = (
-                f"🔔 {self._t('payment_reminder_for', user_id=None, customer_name=customer_name)}\n\n{message}"
-            )
+            # For guests, send to admin with customer context (sent as HTML, so the name is escaped)
+            guest_name = self._html_customer_name(customer)
+            admin_message = f"🔔 {self._t('payment_reminder_for', user_id=None, customer_name=guest_name)}\n\n{message}"
             result = self._send_message(self.admin_user_id, admin_message, parse_mode="HTML")
         else:
             # For regular customers, send directly from admin account

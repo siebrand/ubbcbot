@@ -239,8 +239,9 @@ class InfoCommands(BaseHandler):
             self._send_message(chat_id, self._t(key, caller_user_id, name=customer_name))
             return {"status": "success"}
 
+        # This message is sent as HTML, so the name is escaped (the "nothing to order" one above is plain text)
         header_key = "fomo_header" if is_self else "fomo_header_for_user"
-        message = self._t(header_key, caller_user_id, name=customer_name) + "\n\n"
+        message = self._t(header_key, caller_user_id, name=self._html_customer_name(customer)) + "\n\n"
         for offer in unordered:
             message += self._format_offer_line(offer, "🍺", caller_user_id)
 

@@ -272,14 +272,15 @@ class CustomerOrderCommands(BaseHandler):
                 self._send_message(self.admin_user_id, message, parse_mode="HTML")
 
     def _get_public_name(self, customer):
-        """Get customer's public display name (Firstname L)"""
+        """Get customer's public display name (Firstname L), escaped for the HTML group message"""
         name_parts = []
         if customer.first_name:
             name_parts.append(customer.first_name)
         if customer.last_name:
             name_parts.append(f"{customer.last_name[0]}")
 
-        return " ".join(name_parts) if name_parts else customer.username or self._t("unknown", user_id=None)
+        name = " ".join(name_parts) if name_parts else customer.username or self._t("unknown", user_id=None)
+        return self._escape_html(name)
 
     def _build_order_notification_message(self, customer, offer, quantity):
         """Build order notification message"""

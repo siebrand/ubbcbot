@@ -123,7 +123,7 @@ class OrderCancellation(BaseOrderHandler):
             self._send_message(chat_id, self._t("box_not_found_for_order", chat_id, order_id=order.order_id))
             return {"status": "box_not_found"}
 
-        customer_name = f"{customer.first_name} {customer.last_name}" if customer else self._t("unknown", user_id=None)
+        customer_name = self._html_customer_name(customer)  # The message is sent as HTML
         offer_name = offer.name if offer else self._t("unknown", user_id=None)
 
         from utils.timezone import to_cet_string

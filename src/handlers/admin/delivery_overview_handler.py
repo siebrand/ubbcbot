@@ -181,8 +181,10 @@ class DeliveryOverviewHandler(BaseHandler):
 
             # For guests, send to admin; for regular customers, send from admin account
             if customer.is_guest:
+                # Sent as HTML: the guest's name is escaped
+                guest_name = self._html_customer_name(customer)
                 admin_message = (
-                    f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=customer_name)}\n\n{message}"
+                    f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=guest_name)}\n\n{message}"
                 )
                 return {
                     "user_id": int(self.admin_user_id),
@@ -282,6 +284,16 @@ class DeliveryOverviewHandler(BaseHandler):
 
         return message
 
+    def _admin_overview_text(self, customer, delivered_orders: list, message: str, name: str, delivered_total) -> str:
+        """Admin copy of a delivery overview. ``name`` must already be safe for the way the text is sent."""
+        if customer.is_guest:
+            return f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=name)}\n\n{message}"
+
+        text = f"✅ {name}\n"
+        for offer_name, offer_id, quantity, line_total in self._aggregate_order_lines(delivered_orders):
+            text += f"{quantity}x [{offer_id}] {offer_name} - €{line_total:.2f}\n"
+        return text + f"Total: €{delivered_total:.2f}"
+
     def _send_admin_notification(
         self,
         customer,
@@ -293,23 +305,21 @@ class DeliveryOverviewHandler(BaseHandler):
         delivered_total,
     ):
         """Send admin notification about delivery overview"""
-        if customer.is_guest:
-            admin_message = (
-                f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=customer_name)}\n\n{message}"
-            )
-        else:
-            admin_message = f"✅ {customer_name}\n"
-            for offer_name, offer_id, quantity, line_total in self._aggregate_order_lines(delivered_orders):
-                admin_message += f"{quantity}x [{offer_id}] {offer_name} - €{line_total:.2f}\n"
-            admin_message += f"Total: €{delivered_total:.2f}"
-
         if success:
+            # Sent as HTML: the customer's name comes from Telegram and must be escaped
+            admin_message = self._admin_overview_text(
+                customer, delivered_orders, message, self._html_customer_name(customer), delivered_total
+            )
             self._send_message(
                 self.admin_user_id,
                 self._t("admin_overview_sent_success", user_id=None, message=admin_message),
                 parse_mode="HTML",
             )
         else:
+            # Sent as plain text, so the name stays as it is
+            admin_message = self._admin_overview_text(
+                customer, delivered_orders, message, customer_name, delivered_total
+            )
             error_msg = self._t("unknown", user_id=None)
             self._send_message(
                 self.admin_user_id,
