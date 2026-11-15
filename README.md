@@ -237,8 +237,8 @@ Download CSV of all orders (default: active, full exports all fields)
 
 ## Static Analysis
 
-CI runs ruff, mypy, bandit, pip-audit and CodeQL on every pull request. To run
-the same checks locally:
+CI runs ruff, mypy, bandit and pip-audit on every pull request, and GitHub's
+CodeQL default setup scans the code. To run the first four locally:
 
 ```bash
 pip install -r tests/requirements.txt

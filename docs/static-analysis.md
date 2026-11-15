@@ -10,10 +10,16 @@ The project runs the same static analysis tools locally and in CI.
 | [bandit](https://bandit.readthedocs.io/)                    | Security issues in `src/`               | `[tool.bandit]` in `pyproject.toml`     | `static-analysis.yml` job `bandit`     | Yes                       |
 | [pip-audit](https://github.com/pypa/pip-audit)              | Known CVEs in pinned dependencies       | `requirements.txt` files                | `static-analysis.yml` job `pip-audit`  | Yes                       |
 | `python -m compileall`                                      | Syntax errors                           |                                         | `lint.yml`                             | Yes                       |
-| [CodeQL](https://codeql.github.com/)                        | Data-flow security and quality queries  | `.github/workflows/codeql.yml`          | `codeql.yml`                           | Reports to GitHub Security tab |
+| [CodeQL](https://codeql.github.com/)                        | Data-flow security queries              | GitHub default setup (repo settings)    | GitHub-managed, no workflow file       | Reports to GitHub Security tab |
 
-`static-analysis.yml` and `codeql.yml` also run weekly (Monday 05:00 UTC), so new
-advisories for pinned dependencies show up even without a push.
+`static-analysis.yml` also runs weekly (Monday 05:00 UTC), so new advisories for
+pinned dependencies show up even without a push.
+
+CodeQL uses GitHub's *default setup* (Settings → Advanced Security → Code scanning),
+which scans on pull requests, pushes and weekly. It cannot run locally. Do not add a
+CodeQL workflow file while default setup is enabled: GitHub rejects the results of
+the workflow ("analyses from advanced configurations cannot be processed when the
+default setup is enabled").
 
 ## Run locally
 
