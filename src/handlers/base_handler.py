@@ -7,6 +7,7 @@ import requests
 
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
+from services.export_expiry import ExportExpiryService
 from utils.pagination import PaginationUtils
 from utils.validation import ValidationUtils
 
@@ -23,6 +24,7 @@ class BaseHandler:
         self._translations: dict[str, dict[str, str]] = {}
         self.validator = ValidationUtils(db, self._t)
         self.box_status_manager = BoxStatusManager(db)
+        self.export_expiry = ExportExpiryService(db, self._delete_message_result)
 
     def _load_translations(self, lang: str) -> dict[str, str]:
         """Load translations for given language"""
@@ -166,6 +168,49 @@ class BaseHandler:
             logger.error(f"Error deleting message: {e}")
             return False
 
+    def _delete_message_result(self, chat_id: int, message_id: int) -> dict:
+        """Delete a message and report why it failed.
+
+        Returns ``success`` when Telegram deleted it. ``gone`` is True when retrying cannot help:
+        the message no longer exists, the chat is unknown, or it is too old to delete (48 hours).
+        Anything else (network error, 5xx, rate limit) is neither, so the caller may retry later.
+        """
+        if not self.telegram_token:
+            logger.error("Telegram token is empty")
+            return {"success": False, "gone": False}
+
+        url = f"https://api.telegram.org/bot{self.telegram_token}/deleteMessage"
+        data = {"chat_id": chat_id, "message_id": message_id}
+
+        try:
+            response = requests.post(url, json=data, timeout=20)
+            if response.status_code == 200:
+                return {"success": True, "gone": False}
+
+            lowered = (response.text or "").lower()
+            gone = response.status_code == 400 and (
+                "message to delete not found" in lowered
+                or "message can't be deleted" in lowered
+                or "chat not found" in lowered
+            )
+            if not gone:
+                logger.error(f"Failed to delete message: status {response.status_code}")
+            return {"success": False, "gone": gone}
+        except Exception as e:
+            logger.error(f"Error deleting message: {e}")
+            return {"success": False, "gone": False}
+
+    def expire_exports(self, force: bool = False) -> None:
+        """Delete exported files that have passed their expiry. Never raises.
+
+        Called from events that already happen (offer publish, message sync, admin updates, a new
+        export) instead of from a schedule. See services/export_expiry.py.
+        """
+        try:
+            self.export_expiry.sweep(force=force)
+        except Exception as e:
+            logger.error(f"Error expiring exports: {e}")
+
     def _set_message_reaction(self, chat_id: int, message_id: int, emoji: str = "👍") -> bool:
         """Set an emoji reaction on a Telegram message (e.g. 👍). Returns success."""
         if not self.telegram_token:
@@ -254,6 +299,10 @@ class BaseHandler:
 
     def _send_document(self, chat_id: int, content: str, filename: str, caption: str | None = None) -> bool:
         """Send document to Telegram chat"""
+        return self._send_document_message(chat_id, content, filename, caption)["success"]
+
+    def _send_document_message(self, chat_id: int, content: str, filename: str, caption: str | None = None) -> dict:
+        """Send a document and return ``success`` plus the ``message_id`` Telegram assigned to it"""
         from io import BytesIO
 
         if self.environment == "test" and caption:
@@ -261,7 +310,7 @@ class BaseHandler:
 
         if not self.telegram_token:
             logger.error("Telegram token is empty")
-            return False
+            return {"success": False}
 
         url = f"https://api.telegram.org/bot{self.telegram_token}/sendDocument"
 
@@ -281,10 +330,12 @@ class BaseHandler:
             response = requests.post(url, data=data, files=files, timeout=20)
             if self.environment == "test":
                 logger.info(f"Telegram API response: {response.status_code}")
-            return response.status_code == 200
+            if response.status_code != 200:
+                return {"success": False}
+            return {"success": True, "message_id": response.json()["result"]["message_id"]}
         except Exception as e:
             logger.error(f"Error sending document: {e}")
-            return False
+            return {"success": False}
 
     def _build_pagination_keyboard(
         self, current_page: int, total_pages: int, entity_type: str, filters: str = "", enhanced: bool = False
@@ -458,6 +509,9 @@ class BaseHandler:
         if not offer:
             logger.warning(f"sync_offer_messages: offer {offer_id} not found")
             return
+
+        # Event-based export expiry: piggyback on this message update
+        self.expire_exports()
 
         rows = self.db.get_notification_messages_by_offer(offer_id)
         group_rows = [r for r in rows if getattr(r, "kind", "group") == "group"]

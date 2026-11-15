@@ -636,5 +636,8 @@
   "delete_user_blocked_orders": "• {count} order(s) not yet delivered and paid:\n{orders}\nCancel or complete these orders first.",
   "delete_user_blocked_credit": "• Credit balance is €{balance}. Settle the balance first with /credit.",
   "delete_user_done": "✅ Customer {label} deleted. Orders, credit transactions and purchase history were kept.",
-  "delete_user_failed": "❌ Failed to delete customer {label}"
+  "delete_user_failed": "❌ Failed to delete customer {label}",
+  "export_expiry_notice": "🕐 This file expires after {minutes} minutes and is then removed from the chat.",
+  "export_sent_privately": "📨 The export was sent to you privately.",
+  "export_failed": "❌ Could not send the export. Make sure you have started a private chat with the bot."
 }

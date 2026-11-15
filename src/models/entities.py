@@ -128,13 +128,17 @@ class NotificationMessage:
     offer_id: int = 0
     chat_id: int = 0
     message_id: int = 0
-    kind: str = "group"  # "group" (channel announcement) or "subscriber" (DM)
+    kind: str = "group"  # "group" (channel announcement), "subscriber" (DM) or "export" (admin file, see below)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     # TTL: tracking rows self-expire 168h (7 days) after send. Both group and
     # subscriber rows use the same window because every message is edited (never
     # deleted) and may need reverting on sold_out -> active.
     ttl: int | None = None
+
+    # Export rows (offer_id 0) track a CSV sent to the admin chat. ``expires_at`` (epoch seconds)
+    # is when the message must be deleted; ``ttl`` is set later so the row outlives it.
+    expires_at: int | None = None
 
     def __post_init__(self):
         # DynamoDB returns numbers as Decimal. The Telegram request needs plain ints.
@@ -143,6 +147,8 @@ class NotificationMessage:
         self.message_id = int(self.message_id)
         if self.ttl is not None:
             self.ttl = int(self.ttl)
+        if self.expires_at is not None:
+            self.expires_at = int(self.expires_at)
 
         if not self.ttl:
             from datetime import timedelta

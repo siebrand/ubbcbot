@@ -187,11 +187,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/cancel_order <order_id>` - Cancel customer order (button confirmation)
 - `/list_user_orders <username>` - View orders for specific user
 - `/list_offer_orders <offer_id>` - View all orders for specific offer
--
-
-`/export_orders [active|cancelled|ordered|ready_for_labeling|labeling_completed|awaiting_payment|completed|all|full]` -
-Download CSV of all orders (default: active, full exports all fields)
-
+- `/export_orders [active|cancelled|ordered|ready_for_labeling|labeling_completed|awaiting_payment|completed|all|full]` - Download CSV of all orders (default: active, full exports all fields). The file is always sent to the admin's private chat, also when requested in a group, and is deleted from the chat one hour after it was sent (see "Export expiry" below)
 - `/list_pending` - View users awaiting approval (paginated with approve/reject buttons)
 - `/list_users` - View all customers (paginated with status filtering)
 - `/create_guest <first_name> [last_name] [contact]` - Add guest user (non-Telegram)
@@ -257,6 +253,20 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
 - **Parameter Store**: Secure token storage
 
 ## Features
+
+### Export Expiry
+
+- **Why**: an order export contains customer data and should not stay in the chat history.
+- **How**: every export sent by `/export_orders` is tracked in the notifications table (`kind` `export`, `offer_id` 0)
+  with an expiry one hour after it was sent. When it has expired the message is deleted from the chat.
+- **Event-based, no scheduler**: expired exports are cleared whenever one of these happens: a new export, an offer
+  publish or announcement (including import finalization), an offer message sync, or any update from the admin. The
+  sweep runs at most once a minute per warm Lambda container. An export is therefore removed at the first of those
+  events after the hour has passed, not exactly at the hour.
+- **Limits**: Telegram only lets a bot delete messages younger than 48 hours; an older export is dropped from tracking
+  and has to be removed by hand. Files the admin already downloaded stay on the admin's devices.
+- **Recommended**: set the chat auto-delete timer in the private chat with the bot (chat menu, "Auto-delete"). Only the
+  user can set it, not the bot. It removes anything that the event-based sweep has not cleared yet.
 
 ### Enhanced Wholesale Delivery
 

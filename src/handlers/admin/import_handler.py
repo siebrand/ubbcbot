@@ -276,6 +276,9 @@ class ImportHandler(NotificationHandler):
         """Announce offer to default group and subscribers"""
         import os
 
+        # Event-based export expiry: piggyback on the announcement
+        self.expire_exports()
+
         default_group_id = os.environ.get("DEFAULT_GROUP_ID")
 
         # Send to default group

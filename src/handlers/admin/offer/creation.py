@@ -192,6 +192,9 @@ class OfferCreationHandler(OfferBaseHandler):
 
     def _announce_offer(self, offer):
         """Announce new offer to default group and subscribers using rich format"""
+        # Event-based export expiry: piggyback on the publish
+        self.expire_exports()
+
         default_group_id = os.environ.get("DEFAULT_GROUP_ID")
 
         # Send rich offer message to default group (with order buttons)

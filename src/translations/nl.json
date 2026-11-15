@@ -636,5 +636,8 @@
   "delete_user_blocked_orders": "• {count} bestelling(en) nog niet geleverd en betaald:\n{orders}\nAnnuleer of rond deze bestellingen eerst af.",
   "delete_user_blocked_credit": "• Tegoedsaldo is €{balance}. Verreken het saldo eerst met /credit.",
   "delete_user_done": "✅ Klant {label} verwijderd. Bestellingen, tegoedtransacties en aankoopgeschiedenis zijn bewaard.",
-  "delete_user_failed": "❌ Kon klant {label} niet verwijderen"
+  "delete_user_failed": "❌ Kon klant {label} niet verwijderen",
+  "export_expiry_notice": "🕐 Dit bestand verloopt na {minutes} minuten en wordt dan uit de chat verwijderd.",
+  "export_sent_privately": "📨 De export is privé naar je verstuurd.",
+  "export_failed": "❌ Kon de export niet versturen. Zorg dat je een privéchat met de bot hebt gestart."
 }

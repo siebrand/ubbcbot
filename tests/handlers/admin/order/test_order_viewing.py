@@ -138,10 +138,12 @@ class TestOrderViewing(unittest.TestCase):
         self.assertEqual(result["status"], "no_orders")
         mock_send.assert_called_once()
 
-    @patch.object(OrderViewing, "_send_document")
+    @patch.object(OrderViewing, "_send_message")
+    @patch.object(OrderViewing, "_send_document_message")
     @patch.object(OrderViewing, "_generate_pick_list_csv")
-    def test_export_orders_by_status_success(self, mock_csv, mock_send_doc):
-        """Test successful order export"""
+    def test_export_orders_by_status_success(self, mock_csv, mock_send_doc, mock_send):
+        """Test successful order export: the file goes to the admin's private chat"""
+        mock_send_doc.return_value = {"success": True, "message_id": 55}
         # Mock customer with orders
         mock_customer = Mock()
         mock_customer.first_name = "John"
@@ -160,11 +162,18 @@ class TestOrderViewing(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         mock_send_doc.assert_called_once()
 
-        # Check CSV filename format
+        # Never the requesting chat (123): always the admin's private chat
         call_args = mock_send_doc.call_args[0]
+        self.assertEqual(call_args[0], self.admin_user_id)
+
+        # Check CSV filename format
         filename = call_args[2]
         self.assertTrue(filename.startswith("orders_test_active_"))
         self.assertTrue(filename.endswith(".csv"))
+
+        # The requesting chat only gets a note that the export was sent privately
+        mock_send.assert_called_once()
+        self.assertEqual(mock_send.call_args[0][0], 123)
 
     def test_status_filter_logic(self):
         """Test order status filtering logic"""

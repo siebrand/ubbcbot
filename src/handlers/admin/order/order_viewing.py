@@ -1,6 +1,7 @@
 from typing import Any
 
 from models.entities import AuthorizationStatus, OfferStatus, OrderStatus
+from services.export_expiry import EXPORT_LIFETIME_SECONDS
 
 from .base_order_handler import BaseOrderHandler
 
@@ -55,6 +56,9 @@ class OrderViewing(BaseOrderHandler):
 
     def _export_orders_by_status(self, chat_id: int, status_filter: str) -> dict[str, Any]:
         """Export orders by status filter"""
+        # An earlier export may have expired by now: clear it before creating a new one
+        self.expire_exports(force=True)
+
         # Get all customers and their orders
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
 
@@ -114,11 +118,28 @@ class OrderViewing(BaseOrderHandler):
         timestamp = to_cet_string(datetime.now(UTC), "%Y%m%d_%H%M%S")
         csv_filename = f"orders_{self.environment}_{status_filter}_{timestamp}.csv"
 
-        # Send CSV file
-        caption = self._t(
-            "pick_list_csv_caption", user_id=None, status=status_filter.replace("_", " ").title(), count=len(all_orders)
+        # The export holds customer data: it always goes to the admin's private chat, never to a
+        # group, and is deleted again after an hour (see services/export_expiry.py).
+        caption = (
+            self._t(
+                "pick_list_csv_caption",
+                user_id=None,
+                status=status_filter.replace("_", " ").title(),
+                count=len(all_orders),
+            )
+            + "\n"
+            + self._t("export_expiry_notice", user_id=None, minutes=EXPORT_LIFETIME_SECONDS // 60)
         )
-        self._send_document(chat_id, csv_content, csv_filename, caption)
+        result = self._send_document_message(self.admin_user_id, csv_content, csv_filename, caption)
+
+        if not result.get("success"):
+            self._send_message(chat_id, self._t("export_failed", user_id=None))
+            return {"status": "error"}
+
+        self.export_expiry.track(self.admin_user_id, result["message_id"])
+
+        if chat_id != self.admin_user_id:
+            self._send_message(chat_id, self._t("export_sent_privately", user_id=None))
 
         return {"status": "success"}
 

@@ -176,6 +176,8 @@ class BotService:
             if update_id is not None and not self.db.mark_update_processed(update_id):
                 return {"status": "duplicate"}
 
+            self._expire_exports_on_admin_update(update)
+
             # Handle callback queries (inline button presses)
             if "callback_query" in update:
                 return self.callback_handler.handle_callback_query(update["callback_query"])
@@ -234,6 +236,15 @@ class BotService:
         except Exception as e:
             logger.error(f"Error processing update: {e}")
             return {"status": "error", "error": str(e)}
+
+    def _expire_exports_on_admin_update(self, update: dict[str, Any]) -> None:
+        """Delete expired exports when the admin does something. Customer updates skip this check."""
+        try:
+            sender = (update.get("callback_query") or update.get("message") or {}).get("from") or {}
+            if sender.get("id") == self.admin_user_id:
+                self.base_handler.expire_exports()
+        except Exception as e:
+            logger.error(f"Error expiring exports: {e}")
 
     def _register_customer_if_needed(self, user_data: dict[str, Any]):
         """Register customer if they don't exist"""
