@@ -36,8 +36,8 @@ scripts/static-analysis.sh
 See [docs/static-analysis.md](docs/static-analysis.md) for the individual tools,
 how to run a single check, and how to suppress findings.
 
-CI runs the test suite and the static analysis checks on every pull request; the
-blocking ones must pass before merge. mypy is advisory for now.
+CI runs the test suite and the static analysis checks on every pull request; they
+must pass before merge.
 
 ## Coding standards
 

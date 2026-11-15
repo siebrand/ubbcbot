@@ -5,8 +5,7 @@
 #   scripts/static-analysis.sh [check ...]
 #
 # Checks: ruff, format, mypy, bandit, audit, compile. With no arguments all run.
-# Exit code is non-zero if any blocking check fails. mypy is advisory for now
-# (see docs/static-analysis.md) and only fails the run with STRICT_MYPY=1.
+# Exit code is non-zero if any check fails.
 set -u
 
 cd "$(dirname "$0")/.." || exit 1
@@ -32,7 +31,6 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 
 failed=()
-advisory=()
 
 run() {
   local name="$1"
@@ -41,9 +39,6 @@ run() {
   echo "==> $name: $*"
   if "$@"; then
     echo "OK   $name"
-  elif [ "$name" = "mypy" ] && [ "${STRICT_MYPY:-0}" != "1" ]; then
-    echo "WARN $name (advisory, not failing the run)"
-    advisory+=("$name")
   else
     echo "FAIL $name"
     failed+=("$name")
@@ -66,11 +61,8 @@ for check in "${CHECKS[@]}"; do
 done
 
 echo
-if [ ${#advisory[@]} -gt 0 ]; then
-  echo "Advisory findings: ${advisory[*]}"
-fi
 if [ ${#failed[@]} -gt 0 ]; then
   echo "Failed: ${failed[*]}"
   exit 1
 fi
-echo "All blocking checks passed."
+echo "All checks passed."

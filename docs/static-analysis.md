@@ -6,7 +6,7 @@ The project runs the same static analysis tools locally and in CI.
 |-------------------------------------------------------------|-----------------------------------------|-----------------------------------------|----------------------------------------|---------------------------|
 | [ruff](https://docs.astral.sh/ruff/) `check`                | Lint rules, import order                | `[tool.ruff]` in `pyproject.toml`       | `lint.yml` (via pre-commit)            | Yes                       |
 | ruff `format`                                               | Formatting                              | `[tool.ruff]` in `pyproject.toml`       | `lint.yml` (via pre-commit)            | Yes                       |
-| [mypy](https://mypy.readthedocs.io/)                        | Type errors                             | `[tool.mypy]` in `pyproject.toml`       | `static-analysis.yml` job `mypy`       | **No** (advisory, see below) |
+| [mypy](https://mypy.readthedocs.io/)                        | Type errors                             | `[tool.mypy]` in `pyproject.toml`       | `static-analysis.yml` job `mypy`       | Yes                       |
 | [bandit](https://bandit.readthedocs.io/)                    | Security issues in `src/`               | `[tool.bandit]` in `pyproject.toml`     | `static-analysis.yml` job `bandit`     | Yes                       |
 | [pip-audit](https://github.com/pypa/pip-audit)              | Known CVEs in pinned dependencies       | `requirements.txt` files                | `static-analysis.yml` job `pip-audit`  | Yes                       |
 | `python -m compileall`                                      | Syntax errors                           |                                         | `lint.yml`                             | Yes                       |
@@ -44,12 +44,7 @@ scripts/static-analysis.sh ruff format
 scripts/static-analysis.sh bandit
 ```
 
-The script exits non-zero if a blocking check fails. mypy findings are printed but
-do not fail the run unless you set `STRICT_MYPY=1`:
-
-```bash
-STRICT_MYPY=1 scripts/static-analysis.sh mypy
-```
+The script exits non-zero if any check fails.
 
 Or run the tools directly:
 
@@ -87,20 +82,6 @@ also bumped by Dependabot. The two ruff versions can differ briefly between
 the Dependabot PRs for each file.
 
 `pip-audit` queries the PyPI vulnerability service, so it needs network access.
-
-## mypy is advisory
-
-mypy currently reports 61 errors in 21 files (mostly `None` defaults on typed
-parameters and missing return statements). They pre-date this setup, so the `mypy`
-CI job has `continue-on-error: true`: it shows the findings without failing the
-pull request.
-
-To make mypy blocking once the errors are fixed:
-
-1. Remove `continue-on-error: true` from the `mypy` job in
-   `.github/workflows/static-analysis.yml`.
-2. Make `scripts/static-analysis.sh` fail on mypy by default (remove the
-   `STRICT_MYPY` branch).
 
 ## Suppressing findings
 

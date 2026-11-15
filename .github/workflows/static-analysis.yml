@@ -22,9 +22,6 @@ jobs:
   mypy:
     name: mypy (type check)
     runs-on: ubuntu-latest
-    # Advisory until the existing findings are fixed. Remove this line to make
-    # the job blocking. Results still show in the job log.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
