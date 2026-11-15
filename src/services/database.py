@@ -300,7 +300,7 @@ class DynamoDBService:
             audit = AuditService(self)
             new_order = self.get_order(order_id)
 
-            if "status" in updates and old_order.status != new_order.status:
+            if new_order and "status" in updates and old_order.status != new_order.status:
                 audit.log_payment_if_completed(new_order, old_order.status, new_order.status, admin_id)
 
             return True

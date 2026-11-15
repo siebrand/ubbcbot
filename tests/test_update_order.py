@@ -1,8 +1,4 @@
-"""DynamoDBService.update_order: audit logging after an order update.
-
-The tests marked ``expectedFailure`` document behavior that is fixed in the
-follow-up commit.
-"""
+"""DynamoDBService.update_order: audit logging after an order update."""
 
 import os
 import sys
@@ -61,7 +57,6 @@ class TestUpdateOrder(unittest.TestCase):
 
         self.assertFalse(result)
 
-    @unittest.expectedFailure
     def test_order_missing_after_successful_update_still_succeeds(self):
         """The update already happened; failing to re-read the order for the audit
         must not turn it into a reported failure."""
