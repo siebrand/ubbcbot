@@ -4,7 +4,7 @@ from typing import Any
 import requests
 
 from handlers.admin.offer.notifications import NotificationHandler
-from models.entities import AuthorizationStatus, BoxStatus, OfferStatus, Order
+from models.entities import BoxStatus, OfferStatus, Order
 from services.box_status_manager import BoxStatusManager
 from utils.csv_parser import CSVParser
 
@@ -89,7 +89,7 @@ class ImportHandler(NotificationHandler):
         rows = parse_result["rows"]
 
         # A name that fits more than one customer cannot be imported: refuse the whole file, import nothing
-        customers = self._load_import_customers()
+        customers = self.validator.load_customers()
         collisions = self._find_ambiguous_lines(rows, customers)
         if collisions:
             return self._refuse_ambiguous(chat_id, collisions)
@@ -154,17 +154,6 @@ class ImportHandler(NotificationHandler):
         self._send_message(chat_id, summary)
         return {"status": "success", "imported": success_count, "errors": len(errors)}
 
-    def _load_import_customers(self) -> list:
-        """All customers a CSV line may refer to, whatever their authorization status"""
-        customers: list = []
-        for status in (
-            AuthorizationStatus.APPROVED.value,
-            AuthorizationStatus.UNAUTHORIZED.value,
-            AuthorizationStatus.REJECTED.value,
-        ):
-            customers.extend(self.db.get_customers_by_status(status))
-        return customers
-
     def _find_customer_for_import(self, username: str, customers: list) -> tuple:
         """Find the customer for a CSV line - returns (customer, None) or (None, reason text).
 
@@ -192,12 +181,7 @@ class ImportHandler(NotificationHandler):
         shown = collisions[: self.MAX_AMBIGUOUS_LINES_SHOWN]
         message = self._t("import_refused_ambiguous", count=len(collisions))
         for line, username, matches in shown:
-            candidates = ", ".join(
-                f"{' '.join(p for p in (c.first_name, c.last_name) if p)} (@{c.username}, {str(c.customer_id)[:8]})"
-                for c in matches[: self.MAX_CANDIDATES_SHOWN]
-            )
-            if len(matches) > self.MAX_CANDIDATES_SHOWN:
-                candidates += ", …"
+            candidates = self._format_customer_candidates(matches, self.MAX_CANDIDATES_SHOWN)
             message += "\n" + self._t(
                 "import_line_error_ambiguous", line=line, username=username, count=len(matches), matches=candidates
             )

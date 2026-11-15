@@ -625,6 +625,8 @@
   "no_payment_needed": "✅ Geen betaling nodig! Je tegoed dekt deze levering.",
   "credit_notification": "💰 Tegoed Uitgegeven\n\nJe hebt een tegoed ontvangen van €{amount:.2f}\n\nReden: {reason}\n\nJe nieuwe tegoedsaldo: €{balance:.2f}\n\nDit tegoed wordt automatisch toegepast op je volgende levering.",
   "usage_credit": "Gebruik: /credit <gebruikersnaam> <bedrag> [reden]",
+  "usage_test_user_message": "Gebruik: /test_user_message <klant> <bericht>\nDe klant is een naam, gebruikersnaam of klant-ID (8+ tekens), of een Telegram-gebruikers-ID.",
+  "test_user_message_ambiguous": "❌ {count} klanten passen bij '{identifier}': {matches}\n\nHerhaal het commando met de volledige gebruikersnaam of het klant-ID (8 of meer tekens).",
   "reason_required_negative": "❌ Reden is verplicht voor negatieve bedragen",
   "invalid_amount": "❌ Ongeldig bedrag",
   "fomo_header": "Actieve aanbiedingen die je nog niet hebt besteld:",

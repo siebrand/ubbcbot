@@ -166,7 +166,7 @@ CUSTOMER_COMMANDS = [
 
 ADMIN_COMMANDS = [
     admin_row("/setup_test_data", "test", "handle_setup_test_data", AD),
-    admin_row("/test_user_message 42 hello there", "test", "handle_test_user_message", AD, 42, "hello there"),
+    admin_row("/test_user_message 42 hello there", "test", "handle_test_user_message", AD, ARGS),
     admin_row("/create_supplier Acme Bier", "supplier", "handle_create_supplier", AD, ARGS),
     admin_row("/archive_supplier Acme", "supplier", "handle_archive_supplier", AD, ARGS),
     admin_row("/list_suppliers", "supplier", "handle_list_suppliers", AD, 1, "active"),
@@ -412,7 +412,7 @@ class TestAuthorization:
         )
 
         env.base._send_message.reset_mock()
-        send(env, "/confirm_order 7 1", sender, GROUP)
+        send(env, "/fomo", sender, GROUP)
         env.base._send_message.assert_called_once_with(GROUP if environment == "test" else sender, "unauthorized")
         assert handler_calls(env) == [("auth", "handle_unauthorized_start")]
 
@@ -540,19 +540,6 @@ class TestSpecialCases:
         send(env, "/start help_orders", APPROVED_ID, GROUP)
 
         env.handlers["info"].handle_help.assert_called_once_with(APPROVED_ID, APPROVED_ID, ["orders"])
-
-    def test_test_user_message_without_a_user_id_raises(self):
-        """Characterization: the router does not validate this; process_update turns the exception into an error"""
-        env = make_router()
-
-        with pytest.raises(IndexError):
-            send(env, "/test_user_message")
-
-    def test_test_user_message_with_a_non_numeric_user_id_raises(self):
-        env = make_router()
-
-        with pytest.raises(ValueError):
-            send(env, "/test_user_message abc hello")
 
 
 class TestCancelCommand:

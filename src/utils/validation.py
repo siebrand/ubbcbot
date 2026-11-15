@@ -77,17 +77,24 @@ class ValidationUtils:
                 matches.append(customer)
         return matches
 
+    def load_customers(self, status_filter: str | None = None) -> list:
+        """All customers with the given authorization status, or of every status when no filter is given"""
+        if status_filter:
+            return list(self.db.get_customers_by_status(status_filter))
+        customers: list = []
+        for status in (
+            AuthorizationStatus.APPROVED.value,
+            AuthorizationStatus.UNAUTHORIZED.value,
+            AuthorizationStatus.REJECTED.value,
+        ):
+            customers.extend(self.db.get_customers_by_status(status))
+        return customers
+
     def find_customer_with_disambiguation(
         self, identifier: str, chat_id: int, callback_prefix: str, status_filter: str | None = None
     ) -> tuple[Any | None, dict[str, Any] | None]:
         """Find customer with disambiguation UI if multiple matches"""
-        if status_filter:
-            all_customers = self.db.get_customers_by_status(status_filter)
-        else:
-            all_customers = []
-            all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value))
-            all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.UNAUTHORIZED.value))
-            all_customers.extend(self.db.get_customers_by_status(AuthorizationStatus.REJECTED.value))
+        all_customers = self.load_customers(status_filter)
 
         matches = self.match_customers(identifier, all_customers)
 

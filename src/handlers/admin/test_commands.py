@@ -95,8 +95,39 @@ class TestCommands(BaseHandler):
             self._send_message(chat_id, self._t("test_data_failed"))
             return {"status": "error"}
 
-    def handle_test_user_message(self, chat_id: int, user_id: int, message: str) -> dict[str, Any]:
-        """Handle /test_user_message command - sends test message from admin account"""
+    def handle_test_user_message(self, chat_id: int, args: list) -> dict[str, Any]:
+        """Handle /test_user_message <customer> <text> - sends a message from the admin's own account.
+
+        The customer is found like in the other admin commands (name, username, customer ID prefix, partial
+        match). A Telegram user ID that is not a customer still works. Several matches are refused with a list:
+        a button cannot carry the message text, so the admin repeats the command with a more specific name.
+        """
+        if len(args) < 2:
+            self._send_message(chat_id, self._t("usage_test_user_message"))
+            return {"status": "invalid_args"}
+
+        identifier = args[0]
+        matches = self.validator.match_customers(identifier, self.validator.load_customers())
+        if len(matches) > 1:
+            self._send_message(
+                chat_id,
+                self._t(
+                    "test_user_message_ambiguous",
+                    identifier=identifier,
+                    count=len(matches),
+                    matches=self._format_customer_candidates(matches),
+                ),
+            )
+            return {"status": "ambiguous_customer"}
+        if matches:
+            user_id = int(matches[0].telegram_user_id)
+        elif identifier.isdigit() and int(identifier) > 0:
+            user_id = int(identifier)
+        else:
+            self._send_message(chat_id, self._t("user_not_found", identifier=identifier))
+            return {"status": "user_not_found"}
+
+        message = " ".join(args[1:])
         try:
             payload = {
                 "messages": [{"user_id": user_id, "message": message, "from_admin": True}],

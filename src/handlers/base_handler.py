@@ -483,6 +483,15 @@ class BaseHandler:
             logger.error(f"Error sending media group: {e}")
             return {"success": False}
 
+    def _format_customer_candidates(self, matches: list, limit: int = 5) -> str:
+        """'Name (@username, 1a2b3c4d), ...': enough to tell similar customers apart and to type the ID prefix"""
+        described = []
+        for customer in matches[:limit]:
+            name = " ".join(part for part in (customer.first_name, customer.last_name) if part)
+            described.append(f"{name} (@{customer.username}, {str(customer.customer_id)[:8]})")
+        candidates = ", ".join(described)
+        return candidates + ", …" if len(matches) > limit else candidates
+
     def _find_customer_with_disambiguation(
         self, identifier: str, chat_id: int, callback_prefix: str, status_filter: str | None = None
     ):
