@@ -653,7 +653,11 @@ class CallbackHandler:
         """Remove inline keyboard from a message"""
         try:
             url = f"https://api.telegram.org/bot{self.telegram_token}/editMessageReplyMarkup"
-            data = {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": []}}
+            data: dict[str, Any] = {
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "reply_markup": {"inline_keyboard": []},
+            }
             response = requests.post(url, json=data, timeout=20)
             return response.status_code == 200
         except Exception as e:

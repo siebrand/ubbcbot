@@ -130,7 +130,7 @@ class OrderViewing(BaseOrderHandler):
         csv_content = ",".join(headers) + "\n"
 
         # Group by customer and sort
-        customer_orders = {}
+        customer_orders: dict[str, list[tuple]] = {}
         for customer, order in orders_data:
             customer_key = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(
                 "unknown", user_id=None
@@ -363,7 +363,7 @@ class OrderViewing(BaseOrderHandler):
 
         # Add back to admin button
         keyboard_buttons.append([{"text": self._t("back_to_admin"), "callback_data": "admin:main"}])
-        keyboard = {"inline_keyboard": keyboard_buttons} if keyboard_buttons else None
+        keyboard = {"inline_keyboard": keyboard_buttons}
 
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {"status": "success"}

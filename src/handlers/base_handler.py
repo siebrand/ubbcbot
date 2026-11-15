@@ -19,8 +19,8 @@ class BaseHandler:
         self.admin_user_id = admin_user_id
         self.environment = environment
         self.telegram_token = telegram_token
-        self._bot_username = None
-        self._translations = {}
+        self._bot_username: str | None = None
+        self._translations: dict[str, dict[str, str]] = {}
         self.validator = ValidationUtils(db, self._t)
         self.box_status_manager = BoxStatusManager(db)
 
@@ -125,7 +125,7 @@ class BaseHandler:
             return {"success": False}
 
         url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
-        data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True}
+        data: dict[str, Any] = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True}
 
         if parse_mode:
             data["parse_mode"] = parse_mode
@@ -176,7 +176,11 @@ class BaseHandler:
             return False
 
         url = f"https://api.telegram.org/bot{self.telegram_token}/setMessageReaction"
-        data = {"chat_id": chat_id, "message_id": message_id, "reaction": [{"type": "emoji", "emoji": emoji}]}
+        data: dict[str, Any] = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "reaction": [{"type": "emoji", "emoji": emoji}],
+        }
 
         try:
             response = requests.post(url, json=data, timeout=20)
@@ -205,7 +209,12 @@ class BaseHandler:
             return {"success": False, "not_found": False}
 
         url = f"https://api.telegram.org/bot{self.telegram_token}/editMessageText"
-        data = {"chat_id": chat_id, "message_id": message_id, "text": text, "disable_web_page_preview": True}
+        data: dict[str, Any] = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+            "disable_web_page_preview": True,
+        }
         if parse_mode:
             data["parse_mode"] = parse_mode
         if reply_markup is not None:
@@ -264,7 +273,7 @@ class BaseHandler:
 
         files = {"document": (filename, file_data, "text/csv")}
 
-        data = {"chat_id": chat_id}
+        data: dict[str, Any] = {"chat_id": chat_id}
 
         if caption:
             data["caption"] = caption
@@ -355,7 +364,7 @@ class BaseHandler:
             return {"success": False}
 
         url = f"https://api.telegram.org/bot{self.telegram_token}/sendPhoto"
-        data = {"chat_id": chat_id, "photo": photo_url}
+        data: dict[str, Any] = {"chat_id": chat_id, "photo": photo_url}
 
         if caption:
             data["caption"] = caption
@@ -392,7 +401,7 @@ class BaseHandler:
             return {"success": False}
 
         url = f"https://api.telegram.org/bot{self.telegram_token}/sendMediaGroup"
-        data = {"chat_id": chat_id, "media": media_group}
+        data: dict[str, Any] = {"chat_id": chat_id, "media": media_group}
 
         try:
             if self.environment == "test":

@@ -87,7 +87,7 @@ class ImportHandler(NotificationHandler):
         self._send_message(chat_id, self._t("import_processing", row_count=len(rows)))
 
         success_count = 0
-        errors = []
+        errors: list[str] = []
         max_errors = 5
 
         for idx, row in enumerate(rows, start=2):  # Line numbers start at 2 (header is 1)
@@ -200,7 +200,7 @@ class ImportHandler(NotificationHandler):
             logger.error(f"Error creating import order: {e}")
             return {"success": False}
 
-    def _download_file(self, file_id: str) -> bytes:
+    def _download_file(self, file_id: str) -> bytes | None:
         """Download file from Telegram"""
         try:
             # Get file path

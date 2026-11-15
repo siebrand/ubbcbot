@@ -16,7 +16,7 @@ class PaginationUtils:
         current_page: int, total_pages: int, entity_type: str, filters: str = "", enhanced: bool = False
     ) -> dict[str, Any]:
         """Build pagination keyboard for list commands"""
-        keyboard = []
+        keyboard: list[list[dict[str, Any]]] = []
 
         if total_pages <= 1:
             return {"inline_keyboard": keyboard}

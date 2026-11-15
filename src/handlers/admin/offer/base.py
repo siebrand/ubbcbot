@@ -43,7 +43,7 @@ class OfferBaseHandler(BaseHandler):
 
         # Find all HTML tags
         tags = re.findall(r"<(/?)([a-zA-Z][a-zA-Z0-9-]*)[^>]*>", content)
-        stack = []
+        stack: list[str] = []
 
         for is_closing, tag_name in tags:
             # Reject any tag Telegram does not support (e.g. <ul>, <li>, <p>, <br>).

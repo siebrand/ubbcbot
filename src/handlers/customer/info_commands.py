@@ -288,11 +288,11 @@ class InfoCommands(BaseHandler):
         all_orders = self.db.get_all_orders(statuses=["pending", "ordered"])
 
         # Build lookup dictionaries
-        boxes_by_offer = {}
+        boxes_by_offer: dict[int, list] = {}
         for box in all_boxes:
             boxes_by_offer.setdefault(box.offer_id, []).append(box)
 
-        orders_by_offer = {}
+        orders_by_offer: dict[int, list] = {}
         for order in all_orders:
             orders_by_offer.setdefault(order.offer_id, []).append(order)
 
@@ -369,7 +369,7 @@ class InfoCommands(BaseHandler):
                 show_draft = show_import = show_active = True
 
             # Group by status
-            offers_by_status = {}
+            offers_by_status: dict[str, list] = {}
             for offer in offers:
                 offers_by_status.setdefault(offer.status, []).append(offer)
 

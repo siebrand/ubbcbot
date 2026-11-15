@@ -85,7 +85,7 @@ class BaseOrderHandler(BaseHandler):
             aggregated[key]["dates"].add(date_str)
 
         # Group by status
-        status_groups = {}
+        status_groups: dict[str, dict[str, Any]] = {}
         for (offer_id, unit_price, status), data in aggregated.items():
             if status not in status_groups:
                 status_groups[status] = {"total_price": Decimal("0.0"), "items": []}

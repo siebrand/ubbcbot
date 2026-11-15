@@ -1,11 +1,12 @@
 import time
+from typing import Any
 
 
 class OfferCache:
     """Runtime cache for offer operations"""
 
-    _cache = {}
-    _cache_timestamps = {}
+    _cache: dict[str, Any] = {}
+    _cache_timestamps: dict[str, float] = {}
     _ttl = 300  # 5 minutes
 
     @classmethod

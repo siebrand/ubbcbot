@@ -156,7 +156,7 @@ class DeliveryOverviewHandler(BaseHandler):
             self._send_message(chat_id, self._t("error_processing_payment_link", user_id=None, error=str(e)))
             return {"status": "error"}
 
-    def _build_delivery_message_payload(self, customer_data: dict, payment_link: str) -> dict:
+    def _build_delivery_message_payload(self, customer_data: dict, payment_link: str) -> dict | None:
         """Build message payload for async sending"""
         try:
             customer = self.db.get_customer(customer_data["customer_id"])
