@@ -9,6 +9,7 @@ Every handler is an autospec of the real class. A route to a method that does no
 number of arguments, therefore fails here instead of in production.
 """
 
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -603,8 +604,8 @@ def _routed_commands() -> set[str]:
 
 
 def _commands_offered_in_telegram() -> set[str]:
-    source = (ROOT / "setup-commands.sh").read_text()
-    return {"/" + name for name in re.findall(r'\{"command":\s*"([a-z_]+)"', source)}
+    menus = json.loads((ROOT / "telegram-commands.json").read_text())
+    return {"/" + entry["command"] for menu in menus.values() for entry in menu}
 
 
 class TestCompleteness:
@@ -623,11 +624,11 @@ class TestCompleteness:
 
     def test_every_command_in_the_telegram_menu_is_routed(self):
         env = make_router()
+        offered = _commands_offered_in_telegram()
 
-        unrouted = sorted(
-            command for command in _commands_offered_in_telegram() if send(env, f"{command} 1 1") == UNKNOWN_COMMAND
-        )
+        unrouted = sorted(command for command in offered if send(env, f"{command} 1 1") == UNKNOWN_COMMAND)
 
+        assert len(offered) > 60  # the menus were found
         assert unrouted == []
 
     @pytest.mark.parametrize("command", sorted(COMMAND_ROUTES))

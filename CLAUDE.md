@@ -42,7 +42,8 @@ client for messages sent from the admin's own Telegram account.
 - All user-facing text via `self._t(key, user_id, **params)`; the key must exist in both
   `src/translations/nl.json` and `en.json`; no duplicate keys; group messages are always nl.
 - Changing a command: update `COMMAND_ROUTES` (and its row in `tests/test_command_dispatch.py`), callback_handler/admin
-  panel, help text, translations, `setup-commands.sh` and README together.
+  panel, help text, translations, `telegram-commands.json` (the command menus; then run `setup-commands.sh`) and README
+  together.
 - Escape user-supplied strings (`_escape_html`) in any `parse_mode="HTML"` message.
 - Use `logger`, not `print`. Never log tokens, contact info or free-text user input.
 - Resource naming `ubbc-bot-{env}-{type}`; secrets only in SSM under `/ubbc-bot/{env}/`

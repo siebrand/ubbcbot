@@ -1,0 +1,360 @@
+{
+  "group": [
+    {
+      "command": "fomo",
+      "description": "View active offers you have not ordered yet (answered privately)"
+    }
+  ],
+  "customer": [
+    {
+      "command": "start",
+      "description": "Register and view help"
+    },
+    {
+      "command": "help",
+      "description": "Show help for specific section"
+    },
+    {
+      "command": "order",
+      "description": "Place order: /order <offer_id> [quantity]"
+    },
+    {
+      "command": "my_orders",
+      "description": "View your orders"
+    },
+    {
+      "command": "confirm_order",
+      "description": "Confirm duplicate order"
+    },
+    {
+      "command": "payment_info",
+      "description": "View payment details"
+    },
+    {
+      "command": "delete_cancelled_orders",
+      "description": "Delete all cancelled orders"
+    },
+    {
+      "command": "delete_completed_orders",
+      "description": "Delete all completed orders"
+    },
+    {
+      "command": "list_offers",
+      "description": "View available offers"
+    },
+    {
+      "command": "view_offer",
+      "description": "View offer details"
+    },
+    {
+      "command": "subscribe",
+      "description": "Subscribe to offer notifications"
+    },
+    {
+      "command": "unsubscribe",
+      "description": "Unsubscribe from offer notifications"
+    },
+    {
+      "command": "changelog",
+      "description": "View bot updates and changes"
+    },
+    {
+      "command": "privacy",
+      "description": "View the privacy statement"
+    },
+    {
+      "command": "my_data",
+      "description": "Download all data we have about you"
+    },
+    {
+      "command": "fomo",
+      "description": "View active offers you have not ordered yet"
+    },
+    {
+      "command": "cancel",
+      "description": "Cancel pending operation"
+    }
+  ],
+  "admin": [
+    {
+      "command": "start",
+      "description": "Register and view help"
+    },
+    {
+      "command": "help",
+      "description": "Show help for specific section"
+    },
+    {
+      "command": "order",
+      "description": "Place order: /order <offer_id> [quantity]"
+    },
+    {
+      "command": "my_orders",
+      "description": "View your orders"
+    },
+    {
+      "command": "confirm_order",
+      "description": "Confirm duplicate order"
+    },
+    {
+      "command": "payment_info",
+      "description": "View payment details"
+    },
+    {
+      "command": "delete_cancelled_orders",
+      "description": "Delete all cancelled orders"
+    },
+    {
+      "command": "delete_completed_orders",
+      "description": "Delete all completed orders"
+    },
+    {
+      "command": "list_offers",
+      "description": "View available offers"
+    },
+    {
+      "command": "view_offer",
+      "description": "View offer details"
+    },
+    {
+      "command": "subscribe",
+      "description": "Subscribe to offer notifications"
+    },
+    {
+      "command": "unsubscribe",
+      "description": "Unsubscribe from offer notifications"
+    },
+    {
+      "command": "changelog",
+      "description": "View bot updates and changes"
+    },
+    {
+      "command": "privacy",
+      "description": "View the privacy statement"
+    },
+    {
+      "command": "my_data",
+      "description": "Download all data we have about you"
+    },
+    {
+      "command": "fomo",
+      "description": "View active offers you have not ordered yet"
+    },
+    {
+      "command": "cancel",
+      "description": "Cancel pending operation"
+    },
+    {
+      "command": "admin",
+      "description": "Admin panel with buttons for all admin functions"
+    },
+    {
+      "command": "setup_test_data",
+      "description": "Create test data (test environment only)"
+    },
+    {
+      "command": "test_user_message",
+      "description": "Send a message from your own account: <customer> <message>"
+    },
+    {
+      "command": "create_supplier",
+      "description": "Register a new supplier: <name>"
+    },
+    {
+      "command": "archive_supplier",
+      "description": "Archive a supplier: <name>"
+    },
+    {
+      "command": "list_suppliers",
+      "description": "View suppliers: [active|retired|all]"
+    },
+    {
+      "command": "update_supplier",
+      "description": "Edit supplier details: <name>"
+    },
+    {
+      "command": "update_supplier_name",
+      "description": "Update supplier name: <supplier_id> <new_name>"
+    },
+    {
+      "command": "update_supplier_contact",
+      "description": "Update supplier contact email: <supplier_id> <email>"
+    },
+    {
+      "command": "update_supplier_full_name",
+      "description": "Update supplier full name: <supplier_id> <new_name>"
+    },
+    {
+      "command": "create_offer",
+      "description": "Create a draft offer: <supplier> <name> <price> <box_size>"
+    },
+    {
+      "command": "update_offer_name",
+      "description": "Update offer name: <offer_id> <new_name>"
+    },
+    {
+      "command": "update_offer_price",
+      "description": "Update offer price: <offer_id> <new_price>"
+    },
+    {
+      "command": "update_offer_description",
+      "description": "Update offer description: <offer_id> <description>"
+    },
+    {
+      "command": "publish_offer",
+      "description": "Publish a draft offer: <offer_id>"
+    },
+    {
+      "command": "cancel_offer",
+      "description": "Cancel an offer and its orders: <offer_id>"
+    },
+    {
+      "command": "delete_offer",
+      "description": "Delete a completed or inactive offer: <offer_id>"
+    },
+    {
+      "command": "offer_status",
+      "description": "Change offer status: <offer_id> <status>"
+    },
+    {
+      "command": "create_box",
+      "description": "Add a box to an offer: <offer_id>"
+    },
+    {
+      "command": "list_boxes",
+      "description": "View box status and capacity"
+    },
+    {
+      "command": "audit_offer",
+      "description": "Audit offer capacity against orders"
+    },
+    {
+      "command": "process_wholesale",
+      "description": "Start the wholesale ordering process"
+    },
+    {
+      "command": "confirm_process_wholesale",
+      "description": "Confirm wholesale ordering: <offer_id> <boxes>"
+    },
+    {
+      "command": "import_orders",
+      "description": "Import orders from a CSV file"
+    },
+    {
+      "command": "finalize_import",
+      "description": "Finalize an imported offer: <offer_id>"
+    },
+    {
+      "command": "create_order_for",
+      "description": "Place an order for a customer: <customer> <offer_id> [quantity]"
+    },
+    {
+      "command": "cancel_order",
+      "description": "Cancel a customer order"
+    },
+    {
+      "command": "edit_order",
+      "description": "Edit an order: box, price or status"
+    },
+    {
+      "command": "list_user_orders",
+      "description": "View the orders of a customer: <customer>"
+    },
+    {
+      "command": "list_offer_orders",
+      "description": "View all orders of an offer: <offer_id>"
+    },
+    {
+      "command": "export_orders",
+      "description": "Download a CSV of orders: [status|all|full]"
+    },
+    {
+      "command": "list_pending",
+      "description": "View users awaiting approval"
+    },
+    {
+      "command": "list_users",
+      "description": "View customers: [status] [search]"
+    },
+    {
+      "command": "approve_user",
+      "description": "Approve a user: <name or username>"
+    },
+    {
+      "command": "reject_user",
+      "description": "Reject a user: <name or username>"
+    },
+    {
+      "command": "user_status",
+      "description": "Check the status of a user: <name or username>"
+    },
+    {
+      "command": "update_user",
+      "description": "Update a customer name: <customer> <first_name> [last_name]"
+    },
+    {
+      "command": "update_user_first_name",
+      "description": "Update first name: <customer_id> <first_name>"
+    },
+    {
+      "command": "update_user_last_name",
+      "description": "Update last name: <customer_id> <last_name>"
+    },
+    {
+      "command": "delete_user",
+      "description": "Delete a customer record (right to be forgotten)"
+    },
+    {
+      "command": "export_user_data",
+      "description": "Build the personal data export of a customer"
+    },
+    {
+      "command": "clear_data_export",
+      "description": "Reset the monthly data export limit of a customer"
+    },
+    {
+      "command": "create_guest",
+      "description": "Add a guest user: <first_name> [last_name] [contact]"
+    },
+    {
+      "command": "list_guests",
+      "description": "View all guest users"
+    },
+    {
+      "command": "process_delivery",
+      "description": "Process wholesale deliveries"
+    },
+    {
+      "command": "process_labeling",
+      "description": "Complete labeling of delivered orders"
+    },
+    {
+      "command": "send_delivery_overviews",
+      "description": "Send delivery overviews to customers"
+    },
+    {
+      "command": "process_payment",
+      "description": "Mark customers as paid"
+    },
+    {
+      "command": "send_payment_reminder",
+      "description": "Send payment reminders"
+    },
+    {
+      "command": "failed_notifications",
+      "description": "View orders with failed notifications"
+    },
+    {
+      "command": "credit",
+      "description": "Issue credit: <customer> <amount> <reason>"
+    },
+    {
+      "command": "delete_old_orders",
+      "description": "Delete cancelled and completed orders older than 7 days"
+    },
+    {
+      "command": "audit_orders",
+      "description": "Audit orders: add update_date where missing"
+    }
+  ]
+}

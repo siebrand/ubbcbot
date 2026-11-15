@@ -115,8 +115,8 @@ first deploy and passed to Telegram as `secret_token`. The webhook Lambda reject
 ./deploy.sh prod
 ```
 
-*Note: The deployment script automatically sets the Telegram webhook and configures bot commands with proper scopes (
-admin commands only visible to chat administrators).*
+*Note: The deployment script automatically sets the Telegram webhook and configures the bot's command menus (see "Bot
+Commands").*
 
 ## Post-Deployment Verification
 
@@ -154,7 +154,19 @@ Expected response should show:
 
 ## Bot Commands
 
-These commands are set up in the deployment script, throught bash script setup-commands.sh.
+The commands Telegram suggests (the menu behind the `/` button) are set up by `setup-commands.sh`, which `deploy.sh`
+runs. There are three menus, so Telegram only suggests what works where:
+
+| Menu | Shown in | Contains |
+|------|----------|----------|
+| `group` | group chats | only what works in a group (`/fomo`) |
+| `customer` | private chats (and the default) | the customer commands |
+| `admin` | the private chat of the admin only | the customer commands and every admin command |
+
+The menus and their descriptions are in `telegram-commands.json`. After changing it, run `./setup-commands.sh test` (or
+`prod`); `DRY_RUN=1 ./setup-commands.sh test` prints the Telegram calls without making them. Tests check that the menus
+only suggest commands the bot has, that customers and groups are never offered admin commands, and that the admin menu
+has every admin command.
 
 ### Admin Commands
 
