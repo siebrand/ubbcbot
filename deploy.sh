@@ -23,9 +23,11 @@ if [ ! -d "test_env" ]; then
     python3 -m venv test_env
 fi
 source test_env/bin/activate
-if ! pip show pytest >/dev/null 2>&1; then
-    echo "Installing test dependencies..."
-    pip install -r tests/requirements.txt
+# Install/update src and test requirements to the pinned versions (no-op when current).
+if ! scripts/sync-venv.sh; then
+    echo "❌ Could not install dependencies. Deployment aborted."
+    deactivate
+    exit 1
 fi
 
 # Set PYTHONPATH for imports
