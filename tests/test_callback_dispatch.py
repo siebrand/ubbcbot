@@ -693,7 +693,7 @@ class TestDisambiguationButtons:
         assert len(prefixes) >= 8
         assert {"approve_user_select", "delete_user_select", "edit_user_select"} <= set(prefixes)
 
-    @pytest.mark.parametrize("prefix", [p for p in _disambiguation_prefixes() if p != "import"])
+    @pytest.mark.parametrize("prefix", _disambiguation_prefixes())
     def test_every_prefix_leads_to_a_handler(self, prefix):
         env = make_env()
 
@@ -703,14 +703,6 @@ class TestDisambiguationButtons:
         assert calls, f"{prefix}_<id> reaches no handler: {result}"
         assert len(calls) == 1
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="BUG: the CSV import looks up customers 'without interactive UI', but an ambiguous name still shows "
-        "buttons with the prefix import_<id>, and nothing handles them",
-    )
-    def test_import_disambiguation_buttons_are_handled(self):
-        env = make_env()
-
-        tap(env, f"import_{CID}")
-
-        assert all_handler_calls(env)
+    def test_the_csv_import_shows_no_buttons(self):
+        """Nobody can answer 'which customer?' during an import: it refuses the file instead"""
+        assert "import" not in _disambiguation_prefixes()

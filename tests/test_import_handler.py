@@ -48,71 +48,46 @@ class TestImportHandler(unittest.TestCase):
 
             mock_send.assert_called_once_with(chat_id, "import_already_pending", "already_pending")
 
+    def _alice(self, username="alice", first_name="Alice"):
+        return Customer(
+            customer_id="cust1",
+            telegram_user_id=123,
+            username=username,
+            first_name=first_name,
+            authorization_status=AuthorizationStatus.APPROVED.value,
+        )
+
     def test_find_customer_exact_username(self):
         """Test finding customer by exact username"""
-        customer = Customer(
-            customer_id="cust1",
-            telegram_user_id=123,
-            username="alice",
-            first_name="Alice",
-            authorization_status=AuthorizationStatus.APPROVED.value,
-        )
+        result, error = self.handler._find_customer_for_import("alice", [self._alice()])
 
-        with patch.object(self.handler, "_find_customer_with_disambiguation") as mock_find:
-            mock_find.return_value = (customer, None)
-            result, error = self.handler._find_customer_for_import("alice", 123)
-
-            self.assertIsNotNone(result)
-            self.assertIsNone(error)
-            self.assertEqual(result.customer_id, "cust1")
+        self.assertIsNone(error)
+        self.assertEqual(result.customer_id, "cust1")
 
     def test_find_customer_by_name(self):
-        """Test finding customer by name when username not found"""
-        customer = Customer(
-            customer_id="cust1",
-            telegram_user_id=123,
-            username="alice_user",
-            first_name="Alice",
-            authorization_status=AuthorizationStatus.APPROVED.value,
-        )
+        """Test finding customer by name when username differs"""
+        result, error = self.handler._find_customer_for_import("Alice", [self._alice("alice_user")])
 
-        with patch.object(self.handler, "_find_customer_with_disambiguation") as mock_find:
-            mock_find.return_value = (customer, None)
-            result, error = self.handler._find_customer_for_import("Alice", 123)
-
-            self.assertIsNotNone(result)
-            self.assertIsNone(error)
-            self.assertEqual(result.customer_id, "cust1")
+        self.assertIsNone(error)
+        self.assertEqual(result.customer_id, "cust1")
 
     def test_find_customer_multiple_matches(self):
         """Test finding customer returns error for multiple matches"""
-        with (
-            patch.object(self.handler, "_find_customer_with_disambiguation") as mock_find,
-            patch.object(self.handler, "_t") as mock_t,
-        ):
-            mock_find.return_value = (None, {"status": "disambiguation_shown"})
-            mock_t.return_value = "multiple_matches"
+        customers = [self._alice("alice_a"), self._alice("alice_b")]
 
-            result, error = self.handler._find_customer_for_import("Alice", 123)
+        with patch.object(self.handler, "_t", return_value="multiple_matches"):
+            result, error = self.handler._find_customer_for_import("Alice", customers)
 
-            self.assertIsNone(result)
-            self.assertIsNotNone(error)
-            self.assertEqual(error, "multiple_matches")
+        self.assertIsNone(result)
+        self.assertEqual(error, "multiple_matches")
 
     def test_find_customer_not_found(self):
         """Test finding customer returns error when not found"""
-        with (
-            patch.object(self.handler, "_find_customer_with_disambiguation") as mock_find,
-            patch.object(self.handler, "_t") as mock_t,
-        ):
-            mock_find.return_value = (None, {"status": "user_not_found"})
-            mock_t.return_value = "not_found"
+        with patch.object(self.handler, "_t", return_value="not_found"):
+            result, error = self.handler._find_customer_for_import("unknown", [self._alice()])
 
-            result, error = self.handler._find_customer_for_import("unknown", 123)
-
-            self.assertIsNone(result)
-            self.assertIsNotNone(error)
-            self.assertEqual(error, "not_found")
+        self.assertIsNone(result)
+        self.assertEqual(error, "not_found")
 
     def test_create_import_order_with_existing_box(self):
         """Test creating import order with existing open box"""

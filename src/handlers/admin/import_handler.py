@@ -4,7 +4,7 @@ from typing import Any
 import requests
 
 from handlers.admin.offer.notifications import NotificationHandler
-from models.entities import BoxStatus, OfferStatus, Order
+from models.entities import AuthorizationStatus, BoxStatus, OfferStatus, Order
 from services.box_status_manager import BoxStatusManager
 from utils.csv_parser import CSVParser
 
@@ -13,6 +13,9 @@ logger = logging.getLogger()
 
 class ImportHandler(NotificationHandler):
     """Handler for order import operations"""
+
+    MAX_AMBIGUOUS_LINES_SHOWN = 10
+    MAX_CANDIDATES_SHOWN = 5
 
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
@@ -84,6 +87,13 @@ class ImportHandler(NotificationHandler):
 
         # Process rows
         rows = parse_result["rows"]
+
+        # A name that fits more than one customer cannot be imported: refuse the whole file, import nothing
+        customers = self._load_import_customers()
+        collisions = self._find_ambiguous_lines(rows, customers)
+        if collisions:
+            return self._refuse_ambiguous(chat_id, collisions)
+
         self._send_message(chat_id, self._t("import_processing", row_count=len(rows)))
 
         success_count = 0
@@ -117,8 +127,8 @@ class ImportHandler(NotificationHandler):
                 )
                 continue
 
-            # Find customer (no interactive disambiguation)
-            customer, error = self._find_customer_for_import(username, chat_id)
+            # Find customer (no interactive disambiguation: ambiguous names were refused above)
+            customer, error = self._find_customer_for_import(username, customers)
             if error:
                 errors.append(self._t("import_line_error_customer", line=idx, username=username, reason=error))
                 continue
@@ -144,19 +154,58 @@ class ImportHandler(NotificationHandler):
         self._send_message(chat_id, summary)
         return {"status": "success", "imported": success_count, "errors": len(errors)}
 
-    def _find_customer_for_import(self, username: str, chat_id: int) -> tuple:
-        """Find customer for import - returns customer or error string"""
-        # Use base handler's disambiguation method without interactive UI
-        customer, error = self._find_customer_with_disambiguation(username, chat_id, "import", None)
+    def _load_import_customers(self) -> list:
+        """All customers a CSV line may refer to, whatever their authorization status"""
+        customers: list = []
+        for status in (
+            AuthorizationStatus.APPROVED.value,
+            AuthorizationStatus.UNAUTHORIZED.value,
+            AuthorizationStatus.REJECTED.value,
+        ):
+            customers.extend(self.db.get_customers_by_status(status))
+        return customers
 
-        if error:
-            # Return error message string instead of dict
-            if error["status"] == "user_not_found":
-                return None, self._t("not_found")
-            elif error["status"] == "disambiguation_shown":
-                return None, self._t("multiple_matches")
+    def _find_customer_for_import(self, username: str, customers: list) -> tuple:
+        """Find the customer for a CSV line - returns (customer, None) or (None, reason text).
 
-        return customer, None
+        No messages and no buttons: the CSV import has nobody to ask which customer was meant.
+        """
+        matches = self.validator.match_customers(username, customers)
+        if not matches:
+            return None, self._t("not_found")
+        if len(matches) > 1:
+            return None, self._t("multiple_matches")
+        return matches[0], None
+
+    def _find_ambiguous_lines(self, rows: list, customers: list) -> list[tuple[int, str, list]]:
+        """The lines of the file whose name matches more than one customer: (line number, name, customers)"""
+        collisions = []
+        for idx, row in enumerate(rows, start=2):  # Line numbers start at 2 (header is 1)
+            username = row["username"].strip()
+            matches = self.validator.match_customers(username, customers)
+            if len(matches) > 1:
+                collisions.append((idx, username, matches))
+        return collisions
+
+    def _refuse_ambiguous(self, chat_id: int, collisions: list[tuple[int, str, list]]) -> dict[str, Any]:
+        """Tell the admin which lines are ambiguous and who they could be. Nothing has been imported."""
+        shown = collisions[: self.MAX_AMBIGUOUS_LINES_SHOWN]
+        message = self._t("import_refused_ambiguous", count=len(collisions))
+        for line, username, matches in shown:
+            candidates = ", ".join(
+                f"{' '.join(p for p in (c.first_name, c.last_name) if p)} (@{c.username}, {str(c.customer_id)[:8]})"
+                for c in matches[: self.MAX_CANDIDATES_SHOWN]
+            )
+            if len(matches) > self.MAX_CANDIDATES_SHOWN:
+                candidates += ", …"
+            message += "\n" + self._t(
+                "import_line_error_ambiguous", line=line, username=username, count=len(matches), matches=candidates
+            )
+        if len(collisions) > len(shown):
+            message += "\n" + self._t("import_ambiguous_more", remaining=len(collisions) - len(shown))
+
+        self._send_message(chat_id, message)
+        return {"status": "ambiguous_customers", "lines": [line for line, _, _ in collisions]}
 
     def _create_import_order(self, offer, customer) -> dict[str, Any]:
         """Create order for import (quantity=1, no announcement)"""

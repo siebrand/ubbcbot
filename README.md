@@ -208,7 +208,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/send_payment_reminder` - Send payment reminder to customers awaiting payment
 - `/failed_notifications` - View orders with failed delivery notifications
 - `/offer_status <offer_id> import` - Change offer status to import (for import workflow)
-- `/import_orders` - Import orders from CSV file
+- `/import_orders` - Import orders from CSV file. If a name on any line matches more than one customer, the whole file is refused and the colliding lines are listed (use the full username or the customer ID, 8+ characters)
 - `/finalize_import <offer_id>` - Finalize imported offer
 - `/delete_old_orders` - Delete cancelled and completed orders older than 7 days
 - `/delete_cancelled_orders` - Delete all cancelled orders from database
