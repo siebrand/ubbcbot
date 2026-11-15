@@ -343,6 +343,101 @@ class CallbackHandler:
         self._register_admin_panel_routes()
         self._register_panel_command_routes()
 
+        # Pagination of the lists (page_*)
+        self._register_pagination_routes()
+
+    def _register_pagination_routes(self):
+        """Pagination buttons: ``page_<list>[_<filter>]_<page>``, built by PaginationUtils.
+
+        Every list has its own route, so a filter may contain underscores (``sold_out``) and nothing has to
+        be guessed from the number of segments. Customers may only use the three customer lists; that is
+        enforced before routing by ``CUSTOMER_CALLBACK_PATTERN``.
+        """
+        register = self.router.register
+
+        # page_info is the "3/7" indicator in the middle of the keyboard: nothing to do
+        register(r"^page_info$", lambda m, ctx: None)
+
+        # Customer lists
+        register(
+            r"^page_list_offers(?:_(.+))?_(\d+)$",
+            lambda m, ctx: self.handlers["info"].handle_list_offers(
+                ctx["chat_id"], ctx["user_id"], [m.group(1)] if m.group(1) else None, int(m.group(2))
+            ),
+        )
+        register(
+            r"^page_changelog_(\d+)$",
+            lambda m, ctx: self.handlers["changelog"].handle_changelog(ctx["chat_id"], ctx["user_id"], int(m.group(1))),
+        )
+        register(r"^page_(?:list_)?my_orders_(\d+)_(\d+)$", self._my_orders_page)
+
+        # Admin lists. Older buttons carry no filter (page_suppliers_2): that was always the active list.
+        register(
+            r"^page_process_wholesale_(\d+)$",
+            lambda m, ctx: self.handlers["offer"].handle_process_wholesale_page(ctx["chat_id"], int(m.group(1))),
+        )
+        register(
+            r"^page_suppliers_(\d+)$",
+            lambda m, ctx: self.handlers["supplier"].handle_list_suppliers(ctx["chat_id"], int(m.group(1)), "active"),
+        )
+        register(
+            r"^page_suppliers_(.+)_(\d+)$",
+            lambda m, ctx: self.handlers["supplier"].handle_list_suppliers(ctx["chat_id"], int(m.group(2)), m.group(1)),
+        )
+        register(
+            r"^page_boxes_(\d+)$",
+            lambda m, ctx: self.handlers["offer"].handle_list_boxes(ctx["chat_id"], ["active", m.group(1)]),
+        )
+        register(
+            r"^page_boxes_offer_(.+)_(\d+)$",
+            lambda m, ctx: self.handlers["offer"].handle_list_boxes(ctx["chat_id"], [m.group(1), m.group(2)]),
+        )
+        register(
+            r"^page_boxes_(.+)_(\d+)$",
+            lambda m, ctx: self.handlers["offer"].handle_list_boxes(ctx["chat_id"], [m.group(1), m.group(2)]),
+        )
+        register(
+            r"^page_pending_(\d+)_?$",
+            lambda m, ctx: self.handlers["user"].handle_list_pending(ctx["chat_id"], int(m.group(1))),
+        )
+        register(
+            r"^page_customers_(.+)_(\d+)$",
+            lambda m, ctx: self.handlers["user"].handle_list_users(ctx["chat_id"], int(m.group(2)), m.group(1)),
+        )
+        register(
+            r"^page_guests_(\d+)$",
+            lambda m, ctx: self.handlers["user"].handle_list_guests(ctx["chat_id"], int(m.group(1))),
+        )
+        register(
+            r"^page_process_payment_(\d+)$",
+            lambda m, ctx: self.handlers["admin_order"].handle_process_payment(ctx["chat_id"], [], int(m.group(1))),
+        )
+        register(
+            r"^page_remind_payment_(\d+)$",
+            lambda m, ctx: self.handlers["admin_order"].handle_send_payment_reminder(
+                ctx["chat_id"], [], int(m.group(1))
+            ),
+        )
+        register(r"^page_(?:list_)?user_orders_(.+)_(\d+)$", self._user_orders_page)
+
+        # Anything else that starts with page_ is not a list we know: nothing happens
+        register(r"^page_", lambda m, ctx: None)
+
+    def _user_orders_page(self, match, ctx):
+        """A page of one customer's orders (admin)"""
+        customer = self.db.get_customer(match.group(1))
+        if customer:
+            return self.handlers["admin_order"].viewing._show_user_orders(ctx["chat_id"], customer, int(match.group(2)))
+        return None
+
+    def _my_orders_page(self, match, ctx):
+        """A page of your own orders. The id in the button must be the one of the user who taps it."""
+        if ctx["user_id"] == int(match.group(1)):
+            return self.handlers["info"].handle_list_my_orders(
+                ctx["chat_id"], ctx["user_id"], None, int(match.group(2))
+            )
+        return None
+
     def _register_admin_panel_routes(self):
         """Admin panel navigation. Both ``admin:main`` and the older ``admin_main`` form are accepted."""
 
@@ -634,10 +729,6 @@ class CallbackHandler:
                 logger.info(f"Callback handled by router: {data}")
                 return {"status": "handled_by_router"}
 
-            # Special handlers for complex patterns
-            if data.startswith("page_"):
-                return self._handle_pagination_callbacks(handler_chat_id, user_id, data)
-
             return {"status": "unknown_callback"}
 
         except Exception as e:
@@ -674,101 +765,6 @@ class CallbackHandler:
         if data.startswith("order_"):
             return False
         return data != "create_supplier_start"
-
-    def _handle_pagination_callbacks(self, chat_id: int, user_id: int, data: str) -> dict[str, Any]:
-        """Handle pagination callbacks"""
-        if data == "page_info":
-            return {"status": "page_info", "no_action": True}
-
-        parts = data.split("_")
-        if len(parts) < 3:
-            return {"status": "invalid_pagination"}
-
-        # Handle list_offers specially
-        if parts[1] == "list" and len(parts) >= 4 and parts[2] == "offers":
-            filter_arg = parts[3] if len(parts) == 5 else None
-            page = int(parts[4] if len(parts) == 5 else parts[3])
-            args = [filter_arg] if filter_arg else None
-            return self.handlers["info"].handle_list_offers(chat_id, user_id, args, page)
-
-        # Handle process_wholesale pagination
-        if parts[1] == "process" and parts[2] == "wholesale":
-            return self.handlers["offer"].handle_process_wholesale_page(chat_id, int(parts[3]))
-
-        # Parse entity type and page
-        entity_type, page = self._parse_pagination_entity(parts)
-
-        # Route to appropriate handler
-        return self._route_pagination(chat_id, user_id, entity_type, page)
-
-    def _parse_pagination_entity(self, parts: list) -> tuple:
-        """Parse entity type and page from pagination callback parts"""
-        if len(parts) >= 4 and parts[1] in ["customers", "suppliers", "process", "remind", "list", "user", "my"]:
-            if parts[1] == "remind" and parts[2] == "payment":
-                return "remind_payment", int(parts[3])
-            elif parts[1] == "process" and parts[2] == "payment":
-                return "process_payment", int(parts[3])
-            elif parts[1] == "list" and parts[2] == "user" and parts[3] == "orders":
-                return f"list_user_orders_{parts[4]}", int(parts[5])
-            elif parts[1] == "list" and parts[2] == "my" and parts[3] == "orders":
-                return f"list_my_orders_{parts[4]}", int(parts[5])
-            elif parts[1] == "user" and parts[2] == "orders":
-                return f"user_orders_{parts[3]}", int(parts[4])
-            elif parts[1] == "my" and parts[2] == "orders":
-                return f"my_orders_{parts[3]}", int(parts[4])
-            else:
-                return f"{parts[1]}_{parts[2]}", int(parts[3])
-        else:
-            return parts[1], int(parts[2])
-
-    def _route_pagination(self, chat_id: int, user_id: int, entity_type: str, page: int) -> dict[str, Any]:
-        """Route pagination request to appropriate handler"""
-        if entity_type == "suppliers" or entity_type.startswith("suppliers_"):
-            status_filter = entity_type.split("_", 1)[1] if "_" in entity_type else "active"
-            return self.handlers["supplier"].handle_list_suppliers(chat_id, page, status_filter)
-        elif entity_type == "boxes" or entity_type.startswith("boxes_"):
-            filter_part = entity_type.split("_", 1)[1] if "_" in entity_type else "active"
-            if filter_part.startswith("offer_"):
-                offer_id = filter_part.split("_", 1)[1]
-                return self.handlers["offer"].handle_list_boxes(chat_id, [offer_id, str(page)])
-            else:
-                return self.handlers["offer"].handle_list_boxes(chat_id, [filter_part, str(page)])
-        elif entity_type == "pending":
-            return self.handlers["user"].handle_list_pending(chat_id, page)
-        elif entity_type.startswith("customers_"):
-            status_filter = entity_type.split("_", 1)[1]
-            return self.handlers["user"].handle_list_users(chat_id, page, status_filter)
-        elif entity_type == "guests":
-            return self.handlers["user"].handle_list_guests(chat_id, page)
-        elif entity_type.startswith("user_orders_") or entity_type.startswith("list_user_orders_"):
-            customer_id = (
-                entity_type.split("_", 3)[3]
-                if entity_type.startswith("list_user_orders_")
-                else entity_type.split("_", 2)[2]
-            )
-            customer = self.db.get_customer(customer_id)
-            if customer:
-                return self.handlers["admin_order"].viewing._show_user_orders(chat_id, customer, page)
-            return {"status": "customer_not_found"}
-        elif entity_type == "changelog":
-            return self.handlers["changelog"].handle_changelog(chat_id, user_id, page)
-        elif entity_type in ["process_payment", "remind_payment"]:
-            return (
-                self.handlers["admin_order"].handle_send_payment_reminder(chat_id, [], page)
-                if entity_type == "remind_payment"
-                else self.handlers["admin_order"].handle_process_payment(chat_id, [], page)
-            )
-        elif entity_type.startswith("my_orders_") or entity_type.startswith("list_my_orders_"):
-            target_user_id = int(
-                entity_type.split("_", 3)[3]
-                if entity_type.startswith("list_my_orders_")
-                else entity_type.split("_", 2)[2]
-            )
-            if user_id == target_user_id:
-                return self.handlers["info"].handle_list_my_orders(chat_id, user_id, None, page)
-            return {"status": "unauthorized"}
-
-        return {"status": "unknown_pagination_type"}
 
     def _store_edit_context(self, chat_id: int, edit_type: str, entity_id: str):
         """Store edit context in DynamoDB for processing replies"""

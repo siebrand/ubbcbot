@@ -290,6 +290,9 @@ PAGE_ADMIN = [
     ("page_process_wholesale_2", C("offer", call.handle_process_wholesale_page(CHAT, 2))),
     ("page_suppliers_active_2", C("supplier", call.handle_list_suppliers(CHAT, 2, "active"))),
     ("page_suppliers_retired_3", C("supplier", call.handle_list_suppliers(CHAT, 3, "retired"))),
+    # Older buttons carry no filter: the list was always the active one
+    ("page_suppliers_2", C("supplier", call.handle_list_suppliers(CHAT, 2, "active"))),
+    ("page_boxes_2", C("offer", call.handle_list_boxes(CHAT, ["active", "2"]))),
     ("page_pending_2_", C("user", call.handle_list_pending(CHAT, 2))),
     ("page_customers_all_2", C("user", call.handle_list_users(CHAT, 2, "all"))),
     ("page_customers_subscribers_1", C("user", call.handle_list_users(CHAT, 1, "subscribers"))),
@@ -319,22 +322,14 @@ PAGE_CUSTOMER = [
         C("info", call.handle_list_my_orders(CUSTOMER_ID, CUSTOMER_ID, None, 3)),
     ),
     (f"page_my_orders_{OTHER_USER_ID}_2", Silent()),  # somebody else's orders: refused
+    ("page_list_offers_sold_out_2", C("info", call.handle_list_offers(CUSTOMER_ID, CUSTOMER_ID, ["sold_out"], 2))),
 ]
 
-# Behavior that is wrong today. The right behavior is written down; strict xfail until it is fixed.
-BUGS = [
-    pytest.param(
-        "page_boxes_active_2",
-        C("offer", call.handle_list_boxes(CHAT, ["active", "2"])),
-        id="BUG /list_boxes pagination fails to parse",
-        marks=pytest.mark.xfail(strict=True, reason="page_boxes_* cannot be parsed"),
-    ),
-    pytest.param(
-        "page_boxes_offer_7_2",
-        C("offer", call.handle_list_boxes(CHAT, ["7", "2"])),
-        id="BUG /list_boxes <offer> pagination fails to parse",
-        marks=pytest.mark.xfail(strict=True, reason="page_boxes_* cannot be parsed"),
-    ),
+# /list_boxes pagination. These were broken before the pagination moved onto the router.
+PAGE_BOXES = [
+    ("page_boxes_active_2", C("offer", call.handle_list_boxes(CHAT, ["active", "2"]))),
+    ("page_boxes_all_3", C("offer", call.handle_list_boxes(CHAT, ["all", "3"]))),
+    ("page_boxes_offer_7_2", C("offer", call.handle_list_boxes(CHAT, ["7", "2"]))),
 ]
 
 
@@ -359,7 +354,7 @@ class TestAdminDispatch:
 
         assert_effect(env, effect, result)
 
-    @pytest.mark.parametrize("data, effect", _params(PAGE_ADMIN) + BUGS)
+    @pytest.mark.parametrize("data, effect", _params(PAGE_ADMIN + PAGE_BOXES))
     def test_pagination(self, data, effect):
         env = make_env()
 
@@ -527,24 +522,18 @@ ROUND_TRIPS = [
         True,
         CUSTOMER_ID,
         lambda p: C("info", call.handle_list_offers(CUSTOMER_ID, CUSTOMER_ID, ["sold_out"], p)),
-        id="BUG list_offers_sold_out",
-        marks=pytest.mark.xfail(strict=True, reason="an underscore in the filter breaks the parse"),
     ),
     pytest.param(
         "boxes_active",
         True,
         ADMIN_ID,
         lambda p: C("offer", call.handle_list_boxes(CHAT, ["active", str(p)])),
-        id="BUG boxes_active",
-        marks=pytest.mark.xfail(strict=True, reason="boxes pagination cannot be parsed"),
     ),
     pytest.param(
         "boxes_offer_7",
         True,
         ADMIN_ID,
         lambda p: C("offer", call.handle_list_boxes(CHAT, ["7", str(p)])),
-        id="BUG boxes_offer_7",
-        marks=pytest.mark.xfail(strict=True, reason="boxes pagination cannot be parsed"),
     ),
 ]
 
