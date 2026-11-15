@@ -50,7 +50,41 @@ class DataExportCommands(BaseHandler):
         self._send_message(user_id, self._t("data_export_started", user_id))
         return {"status": "success"}
 
-    def _invoke_exporter(self, customer_id: str, chat_id: int, claimed_at: int, previous: int | None) -> bool:
+    def handle_export_user_data(self, chat_id: int, args: list) -> dict[str, Any]:
+        """Handle /export_user_data (admin): build the same zip for a customer who asked by email.
+
+        The file goes to the admin's private chat, not to the customer, and is not limited to once a month.
+        """
+        if not args:
+            self._send_message(chat_id, self._t("usage_export_user_data", chat_id))
+            return {"status": "invalid_args"}
+
+        customer, error = self._find_customer_with_disambiguation(" ".join(args), chat_id, "export_user_data_select")
+        if error:
+            return error
+
+        return self._start_admin_export(chat_id, customer)
+
+    def handle_export_user_data_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
+        """Handle user selection from disambiguation for /export_user_data"""
+        customer = self.db.get_customer(customer_id)
+        if not customer:
+            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
+            return {"status": "user_not_found"}
+
+        return self._start_admin_export(chat_id, customer)
+
+    def _start_admin_export(self, chat_id: int, customer) -> dict[str, Any]:
+        if not self._invoke_exporter(customer.customer_id, self.admin_user_id, None, None):
+            self._send_message(chat_id, self._t("data_export_failed", chat_id))
+            return {"status": "error"}
+
+        name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t("unknown", user_id=None)
+        label = f"{name} ({customer.customer_id[:8]})"
+        self._send_message(chat_id, self._t("export_user_data_started", chat_id, label=label))
+        return {"status": "success"}
+
+    def _invoke_exporter(self, customer_id: str, chat_id: int, claimed_at: int | None, previous: int | None) -> bool:
         """Start the DataExporter Lambda asynchronously. Returns False when it could not be started."""
         try:
             import boto3

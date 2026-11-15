@@ -199,6 +199,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/update_user_first_name <customer_id> <new_first_name>` - Update customer first name
 - `/update_user_last_name <customer_id> <new_last_name>` - Update customer last name
 - `/delete_user <username|customer_id>` - Delete a customer record (right to be forgotten). Refused while the customer has orders that are not completed or cancelled (not yet delivered and/or unpaid) or a non-zero credit balance. Orders, credit transactions and purchase history are kept
+- `/export_user_data <username|customer_id>` - Build the personal data export (zip with JSON, see "Personal Data Export") of a customer for an access request. Sent to the admin's private chat, not limited to once a month, and removed after an hour
 - `/process_delivery` - Process wholesale deliveries and manage delivery status
 - `/process_labeling` - Complete labeling process for delivered orders
 - `/send_delivery_overviews` - Send delivery overviews to customers

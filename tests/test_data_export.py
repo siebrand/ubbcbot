@@ -415,6 +415,127 @@ class TestDataExporterLambda:
         assert self._documents(telegram) == []
 
 
+class TestAdminExport:
+    """/export_user_data: the admin builds the same zip for a customer who asked by email"""
+
+    @pytest.fixture
+    def handler(self, db):
+        handler = DataExportCommands(db, ADMIN_ID, "test", "token")
+        handler._send_message = Mock(return_value={"success": True})
+        return handler
+
+    @pytest.fixture
+    def lambda_client(self):
+        with patch("boto3.client") as client:
+            yield client.return_value
+
+    @staticmethod
+    def _payload(lambda_client):
+        return json.loads(lambda_client.invoke.call_args.kwargs["Payload"])
+
+    def test_without_arguments_shows_usage(self, handler, lambda_client):
+        assert handler.handle_export_user_data(ADMIN_ID, []) == {"status": "invalid_args"}
+        lambda_client.invoke.assert_not_called()
+
+    def test_unknown_customer_is_reported(self, handler, customer, lambda_client):
+        assert handler.handle_export_user_data(ADMIN_ID, ["nobody-like-this"])["status"] == "user_not_found"
+        lambda_client.invoke.assert_not_called()
+
+    def test_the_zip_goes_to_the_admin_not_to_the_customer(self, handler, customer, lambda_client):
+        result = handler.handle_export_user_data(ADMIN_ID, ["jantje"])
+
+        assert result == {"status": "success"}
+        payload = self._payload(lambda_client)
+        assert payload["customer_id"] == customer.customer_id
+        assert payload["chat_id"] == ADMIN_ID
+        assert lambda_client.invoke.call_args.kwargs["InvocationType"] == "Event"
+
+    def test_it_makes_no_claim_so_the_customers_own_monthly_slot_is_untouched(
+        self, handler, db, customer, lambda_client
+    ):
+        db.claim_data_export(customer.customer_id, 1_800_000_000, MONTH)
+
+        handler.handle_export_user_data(ADMIN_ID, ["jantje"])
+        handler.handle_export_user_data(ADMIN_ID, ["jantje"])  # not limited to once a month either
+
+        assert lambda_client.invoke.call_count == 2
+        assert self._payload(lambda_client).get("claimed_at") is None
+        assert int(db.get_customer(customer.customer_id).last_data_export_at) == 1_800_000_000
+
+    def test_resolves_a_partial_customer_id(self, handler, customer, lambda_client):
+        handler.handle_export_user_data(ADMIN_ID, [customer.customer_id[:8]])
+
+        assert self._payload(lambda_client)["customer_id"] == customer.customer_id
+
+    def test_ambiguous_names_show_a_choice_that_leads_to_the_export(self, handler, db, customer, lambda_client):
+        other = _customer(db, telegram_id=7, first_name="Jantje")
+
+        result = handler.handle_export_user_data(ADMIN_ID, ["jantje"])
+
+        assert result["status"] == "disambiguation_shown"
+        lambda_client.invoke.assert_not_called()
+        markup = handler._send_message.call_args.kwargs["reply_markup"]
+        callbacks = [b["callback_data"] for row in markup["inline_keyboard"] for b in row]
+        assert f"export_user_data_select_{other.customer_id}" in callbacks
+
+        handler.handle_export_user_data_select(ADMIN_ID, other.customer_id)
+
+        assert self._payload(lambda_client)["customer_id"] == other.customer_id
+
+    def test_failure_to_start_is_reported(self, handler, customer, lambda_client):
+        lambda_client.invoke.side_effect = RuntimeError("boom")
+
+        assert handler.handle_export_user_data(ADMIN_ID, ["jantje"]) == {"status": "error"}
+
+    def test_the_exporter_lambda_sends_to_the_admin_without_touching_any_claim(self, db, populated, telegram_post):
+        import boto3
+
+        boto3.client("ssm", region_name="eu-west-1").put_parameter(
+            Name="/ubbc-bot/test/telegram-bot-token", Value="token", Type="SecureString"
+        )
+        customer = populated["customer"]
+        event = {"customer_id": customer.customer_id, "chat_id": ADMIN_ID, "environment": "test"}
+
+        result = data_exporter.lambda_handler(event, None)
+
+        assert result["statusCode"] == 200
+        (document,) = [kw for url, kw in telegram_post if url.endswith("/sendDocument")]
+        assert document["data"]["chat_id"] == ADMIN_ID
+        assert set(_unzip(document["files"]["document"][1].getvalue())) == FILES
+        assert db.get_customer(customer.customer_id).last_data_export_at is None
+
+    def test_a_failed_admin_export_does_not_try_to_release_a_claim(self, db, populated):
+        import boto3
+
+        boto3.client("ssm", region_name="eu-west-1").put_parameter(
+            Name="/ubbc-bot/test/telegram-bot-token", Value="token", Type="SecureString"
+        )
+        db.claim_data_export(populated["customer"].customer_id, 1_800_000_000, MONTH)
+        event = {"customer_id": populated["customer"].customer_id, "chat_id": ADMIN_ID, "environment": "test"}
+
+        with (
+            patch.object(DataExportService, "build_zip", side_effect=RuntimeError("boom")),
+            patch("handlers.base_handler.requests.post"),
+        ):
+            data_exporter.lambda_handler(event, None)
+
+        # The customer's own claim must survive an admin export that failed
+        assert int(db.get_customer(populated["customer"].customer_id).last_data_export_at) == 1_800_000_000
+
+    @pytest.fixture
+    def telegram_post(self):
+        calls = []
+
+        def post(url, **kwargs):
+            calls.append((url, kwargs))
+            response = MagicMock(status_code=200, text="ok")
+            response.json.return_value = {"result": {"message_id": 321}}
+            return response
+
+        with patch("handlers.base_handler.requests.post", side_effect=post):
+            yield calls
+
+
 class TestAuthorization:
     def _router(self, status):
         db = Mock()
@@ -456,3 +577,23 @@ class TestAuthorization:
         router.route_command(GROUP_ID, USER_ID, "/my_data")
 
         handlers["data_export"].handle_my_data.assert_called_once_with(USER_ID)
+
+    def test_admin_command_is_routed_for_the_admin(self):
+        router, handlers = self._router("approved")
+
+        router.route_command(ADMIN_ID, ADMIN_ID, "/export_user_data jantje beton")
+
+        handlers["data_export"].handle_export_user_data.assert_called_once_with(ADMIN_ID, ["jantje", "beton"])
+
+    def test_customers_cannot_export_other_peoples_data(self):
+        router, handlers = self._router("approved")
+
+        router.route_command(USER_ID, USER_ID, "/export_user_data jantje")
+
+        handlers["data_export"].handle_export_user_data.assert_not_called()
+
+    @pytest.mark.parametrize("data", ["export_user_data_select_abc-123"])
+    def test_the_selection_button_is_admin_only(self, data):
+        from services.callback_handler import CUSTOMER_CALLBACK_PATTERN
+
+        assert CUSTOMER_CALLBACK_PATTERN.match(data) is None

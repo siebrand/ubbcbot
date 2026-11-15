@@ -22,11 +22,12 @@ configure_logging()
 
 
 def lambda_handler(event, context):
-    """Event: customer_id, chat_id, claimed_at, previous (last export before the claim), environment"""
+    """Event: customer_id, chat_id, environment, and for a customer's own request claimed_at and previous
+    (the last export before the claim). An export made by the admin on request has no claim to release."""
     environment = event.get("environment", "test")
     customer_id = event["customer_id"]
     chat_id = event["chat_id"]
-    claimed_at = event["claimed_at"]
+    claimed_at = event.get("claimed_at")
     previous = event.get("previous")
 
     db = None
@@ -53,7 +54,9 @@ def lambda_handler(event, context):
         return {"statusCode": 500, "body": "error"}
 
 
-def _release(db, customer_id: str, claimed_at: int, previous: int | None) -> None:
+def _release(db, customer_id: str, claimed_at: int | None, previous: int | None) -> None:
+    if claimed_at is None:
+        return
     released = db.release_data_export_claim(customer_id, claimed_at, previous)
     logger.info(f"Released data export claim for customer {customer_id}: {released}")
 
