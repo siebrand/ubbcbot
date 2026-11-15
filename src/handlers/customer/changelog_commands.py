@@ -15,6 +15,7 @@ class ChangelogCommands(BaseHandler):
 • <b>Announcements Stay Accurate</b> - Announcements are now also updated when wholesale processing sells an offer out, when a new box reopens a sold-out offer, when an admin changes the status by hand, and after an audit; cancelled and completed offers no longer show order buttons
 • <b>Privacy</b> - The privacy statement (<code>/privacy</code>) now explains how to request access and deletion of your data, and names, usernames and typed text are no longer written to the logs
 • <b>Ordering in the Group</b> - Typing <code>/order</code> or <code>/confirm_order</code> in the group now sends you to the private chat, where the bot can answer you
+• <b>Command Suggestions</b> - Typing <code>/</code> now suggests only what works: just <code>/fomo</code> in the group, and in a private chat the customer commands in alphabetical order
 
 <b>Admin-Facing Updates</b>
 • <b>New /delete_user Command</b> - Delete a customer record (right to be forgotten) after a confirmation. Refused while the customer has orders that are not delivered and paid, or a credit balance. Orders, credit transactions and purchase history are kept, without a name
@@ -23,11 +24,12 @@ class ChangelogCommands(BaseHandler):
 • <b>Private, Expiring Order Exports</b> - <code>/export_orders</code> now always sends the file to your private chat, also when asked in a group, and the file is removed from the chat again after about an hour
 • <b>Safer Offer Texts</b> - Offer names and descriptions with HTML tags that Telegram does not support are rejected up front with a hint, instead of failing when the offer is announced
 • <b>Clearer Admin Messages</b> - Customers without a name show as "Unknown" instead of "None", wholesale delivery buttons always give feedback, and a successful order update is no longer reported as failed
-• <b>Buttons Fixed</b> - Tapping an order in the <code>/cancel_order</code> list works again (it did nothing), the page buttons of <code>/list_boxes</code> work again, and <code>/list_guests</code> no longer fails
-• <b>/test_user_message</b> - Finds a customer by name, username or customer ID (approved customers only) and always answers, also when nothing or too many customers match
+• <b>Buttons Fixed</b> - Tapping an order in the <code>/cancel_order</code> list works again, as do the <code>/list_boxes</code> page buttons, and <code>/list_guests</code> no longer fails
+• <b>/test_user_message</b> - Finds a customer by name, username or customer ID (approved only) and always answers
 • <b>/update_supplier_full_name</b> - Now also works as a typed command
-• <b>Safer CSV Import</b> - If a name in the file fits more than one customer, the whole file is refused and the lines are listed with the matching customers (name, username, ID); nothing is imported and no buttons are shown
+• <b>Safer CSV Import</b> - If a name in the file fits more than one customer, the whole file is refused and those lines are listed with the matching customers; nothing is imported
 • <b>Paging Fixed</b> - The next-page button of <code>/list_offers sold_out</code> works again
+• <b>Admin Command Menu</b> - Typing <code>/</code> in your private chat with the bot now suggests every admin command, in alphabetical order
 
 <b>Behind the Scenes</b>
 • <b>Data Export Service</b> - A separate DataExporter function builds the exports, backed by a new customer index on the purchase history
