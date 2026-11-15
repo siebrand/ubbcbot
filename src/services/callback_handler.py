@@ -116,11 +116,8 @@ class CallbackHandler:
             r"^edit_supplier_select_(.+)$",
             lambda match, ctx: self.handlers["supplier"].show_edit_interface_by_id(ctx["chat_id"], match.group(1)),
         )
-        # Generic edit pattern: edit_{entity}_{field}_{id} - handled by _handle_edit_callbacks wrapper
-        self.router.register(
-            r"^edit_(.+)$",
-            lambda match, ctx: self._handle_edit_callbacks(ctx["chat_id"], ctx["user_id"], f"edit_{match.group(1)}"),
-        )
+        # Generic edit buttons (edit_<entity>_<field>_<id>) and the /edit_order flow
+        self._register_edit_routes()
 
         # Order patterns - most specific first (Phase 3 Batch B)
         self.router.register(
@@ -373,39 +370,47 @@ class CallbackHandler:
 
     def _register_panel_command_routes(self):
         """The buttons of the admin panel menus. Both ``cmd:list_pending`` and the older ``cmd_list_pending`` work."""
-        h = self.handlers
+        # Handlers are looked up when a button is tapped, like in the other routes
         commands = {
-            "create_supplier": lambda chat, user: h["supplier"].handle_create_supplier(chat, []),
-            "list_suppliers": lambda chat, user: h["supplier"].handle_list_suppliers(chat, 1, "active"),
-            "update_supplier": lambda chat, user: h["supplier"].handle_list_suppliers(chat, 1, "active"),
-            "create_offer": lambda chat, user: h["offer"].handle_create_offer(chat, []),
+            "create_supplier": lambda chat, user: self.handlers["supplier"].handle_create_supplier(chat, []),
+            "list_suppliers": lambda chat, user: self.handlers["supplier"].handle_list_suppliers(chat, 1, "active"),
+            "update_supplier": lambda chat, user: self.handlers["supplier"].handle_list_suppliers(chat, 1, "active"),
+            "create_offer": lambda chat, user: self.handlers["offer"].handle_create_offer(chat, []),
             "publish_offer": lambda chat, user: self._send_usage_message(chat, "usage_publish_offer"),
-            "list_offers": lambda chat, user: h["info"].handle_list_offers(chat, user, []),
-            "list_boxes": lambda chat, user: h["offer"].handle_list_boxes(chat),
-            "audit_offer": lambda chat, user: h["offer"].handle_audit_offer(chat, []),
-            "process_wholesale": lambda chat, user: h["offer"].handle_process_wholesale(chat, []),
-            "export_orders": lambda chat, user: h["admin_order"].handle_export_orders(chat, []),
+            "list_offers": lambda chat, user: self.handlers["info"].handle_list_offers(chat, user, []),
+            "list_boxes": lambda chat, user: self.handlers["offer"].handle_list_boxes(chat),
+            "audit_offer": lambda chat, user: self.handlers["offer"].handle_audit_offer(chat, []),
+            "process_wholesale": lambda chat, user: self.handlers["offer"].handle_process_wholesale(chat, []),
+            "export_orders": lambda chat, user: self.handlers["admin_order"].handle_export_orders(chat, []),
             "list_user_orders": lambda chat, user: self._start_user_orders_input(chat),
-            "list_offer_orders": lambda chat, user: h["admin_order"].handle_list_offer_orders(chat, []),
-            "cancel_order": lambda chat, user: h["admin_order"].handle_cancel_order(chat, []),
-            "create_order_for": lambda chat, user: h["admin_order"].handle_create_order_for(chat, user, []),
-            "list_pending": lambda chat, user: h["user"].handle_list_pending(chat),
-            "list_users": lambda chat, user: h["user"].handle_list_users(chat, 1, "all"),
+            "list_offer_orders": lambda chat, user: self.handlers["admin_order"].handle_list_offer_orders(chat, []),
+            "cancel_order": lambda chat, user: self.handlers["admin_order"].handle_cancel_order(chat, []),
+            "create_order_for": lambda chat, user: self.handlers["admin_order"].handle_create_order_for(chat, user, []),
+            "list_pending": lambda chat, user: self.handlers["user"].handle_list_pending(chat),
+            "list_users": lambda chat, user: self.handlers["user"].handle_list_users(chat, 1, "all"),
             "create_guest": lambda chat, user: self._send_usage_message(chat, "usage_add_guest"),
-            "list_guests": lambda chat, user: h["user"].handle_list_guests(chat),
+            "list_guests": lambda chat, user: self.handlers["user"].handle_list_guests(chat),
             "approve_user": lambda chat, user: self._start_approve_user_input(chat),
             "user_status": lambda chat, user: self._start_user_status_input(chat),
-            "process_delivery": lambda chat, user: h["wholesale_delivery"].handle_process_delivery(chat, user, []),
-            "process_labeling": lambda chat, user: h["labeling"].handle_process_labeling(chat, user, []),
-            "send_delivery_overviews": lambda chat, user: h["admin_order"].handle_send_delivery_overviews(chat, []),
-            "process_payment": lambda chat, user: h["admin_order"].handle_process_payment(chat, []),
-            "send_payment_reminder": lambda chat, user: h["admin_order"].handle_send_payment_reminder(chat, []),
-            "setup_test_data": lambda chat, user: h["test"].handle_setup_test_data(chat),
-            "failed_notifications": lambda chat, user: h["admin_order"].handle_failed_notifications(chat, []),
-            "delete_old_orders": lambda chat, user: h["admin_order"].handle_delete_old_orders(chat),
-            "audit_orders": lambda chat, user: h["admin_order"].handle_audit_orders(chat),
-            "import_orders": lambda chat, user: h["import"].handle_import_orders(chat, user),
-            "finalize_import": lambda chat, user: h["import"].handle_finalize_import(chat, []),
+            "process_delivery": lambda chat, user: self.handlers["wholesale_delivery"].handle_process_delivery(
+                chat, user, []
+            ),
+            "process_labeling": lambda chat, user: self.handlers["labeling"].handle_process_labeling(chat, user, []),
+            "send_delivery_overviews": lambda chat, user: self.handlers["admin_order"].handle_send_delivery_overviews(
+                chat, []
+            ),
+            "process_payment": lambda chat, user: self.handlers["admin_order"].handle_process_payment(chat, []),
+            "send_payment_reminder": lambda chat, user: self.handlers["admin_order"].handle_send_payment_reminder(
+                chat, []
+            ),
+            "setup_test_data": lambda chat, user: self.handlers["test"].handle_setup_test_data(chat),
+            "failed_notifications": lambda chat, user: self.handlers["admin_order"].handle_failed_notifications(
+                chat, []
+            ),
+            "delete_old_orders": lambda chat, user: self.handlers["admin_order"].handle_delete_old_orders(chat),
+            "audit_orders": lambda chat, user: self.handlers["admin_order"].handle_audit_orders(chat),
+            "import_orders": lambda chat, user: self.handlers["import"].handle_import_orders(chat, user),
+            "finalize_import": lambda chat, user: self.handlers["import"].handle_finalize_import(chat, []),
         }
         for action, run in commands.items():
             self.router.register(rf"^cmd[:_]{action}$", lambda match, ctx, run=run: run(ctx["chat_id"], ctx["user_id"]))
@@ -416,6 +421,58 @@ class CallbackHandler:
     def _unknown_callback(self, match, ctx):
         """Tell the admin the button is not recognized (used for unknown actions inside a known callback family)"""
         return self._send_message(ctx["chat_id"], self._t("unknown_callback", ctx["user_id"]))
+
+    def _register_edit_routes(self):
+        """Edit buttons. ``edit_user_select_`` and ``edit_supplier_select_`` are more specific and registered first.
+
+        Customer, supplier and offer ids have no underscore (UUIDs, numbers), so the id is the last segment and the
+        segment before it is the field. Anything starting with ``edit_`` that matches nothing is reported.
+        """
+        register = self.router.register
+
+        def editing():
+            return self.handlers["admin_order"].editing
+
+        # /edit_order: the order id is the first segment (a UUID prefix); a status value may contain underscores
+        register(
+            r"^edit_order_pick_(.+)$",
+            lambda m, ctx: editing()._show_aspect_menu(ctx["chat_id"], self.db.get_order(m.group(1))),
+        )
+        register(r"^edit_order_box_(.+)$", lambda m, ctx: editing().show_box_options(ctx["chat_id"], m.group(1)))
+        register(r"^edit_order_price_(.+)$", lambda m, ctx: editing().prompt_price(ctx["chat_id"], m.group(1)))
+        register(r"^edit_order_status_(.+)$", lambda m, ctx: editing().show_status_options(ctx["chat_id"], m.group(1)))
+        register(
+            r"^edit_order_setbox_([^_]+)_(.+)$",
+            lambda m, ctx: editing().confirm_box(ctx["chat_id"], m.group(1), m.group(2)),
+        )
+        register(
+            r"^edit_order_applybox_([^_]+)_(.+)$",
+            lambda m, ctx: editing().apply_box(ctx["chat_id"], m.group(1), m.group(2)),
+        )
+        register(
+            r"^edit_order_setstatus_([^_]+)_(.+)$",
+            lambda m, ctx: editing().confirm_status(ctx["chat_id"], m.group(1), m.group(2)),
+        )
+        register(
+            r"^edit_order_applystatus_([^_]+)_(.+)$",
+            lambda m, ctx: editing().apply_status(ctx["chat_id"], m.group(1), m.group(2)),
+        )
+
+        # Text-input edits: the manager stores the context and asks for the new value
+        register(
+            r"^edit_supplier_(full_name|[^_]+)_([^_]+)$",
+            lambda m, ctx: self.edit_context_manager.handle_supplier_edit(ctx["chat_id"], m.group(1), m.group(2)),
+        )
+        register(
+            r"^edit_offer_([^_]+)_([^_]+)$",
+            lambda m, ctx: self.edit_context_manager.handle_offer_edit(ctx["chat_id"], m.group(1), m.group(2)),
+        )
+        register(
+            r"^edit_customer_(first_name|last_name|contact|location)_([^_]+)$",
+            lambda m, ctx: self.edit_context_manager.handle_customer_edit(ctx["chat_id"], m.group(1), m.group(2)),
+        )
+
+        register(r"^edit_", lambda m, ctx: self._send_message(ctx["chat_id"], self._t("unknown_edit")))
 
     def _register_workflow_routes(self):
         """The wholesale delivery (wd_) and labeling (lc_) workflows share one grammar: ``<prefix>_<verb>:<arg>:...``.
@@ -458,39 +515,40 @@ class CallbackHandler:
 
     def _register_workflow(self, prefix: str, key: str, action_method: str, complete_method: str, confirm_method: str):
         register = self.router.register
-        handlers = self.handlers
 
         register(
             rf"^{prefix}_sup:([^:]+)$",
-            lambda m, ctx: handlers[key].handle_supplier_selection(ctx["chat_id"], m.group(1)),
+            lambda m, ctx: self.handlers[key].handle_supplier_selection(ctx["chat_id"], m.group(1)),
         )
         register(
             rf"^{prefix}_off:(\d+):([^:]+)$",
-            lambda m, ctx: handlers[key].handle_offer_selection(ctx["chat_id"], int(m.group(1)), m.group(2)),
+            lambda m, ctx: self.handlers[key].handle_offer_selection(ctx["chat_id"], int(m.group(1)), m.group(2)),
         )
         register(
             rf"^{prefix}_box:([^:]+):(\d+):([^:]+)$",
-            lambda m, ctx: handlers[key].handle_box_selection(ctx["chat_id"], m.group(1), int(m.group(2)), m.group(3)),
+            lambda m, ctx: self.handlers[key].handle_box_selection(
+                ctx["chat_id"], m.group(1), int(m.group(2)), m.group(3)
+            ),
         )
         register(
             rf"^{prefix}_action:([^:]+):([^:]+):(\d+):([^:]+)$",
-            lambda m, ctx: getattr(handlers[key], action_method)(
+            lambda m, ctx: getattr(self.handlers[key], action_method)(
                 ctx["chat_id"], m.group(1), m.group(2), int(m.group(3)), m.group(4)
             ),
         )
         register(
             rf"^{prefix}_back:([^:]+)(?::(.*))?$",
-            lambda m, ctx: handlers[key].handle_back_navigation(
+            lambda m, ctx: self.handlers[key].handle_back_navigation(
                 ctx["chat_id"], m.group(1), *(m.group(2).split(":") if m.group(2) is not None else [])
             ),
         )
         register(
             rf"^{prefix}_complete:(\d+):([^:]+)$",
-            lambda m, ctx: getattr(handlers[key], complete_method)(ctx["chat_id"], int(m.group(1)), m.group(2)),
+            lambda m, ctx: getattr(self.handlers[key], complete_method)(ctx["chat_id"], int(m.group(1)), m.group(2)),
         )
         register(
             rf"^{prefix}_confirm_complete:(\d+):([^:]+)$",
-            lambda m, ctx: getattr(handlers[key], confirm_method)(ctx["chat_id"], int(m.group(1)), m.group(2)),
+            lambda m, ctx: getattr(self.handlers[key], confirm_method)(ctx["chat_id"], int(m.group(1)), m.group(2)),
         )
         register(
             rf"^{prefix}_confirm_complete(?::.*)?$",
@@ -711,93 +769,6 @@ class CallbackHandler:
             return {"status": "unauthorized"}
 
         return {"status": "unknown_pagination_type"}
-
-    def _handle_edit_callbacks(self, chat_id: int, user_id: int, data: str) -> dict[str, Any]:
-        """Handle edit-related callbacks"""
-        # /edit_order flow. order_id and box_id are UUIDs (hyphens, no underscores);
-        # status values may contain underscores, so parse by known action prefixes
-        # rather than a naive split.
-        if data.startswith("edit_order_"):
-            editing = self.handlers["admin_order"].editing
-            rest = data[len("edit_order_") :]
-            for action, method in (
-                ("pick_", "pick"),
-                ("box_", "show_box"),
-                ("price_", "prompt_price"),
-                ("status_", "show_status"),
-                ("setbox_", "confirm_box"),
-                ("applybox_", "apply_box"),
-                ("setstatus_", "confirm_status"),
-                ("applystatus_", "apply_status"),
-            ):
-                if rest.startswith(action):
-                    payload = rest[len(action) :]
-                    if method == "pick":
-                        return editing._show_aspect_menu(chat_id, self.db.get_order(payload))
-                    if method == "show_box":
-                        return editing.show_box_options(chat_id, payload)
-                    if method == "prompt_price":
-                        return editing.prompt_price(chat_id, payload)
-                    if method == "show_status":
-                        return editing.show_status_options(chat_id, payload)
-                    # two-part payloads: order_id + value, split on the first "_"
-                    order_id, _, value = payload.partition("_")
-                    if method == "confirm_box":
-                        return editing.confirm_box(chat_id, order_id, value)
-                    if method == "apply_box":
-                        return editing.apply_box(chat_id, order_id, value)
-                    if method == "confirm_status":
-                        return editing.confirm_status(chat_id, order_id, value)
-                    if method == "apply_status":
-                        return editing.apply_status(chat_id, order_id, value)
-            self._send_message(chat_id, self._t("unknown_edit"))
-            return {"status": "unknown_edit"}
-
-        parts = data.split("_")
-
-        if len(parts) >= 4:
-            # Handle special case for customer first/last name editing
-            if parts[1] == "customer" and len(parts) == 5:
-                if parts[2] == "first" and parts[3] == "name":
-                    return self._handle_customer_edit(chat_id, "first_name", parts[4])
-                elif parts[2] == "last" and parts[3] == "name":
-                    return self._handle_customer_edit(chat_id, "last_name", parts[4])
-
-            # Handle customer contact and location (4 parts: edit_customer_contact_id)
-            if parts[1] == "customer" and len(parts) == 4:
-                if parts[2] == "contact":
-                    return self._handle_customer_edit(chat_id, "contact", parts[3])
-                elif parts[2] == "location":
-                    return self._handle_customer_edit(chat_id, "location", parts[3])
-
-            # Handle special case for supplier full_name editing
-            if parts[1] == "supplier" and len(parts) == 5 and parts[2] == "full" and parts[3] == "name":
-                return self._handle_supplier_edit(chat_id, "full_name", parts[4])
-
-            # Standard format: edit_{entity}_{field}_{id}
-            entity_type = parts[1]
-            field = parts[2]
-            entity_id = parts[3]
-
-            if entity_type == "supplier":
-                return self._handle_supplier_edit(chat_id, field, entity_id)
-            elif entity_type == "offer":
-                return self._handle_offer_edit(chat_id, field, entity_id)
-
-        self._send_message(chat_id, self._t("unknown_edit"))
-        return {"status": "unknown_edit"}
-
-    def _handle_supplier_edit(self, chat_id: int, field: str, supplier_id: str) -> dict[str, Any]:
-        """Handle supplier edit callbacks"""
-        return self.edit_context_manager.handle_supplier_edit(chat_id, field, supplier_id)
-
-    def _handle_offer_edit(self, chat_id: int, field: str, offer_id: str) -> dict[str, Any]:
-        """Handle offer edit callbacks"""
-        return self.edit_context_manager.handle_offer_edit(chat_id, field, offer_id)
-
-    def _handle_customer_edit(self, chat_id: int, field: str, customer_id: str) -> dict[str, Any]:
-        """Handle customer edit callbacks"""
-        return self.edit_context_manager.handle_customer_edit(chat_id, field, customer_id)
 
     def _store_edit_context(self, chat_id: int, edit_type: str, entity_id: str):
         """Store edit context in DynamoDB for processing replies"""
