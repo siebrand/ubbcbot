@@ -85,6 +85,16 @@ class Customer:
     is_guest: bool = False
     contact_info: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    last_data_export_at: int | None = None  # Epoch seconds of the last /my_data export (monthly limit)
+
+
+@dataclass
+class DataExportClaim:
+    """Result of trying to claim the monthly personal data export slot"""
+
+    claimed: bool
+    previous: int | None = None  # last_data_export_at before the claim (needed to release it again)
+    last_export_at: int | None = None  # when the customer last exported (set when the claim was refused)
 
 
 @dataclass

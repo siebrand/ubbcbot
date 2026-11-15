@@ -54,6 +54,25 @@ class OrderHistoryRepository(BaseRepository):
             logger.error(f"Error batch creating order history: {e}")
             return 0
 
+    def get_events_by_customer(self, customer_id: str) -> list[OrderHistory]:
+        """All events of one customer, oldest first, via the customer-index (hash customer_id, range changed_at)"""
+        try:
+            params = {
+                "IndexName": "customer-index",
+                "KeyConditionExpression": Key("customer_id").eq(customer_id),
+            }
+            items: list[dict] = []
+            while True:
+                response = self.table.query(**params)
+                items.extend(response.get("Items", []))
+                if "LastEvaluatedKey" not in response:
+                    break
+                params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+            return [self._item_to_history(item) for item in items]
+        except Exception as e:
+            logger.error(f"Error getting events by customer: {e}")
+            return []
+
     def get_events_by_type(
         self, event_type: str, start_date: datetime | None = None, end_date: datetime | None = None
     ) -> list[OrderHistory]:

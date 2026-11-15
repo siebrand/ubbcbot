@@ -34,10 +34,19 @@ class OrderRepository(BaseRepository):
 
     def get_orders_by_customer(self, customer_id: str) -> list[Order]:
         try:
-            response = self.table.query(
-                IndexName="customer-index", KeyConditionExpression=Key("customer_id").eq(customer_id)
-            )
-            return [Order(**item) for item in response.get("Items", [])]
+            # Follow pagination: a data export must contain every order, not just the first 1 MB
+            params: dict[str, Any] = {
+                "IndexName": "customer-index",
+                "KeyConditionExpression": Key("customer_id").eq(customer_id),
+            }
+            items: list[dict[str, Any]] = []
+            while True:
+                response = self.table.query(**params)
+                items.extend(response.get("Items", []))
+                if "LastEvaluatedKey" not in response:
+                    break
+                params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+            return [Order(**item) for item in items]
         except Exception as e:
             logger.error(f"Error getting orders by customer: {e}")
             return []

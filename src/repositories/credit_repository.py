@@ -130,6 +130,26 @@ class CreditRepository(BaseRepository):
             logger.error(f"Error getting credit transactions: {e}")
             return []
 
+    def get_all_credit_transactions_by_customer(self, customer_id: str) -> list[CreditTransaction]:
+        """Every credit transaction of a customer, oldest first (no limit, follows pagination)"""
+        try:
+            params = {
+                "IndexName": "customer-index",
+                "KeyConditionExpression": Key("customer_id").eq(customer_id),
+            }
+            items: list[dict] = []
+            while True:
+                response = self.transactions_table.query(**params)
+                items.extend(response.get("Items", []))
+                if "LastEvaluatedKey" not in response:
+                    break
+                params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+            transactions = [self._item_to_transaction(item) for item in items]
+            return sorted(transactions, key=lambda t: str(t.created_at))
+        except Exception as e:
+            logger.error(f"Error getting all credit transactions: {e}")
+            return []
+
     def get_customers_with_credit_balance(self, min_amount: Decimal | None = None) -> list[CustomerCredit]:
         try:
             if min_amount:

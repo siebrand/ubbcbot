@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from models.entities import Customer
+from models.entities import Customer, DataExportClaim
 from repositories.base_repository import BaseRepository
 from repositories.system_repository import SystemRepository
 from services.user_cache import UserCache
@@ -116,6 +116,59 @@ class CustomerRepository(BaseRepository):
 
         UserCache.invalidate_cache()
         return True
+
+    def claim_data_export(self, customer_id: str, now: int, min_interval_seconds: int) -> DataExportClaim | None:
+        """Atomically claim the right to export personal data (once per ``min_interval_seconds``).
+
+        The condition and the write happen in one DynamoDB call, so two simultaneous requests
+        cannot both succeed. Returns None when the database call itself failed. The customer cache
+        is not touched: nothing reads ``last_data_export_at`` from it.
+        """
+        try:
+            response = self.table.update_item(
+                Key={"customer_id": customer_id},
+                UpdateExpression="SET last_data_export_at = :now",
+                ConditionExpression=(
+                    "attribute_exists(customer_id) AND "
+                    "(attribute_not_exists(last_data_export_at) OR last_data_export_at <= :cutoff)"
+                ),
+                ExpressionAttributeValues={":now": now, ":cutoff": now - min_interval_seconds},
+                ReturnValues="UPDATED_OLD",
+            )
+            previous = response.get("Attributes", {}).get("last_data_export_at")
+            return DataExportClaim(claimed=True, previous=int(previous) if previous is not None else None)
+        except self.dynamodb.meta.client.exceptions.ConditionalCheckFailedException:
+            customer = self.get_customer(customer_id)
+            last = customer.last_data_export_at if customer else None
+            return DataExportClaim(claimed=False, last_export_at=int(last) if last is not None else None)
+        except Exception as e:
+            logger.error(f"Error claiming data export for {customer_id}: {e}")
+            return None
+
+    def release_data_export_claim(self, customer_id: str, claimed_at: int, previous: int | None) -> bool:
+        """Undo a claim after a failed export, so a failure does not use up the month.
+
+        Only applies while the claim is still ours (``last_data_export_at == claimed_at``).
+        """
+        try:
+            values: dict[str, Any] = {":claimed": claimed_at}
+            if previous is None:
+                expression = "REMOVE last_data_export_at"
+            else:
+                expression = "SET last_data_export_at = :previous"
+                values[":previous"] = previous
+            self.table.update_item(
+                Key={"customer_id": customer_id},
+                UpdateExpression=expression,
+                ConditionExpression="last_data_export_at = :claimed",
+                ExpressionAttributeValues=values,
+            )
+            return True
+        except self.dynamodb.meta.client.exceptions.ConditionalCheckFailedException:
+            return False
+        except Exception as e:
+            logger.error(f"Error releasing data export claim for {customer_id}: {e}")
+            return False
 
     def get_customer_by_telegram_id(self, telegram_user_id: int) -> Customer | None:
         """Get customer by telegram ID with caching"""

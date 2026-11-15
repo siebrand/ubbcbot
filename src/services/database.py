@@ -345,6 +345,12 @@ class DynamoDBService:
     def delete_customer(self, customer_id: str) -> bool:
         return self.customer_repo.delete_customer(customer_id)
 
+    def claim_data_export(self, customer_id: str, now: int, min_interval_seconds: int):
+        return self.customer_repo.claim_data_export(customer_id, now, min_interval_seconds)
+
+    def release_data_export_claim(self, customer_id: str, claimed_at: int, previous: int | None) -> bool:
+        return self.customer_repo.release_data_export_claim(customer_id, claimed_at, previous)
+
     def get_subscribers(self) -> list[Customer]:
         """Get subscribers with caching"""
         return self.customer_repo.get_subscribers()
@@ -611,6 +617,9 @@ class DynamoDBService:
     ) -> list:
         return self.order_history_repo.get_events_by_type(event_type, start_date, end_date)
 
+    def get_order_history_by_customer(self, customer_id: str) -> list:
+        return self.order_history_repo.get_events_by_customer(customer_id)
+
     # Transaction methods for sensitive order operations
     def cancel_order(self, order_id: str, admin_id: int, reason: str) -> bool:
         """Cancel an order (inventory correction handled by the status update)."""
@@ -673,6 +682,9 @@ class DynamoDBService:
 
     def get_credit_transactions_by_customer(self, customer_id: str, limit: int = 50) -> list:
         return self.credit_repo.get_credit_transactions_by_customer(customer_id, limit)
+
+    def get_all_credit_transactions_by_customer(self, customer_id: str) -> list:
+        return self.credit_repo.get_all_credit_transactions_by_customer(customer_id)
 
     def get_customers_with_credit_balance(self, min_amount=None) -> list:
         return self.credit_repo.get_customers_with_credit_balance(min_amount)

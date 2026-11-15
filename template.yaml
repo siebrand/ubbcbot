@@ -666,6 +666,8 @@ Resources:
           AttributeType: S
         - AttributeName: event_type
           AttributeType: S
+        - AttributeName: customer_id
+          AttributeType: S
       KeySchema:
         - AttributeName: history_id
           KeyType: HASH
@@ -673,6 +675,14 @@ Resources:
         - IndexName: event-time-index
           KeySchema:
             - AttributeName: event_type
+              KeyType: HASH
+            - AttributeName: changed_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: customer-index
+          KeySchema:
+            - AttributeName: customer_id
               KeyType: HASH
             - AttributeName: changed_at
               KeyType: RANGE

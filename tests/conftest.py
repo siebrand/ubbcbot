@@ -147,12 +147,22 @@ def dynamodb(aws_credentials):
                 {"AttributeName": "history_id", "AttributeType": "S"},
                 {"AttributeName": "event_type", "AttributeType": "S"},
                 {"AttributeName": "changed_at", "AttributeType": "S"},
+                {"AttributeName": "customer_id", "AttributeType": "S"},
             ],
             GlobalSecondaryIndexes=[
                 {
                     "IndexName": "event-time-index",
                     "KeySchema": [
                         {"AttributeName": "event_type", "KeyType": "HASH"},
+                        {"AttributeName": "changed_at", "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
+                {
+                    "IndexName": "customer-index",
+                    "KeySchema": [
+                        {"AttributeName": "customer_id", "KeyType": "HASH"},
                         {"AttributeName": "changed_at", "KeyType": "RANGE"},
                     ],
                     "Projection": {"ProjectionType": "ALL"},
