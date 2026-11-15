@@ -31,6 +31,7 @@ Wanneer je de bot gebruikt, verwerken we:
 | Taalvoorkeur | Telegram | Berichten in de juiste taal tonen |
 | Contactgegevens (optioneel) | Door beheerder ingevoerd | Contact bij gastgebruikers zonder Telegram |
 | Bestel- en betaalgeschiedenis | Jouw gebruik van de bot | Bestellingen, levering, facturatie en tegoeden |
+| Tijdstip van je laatste gegevensexport | Jouw gebruik van de bot | Het aantal exports beperken tot één per 30 dagen |
 | Telegram-gebruikers-ID in technische logbestanden | Telegram | Foutopsporing en beveiliging (geen namen, gebruikersnamen of ingevoerde tekst) |
 
 De ophaal-/leverlocatie die de bot gebruikt is een vaste, gedeelde locatie voor
@@ -81,6 +82,12 @@ beperking en bezwaar. Ook kun je je toestemming voor meldingen op elk moment
 intrekken.
 
 - **Afmelden voor meldingen:** stuur `/unsubscribe` naar de bot.
+- **Inzage via de bot:** stuur `/my_data` naar de bot (voor goedgekeurde
+  gebruikers). Je ontvangt in je privéchat een zipbestand met JSON-bestanden met
+  alle gegevens die we van je hebben: je profiel, bestellingen, tegoed en
+  aankoopgeschiedenis. Dit kan één keer per 30 dagen. Het bestand wordt na
+  ongeveer een uur uit de chat verwijderd; bewaar het dus direct als je het wilt
+  houden.
 - **Inzage, correctie of verwijdering:** neem contact op via het adres
   hierboven. Je verzoek is kosteloos. Om te controleren dat het van jou komt,
   vragen we je je Telegram-gebruikersnaam te noemen en het verzoek vanuit je

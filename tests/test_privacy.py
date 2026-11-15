@@ -57,6 +57,15 @@ class TestPrivacyApi:
         assert "geanonimiseerde vorm" not in body
         assert "gewist of gepseudonimiseerd" not in body
 
+    def test_describes_the_self_service_data_export(self):
+        body = " ".join(privacy_api.handler({}, None)["body"].split())
+        assert "/my_data" in body
+        assert "zipbestand met JSON-bestanden" in body
+        assert "één keer per 30 dagen" in body
+        assert "na ongeveer een uur uit de chat verwijderd" in body
+        # The timestamp used for the monthly limit is personal data too
+        assert "Tijdstip van je laatste gegevensexport" in body
+
     def test_describes_exports_and_logs(self):
         body = " ".join(privacy_api.handler({}, None)["body"].split())
         assert "privéchat van de beheerder" in body
