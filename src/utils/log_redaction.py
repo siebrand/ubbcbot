@@ -6,6 +6,7 @@ leak them by accident.
 """
 
 import logging
+import os
 import re
 
 REDACTED = "***"
@@ -50,6 +51,16 @@ class PiiRedactionFilter(logging.Filter):
         record.msg = redact(message)
         record.args = None
         return True
+
+
+def configure_logging() -> None:
+    """Set the root log level from LOG_LEVEL (default INFO) and install PII redaction.
+
+    Invalid values fall back to INFO so a typo cannot silence logging entirely.
+    """
+    level = logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO").upper())
+    logging.getLogger().setLevel(level if isinstance(level, int) else logging.INFO)
+    install_pii_redaction()
 
 
 def install_pii_redaction() -> None:

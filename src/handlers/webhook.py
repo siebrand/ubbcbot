@@ -5,12 +5,11 @@ import os
 from typing import Any
 
 from services.bot_service import BotService
-from utils.log_redaction import install_pii_redaction
+from utils.log_redaction import configure_logging
 from utils.response import create_response
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-install_pii_redaction()
+configure_logging()
 
 SECRET_TOKEN_HEADER = "x-telegram-bot-api-secret-token"
 

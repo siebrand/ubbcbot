@@ -8,11 +8,10 @@ from typing import Any
 import boto3
 from boto3.dynamodb.conditions import Key
 
-from utils.log_redaction import install_pii_redaction
+from utils.log_redaction import configure_logging
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-install_pii_redaction()
+configure_logging()
 
 dynamodb = boto3.resource("dynamodb")
 table_prefix = os.environ["DYNAMODB_TABLE_PREFIX"]

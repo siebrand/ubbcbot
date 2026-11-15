@@ -24,6 +24,7 @@ Globals:
     Environment:
       Variables:
         ENVIRONMENT: !Ref Environment
+        LOG_LEVEL: !If [ IsTestEnvironment, INFO, WARNING ]
         DYNAMODB_TABLE_PREFIX: !Sub 'ubbc-bot-${Environment}'
         S3_BUCKET_NAME: !Ref ImageBucket
         ADMIN_USER_ID: !Ref AdminUserId

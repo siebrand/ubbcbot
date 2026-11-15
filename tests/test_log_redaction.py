@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from utils.log_redaction import REDACTED, PiiRedactionFilter, install_pii_redaction, redact
+from utils.log_redaction import REDACTED, PiiRedactionFilter, configure_logging, install_pii_redaction, redact
 
 
 class TestRedact:
@@ -49,6 +49,45 @@ class TestFilter:
         record = self._record("bad %d", "@secret_user")
         assert PiiRedactionFilter().filter(record) is True
         assert "secret_user" not in record.getMessage()
+
+
+class TestConfigureLogging:
+    @pytest.fixture
+    def clean_root(self):
+        root = logging.getLogger()
+        saved = (root.level, list(root.filters), list(root.handlers))
+        root.filters = []
+        yield root
+        root.setLevel(saved[0])
+        root.filters, root.handlers = saved[1], saved[2]
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            ("WARNING", logging.WARNING),
+            ("warning", logging.WARNING),
+            ("DEBUG", logging.DEBUG),
+            (None, logging.INFO),
+            ("NOPE", logging.INFO),
+            ("", logging.INFO),
+        ],
+    )
+    def test_level_comes_from_environment(self, clean_root, monkeypatch, value, expected):
+        if value is None:
+            monkeypatch.delenv("LOG_LEVEL", raising=False)
+        else:
+            monkeypatch.setenv("LOG_LEVEL", value)
+
+        configure_logging()
+
+        assert clean_root.level == expected
+
+    def test_also_installs_redaction(self, clean_root, monkeypatch):
+        monkeypatch.setenv("LOG_LEVEL", "INFO")
+
+        configure_logging()
+
+        assert any(isinstance(f, PiiRedactionFilter) for f in clean_root.filters)
 
 
 class TestInstall:
