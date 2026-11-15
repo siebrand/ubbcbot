@@ -176,16 +176,14 @@ class OrderCancellation(BaseOrderHandler):
         orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.status in ["pending", "ordered"]]
 
         if not orders:
-            display_name = f"{customer.first_name} {customer.last_name}" or self._t("unknown", user_id=None)
+            display_name = self._customer_display_name(customer)
             self._send_message(chat_id, self._t("no_active_orders_for_user", chat_id, name=display_name))
             return {"status": "no_orders"}
 
         # Paginate orders
         page_orders, total_pages = self._paginate_list(orders, page, 10)
 
-        display_name = self._escape_html(
-            f"{customer.first_name} {customer.last_name}" or self._t("unknown", user_id=None)
-        )
+        display_name = self._escape_html(self._customer_display_name(customer))
         message = f"❌ Cancel Order for {display_name} (Page {page}/{total_pages}):\n\n"
 
         keyboard_buttons = []

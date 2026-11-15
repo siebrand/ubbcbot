@@ -3,9 +3,6 @@
 Customers can have no first and/or last name (guests, Telegram users without a
 last name). The handlers must fall back to "Unknown" for a nameless customer
 and must never render a missing part as the text "None".
-
-The tests marked ``expectedFailure`` document behavior that is fixed in the
-follow-up commit; that commit removes the markers.
 """
 
 import os
@@ -107,11 +104,9 @@ class TestPlacementOffersDisplayName(CustomerDisplayNameTestBase):
     def test_full_name(self):
         self.assert_shows_full_name(self.show)
 
-    @unittest.expectedFailure
     def test_missing_name_parts(self):
         self.assert_handles_missing_parts(self.show)
 
-    @unittest.expectedFailure
     def test_nameless_customer_shows_unknown(self):
         self.assert_falls_back_to_unknown(self.show)
 
@@ -127,11 +122,9 @@ class TestPlacementQuantityDisplayName(CustomerDisplayNameTestBase):
     def test_full_name(self):
         self.assert_shows_full_name(self.show)
 
-    @unittest.expectedFailure
     def test_missing_name_parts(self):
         self.assert_handles_missing_parts(self.show)
 
-    @unittest.expectedFailure
     def test_nameless_customer_shows_unknown(self):
         self.assert_falls_back_to_unknown(self.show)
 
@@ -148,11 +141,9 @@ class TestCancellationNoOrdersDisplayName(CustomerDisplayNameTestBase):
     def test_full_name(self):
         self.assert_shows_full_name(self.show)
 
-    @unittest.expectedFailure
     def test_missing_name_parts(self):
         self.assert_handles_missing_parts(self.show)
 
-    @unittest.expectedFailure
     def test_nameless_customer_shows_unknown(self):
         self.assert_falls_back_to_unknown(self.show)
 
@@ -170,11 +161,9 @@ class TestCancellationOrderListDisplayName(CustomerDisplayNameTestBase):
     def test_full_name(self):
         self.assert_shows_full_name(self.show)
 
-    @unittest.expectedFailure
     def test_missing_name_parts(self):
         self.assert_handles_missing_parts(self.show)
 
-    @unittest.expectedFailure
     def test_nameless_customer_shows_unknown(self):
         self.assert_falls_back_to_unknown(self.show)
 
@@ -191,11 +180,9 @@ class TestBaseNoOrdersDisplayName(CustomerDisplayNameTestBase):
     def test_full_name(self):
         self.assert_shows_full_name(self.show)
 
-    @unittest.expectedFailure
     def test_missing_name_parts(self):
         self.assert_handles_missing_parts(self.show)
 
-    @unittest.expectedFailure
     def test_nameless_customer_shows_unknown(self):
         self.assert_falls_back_to_unknown(self.show)
 
@@ -216,11 +203,9 @@ class TestBaseOrderListDisplayName(CustomerDisplayNameTestBase):
     def test_full_name(self):
         self.assert_shows_full_name(self.show)
 
-    @unittest.expectedFailure
     def test_missing_name_parts(self):
         self.assert_handles_missing_parts(self.show)
 
-    @unittest.expectedFailure
     def test_nameless_customer_shows_unknown(self):
         self.assert_falls_back_to_unknown(self.show)
 

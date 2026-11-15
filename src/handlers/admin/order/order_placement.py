@@ -67,9 +67,7 @@ class OrderPlacement(BaseOrderHandler):
             self._send_message(chat_id, self._t("no_offers_available"))
             return {"status": "no_offers"}
 
-        display_name = self._escape_html(
-            f"{customer.first_name} {customer.last_name}" or self._t("unknown", user_id=None)
-        )
+        display_name = self._escape_html(self._customer_display_name(customer))
         message = f"🍺 Select offer for {display_name}:\n\n"
 
         keyboard_buttons = []
@@ -90,9 +88,7 @@ class OrderPlacement(BaseOrderHandler):
 
     def _show_quantity_selection_for_order_for(self, chat_id: int, customer, offer) -> dict[str, Any]:
         """Show quantity selection for order_for workflow"""
-        display_name = self._escape_html(
-            f"{customer.first_name} {customer.last_name}" or self._t("unknown", user_id=None)
-        )
+        display_name = self._escape_html(self._customer_display_name(customer))
         message = f"📦 Select quantity for {display_name}:\n\n🍺 {offer.name} - €{offer.price_per_unit:.2f}"
 
         keyboard_buttons = [

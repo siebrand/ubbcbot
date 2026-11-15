@@ -27,6 +27,14 @@ class BaseOrderHandler(BaseHandler):
                 matches.append((order, customer))
         return matches
 
+    def _customer_display_name(self, customer) -> str:
+        """Full name of a customer, or the localized "Unknown" if they have no name.
+
+        Either name part can be missing (guests, Telegram users without a last name).
+        """
+        name = " ".join(part for part in (customer.first_name, customer.last_name) if part)
+        return name or self._t("unknown", user_id=None)
+
     def _show_customer_orders(
         self, chat_id: int, customer, page: int = 1, show_order_ids: bool = False, user_id: int = None
     ) -> dict[str, Any]:
@@ -34,7 +42,7 @@ class BaseOrderHandler(BaseHandler):
         orders = self.db.get_orders_by_customer(customer.customer_id)
 
         if not orders:
-            display_name = f"{customer.first_name} {customer.last_name}" or self._t("unknown", user_id=None)
+            display_name = self._customer_display_name(customer)
             if user_id and self._is_admin(user_id):
                 keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin"), "callback_data": "admin:main"}]]}
                 self._send_message(chat_id, self._t("no_orders_for_user", name=display_name), reply_markup=keyboard)
@@ -103,9 +111,7 @@ class BaseOrderHandler(BaseHandler):
 
         # Build message
         is_admin = user_id and self._is_admin(user_id)
-        display_name = self._escape_html(
-            f"{customer.first_name} {customer.last_name}" or self._t("unknown", user_id=None)
-        )
+        display_name = self._escape_html(self._customer_display_name(customer))
 
         if is_admin:
             message = self._t("user_orders_title", user_id=None, name=display_name)
