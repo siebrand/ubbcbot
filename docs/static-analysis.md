@@ -55,7 +55,9 @@ bandit -r src -c pyproject.toml
 pip-audit -r src/requirements.txt -r tests/requirements.txt
 ```
 
-`pre-commit install` additionally runs ruff and ruff-format on every commit.
+`pre-commit install` additionally runs ruff and ruff-format on every commit. The
+hook revisions in `.pre-commit-config.yaml` are kept current by Dependabot (weekly
+PR); `pre-commit autoupdate` does the same by hand.
 
 `pip-audit` queries the PyPI vulnerability service, so it needs network access.
 
