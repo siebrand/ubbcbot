@@ -29,13 +29,15 @@ environment. See the [README](README.md) for bot and deployment setup.
 AWS_DEFAULT_REGION=eu-north-1 AWS_ACCESS_KEY_ID=testing AWS_SECRET_ACCESS_KEY=testing \
   PYTHONPATH=src python -m pytest
 
-# Lint + format (also run automatically by the pre-commit hook and in CI)
-ruff check .
-ruff format --check .
+# All static analysis CI runs: ruff, ruff format, mypy, bandit, pip-audit
+scripts/static-analysis.sh
 ```
 
-CI runs the test suite and the lint/format checks on every pull request; both
-must pass before merge.
+See [docs/static-analysis.md](docs/static-analysis.md) for the individual tools,
+how to run a single check, and how to suppress findings.
+
+CI runs the test suite and the static analysis checks on every pull request; the
+blocking ones must pass before merge. mypy is advisory for now.
 
 ## Coding standards
 

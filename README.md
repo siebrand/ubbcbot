@@ -188,8 +188,10 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/list_user_orders <username>` - View orders for specific user
 - `/list_offer_orders <offer_id>` - View all orders for specific offer
 -
+
 `/export_orders [active|cancelled|ordered|ready_for_labeling|labeling_completed|awaiting_payment|completed|all|full]` -
 Download CSV of all orders (default: active, full exports all fields)
+
 - `/list_pending` - View users awaiting approval (paginated with approve/reject buttons)
 - `/list_users` - View all customers (paginated with status filtering)
 - `/create_guest <first_name> [last_name] [contact]` - Add guest user (non-Telegram)
@@ -232,6 +234,18 @@ Download CSV of all orders (default: active, full exports all fields)
 - `/delete_cancelled_orders` - Delete all cancelled orders from personal register
 - `/delete_completed_orders` - Delete all completed orders from personal register
 - `/changelog` - View bot updates and feature changes
+
+## Static Analysis
+
+CI runs ruff, mypy, bandit, pip-audit and CodeQL on every pull request. To run
+the same checks locally:
+
+```bash
+pip install -r tests/requirements.txt
+scripts/static-analysis.sh
+```
+
+See [docs/static-analysis.md](docs/static-analysis.md) for details.
 
 ## Architecture
 

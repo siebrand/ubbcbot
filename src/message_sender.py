@@ -192,7 +192,7 @@ async def send_from_bot(msg, environment, bot_token):
 
         # Run in executor to avoid blocking
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, lambda: requests.post(url, json=payload))
+        response = await loop.run_in_executor(None, lambda: requests.post(url, json=payload, timeout=10))
 
         if response.status_code == 200:
             return {"success": True, "user_id": user_id}
@@ -235,7 +235,7 @@ async def notify_admin_of_failures(failures, environment, bot_token):
         payload = {"chat_id": admin_user_id, "text": message}
 
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, lambda: req.post(url, json=payload))
+        await loop.run_in_executor(None, lambda: req.post(url, json=payload, timeout=10))
 
     except Exception as e:
         logger.error(f"Failed to notify admin of failures: {e}")
