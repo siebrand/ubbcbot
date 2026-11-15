@@ -236,6 +236,8 @@ class OrderCancellation(BaseOrderHandler):
             self._send_message(chat_id, self._t("box_not_found"))
             return {"status": "box_not_found"}
 
+        return self._execute_cancel(order, box, chat_id)
+
     def handle_confirm_cancel_with_reason(self, chat_id: int, order_id: str, reason: str) -> dict[str, Any]:
         """Handle order cancellation with reason"""
         order = self.db.get_order(order_id)

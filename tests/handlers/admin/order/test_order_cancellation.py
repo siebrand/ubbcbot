@@ -188,7 +188,6 @@ class TestOrderCancellation(unittest.TestCase):
         mock_send.assert_called_once()
         self.mock_db.cancel_order.assert_not_called()
 
-    @unittest.expectedFailure
     def test_handle_confirm_cancel_cancels_the_order(self):
         """/confirm_cancel with a valid order and box must cancel the order"""
         order = Mock(order_id="o1", box_id="b1")
