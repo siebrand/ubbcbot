@@ -13,7 +13,10 @@ client for messages sent from the admin's own Telegram account.
 
 ## Architecture
 - Entry: `src/handlers/webhook.py` (verifies `X-Telegram-Bot-Api-Secret-Token`) → `services/bot_service.py::process_update`
-  - commands → `services/command_router.py` (authorization + admin check, then if/elif dispatch)
+  - commands → `services/command_router.py`: group redirect, then authorization (not approved: only `/start`), then
+    one table `services/routing/command_table.py` (`COMMAND_ROUTES`: handler, method, arguments and `admin_only` per
+    command). A command that matches nothing, or an admin command from anyone else, returns `unknown_command`.
+    `tests/test_command_dispatch.py` sends every command as every kind of sender and checks the result.
   - inline buttons → `services/callback_handler.py`: `_authorize_callback` first, then every button through the
     `CallbackRouter` (first match wins, so register specific patterns before broad ones). A callback that matches no
     route returns `unknown_callback`. `tests/test_callback_dispatch.py` taps every button and checks the result.
@@ -28,6 +31,8 @@ client for messages sent from the admin's own Telegram account.
 - Admin = the single Telegram ID in `ADMIN_USER_ID` (`config.py`).
 - Callback data is client-supplied. Any new customer-facing callback must be added to
   `CUSTOMER_CALLBACK_PATTERN` in `callback_handler.py`; everything else is admin-only by default.
+- A new typed command is a line in `COMMAND_ROUTES`; `admin_only=True` (`admin_command`) is the safe choice. Never add
+  a command as a branch in `CommandRouter`: the single flag is what keeps the admin check in one place.
 - Handlers that take only `chat_id` cannot check the caller: never expose them without a gate in front.
 - Customers must be `approved` to order; `handle_create_order` enforces this for every entry point.
 - Edit contexts (admin text prompts) are only created for, and consumed in, the admin's private chat. Admin
@@ -36,8 +41,8 @@ client for messages sent from the admin's own Telegram account.
 ## Conventions
 - All user-facing text via `self._t(key, user_id, **params)`; the key must exist in both
   `src/translations/nl.json` and `en.json`; no duplicate keys; group messages are always nl.
-- Changing a command: update command_router, callback_handler/admin panel, help text, translations,
-  `setup-commands.sh` and README together.
+- Changing a command: update `COMMAND_ROUTES` (and its row in `tests/test_command_dispatch.py`), callback_handler/admin
+  panel, help text, translations, `setup-commands.sh` and README together.
 - Escape user-supplied strings (`_escape_html`) in any `parse_mode="HTML"` message.
 - Use `logger`, not `print`. Never log tokens, contact info or free-text user input.
 - Resource naming `ubbc-bot-{env}-{type}`; secrets only in SSM under `/ubbc-bot/{env}/`

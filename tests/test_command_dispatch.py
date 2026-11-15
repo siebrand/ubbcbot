@@ -36,6 +36,7 @@ from handlers.customer.order_commands import CustomerOrderCommands
 from models.entities import AuthorizationStatus, Customer
 from services.bot_service import BotService
 from services.command_router import CommandRouter
+from services.routing.command_table import COMMAND_ROUTES
 
 ROOT = Path(__file__).resolve().parent.parent
 ADMIN_ID = 15005473
@@ -598,10 +599,7 @@ class TestCancelCommand:
 
 
 def _routed_commands() -> set[str]:
-    source = (ROOT / "src" / "services" / "command_router.py").read_text()
-    commands = set(re.findall(r'command == "(/[a-z_]+)"', source))
-    aliases = CommandRouter.PERMANENT_ALIASES
-    return commands | {"/" + alias for alias in aliases}
+    return set(COMMAND_ROUTES) | {"/" + alias for alias in CommandRouter.PERMANENT_ALIASES}
 
 
 def _commands_offered_in_telegram() -> set[str]:
@@ -610,7 +608,7 @@ def _commands_offered_in_telegram() -> set[str]:
 
 
 class TestCompleteness:
-    def test_the_scan_finds_the_commands(self):
+    def test_the_table_has_the_commands(self):
         assert len(_routed_commands()) > 60
         assert {"/start", "/create_order", "/credit", "/order"} <= _routed_commands()
 
@@ -632,12 +630,26 @@ class TestCompleteness:
 
         assert unrouted == []
 
-    def test_handler_keys_used_by_the_router_exist(self):
+    @pytest.mark.parametrize("command", sorted(COMMAND_ROUTES))
+    def test_every_route_points_to_a_method_that_exists(self, command):
+        """Also for commands that no row above exercises with every argument shape"""
+        route = COMMAND_ROUTES[command]
+        target = CommandRouter if route.handler is None else HANDLER_CLASSES[route.handler]
+
+        assert callable(getattr(target, route.method, None)), f"{command} -> {route.handler}.{route.method}"
+
+    def test_the_admin_flag_of_every_command_matches_the_table_above(self):
+        flags = {row.command: row.admin for row in CORPUS}
+
+        assert {command: route.admin_only for command, route in COMMAND_ROUTES.items()} == {
+            command: flags[command] for command in COMMAND_ROUTES
+        }
+
+    def test_the_router_has_no_command_of_its_own_outside_the_table(self):
+        """Commands are added to the table, never as a branch in the router: that keeps the check in one place"""
         source = (ROOT / "src" / "services" / "command_router.py").read_text()
 
-        used = set(re.findall(r'self\.handlers\["([a-z_]+)"\]', source))
-
-        assert used <= set(HANDLER_CLASSES)
+        assert sorted(set(re.findall(r'command == "(/[a-z_]+)"', source))) == ["/fomo", "/start"]
 
 
 # --- every way an update enters the bot ---------------------------------------------------------------
