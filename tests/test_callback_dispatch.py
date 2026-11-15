@@ -396,10 +396,9 @@ class TestAuthorization:
         assert all_handler_calls(env) == {}
         assert env.handler.edit_context_manager.mock_calls == []
 
-    @pytest.mark.parametrize("data", [pytest.param(d, id=d) for d, _ in PAGE_CUSTOMER])
+    # page_info (the "3/7" indicator) is on the allow-list and does nothing, so there is nothing to refuse
+    @pytest.mark.parametrize("data", [pytest.param(d, id=d) for d, _ in PAGE_CUSTOMER if d != "page_info"])
     def test_unapproved_customers_cannot_use_customer_callbacks_either(self, data):
-        if data == "page_info":
-            pytest.skip("page_info is harmless and is answered without a handler")
         env = make_env(approved=False)
 
         result = tap(env, data, user_id=CUSTOMER_ID)
