@@ -9,7 +9,7 @@ built on AWS serverless (SAM, Lambda, DynamoDB, API Gateway).
 python3 -m venv test_env
 source test_env/bin/activate
 pip install -r src/requirements.txt -r tests/requirements.txt
-pre-commit install
+pre-commit install   # also installs the post-merge hook that keeps the venv in sync
 ```
 
 There is no local bot runtime — the `test` stack on AWS is the development

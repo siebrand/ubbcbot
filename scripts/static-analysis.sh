@@ -11,6 +11,12 @@ set -u
 
 cd "$(dirname "$0")/.." || exit 1
 
+# Use ./test_env when no virtualenv is active, and keep it in sync with the pins.
+if [ -z "${VIRTUAL_ENV:-}" ] && [ -d test_env/bin ]; then
+  export PATH="$PWD/test_env/bin:$PATH"
+fi
+scripts/sync-venv.sh || echo "sync-venv failed; continuing with the installed tools"
+
 PYTHON="${PYTHON:-python3}"
 ALL_CHECKS=(ruff format mypy bandit audit compile)
 CHECKS=("${@:-${ALL_CHECKS[@]}}")

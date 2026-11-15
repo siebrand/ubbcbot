@@ -59,6 +59,27 @@ pip-audit -r src/requirements.txt -r tests/requirements.txt
 hook revisions in `.pre-commit-config.yaml` are kept current by Dependabot (weekly
 PR); `pre-commit autoupdate` does the same by hand.
 
+## Keeping the local venv current
+
+The versions of ruff, mypy, bandit and pip-audit are pinned in
+`tests/requirements.txt`, and Dependabot bumps them. `scripts/sync-venv.sh` installs
+the pins when the venv is behind. It runs automatically:
+
+- at the start of every `scripts/static-analysis.sh` run, and
+- after `git pull`, merge and rebase, through the `post-merge` and `post-rewrite`
+  hooks (installed by `pre-commit install`; re-run it once after pulling this
+  change).
+
+It uses the active virtualenv, otherwise `./test_env`. If neither exists it does
+nothing, so it never modifies the system Python. `scripts/static-analysis.sh` also
+puts `./test_env` on the `PATH` when no venv is active, so activating it first is
+optional. Set `SKIP_VENV_SYNC=1` to turn the sync off. Run it manually with
+`scripts/sync-venv.sh`.
+
+The ruff pre-commit hook has its own version (`rev` in `.pre-commit-config.yaml`),
+also bumped by Dependabot. The two ruff versions can differ briefly between
+the Dependabot PRs for each file.
+
 `pip-audit` queries the PyPI vulnerability service, so it needs network access.
 
 ## mypy is advisory

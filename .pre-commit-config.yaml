@@ -1,3 +1,6 @@
+# Plain `pre-commit install` also installs the post-merge/post-rewrite hooks below.
+default_install_hook_types: [ pre-commit, post-merge, post-rewrite ]
+
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.6
@@ -5,3 +8,15 @@ repos:
       - id: ruff-check
         args: [ --fix ]
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      # After git pull / merge / rebase, update the local venv to the pinned
+      # requirements (e.g. after a Dependabot PR was merged).
+      - id: sync-venv
+        name: sync virtualenv with pinned requirements
+        entry: scripts/sync-venv.sh
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [ post-merge, post-rewrite ]
