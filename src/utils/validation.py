@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from models.entities import AuthorizationStatus
@@ -42,8 +43,23 @@ class ValidationUtils:
 
         return True, None
 
+    # Customer IDs are UUIDs. Like order IDs, admins may type a leading fragment of one.
+    # Requiring 8+ hex characters keeps short names such as "Abe" or "Dad" on the name path.
+    _PARTIAL_ID_PATTERN = re.compile(r"^[0-9a-f-]{8,}$")
+
+    def match_customers_by_partial_id(self, identifier: str, customers: list) -> list:
+        """Match customers whose customer_id starts with the given UUID fragment"""
+        search = identifier.strip().lower()
+        if not self._PARTIAL_ID_PATTERN.match(search):
+            return []
+        return [c for c in customers if str(c.customer_id).lower().startswith(search)]
+
     def match_customers(self, identifier: str, customers: list) -> list:
-        """Match customers by identifier (name or username) - shared matching logic"""
+        """Match customers by identifier (customer ID prefix, name or username) - shared matching logic"""
+        id_matches = self.match_customers_by_partial_id(identifier, customers)
+        if id_matches:
+            return id_matches
+
         search_lower = identifier.lower()
         matches = []
         for customer in customers:

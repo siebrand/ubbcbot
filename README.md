@@ -199,7 +199,7 @@ Download CSV of all orders (default: active, full exports all fields)
 - `/approve_user <name_or_username>` - Approve user
 - `/reject_user <name_or_username>` - Reject user
 - `/user_status <name_or_username>` - Check user status
-- `/update_user <username> <new_first_name> [new_last_name]` - Update customer name
+- `/update_user <username|customer_id> <new_first_name> [new_last_name]` - Update customer name (customer_id may be a partial UUID of 8+ characters, like order IDs)
 - `/update_user_first_name <customer_id> <new_first_name>` - Update customer first name
 - `/update_user_last_name <customer_id> <new_last_name>` - Update customer last name
 - `/process_delivery` - Process wholesale deliveries and manage delivery status
