@@ -301,7 +301,14 @@ class BaseHandler:
         """Send document to Telegram chat"""
         return self._send_document_message(chat_id, content, filename, caption)["success"]
 
-    def _send_document_message(self, chat_id: int, content: str, filename: str, caption: str | None = None) -> dict:
+    def _send_document_message(
+        self,
+        chat_id: int,
+        content: str | bytes,
+        filename: str,
+        caption: str | None = None,
+        mime_type: str = "text/csv",
+    ) -> dict:
         """Send a document and return ``success`` plus the ``message_id`` Telegram assigned to it"""
         from io import BytesIO
 
@@ -314,10 +321,10 @@ class BaseHandler:
 
         url = f"https://api.telegram.org/bot{self.telegram_token}/sendDocument"
 
-        # Convert string content to bytes
-        file_data = BytesIO(content.encode("utf-8"))
+        # Text is sent as UTF-8, binary content (a zip) as is
+        file_data = BytesIO(content.encode("utf-8") if isinstance(content, str) else content)
 
-        files = {"document": (filename, file_data, "text/csv")}
+        files = {"document": (filename, file_data, mime_type)}
 
         data: dict[str, Any] = {"chat_id": chat_id}
 

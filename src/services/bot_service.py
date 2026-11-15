@@ -20,6 +20,7 @@ from handlers.base_handler import BaseHandler
 from handlers.customer.auth_commands import AuthCommands
 from handlers.customer.changelog_commands import ChangelogCommands
 from handlers.customer.credit_commands import CustomerCreditCommands
+from handlers.customer.data_export_commands import DataExportCommands
 from handlers.customer.info_commands import InfoCommands
 from handlers.customer.order_commands import CustomerOrderCommands
 from models.entities import Customer
@@ -130,6 +131,9 @@ class BotService:
         self.customer_credit_commands = CustomerCreditCommands(
             self.db, self.admin_user_id, self.environment, self.telegram_token
         )
+        self.data_export_commands = DataExportCommands(
+            self.db, self.admin_user_id, self.environment, self.telegram_token
+        )
 
     def _init_services(self):
         """Initialize service components"""
@@ -151,6 +155,7 @@ class BotService:
             "auth": self.auth_commands,
             "credit": self.credit_commands,
             "customer_credit": self.customer_credit_commands,
+            "data_export": self.data_export_commands,
         }
 
         # Inject handlers into offer_commands for cross-handler calls

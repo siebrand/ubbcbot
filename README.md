@@ -231,6 +231,7 @@ These commands are set up in the deployment script, throught bash script setup-c
 - `/delete_cancelled_orders` - Delete all cancelled orders from personal register
 - `/delete_completed_orders` - Delete all completed orders from personal register
 - `/changelog` - View bot updates and feature changes
+- `/my_data` - Download all data the bot stores about you as a zip with JSON files (approved users, once per 30 days, see "Personal Data Export")
 
 ## Static Analysis
 
@@ -253,6 +254,24 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
 - **Parameter Store**: Secure token storage
 
 ## Features
+
+### Personal Data Export
+
+- **Why**: customers have the right to a copy of their data (right of access and data portability).
+- **How**: an approved customer sends `/my_data` to the bot. The webhook claims the monthly slot and starts the
+  `DataExporter` Lambda asynchronously. The Lambda builds a zip with `profile.json`, `orders.json`, `credit.json`,
+  `purchase_history.json` and a `README.txt` (Dutch or English, following the customer's language) and sends it to the
+  customer's private chat, whatever chat the command came from.
+- **Once per 30 days**: the time of the last export is stored on the customer record (`last_data_export_at`). The slot is
+  claimed with one conditional DynamoDB update, so two quick requests cannot both succeed. If the export fails, the claim
+  is released again, so a failure does not use up the month. A refused request shows the date it is possible again.
+- **Only the customer's own data**: other customers' data is not included, and the administrator behind a credit
+  transaction (`created_by`) is left out. Amounts are text with two decimals, dates are UTC.
+- **Expiry**: the sent file is tracked and deleted after an hour, exactly like the admin order exports (see "Export
+  Expiry"). Customers should save the file first.
+- **Lookup by customer**: purchase history is read through the `customer-index` on the order history table. Adding that
+  index is the only table change; DynamoDB builds it for the existing rows on the first deploy.
+- **Not included**: data Telegram keeps itself, technical logs (7 days) and short-lived message tracking records.
 
 ### Export Expiry
 

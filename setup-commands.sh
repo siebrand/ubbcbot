@@ -70,6 +70,7 @@ curl -s -X POST --max-time 20 "https://api.telegram.org/bot$TELEGRAM_TOKEN/setMy
          {"command": "unsubscribe", "description": "Unsubscribe from offer notifications"},
          {"command": "changelog", "description": "View bot updates and changes"},
          {"command": "privacy", "description": "View the privacy statement"},
+         {"command": "my_data", "description": "Download all data we have about you"},
          {"command": "fomo", "description": "View active offers you have not ordered yet"},
          {"command": "cancel", "description": "Cancel pending operation"}
        ],

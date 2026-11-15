@@ -109,6 +109,26 @@ Resources:
         - Key: ManagedBy
           Value: sam
 
+  DataExporterLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/ubbc-bot-${Environment}-data-exporter'
+      RetentionInDays: 7
+      LogGroupClass: STANDARD
+      Tags:
+        - Key: Project
+          Value: UBBCBot
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Owner
+          Value: siebrand
+        - Key: CostCenter
+          Value: personal
+        - Key: Application
+          Value: ubbc-telegram-bot
+        - Key: ManagedBy
+          Value: sam
+
   NotificationSenderLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -228,6 +248,7 @@ Resources:
         Variables:
           NOTIFICATION_LAMBDA_NAME: !Ref NotificationSender
           MESSAGE_SENDER_LAMBDA_NAME: !Ref MessageSender
+          DATA_EXPORT_LAMBDA_NAME: !Ref DataExporter
       Events:
         WebhookApi:
           Type: Api
@@ -284,6 +305,7 @@ Resources:
               Resource:
                 - !GetAtt NotificationSender.Arn
                 - !GetAtt MessageSender.Arn
+                - !GetAtt DataExporter.Arn
             - Effect: Allow
               Action:
                 - logs:CreateLogStream
@@ -370,6 +392,70 @@ Resources:
                 - logs:CreateLogStream
                 - logs:PutLogEvents
               Resource: !GetAtt MessageSenderLogGroup.Arn
+      Tags:
+        Project: UBBCBot
+        Environment: !Ref Environment
+        Owner: siebrand
+        CostCenter: personal
+        Application: ubbc-telegram-bot
+        ManagedBy: sam
+
+  DataExporter:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'ubbc-bot-${Environment}-data-exporter'
+      CodeUri: src/
+      Handler: data_exporter.lambda_handler
+      Timeout: 120
+      MemorySize: 512
+      # No automatic retries: a retry would send the customer a second zip
+      EventInvokeConfig:
+        MaximumRetryAttempts: 0
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            # Read the data of one customer; Scan is used by the cached Telegram ID lookup (language)
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt CustomersTable.Arn
+                - !Sub '${CustomersTable.Arn}/index/*'
+                - !GetAtt OrdersTable.Arn
+                - !Sub '${OrdersTable.Arn}/index/*'
+                - !GetAtt OffersTable.Arn
+                - !GetAtt CustomerCreditsTable.Arn
+                - !GetAtt CreditTransactionsTable.Arn
+                - !Sub '${CreditTransactionsTable.Arn}/index/*'
+                - !GetAtt OrderHistoryTable.Arn
+                - !Sub '${OrderHistoryTable.Arn}/index/*'
+            # Release the monthly claim when the export fails
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt CustomersTable.Arn
+            # Track the sent file for expiry and clear expired ones
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt NotificationsTable.Arn
+                - !Sub '${NotificationsTable.Arn}/index/*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ubbc-bot/${Environment}/telegram-bot-token'
+            - Effect: Allow
+              Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !GetAtt DataExporterLogGroup.Arn
       Tags:
         Project: UBBCBot
         Environment: !Ref Environment

@@ -148,6 +148,8 @@ class CommandRouter:
             return self.handlers["info"].handle_fomo(target_chat, user_id, parts[1:] or None)
         elif command == "/my_credit":
             return self.handlers["customer_credit"].handle_my_credit(target_chat, user_id)
+        elif command == "/my_data":
+            return self.handlers["data_export"].handle_my_data(user_id)
 
         # Admin-only commands
         if self._is_admin(user_id):
