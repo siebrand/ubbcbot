@@ -57,8 +57,8 @@ class TestCallbackRouting:
 
     @pytest.fixture
     def callback_handler(self, mock_db, mock_handlers, mock_media_handler):
-        """Create actual CallbackHandler instance"""
-        return CallbackHandler(
+        """Create actual CallbackHandler instance. Nothing is sent to Telegram: these tests check the routing."""
+        handler = CallbackHandler(
             db=mock_db,
             admin_user_id=15005473,
             environment="test",
@@ -66,6 +66,11 @@ class TestCallbackRouting:
             handlers=mock_handlers,
             media_handler=mock_media_handler,
         )
+        handler._answer_callback_query = Mock()
+        handler._edit_message_remove_keyboard = Mock()
+        handler._delete_message = Mock()
+        handler._send_message = Mock(return_value={"success": True})
+        return handler
 
     def _create_callback_query(self, data: str, user_id: int = 12345, chat_id: int = 12345):
         """Helper to create callback query dict"""
