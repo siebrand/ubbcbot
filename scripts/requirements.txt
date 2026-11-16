@@ -1,4 +1,4 @@
-boto3==1.44.1
+boto3==1.44.2
 requests==2.34.2
-botocore[crt]==1.44.1
+botocore[crt]==1.44.2
 telethon==1.45.0
