@@ -30,7 +30,7 @@ source setup_venv/bin/activate  # On Windows: setup_venv\Scripts\activate
 ### 2. Install Dependencies
 
 ```bash
-pip install -r setup_requirements.txt
+pip install -r src/requirements.txt
 ```
 
 ### 3. Run Setup Script

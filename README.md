@@ -253,7 +253,7 @@ CI runs ruff, mypy, bandit and pip-audit on every pull request, and GitHub's
 CodeQL default setup scans the code. To run the first four locally:
 
 ```bash
-pip install -r tests/requirements.txt
+pip install -r src/requirements.txt -r tests/requirements.txt
 scripts/static-analysis.sh
 ```
 

@@ -6,6 +6,7 @@ version: 2
 
 updates:
   # ----- Python: application dependencies (src/requirements.txt) -----
+  # Also used by the maintenance scripts (scripts/) and the user client setup (setup_user_client.py).
   - package-ecosystem: "pip"
     directory: "/src"
     schedule:
@@ -49,31 +50,6 @@ updates:
       prefix-development: "chore(deps-dev)"
     groups:
       test-dependencies:
-        applies-to: version-updates
-        patterns:
-          - "*"
-        update-types:
-          - "major"
-          - "minor"
-          - "patch"
-
-  # ----- Python: maintenance scripts (scripts/requirements.txt) -----
-  - package-ecosystem: "pip"
-    directory: "/scripts"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "06:00"
-      timezone: "Europe/Amsterdam"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "python"
-      - "scripts"
-    commit-message:
-      prefix: "chore(deps)"
-    groups:
-      scripts-dependencies:
         applies-to: version-updates
         patterns:
           - "*"

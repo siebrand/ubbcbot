@@ -32,8 +32,8 @@ python3 scripts/group_customer_analysis.py --env prod
 # Activate virtual environment
 source test_env/bin/activate
 
-# Install dependencies
-pip install -r scripts/requirements.txt
+# Install dependencies (the scripts use the same packages as the bot)
+pip install -r src/requirements.txt
 ```
 
 ### Requirements

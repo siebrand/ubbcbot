@@ -26,7 +26,7 @@ for tool in ruff mypy bandit pip-audit; do
 done
 if [ ${#missing[@]} -gt 0 ]; then
   echo "Missing tools: ${missing[*]}"
-  echo "Install them with: pip install -r tests/requirements.txt"
+  echo "Install them with: pip install -r src/requirements.txt -r tests/requirements.txt"
   exit 2
 fi
 

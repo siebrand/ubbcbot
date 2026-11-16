@@ -1,3 +1,0 @@
-boto3==1.44.1
-botocore[crt]==1.44.1
-telethon==1.45.0
