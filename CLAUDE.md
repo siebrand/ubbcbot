@@ -8,6 +8,7 @@ client for messages sent from the admin's own Telegram account.
 - Setup: `python3 -m venv test_env && source test_env/bin/activate && pip install -r src/requirements.txt -r tests/requirements.txt`
 - Tests: `AWS_DEFAULT_REGION=eu-north-1 AWS_ACCESS_KEY_ID=testing AWS_SECRET_ACCESS_KEY=testing PYTHONPATH=src pytest`
   (parallel via xdist; single file: add `tests/test_x.py -p no:xdist`). Fake AWS env vars keep tests off real AWS.
+- Coverage: add `--cov` to the pytest command (CI does; it fails below `fail_under` in `pyproject.toml`, raise it when coverage rises).
 - Deploy: `./deploy.sh test`. Production (`./deploy.sh prod`) only after explicit approval.
 - There is no local bot runtime; the `test` stack on AWS is the dev environment.
 

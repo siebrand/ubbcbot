@@ -43,5 +43,11 @@ jobs:
           pip install -r src/requirements.txt
           pip install -r tests/requirements.txt
 
-      - name: Run tests
-        run: pytest
+      - name: Run tests with coverage
+        run: pytest --cov --cov-report=term-missing:skip-covered
+
+      - name: Show coverage in the job summary
+        if: always()
+        run: |
+          echo "### Test coverage" >> "$GITHUB_STEP_SUMMARY"
+          coverage report --format=markdown --skip-covered --fail-under=0 >> "$GITHUB_STEP_SUMMARY" || true

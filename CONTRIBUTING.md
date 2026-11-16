@@ -29,6 +29,10 @@ environment. See the [README](README.md) for bot and deployment setup.
 AWS_DEFAULT_REGION=eu-north-1 AWS_ACCESS_KEY_ID=testing AWS_SECRET_ACCESS_KEY=testing \
   PYTHONPATH=src python -m pytest
 
+# The same with test coverage (CI does this and fails below the minimum in pyproject.toml)
+AWS_DEFAULT_REGION=eu-north-1 AWS_ACCESS_KEY_ID=testing AWS_SECRET_ACCESS_KEY=testing \
+  PYTHONPATH=src python -m pytest --cov --cov-report=term-missing:skip-covered
+
 # All static analysis CI runs: ruff, ruff format, mypy, bandit, pip-audit
 scripts/static-analysis.sh
 ```

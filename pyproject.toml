@@ -27,3 +27,15 @@ exclude_dirs = ["tests", "archive", "venv", "test_env", "setup_venv"]
 # B311: random is used to sample cleanup runs in utils/edit_context.py, not for
 #       anything security related.
 skips = ["B105", "B311"]
+
+# Code coverage: `pytest --cov` (CI does this; plain `pytest` stays fast).
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+# CI fails below this percentage (lines and branches together). It was 52 on 2026-11-15: raise it when the
+# coverage rises, so it can only go up.
+fail_under = 50
+precision = 1
+skip_empty = true

@@ -24,6 +24,12 @@ wheels/
 .installed.cfg
 *.egg
 
+# Test coverage (pytest --cov)
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
 # Environment
 .env
 .venv
