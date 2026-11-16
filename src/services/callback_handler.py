@@ -72,7 +72,7 @@ class CallbackHandler:
             lambda match, ctx: self.handlers["admin_order"].handle_cancel_order_by_id(ctx["chat_id"], match.group(1)),
         )
         self.router.register(
-            r"^cancel_orders_page_(\w+)_(\d+)$",
+            r"^cancel_orders_page_([^_]+)_(\d+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_cancel_orders_page(
                 ctx["chat_id"], match.group(1), int(match.group(2))
             ),
@@ -115,19 +115,19 @@ class CallbackHandler:
 
         # Order patterns - most specific first (Phase 3 Batch B)
         self.router.register(
-            r"^order_for_quantity_(\w+)_(\d+)_(\d+)$",
+            r"^order_for_quantity_([^_]+)_(\d+)_(\d+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_create_order_for_quantity_select(
                 ctx["chat_id"], match.group(1), match.group(2), match.group(3)
             ),
         )
         self.router.register(
-            r"^order_for_other_(\w+)_(\d+)$",
+            r"^order_for_other_([^_]+)_(\d+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_create_order_for_other_quantity(
                 ctx["chat_id"], match.group(1), match.group(2)
             ),
         )
         self.router.register(
-            r"^order_for_offer_(\w+)_(\d+)$",
+            r"^order_for_offer_([^_]+)_(\d+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_create_order_for_offer_select(
                 ctx["chat_id"], match.group(1), match.group(2)
             ),

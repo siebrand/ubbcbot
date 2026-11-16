@@ -130,3 +130,31 @@ class TestCancelOrderFlow:
 
         assert result == {"status": "handled_by_router"}
         assert flow.sent, "the admin must get an answer"
+
+    def test_next_page_of_a_long_list_works_with_a_real_customer_id(self, flow, db, order):
+        """The page buttons carry the customer ID, a UUID with hyphens: the route must match it"""
+        for _ in range(11):  # 12 orders, 10 per page
+            assert db.order_repo.create_order(
+                Order(
+                    customer_id=order.customer_id,
+                    box_id=order.box_id,
+                    offer_id=7,
+                    quantity=1,
+                    unit_price=Decimal("2.50"),
+                    total_price=Decimal("2.50"),
+                    status="ordered",
+                )
+            )
+        flow.admin_order.handle_cancel_order(ADMIN_ID, ["siebran"])
+        first_page = flow.sent[-1]
+        next_button = f"cancel_orders_page_{order.customer_id}_2"
+        assert "Page 1/2" in first_page.text
+        assert next_button in first_page.buttons
+
+        result = tap(flow, next_button)
+
+        assert result == {"status": "handled_by_router"}
+        second_page = flow.sent[-1]
+        assert "Page 2/2" in second_page.text
+        assert sum(1 for button in second_page.buttons if button.startswith("cancel_order_confirm_")) == 2
+        assert f"cancel_orders_page_{order.customer_id}_1" in second_page.buttons  # and back

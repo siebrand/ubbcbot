@@ -613,21 +613,29 @@ NO_ACTION_BUTTONS = {"done_action"}
 SKIPPED_FILES = {"pagination.py", "validation.py"}
 
 
-def _sample(expression: str) -> str:
+UUID = "aaaaaaaa-1111-4111-8111-111111111111"  # what customer, order, box and supplier IDs look like for real
+ID_STYLES = ("abc12345", UUID)  # an 8-character partial ID, and a full ID with hyphens
+
+
+def _sample(expression: str, id_style: str) -> str:
     e = expression.lower()
     if "page" in e:
         return "2"
     if any(word in e for word in ("offer_id", "quantity", "units", "total", "count", "boxes")):
         return "7"
-    return "abc12345"
+    return id_style
 
 
 def _expand(text: str) -> list[str]:
-    """Fill the placeholders of an f-string with plausible values (both workflow prefixes where it varies)"""
+    """Fill the placeholders of an f-string with plausible values (both workflow prefixes, short and full IDs)"""
     variants = [text]
     if "{callback_prefix}" in text:
         variants = [text.replace("{callback_prefix}", prefix) for prefix in WORKFLOW_PREFIXES]
-    return [re.sub(r"\{([^}]*)\}", lambda m: _sample(m.group(1)), variant) for variant in variants]
+    return [
+        re.sub(r"\{([^}]*)\}", lambda m, style=style: _sample(m.group(1), style), variant)
+        for variant in variants
+        for style in ID_STYLES
+    ]
 
 
 def _callback_literals() -> list[str]:
@@ -654,6 +662,28 @@ class TestRoutesCallExistingMethods:
 
         assert len(called) > 50
         assert sorted(f"{key}.{method}" for key, method in called if method not in handler_mock_spec(key)) == []
+
+
+class TestRoutesMatchRealIds:
+    """Customer IDs are UUIDs, with hyphens. Routes that captured them with \\w+ never matched a real button."""
+
+    @pytest.mark.parametrize(
+        "data, expected",
+        [
+            (f"cancel_orders_page_{UUID}_2", call.handle_cancel_orders_page(CHAT, UUID, 2)),
+            (f"order_for_offer_{UUID}_7", call.handle_create_order_for_offer_select(CHAT, UUID, "7")),
+            (f"order_for_other_{UUID}_7", call.handle_create_order_for_other_quantity(CHAT, UUID, "7")),
+            (f"order_for_quantity_{UUID}_7_2", call.handle_create_order_for_quantity_select(CHAT, UUID, "7", "2")),
+            ("order_for_quantity_cust1_7_2", call.handle_create_order_for_quantity_select(CHAT, "cust1", "7", "2")),
+        ],
+        ids=["cancel page", "order_for offer", "order_for other", "order_for quantity", "short id"],
+    )
+    def test_the_button_reaches_its_handler_with_the_id_and_numbers(self, data, expected):
+        env = make_env()
+
+        tap(env, data)
+
+        assert env.handlers["admin_order"].mock_calls == [expected]
 
 
 class TestEveryBuiltButtonIsDispatched:
