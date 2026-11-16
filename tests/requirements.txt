@@ -1,10 +1,10 @@
 pytest==9.2.0
 pytest-xdist==3.8.0
-boto3==1.44.1
-botocore[crt]==1.44.1
+boto3==1.44.2
+botocore[crt]==1.44.2
 pytest-mock==3.17.0
 moto==5.2.5
-ruff==0.17.4
+ruff==0.17.5
 pre-commit==4.7.0
 # Static analysis (see docs/static-analysis.md)
 mypy==2.4.1
