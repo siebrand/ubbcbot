@@ -11,6 +11,23 @@ MONTH_ABBR = {
 }
 
 
+def to_utc_datetime(value: datetime | str | None) -> datetime:
+    """A timezone-aware UTC datetime from what the bot stores: an ISO string or a datetime (naive means UTC).
+
+    A missing or unreadable value gives the earliest possible moment, so such an item sorts before real dates
+    and a list can be sorted without a TypeError between naive and aware values.
+    """
+    earliest = datetime.min.replace(tzinfo=UTC)
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return earliest
+    if not isinstance(value, datetime):
+        return earliest
+    return (value.replace(tzinfo=UTC) if value.tzinfo is None else value).astimezone(UTC)
+
+
 def to_cet_string(dt: datetime | str, format_str: str = "%Y-%m-%d %H:%M") -> str:
     """Convert UTC datetime to CET/CEST timezone string (automatically handles DST)"""
     if isinstance(dt, str):

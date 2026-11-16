@@ -3,6 +3,7 @@ from typing import Any
 
 from models.entities import BoxStatus
 from services.box_status_manager import BoxStatusManager
+from utils.timezone import to_utc_datetime
 
 from .base_order_handler import BaseOrderHandler
 
@@ -174,6 +175,8 @@ class OrderCancellation(BaseOrderHandler):
     def _show_user_orders_for_cancel(self, chat_id: int, customer, page: int = 1) -> dict[str, Any]:
         """Show user's active orders with cancel buttons"""
         orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.status in ["pending", "ordered"]]
+        # Newest order first. The database returns them in no particular order, and the pages follow this list.
+        orders.sort(key=lambda o: (to_utc_datetime(o.created_at), o.order_id), reverse=True)
 
         if not orders:
             display_name = self._customer_display_name(customer)
