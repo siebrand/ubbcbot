@@ -510,17 +510,8 @@ class DynamoDBService:
     def get_suppliers_with_orders_by_status(self, order_status: str) -> list[Supplier]:
         """Get suppliers that have orders with specified status"""
         try:
-            # Get all orders with specified status
-            response = self.orders_table.scan(
-                FilterExpression="#status = :status",
-                ExpressionAttributeNames={"#status": "status"},
-                ExpressionAttributeValues={":status": order_status},
-            )
-
-            # Get unique offer IDs from orders
-            offer_ids = set()
-            for item in response.get("Items", []):
-                offer_ids.add(item["offer_id"])
+            # Get the offer IDs of the orders with the specified status (read through the status index)
+            offer_ids = {order.offer_id for order in self.order_repo.get_orders_by_status(order_status)}
 
             # Get supplier names from offers
             supplier_names = set()
@@ -544,17 +535,8 @@ class DynamoDBService:
     def get_offers_by_supplier_and_order_status(self, supplier_name: str, order_status: str) -> list[Offer]:
         """Get offers for a supplier that have orders with specified status"""
         try:
-            # Get all orders with specified status
-            response = self.orders_table.scan(
-                FilterExpression="#status = :status",
-                ExpressionAttributeNames={"#status": "status"},
-                ExpressionAttributeValues={":status": order_status},
-            )
-
-            # Get offer IDs from orders
-            offer_ids = set()
-            for item in response.get("Items", []):
-                offer_ids.add(item["offer_id"])
+            # Get offer IDs of the orders with the specified status (read through the status index)
+            offer_ids = {order.offer_id for order in self.order_repo.get_orders_by_status(order_status)}
 
             # Get offers for this supplier that have orders with specified status
             offers = []

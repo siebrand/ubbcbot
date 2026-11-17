@@ -70,6 +70,7 @@ def dynamodb(aws_credentials):
                 {"AttributeName": "order_id", "AttributeType": "S"},
                 {"AttributeName": "customer_id", "AttributeType": "S"},
                 {"AttributeName": "offer_id", "AttributeType": "N"},
+                {"AttributeName": "status", "AttributeType": "S"},
             ],
             GlobalSecondaryIndexes=[
                 {
@@ -81,6 +82,12 @@ def dynamodb(aws_credentials):
                 {
                     "IndexName": "offer-index",
                     "KeySchema": [{"AttributeName": "offer_id", "KeyType": "HASH"}],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+                },
+                {
+                    "IndexName": "status-index",
+                    "KeySchema": [{"AttributeName": "status", "KeyType": "HASH"}],
                     "Projection": {"ProjectionType": "ALL"},
                     "ProvisionedThroughput": {"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
                 },

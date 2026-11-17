@@ -561,6 +561,8 @@ Resources:
           AttributeType: S
         - AttributeName: offer_id
           AttributeType: N
+        - AttributeName: status
+          AttributeType: S
       KeySchema:
         - AttributeName: order_id
           KeyType: HASH
@@ -574,6 +576,12 @@ Resources:
         - IndexName: offer-index
           KeySchema:
             - AttributeName: offer_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: status-index
+          KeySchema:
+            - AttributeName: status
               KeyType: HASH
           Projection:
             ProjectionType: ALL

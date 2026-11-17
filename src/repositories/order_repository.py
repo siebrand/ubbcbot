@@ -2,16 +2,56 @@ import logging
 from typing import Any
 
 from boto3.dynamodb.conditions import Key
+from botocore.exceptions import ClientError
 
 from models.entities import Order
 from repositories.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
 
+# Global secondary indexes of the orders table (template.yaml)
+STATUS_INDEX = "status-index"
+
+INDEX_UNAVAILABLE_CODES = ("ValidationException", "ResourceNotFoundException")
+
 
 class OrderRepository(BaseRepository):
     def __init__(self):
         super().__init__("orders")
+
+    def _query_index(
+        self,
+        index_name: str,
+        key_name: str,
+        value: Any,
+        projection: str | None = None,
+        names: dict[str, str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """The items whose ``key_name`` equals ``value``, read through the index ``index_name``.
+
+        While the index does not exist yet or is still being built (the deploy that adds it), the same items are
+        found with a scan: slower, but the same answer, so a deploy never makes a list come out empty.
+        Every other database error is raised.
+        """
+        params: dict[str, Any] = {
+            "ExpressionAttributeNames": {"#key": key_name, **(names or {})},
+            "ExpressionAttributeValues": {":value": value},
+        }
+        if projection:
+            params["ProjectionExpression"] = projection
+        try:
+            response = self.table.query(IndexName=index_name, KeyConditionExpression="#key = :value", **params)
+        except ClientError as e:
+            error = e.response.get("Error", {})
+            # DynamoDB says "ValidationException: The table does not have the specified index" or "Cannot read from
+            # backfilling global secondary index"; the test database says "ResourceNotFoundException: Invalid index".
+            # The index name in the message keeps a missing table or other errors out of this.
+            index_unavailable = error.get("Code") in INDEX_UNAVAILABLE_CODES and index_name in error.get("Message", "")
+            if not index_unavailable:
+                raise
+            logger.warning(f"Index {index_name} is not available yet, scanning the table instead: {error['Message']}")
+            response = self.table.scan(FilterExpression="#key = :value", **params)
+        return response.get("Items", [])
 
     def create_order(self, order: Order) -> Order | None:
         try:
@@ -73,24 +113,28 @@ class OrderRepository(BaseRepository):
             logger.error(f"Error getting orders by box: {e}")
             return []
 
+    def get_orders_by_status(self, status: str) -> list[Order]:
+        """All orders with this status, whatever the offer, box or customer"""
+        try:
+            return [Order(**item) for item in self._query_index(STATUS_INDEX, "status", status)]
+        except Exception as e:
+            logger.error(f"Error getting orders by status: {e}")
+            return []
+
     def get_all_orders(self, statuses: list[str] | None = None) -> list[Order]:
         projection = "order_id, offer_id, quantity, #status, customer_id, box_id, unit_price, total_price"
         try:
             if statuses:
-                filter_expr = " OR ".join([f"#status = :status{i}" for i in range(len(statuses))])
-                expr_values = {f":status{i}": status for i, status in enumerate(statuses)}
-                response = self.table.scan(
-                    ProjectionExpression=projection,
-                    FilterExpression=filter_expr,
-                    ExpressionAttributeNames={"#status": "status"},
-                    ExpressionAttributeValues=expr_values,
-                )
+                items: list[dict[str, Any]] = []
+                for status in dict.fromkeys(statuses):  # each status once, in the order given
+                    items.extend(self._query_index(STATUS_INDEX, "status", status, projection, {"#status": "status"}))
             else:
                 response = self.table.scan(
                     ProjectionExpression=projection,
                     ExpressionAttributeNames={"#status": "status"},
                 )
-            return [Order(**item) for item in response.get("Items", [])]
+                items = response.get("Items", [])
+            return [Order(**item) for item in items]
         except Exception as e:
             logger.error(f"Error getting all orders: {e}")
             return []
