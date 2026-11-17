@@ -48,7 +48,7 @@
   "no_offers": "Geen aanbiedingen beschikbaar",
   "offer_not_found": "❌ Aanbieding niet gevonden",
   "invalid_quantity": "❌ Ongeldig aantal",
-  "subscribed": "✅ Geabonneerd op aanbieding meldingen! Je ontvangt privéberichten wanneer nieuwe aanbiedingen beschikbaar zijn.",
+  "subscribed": "✅ Je bent geabonneerd! Zodra er een nieuwe aanbieding is, krijg je daarvan een privébericht. Uitschrijven kan altijd met /unsubscribe.",
   "unsubscribed": "✅ Uitgeschreven van aanbieding meldingen",
   "supplier_added": "✅ Leverancier '{name}' toegevoegd",
   "supplier_exists": "❌ Leverancier '{name}' bestaat al",
