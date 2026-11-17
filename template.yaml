@@ -563,6 +563,8 @@ Resources:
           AttributeType: N
         - AttributeName: status
           AttributeType: S
+        - AttributeName: box_id
+          AttributeType: S
       KeySchema:
         - AttributeName: order_id
           KeyType: HASH
@@ -582,6 +584,12 @@ Resources:
         - IndexName: status-index
           KeySchema:
             - AttributeName: status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: box-index
+          KeySchema:
+            - AttributeName: box_id
               KeyType: HASH
           Projection:
             ProjectionType: ALL

@@ -15,8 +15,8 @@ from unittest.mock import patch
 import pytest
 from botocore.exceptions import ClientError
 
-from models.entities import Offer, Order, Supplier
-from repositories.order_repository import STATUS_INDEX, OrderRepository
+from models.entities import Box, Offer, Order, Supplier
+from repositories.order_repository import BOX_INDEX, STATUS_INDEX, OrderRepository
 from services.database import DynamoDBService
 from services.user_cache import UserCache
 
@@ -152,6 +152,69 @@ class TestLookupsBySupplier:
         with watching_scans(db.orders_table) as table_scan, watching_scans(db.order_repo.table) as repo_scan:
             db.get_suppliers_with_ready_for_labeling_offers()
             db.get_ready_for_labeling_offers_by_supplier("DK")
+
+        assert table_scan.call_count == 0
+        assert repo_scan.call_count == 0
+
+
+class TestOrdersByBox:
+    def test_only_the_orders_of_that_box_are_returned_whatever_their_status(self, repo, orders):
+        assert _ids(repo.get_orders_by_box("box-a")) == ["o1", "o3"]
+        assert _ids(repo.get_orders_by_box("box-c")) == ["o4", "o5"]
+
+    def test_the_orders_are_complete(self, repo, orders):
+        found = {order.order_id: order for order in repo.get_orders_by_box("box-b")}
+
+        assert (found["o2"].customer_id, found["o2"].offer_id) == ("cust-2", 2)
+        assert found["o2"].status == "ready_for_labeling"
+        assert found["o2"].total_price == Decimal("2.50")
+
+    def test_a_box_without_orders_gives_an_empty_list(self, repo, orders):
+        assert repo.get_orders_by_box("box-zzz") == []
+
+    def test_the_table_is_not_scanned(self, repo, orders):
+        with watching_scans(repo.table) as scan:
+            repo.get_orders_by_box("box-a")
+
+        assert scan.call_count == 0
+
+    def test_an_order_that_moves_to_another_box_is_found_there(self, repo, orders):
+        assert repo.update_order("o1", {"box_id": "box-b"})
+
+        assert _ids(repo.get_orders_by_box("box-a")) == ["o3"]
+        assert _ids(repo.get_orders_by_box("box-b")) == ["o1", "o2"]
+
+    def test_a_missing_index_gives_the_same_orders_with_a_scan(self, repo, orders, caplog):
+        repo.table.update(GlobalSecondaryIndexUpdates=[{"Delete": {"IndexName": BOX_INDEX}}])
+
+        with caplog.at_level(logging.WARNING), watching_scans(repo.table) as scan:
+            found = repo.get_orders_by_box("box-a")
+
+        assert _ids(found) == ["o1", "o3"]
+        assert scan.call_count == 1
+        assert BOX_INDEX in caplog.text
+
+
+class TestBoxListsOfTheJobs:
+    """The labeling job asks for the orders of every box of an offer: one lookup per box, so it must be cheap"""
+
+    @pytest.fixture
+    def boxes(self, db, orders):
+        # box-a (offer 1) has an order ready for labeling and one only ordered; box-d (offer 1) only an ordered one
+        for box_id, offer_id in (("box-a", 1), ("box-b", 2), ("box-c", 3), ("box-d", 1)):
+            assert db.create_box(Box(box_id=box_id, offer_id=offer_id, max_capacity=12))
+        assert db.order_repo.create_order(_order("o6", "ordered", offer_id=1, box_id="box-d"))
+
+    def test_the_boxes_of_an_offer_with_orders_ready_for_labeling(self, db, boxes):
+        assert [box.box_id for box in db.get_boxes_by_offer_with_ready_orders(1)] == ["box-a"]
+        assert [box.box_id for box in db.get_boxes_by_offer_with_ready_orders(2)] == ["box-b"]
+        assert db.get_boxes_by_offer_with_ready_orders(3) == []
+
+    def test_no_box_costs_a_scan_of_the_orders(self, db, boxes):
+        with watching_scans(db.orders_table) as table_scan, watching_scans(db.order_repo.table) as repo_scan:
+            db.get_boxes_by_offer_with_ready_orders(1)
+            for box_id in ("box-a", "box-b", "box-c", "box-d"):
+                db.get_orders_by_box(box_id)
 
         assert table_scan.call_count == 0
         assert repo_scan.call_count == 0

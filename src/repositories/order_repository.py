@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Global secondary indexes of the orders table (template.yaml)
 STATUS_INDEX = "status-index"
+BOX_INDEX = "box-index"
 
 INDEX_UNAVAILABLE_CODES = ("ValidationException", "ResourceNotFoundException")
 
@@ -105,10 +106,7 @@ class OrderRepository(BaseRepository):
 
     def get_orders_by_box(self, box_id: str) -> list[Order]:
         try:
-            response = self.table.scan(
-                FilterExpression="box_id = :box_id", ExpressionAttributeValues={":box_id": box_id}
-            )
-            return [Order(**item) for item in response.get("Items", [])]
+            return [Order(**item) for item in self._query_index(BOX_INDEX, "box_id", box_id)]
         except Exception as e:
             logger.error(f"Error getting orders by box: {e}")
             return []

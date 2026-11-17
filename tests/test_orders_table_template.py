@@ -9,7 +9,7 @@ import pytest
 import yaml
 
 from repositories import order_repository
-from repositories.order_repository import STATUS_INDEX, OrderRepository
+from repositories.order_repository import BOX_INDEX, STATUS_INDEX, OrderRepository
 
 TEMPLATE = Path(__file__).resolve().parent.parent / "template.yaml"
 
@@ -62,8 +62,17 @@ def test_the_status_index_is_hashed_on_the_status_and_has_whole_orders():
     assert index["Projection"] == {"ProjectionType": "ALL"}
 
 
+def test_the_box_index_is_hashed_on_the_box_and_has_whole_orders():
+    index = _indexes()[BOX_INDEX]
+    attributes = {a["AttributeName"]: a["AttributeType"] for a in _orders_table()["AttributeDefinitions"]}
+
+    assert index["KeySchema"] == [{"AttributeName": "box_id", "KeyType": "HASH"}]
+    assert attributes["box_id"] == "S"
+    assert index["Projection"] == {"ProjectionType": "ALL"}
+
+
 def test_every_index_the_repository_queries_is_in_the_template():
-    assert STATUS_INDEX in _queried_indexes()
+    assert {STATUS_INDEX, BOX_INDEX} <= _queried_indexes()
     assert sorted(_queried_indexes() - set(_indexes())) == []
 
 
