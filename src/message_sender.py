@@ -9,8 +9,8 @@ import logging
 import os
 
 import boto3
-import requests
 
+from services.telegram_client import TelegramClient
 from services.user_client import UserClient
 from utils.log_redaction import configure_logging
 
@@ -183,7 +183,6 @@ async def send_from_bot(msg, environment, bot_token):
         if environment == "test":
             message = f"TEST - {message}"
 
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {"chat_id": user_id, "text": message}
 
         if parse_mode:
@@ -193,24 +192,24 @@ async def send_from_bot(msg, environment, bot_token):
 
         # Run in executor to avoid blocking
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, lambda: requests.post(url, json=payload, timeout=10))
+        response = await loop.run_in_executor(None, lambda: TelegramClient(bot_token).call("sendMessage", payload))
 
-        if response.status_code == 200:
+        if response.ok:
             return {"success": True, "user_id": user_id}
-        else:
-            return {
-                "success": False,
-                "user_id": user_id,
-                "error": response.text,
-                "customer_name": msg.get("customer_name"),
-            }
+        return {
+            "success": False,
+            "user_id": user_id,
+            # The failure report goes to the admin's chat: Telegram's answer, never an exception (it holds the token)
+            "error": response.body or "No answer from Telegram",
+            "customer_name": msg.get("customer_name"),
+        }
 
     except Exception as e:
-        logger.error(f"Error sending from bot to {msg.get('user_id')}: {e}")
+        logger.error(f"Error sending from bot to {msg.get('user_id')}: {type(e).__name__}")
         return {
             "success": False,
             "user_id": msg.get("user_id"),
-            "error": str(e),
+            "error": type(e).__name__,
             "customer_name": msg.get("customer_name"),
         }
 
@@ -218,8 +217,6 @@ async def send_from_bot(msg, environment, bot_token):
 async def notify_admin_of_failures(failures, environment, bot_token):
     """Notify admin of failed message deliveries"""
     try:
-        import requests as req  # Import locally to ensure it's available
-
         admin_user_id = int(os.environ.get("ADMIN_USER_ID", "15005473"))
 
         message = "⚠️ Failed to send messages:\n\n"
@@ -232,11 +229,10 @@ async def notify_admin_of_failures(failures, environment, bot_token):
         if environment == "test":
             message = f"TEST - {message}"
 
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {"chat_id": admin_user_id, "text": message}
 
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, lambda: req.post(url, json=payload, timeout=10))
+        await loop.run_in_executor(None, lambda: TelegramClient(bot_token).call("sendMessage", payload))
 
     except Exception as e:
-        logger.error(f"Failed to notify admin of failures: {e}")
+        logger.error(f"Failed to notify admin of failures: {type(e).__name__}")
