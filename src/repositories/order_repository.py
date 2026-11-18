@@ -1,7 +1,9 @@
 import logging
 from typing import Any
 
+import boto3
 from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.types import TypeSerializer
 from botocore.exceptions import ClientError
 
 from models.entities import Order
@@ -52,6 +54,54 @@ class OrderRepository(BaseRepository):
                 raise
             logger.warning(f"Index {index_name} is not available yet, scanning the table instead: {error['Message']}")
             return self._scan_items(FilterExpression="#key = :value", **params)
+
+    def create_with_box_increment(self, order: Order, box_id: str, quantity: int, max_capacity: int) -> bool:
+        """Write the order and add its quantity to the box in one transaction: both or neither.
+
+        The box update keeps the capacity guard, so a transaction that would overfill the box is rejected as a
+        whole. Returns False when it was rejected or failed.
+        """
+        serializer = TypeSerializer()
+        order_item = {k: serializer.serialize(v) for k, v in self._prepare_item(order.__dict__).items()}
+
+        # A plain low-level client: the resource's client applies its own (de)serialization, which would
+        # double-wrap the already-serialized items.
+        client = boto3.client("dynamodb")
+        try:
+            client.transact_write_items(
+                TransactItems=[
+                    {
+                        "Put": {
+                            "TableName": self.table_name,
+                            "Item": order_item,
+                            "ConditionExpression": "attribute_not_exists(order_id)",
+                        }
+                    },
+                    {
+                        "Update": {
+                            "TableName": f"{self.table_prefix}-boxes",
+                            "Key": {"box_id": {"S": box_id}},
+                            "UpdateExpression": "ADD current_quantity :delta",
+                            "ConditionExpression": "attribute_exists(box_id) AND current_quantity <= :threshold",
+                            "ExpressionAttributeValues": {
+                                ":delta": {"N": str(quantity)},
+                                ":threshold": {"N": str(max_capacity - quantity)},
+                            },
+                        }
+                    },
+                ]
+            )
+            return True
+        except ClientError as e:
+            code = e.response["Error"]["Code"]
+            if code in ("TransactionCanceledException", "ConditionalCheckFailedException"):
+                logger.warning(f"Order+box transaction rejected for box {box_id}: {e}")
+            else:
+                logger.error(f"Order+box transaction failed for box {box_id}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Order+box transaction failed for box {box_id}: {e}")
+            return False
 
     def create_order(self, order: Order) -> Order | None:
         try:

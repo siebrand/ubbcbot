@@ -149,50 +149,7 @@ class DynamoDBService:
         Returns the created Order on success, or None if the transaction failed
         (including the capacity guard rejecting it).
         """
-        from boto3.dynamodb.types import TypeSerializer
-        from botocore.exceptions import ClientError
-
-        serializer = TypeSerializer()
-        order_item = {k: serializer.serialize(v) for k, v in self.order_repo._prepare_item(order.__dict__).items()}
-        threshold = max_capacity - quantity
-
-        # Use a plain low-level client: the resource's client applies its own
-        # (de)serialization, which would double-wrap our already-serialized items.
-        client = boto3.client("dynamodb")
-
-        try:
-            client.transact_write_items(
-                TransactItems=[
-                    {
-                        "Put": {
-                            "TableName": f"{self.table_prefix}-orders",
-                            "Item": order_item,
-                            "ConditionExpression": "attribute_not_exists(order_id)",
-                        }
-                    },
-                    {
-                        "Update": {
-                            "TableName": f"{self.table_prefix}-boxes",
-                            "Key": {"box_id": {"S": box_id}},
-                            "UpdateExpression": "ADD current_quantity :delta",
-                            "ConditionExpression": "attribute_exists(box_id) AND current_quantity <= :threshold",
-                            "ExpressionAttributeValues": {
-                                ":delta": {"N": str(quantity)},
-                                ":threshold": {"N": str(threshold)},
-                            },
-                        }
-                    },
-                ]
-            )
-        except ClientError as e:
-            code = e.response["Error"]["Code"]
-            if code in ("TransactionCanceledException", "ConditionalCheckFailedException"):
-                logger.warning(f"Order+box transaction rejected for box {box_id}: {e}")
-            else:
-                logger.error(f"Order+box transaction failed for box {box_id}: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"Order+box transaction failed for box {box_id}: {e}")
+        if not self.order_repo.create_with_box_increment(order, box_id, quantity, max_capacity):
             return None
 
         # Audit only after the atomic write has committed.

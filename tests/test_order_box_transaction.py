@@ -10,7 +10,7 @@ order Put and the capacity-guarded box Update atomic on real DynamoDB.
 The method uses a dedicated boto3.client("dynamodb") rather than the resource's
 client (the resource client would double-serialize the already-serialized
 items, which DynamoDB rejects with a ValidationException), so the tests patch
-boto3.client in the database module.
+boto3.client in the order repository.
 """
 
 from decimal import Decimal
@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from botocore.exceptions import ClientError
 
-import services.database as database_module
+import repositories.order_repository as order_repository_module
 from models.entities import Order, OrderStatus
 from services.database import DynamoDBService
 
@@ -28,7 +28,7 @@ from services.database import DynamoDBService
 def txn_client(dynamodb):
     """Stub only the dedicated transaction client; everything else uses moto."""
     client = MagicMock()
-    with patch.object(database_module.boto3, "client", return_value=client):
+    with patch.object(order_repository_module.boto3, "client", return_value=client):
         yield client
 
 
