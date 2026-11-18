@@ -61,7 +61,15 @@ class BaseHandler:
 
         translations = self._load_translations(lang)
         message = translations.get(key, key)
-        return message.format(**params) if params else message
+        if not params:
+            return message
+        try:
+            return message.format(**params)
+        except (KeyError, IndexError, ValueError) as e:
+            # A translation with a placeholder the caller does not pass (or a stray brace) must not break the
+            # command: send the text unfilled. Only the key and the error are logged, never the parameters.
+            logger.error(f"Translation {key!r} ({lang}) could not be filled in: {type(e).__name__}: {e}")
+            return message
 
     def _get_bot_username(self) -> str:
         """Get bot username from Telegram API"""

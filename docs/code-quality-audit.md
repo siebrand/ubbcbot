@@ -43,7 +43,8 @@ sync service.
 2. **Bug (latent): `_t` raises on a missing placeholder.** `message.format(**params)` (`base_handler.py:64`) raises
    `KeyError` when a translation uses a placeholder the caller didn't pass, and `IndexError`/`ValueError` on a stray
    `{` in a translation. One wrong translation edit then breaks a whole command. A missing key silently returns the
-   key itself, which is fine.
+   key itself, which is fine. **Fixed** in step 1: `_t` logs the key and returns the unfilled text, and a test fills in
+   every translation in both languages.
 3. **Risk: translations are loaded once per handler instance, not once per container.** `_translations` is an
    instance attribute (`base_handler.py:24`) and handlers are rebuilt on every request. So each request that
    translates in several handlers parses `nl.json`/`en.json` several times. A module-level cache, loaded once per
