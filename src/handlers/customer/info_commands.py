@@ -4,7 +4,7 @@ from typing import Any
 
 from handlers.base_handler import BaseHandler
 from models.entities import OfferStatus, OrderStatus
-from services.box_status_manager import BoxStatusManager
+from services import offer_listing
 from utils.pagination import PaginationUtils
 from utils.s3_url import is_s3_url
 
@@ -101,46 +101,17 @@ class InfoCommands(BaseHandler):
         return line + "\n"
 
     def _get_offer_capacity_info(
-        self,
-        offer_id: int,
-        user_id: int | None = None,
-        boxes_by_offer: dict | None = None,
-        orders_by_offer: dict | None = None,
-    ):
-        """Get order and capacity information for an offer using BoxStatusManager
-
-        Args:
-            offer_id: The offer ID
-            user_id: Optional user ID (unused, kept for compatibility)
-            boxes_by_offer: Optional pre-loaded boxes dictionary
-            orders_by_offer: Optional pre-loaded orders dictionary (unused when boxes provided)
-
-        Returns:
-            tuple: (total_ordered, total_capacity)
-        """
-        boxes = boxes_by_offer.get(offer_id, []) if boxes_by_offer is not None else self.db.get_boxes_by_offer(offer_id)
-
-        box_manager = BoxStatusManager(self.db)
-
-        # Check if any boxes are delivered
-        delivered_boxes = box_manager.get_delivered_boxes(boxes)
-
-        if delivered_boxes:
-            # For delivered boxes: calculate from box capacity
-            total_capacity = sum(box.max_capacity for box in delivered_boxes)
-            total_ordered = sum(box.current_quantity for box in delivered_boxes)
-        else:
-            # For non-delivered boxes: calculate from orders
-            if orders_by_offer is not None:
-                orders = orders_by_offer.get(offer_id, [])
-            else:
-                orders = self.db.get_orders_by_offer(offer_id)
-                orders = [o for o in orders if o.status in ["pending", "ordered"]]
-
-            total_capacity = sum(box.max_capacity for box in boxes)
-            total_ordered = sum(order.quantity for order in orders)
-
-        return total_ordered, total_capacity
+        self, offer_id: int, boxes_by_offer: dict | None = None, orders_by_offer: dict | None = None
+    ) -> tuple[int, int]:
+        """(ordered, capacity) of an offer. The lists pass the boxes and open orders they loaded; the detail view
+        reads those of the one offer."""
+        if boxes_by_offer is not None and orders_by_offer is not None:
+            return offer_listing.ordered_and_capacity(
+                boxes_by_offer.get(offer_id, []), orders_by_offer.get(offer_id, [])
+            )
+        boxes = self.db.get_boxes_by_offer(offer_id)
+        orders = [o for o in self.db.get_orders_by_offer(offer_id) if o.status in offer_listing.OPEN_ORDER_STATUSES]
+        return offer_listing.ordered_and_capacity(boxes, orders)
 
     def _validate_customer(self, chat_id: int, user_id: int):
         """Validate customer exists and return customer object or error status"""
@@ -219,299 +190,102 @@ class InfoCommands(BaseHandler):
             return {"status": "error"}
 
     def handle_list_offers(self, chat_id: int, user_id: int, args: list | None = None, page: int = 1) -> dict[str, Any]:
-        """Handle /list_offers command with optional status filtering"""
+        """Handle /list_offers command with optional status filtering (see services/offer_listing.py)"""
         offers = self.db.list_offers()
-
         if not offers:
-            self._send_message(chat_id, self._t("no_offers", user_id))
-            return {"status": "no_offers"}
-
-        # Batch load all boxes and orders once
-        all_boxes = self.db.get_all_boxes()
-        all_orders = self.db.get_all_orders(statuses=["pending", "ordered"])
-
-        # Build lookup dictionaries
-        boxes_by_offer: dict[int, list] = {}
-        for box in all_boxes:
-            boxes_by_offer.setdefault(box.offer_id, []).append(box)
-
-        orders_by_offer: dict[int, list] = {}
-        for order in all_orders:
-            orders_by_offer.setdefault(order.offer_id, []).append(order)
-
-        # Sort offers by offer_id ascending
-        offers.sort(key=lambda x: x.offer_id)
-
-        message = ""
+            return self._no_offers(chat_id, user_id)
 
         is_admin = self._is_admin(user_id)
+        # Filter words without underscores, so sold_out and soldout are the same
+        word = args[0].lower().replace("_", "") if args else None
 
-        # Parse filter argument and normalize underscores
-        filter_arg = args[0].lower().replace("_", "") if args and len(args) > 0 else None
-        show_user_view = filter_arg == "user" and is_admin
-
-        # Handle help request
-        if filter_arg == "help":
+        if word == "help":
             help_message = self._t("list_offers_help", user_id)
             if is_admin:
                 help_message += "\n\n" + self._t("list_offers_help_admin", user_id)
             self._send_message(chat_id, help_message)
             return {"status": "success"}
 
-        # Handle special filters
-        if filter_arg == "soldout":
-            # Filter sold_out offers from the already-loaded list
-            sold_out_offers = [o for o in offers if o.status == OfferStatus.SOLD_OUT.value]
-            if not sold_out_offers:
-                self._send_message(chat_id, self._t("no_offers", user_id))
-                return {"status": "no_offers"}
+        # Loaded once for all lines: how much is ordered of each offer
+        boxes = offer_listing.by_offer(self.db.get_all_boxes())
+        orders = offer_listing.by_offer(self.db.get_all_orders(statuses=list(offer_listing.OPEN_ORDER_STATUSES)))
 
-            # Paginate sold out offers
-            page_offers, total_pages = PaginationUtils.paginate_list(sold_out_offers, page, 20)
-
-            message += self._t("sold_out_offers_title", user_id)
-            if total_pages > 1:
-                message += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
-            message += "\n\n"
-
-            for offer in page_offers:
-                total_ordered, total_capacity = self._get_offer_capacity_info(
-                    offer.offer_id, user_id, boxes_by_offer, orders_by_offer
-                )
-                message += self._format_offer_line(offer, "🚫", user_id, total_ordered, total_capacity)
-
-            reply_markup = None
-            if total_pages > 1:
-                reply_markup = PaginationUtils.build_pagination_keyboard(
-                    page, total_pages, "list_offers_soldout", enhanced=True
-                )
-
-            self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
-            return {"status": "success"}
-
-        if is_admin and not show_user_view:
-            # Determine which statuses to show based on filter
-            show_all = filter_arg == "all"
-            show_draft = filter_arg == "draft"
-            show_active = filter_arg == "active"
-            show_completed = filter_arg == "completed"
-            show_inactive = filter_arg == "inactive"
-            show_archived = filter_arg == "archived"
-            show_import = filter_arg == "import"
-
-            # Default: show draft + import + active only
-            if not filter_arg or filter_arg not in [
-                "all",
-                "draft",
-                "active",
-                "completed",
-                "inactive",
-                "archived",
-                "import",
-            ]:
-                show_draft = show_import = show_active = True
-
-            # Group by status
-            offers_by_status: dict[str, list] = {}
-            for offer in offers:
-                offers_by_status.setdefault(offer.status, []).append(offer)
-
-            draft_offers = offers_by_status.get(OfferStatus.DRAFT.value, [])
-            active_offers = offers_by_status.get(OfferStatus.ACTIVE.value, [])
-            import_offers = offers_by_status.get(OfferStatus.IMPORT.value, [])
-
-            # Build list of offers to display
-            display_offers = []
-
-            # Add draft offers
-            if draft_offers and (show_all or show_draft or (not filter_arg)):
-                for offer in draft_offers:
-                    display_offers.append(("draft", offer))
-
-            # Add import offers
-            if import_offers and (show_all or show_import or (not filter_arg)):
-                for offer in import_offers:
-                    display_offers.append(("import", offer))
-
-            # Add active offers
-            if active_offers and (show_all or show_active or (not filter_arg)):
-                for offer in active_offers:
-                    display_offers.append(("active", offer))
-
-            # Add other status offers
-            if show_all or show_completed or show_inactive or show_archived:
-                status_order = [OfferStatus.SOLD_OUT.value, OfferStatus.COMPLETED.value, OfferStatus.INACTIVE.value]
-                for status in status_order:
-                    status_offers = offers_by_status.get(status, [])
-                    if not status_offers:
-                        continue
-                    if show_completed and status != OfferStatus.COMPLETED.value:
-                        continue
-                    if show_inactive and status != OfferStatus.INACTIVE.value:
-                        continue
-                    if show_archived and status not in [
-                        OfferStatus.SOLD_OUT.value,
-                        OfferStatus.COMPLETED.value,
-                        OfferStatus.INACTIVE.value,
-                    ]:
-                        continue
-                    for offer in status_offers:
-                        display_offers.append((status, offer))
-
-            # Paginate offers
-            page_offers, total_pages = PaginationUtils.paginate_list(display_offers, page, 20)
-
-            # Determine if we need section headers
-            show_section_headers = (
-                show_all
-                or (not filter_arg)
-                or len(
-                    [
-                        s
-                        for s in [show_draft, show_import, show_active, show_completed, show_inactive, show_archived]
-                        if s
-                    ]
-                )
-                > 1
+        if word == "soldout":
+            sold_out = offer_listing.sold_out_offers(offers)
+            if not sold_out:
+                return self._no_offers(chat_id, user_id)
+            page_offers, total_pages = PaginationUtils.paginate_list(sold_out, page, offer_listing.PAGE_SIZE)
+            body = "".join(
+                self._listed_line(offer, offer_listing.SOLD_OUT, user_id, boxes, orders) for offer in page_offers
             )
+            title = self._t("sold_out_offers_title", user_id)
+            return self._send_offer_page(chat_id, user_id, title, body, page, total_pages, "list_offers_soldout")
 
-            # Build title based on filter (only if not showing section headers)
-            if not show_section_headers:
-                if show_draft:
-                    message += self._t("draft_offers", user_id)
-                elif show_active:
-                    message += self._t("active_offers", user_id)
-                elif show_import:
-                    message += self._t("import_offers", user_id)
-                elif show_archived:
-                    message += self._t("archived_offers", user_id)
-                elif show_completed:
-                    message += f"✅ {self._t('status_completed', user_id).upper()}:"
-                elif show_inactive:
-                    message += f"❌ {self._t('status_inactive', user_id).upper()}:"
+        if is_admin and word != "user":
+            return self._send_admin_overview(chat_id, user_id, offers, word, page, boxes, orders)
 
-                if total_pages > 1:
-                    message += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
-                message += "\n\n"
-            else:
-                # Show general title for multi-section views
-                if show_all:
-                    message += self._t("all_offers_admin", user_id)
-                else:
-                    message += self._t("current_offers_admin", user_id)
+        # Customers, and the admin's "user" view: what customers can order
+        active = offer_listing.customer_offers(offers)
+        if not active:
+            return self._no_offers(chat_id, user_id)
+        page_offers, total_pages = PaginationUtils.paginate_list(active, page, offer_listing.PAGE_SIZE)
+        body = "".join(self._listed_line(offer, offer_listing.ACTIVE, user_id, boxes, orders) for offer in page_offers)
+        title = self._t("active_offers_customer", user_id)
+        buttons = "list_offers_user" if is_admin else "list_offers"
+        return self._send_offer_page(chat_id, user_id, title, body, page, total_pages, buttons)
 
-                if total_pages > 1:
-                    message += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
-                message += "\n\n"
+    def _send_admin_overview(
+        self, chat_id: int, user_id: int, offers: list, word: str | None, page: int, boxes: dict, orders: dict
+    ) -> dict[str, Any]:
+        """The admin's list: the statuses of the filter, with a header per status in the overview views"""
+        view = offer_listing.admin_view(word)
+        listed = offer_listing.offers_in_view(offers, view)
+        page_items, total_pages = PaginationUtils.paginate_list(listed, page, offer_listing.PAGE_SIZE)
 
-            # Group paginated offers by status for display
-            current_status = None
-            first_section = True
+        body = ""
+        current = None
+        for status, offer in page_items:
+            if view.sections and status != current:
+                body += ("\n" if current else "") + self._section_title(status, user_id) + "\n"
+            current = status
+            body += self._listed_line(offer, status, user_id, boxes, orders, admin=True)
 
-            for status_type, offer in page_offers:
-                if status_type != current_status:
-                    current_status = status_type
-                    if show_section_headers:
-                        if not first_section:
-                            message += "\n"
-                        first_section = False
-                        if status_type == "draft":
-                            message += self._t("draft_offers", user_id) + "\n"
-                        elif status_type == "import":
-                            message += self._t("import_offers", user_id) + "\n"
-                        elif status_type == "active":
-                            message += self._t("active_offers", user_id) + "\n"
-                        else:
-                            status_emoji = {
-                                OfferStatus.SOLD_OUT.value: "🚫",
-                                OfferStatus.COMPLETED.value: "✅",
-                                OfferStatus.INACTIVE.value: "❌",
-                            }.get(status_type, "❓")
-                            status_label = {
-                                OfferStatus.SOLD_OUT.value: self._t("status_sold_out", user_id).upper(),
-                                OfferStatus.COMPLETED.value: self._t("status_completed", user_id).upper(),
-                                OfferStatus.INACTIVE.value: self._t("status_inactive", user_id).upper(),
-                            }.get(status_type, status_type.upper())
-                            message += f"{status_emoji} {status_label}:\n"
+        title = self._t(view.title_key, user_id) if view.title_key else self._section_title(view.statuses[0], user_id)
+        # The page buttons keep the word as typed (also an unknown one, which shows the default view)
+        buttons = f"list_offers_{word}" if word else "list_offers"
+        return self._send_offer_page(chat_id, user_id, title, body, page, total_pages, buttons)
 
-                # Format offer line
-                if status_type == "draft":
-                    message += self._format_offer_line(offer, "📝", user_id, is_draft=True)
-                elif status_type == "import":
-                    total_ordered, total_capacity = self._get_offer_capacity_info(
-                        offer.offer_id, user_id, boxes_by_offer, orders_by_offer
-                    )
-                    message += self._format_offer_line(offer, "📥", user_id, total_ordered, total_capacity)
-                elif status_type == "active":
-                    total_ordered, total_capacity = self._get_offer_capacity_info(
-                        offer.offer_id, user_id, boxes_by_offer, orders_by_offer
-                    )
-                    boxes = boxes_by_offer.get(offer.offer_id, [])
-                    has_ordered_boxes = any(box.status == "ordered" for box in boxes)
-                    emoji = "📦🍺" if has_ordered_boxes else "🍺"
-                    message += self._format_offer_line(offer, emoji, user_id, total_ordered, total_capacity)
-                else:
-                    status_emoji = {
-                        OfferStatus.SOLD_OUT.value: "🚫",
-                        OfferStatus.COMPLETED.value: "✅",
-                        OfferStatus.INACTIVE.value: "❌",
-                    }.get(status_type, "❓")
+    def _section_title(self, status: str, user_id: int) -> str:
+        key = offer_listing.SECTION_TITLE_KEYS.get(status)
+        if key:
+            return self._t(key, user_id)
+        label = self._t(offer_listing.STATUS_LABEL_KEYS[status], user_id).upper()
+        return f"{offer_listing.STATUS_ICONS[status]} {label}:"
 
-                    # Only show availability for sold_out offers
-                    if status_type == OfferStatus.SOLD_OUT.value:
-                        total_ordered, total_capacity = self._get_offer_capacity_info(
-                            offer.offer_id, user_id, boxes_by_offer, orders_by_offer
-                        )
-                        message += self._format_offer_line(offer, status_emoji, user_id, total_ordered, total_capacity)
-                    else:
-                        message += self._format_offer_line(offer, status_emoji, user_id)
+    def _listed_line(self, offer, status: str, user_id: int, boxes: dict, orders: dict, admin: bool = False) -> str:
+        """One offer in a list: its icon, and for the statuses that show it, how much is ordered"""
+        icon = offer_listing.STATUS_ICONS[status]
+        if admin and status == offer_listing.ACTIVE and offer_listing.has_ordered_box(boxes.get(offer.offer_id, [])):
+            icon = offer_listing.ORDERED_BOX_ICON
+        if status not in offer_listing.SHOWS_ORDERED:
+            return self._format_offer_line(offer, icon, user_id)
+        ordered, capacity = self._get_offer_capacity_info(offer.offer_id, boxes, orders)
+        return self._format_offer_line(offer, icon, user_id, ordered, capacity)
 
-            reply_markup = None
-            if total_pages > 1:
-                filter_suffix = f"_{filter_arg}" if filter_arg else ""
-                reply_markup = PaginationUtils.build_pagination_keyboard(
-                    page, total_pages, f"list_offers{filter_suffix}", enhanced=True
-                )
-
-            self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
-            return {"status": "success"}
-        else:
-            # Show only active offers for customers
-            active_offers = [o for o in offers if o.status == OfferStatus.ACTIVE.value]
-
-            if not active_offers:
-                self._send_message(chat_id, self._t("no_offers", user_id))
-                return {"status": "no_offers"}
-
-            # Sort active offers by offer_id descending (highest first)
-            active_offers.sort(key=lambda x: x.offer_id, reverse=True)
-
-            # Paginate active offers
-            page_offers, total_pages = PaginationUtils.paginate_list(active_offers, page, 20)
-
-            message += self._t("active_offers_customer", user_id)
-            if total_pages > 1:
-                message += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
-            message += "\n\n"
-
-            for offer in page_offers:
-                total_ordered, total_capacity = self._get_offer_capacity_info(
-                    offer.offer_id, user_id, boxes_by_offer, orders_by_offer
-                )
-                message += self._format_offer_line(offer, "🍺", user_id, total_ordered, total_capacity)
-
-            reply_markup = None
-            if total_pages > 1:
-                filter_suffix = "_user" if show_user_view else ""
-                reply_markup = PaginationUtils.build_pagination_keyboard(
-                    page, total_pages, f"list_offers{filter_suffix}", enhanced=True
-                )
-
-            self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
-            return {"status": "success"}
-
-        self._send_message(chat_id, message, parse_mode="HTML")
+    def _send_offer_page(
+        self, chat_id: int, user_id: int, title: str, body: str, page: int, total_pages: int, buttons: str
+    ) -> dict[str, Any]:
+        """A page of an offer list: the title (with the page number when there are more), the lines, page buttons"""
+        reply_markup = None
+        if total_pages > 1:
+            title += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
+            reply_markup = PaginationUtils.build_pagination_keyboard(page, total_pages, buttons, enhanced=True)
+        self._send_message(chat_id, f"{title}\n\n{body}", parse_mode="HTML", reply_markup=reply_markup)
         return {"status": "success"}
+
+    def _no_offers(self, chat_id: int, user_id: int) -> dict[str, Any]:
+        self._send_message(chat_id, self._t("no_offers", user_id))
+        return {"status": "no_offers"}
 
     def handle_list_my_orders(
         self, chat_id: int, user_id: int, args: list | None = None, page: int = 1
@@ -658,7 +432,7 @@ class InfoCommands(BaseHandler):
         name = self._escape_html(offer.name)
         if offer.status == OfferStatus.ACTIVE.value:
             # Get availability for active offers
-            total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
+            total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id)
             available = total_capacity - total_ordered
 
             message += (

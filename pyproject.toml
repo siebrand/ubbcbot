@@ -34,8 +34,8 @@ source = ["src"]
 branch = true
 
 [tool.coverage.report]
-# CI fails below this percentage (lines and branches together). It was 54.7 on 2026-11-18: raise it when the
+# CI fails below this percentage (lines and branches together). It was 61.7 on 2026-11-19: raise it when the
 # coverage rises, so it can only go up.
-fail_under = 58
+fail_under = 61
 precision = 1
 skip_empty = true

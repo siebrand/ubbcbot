@@ -114,7 +114,9 @@ The problems are in how routes are declared.
    seven `show_*` flags, three nearly identical branches (sold out, admin, customer) that each paginate, add a title,
    format lines and build a keyboard, and an unreachable `_send_message` at the end (`:571-572`). It is the
    customer-facing entry point of the bot, and it is barely tested: most of the file's 319 uncovered statements are
-   here.
+   here. **Done** in step 4: characterization tests first (19% → 90% coverage), then the views became data in
+   `services/offer_listing.py` (`ADMIN_VIEWS`, icons, which statuses show how much is ordered, the capacity rule),
+   and `handle_list_offers` is a short dispatcher over one page sender. Its complexity is below 10 now.
 2. **Bug: offer names go into HTML messages unescaped.** `_format_offer_line` (`:144-163`) and `_send_offer_view`
    (`:718-734`) put `offer.name` (and, in the detail view, the supplier name) straight into `parse_mode="HTML"`
    messages. Offers are entered by the admin, so this isn't an injection risk. But a name like `Bier & Co` makes
