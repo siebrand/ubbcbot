@@ -1,9 +1,11 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
+from botocore.exceptions import ClientError
 
 from models.entities import Order
-from repositories.order_repository import OrderRepository
+from repositories.order_repository import BOX_INDEX, OrderRepository
 
 
 @pytest.fixture
@@ -261,3 +263,48 @@ class TestOrderRepository:
         active_orders = order_repo.get_all_orders(statuses=["active"])
         active_ids = [o.order_id for o in active_orders]
         assert "order-15" in active_ids
+
+
+class TestEveryPageIsRead:
+    """DynamoDB returns at most 1 MB per call. One item per call forces a page per order."""
+
+    @pytest.fixture
+    def paged(self, order_repo):
+        for i in range(5):
+            order_repo.create_order(
+                Order(order_id=f"p-{i}", customer_id="c1", offer_id=7, box_id="b1", status="ready_for_labeling")
+            )
+        query, scan = order_repo.table.query, order_repo.table.scan
+        with (
+            patch.object(order_repo.table, "query", side_effect=lambda **kw: query(Limit=1, **kw)),
+            patch.object(order_repo.table, "scan", side_effect=lambda **kw: scan(Limit=1, **kw)),
+        ):
+            yield order_repo
+
+    @pytest.mark.parametrize(
+        "read",
+        [
+            lambda repo: repo.get_orders_by_customer("c1"),
+            lambda repo: repo.get_orders_by_offer(7),
+            lambda repo: repo.get_orders_by_box("b1"),
+            lambda repo: repo.get_orders_by_status("ready_for_labeling"),
+            lambda repo: repo.get_all_orders(),
+            lambda repo: repo.get_all_orders(statuses=["ready_for_labeling"]),
+        ],
+        ids=["customer", "offer", "box", "status", "all", "all-by-status"],
+    )
+    def test_every_order_is_returned(self, paged, read):
+        assert sorted(o.order_id for o in read(paged)) == [f"p-{i}" for i in range(5)]
+
+    def test_the_scan_fallback_for_a_missing_index_reads_every_page_too(self, paged):
+        error = ClientError(
+            {
+                "Error": {
+                    "Code": "ValidationException",
+                    "Message": f"The table does not have the specified index: {BOX_INDEX}",
+                }
+            },
+            "Query",
+        )
+        with patch.object(paged.table, "query", side_effect=error):
+            assert len(paged.get_orders_by_box("b1")) == 5

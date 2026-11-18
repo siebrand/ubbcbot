@@ -41,7 +41,7 @@ class OrderRepository(BaseRepository):
         if projection:
             params["ProjectionExpression"] = projection
         try:
-            response = self.table.query(IndexName=index_name, KeyConditionExpression="#key = :value", **params)
+            return self._query_items(IndexName=index_name, KeyConditionExpression="#key = :value", **params)
         except ClientError as e:
             error = e.response.get("Error", {})
             # DynamoDB says "ValidationException: The table does not have the specified index" or "Cannot read from
@@ -51,8 +51,7 @@ class OrderRepository(BaseRepository):
             if not index_unavailable:
                 raise
             logger.warning(f"Index {index_name} is not available yet, scanning the table instead: {error['Message']}")
-            response = self.table.scan(FilterExpression="#key = :value", **params)
-        return response.get("Items", [])
+            return self._scan_items(FilterExpression="#key = :value", **params)
 
     def create_order(self, order: Order) -> Order | None:
         try:
@@ -77,18 +76,10 @@ class OrderRepository(BaseRepository):
         """Orders of a customer. ``strict`` re-raises database errors instead of returning an empty list,
         for callers (the data export) that must not mistake a failed read for "no orders"."""
         try:
-            # Follow pagination: a data export must contain every order, not just the first 1 MB
-            params: dict[str, Any] = {
-                "IndexName": "customer-index",
-                "KeyConditionExpression": Key("customer_id").eq(customer_id),
-            }
-            items: list[dict[str, Any]] = []
-            while True:
-                response = self.table.query(**params)
-                items.extend(response.get("Items", []))
-                if "LastEvaluatedKey" not in response:
-                    break
-                params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+            # Every page: a data export must contain every order, not just the first 1 MB
+            items = self._query_items(
+                IndexName="customer-index", KeyConditionExpression=Key("customer_id").eq(customer_id)
+            )
             return [Order(**item) for item in items]
         except Exception as e:
             logger.error(f"Error getting orders by customer: {e}")
@@ -98,8 +89,8 @@ class OrderRepository(BaseRepository):
 
     def get_orders_by_offer(self, offer_id: int) -> list[Order]:
         try:
-            response = self.table.query(IndexName="offer-index", KeyConditionExpression=Key("offer_id").eq(offer_id))
-            return [Order(**item) for item in response.get("Items", [])]
+            items = self._query_items(IndexName="offer-index", KeyConditionExpression=Key("offer_id").eq(offer_id))
+            return [Order(**item) for item in items]
         except Exception as e:
             logger.error(f"Error getting orders by offer: {e}")
             return []
@@ -127,11 +118,9 @@ class OrderRepository(BaseRepository):
                 for status in dict.fromkeys(statuses):  # each status once, in the order given
                     items.extend(self._query_index(STATUS_INDEX, "status", status, projection, {"#status": "status"}))
             else:
-                response = self.table.scan(
-                    ProjectionExpression=projection,
-                    ExpressionAttributeNames={"#status": "status"},
+                items = self._scan_items(
+                    ProjectionExpression=projection, ExpressionAttributeNames={"#status": "status"}
                 )
-                items = response.get("Items", [])
             return [Order(**item) for item in items]
         except Exception as e:
             logger.error(f"Error getting all orders: {e}")
