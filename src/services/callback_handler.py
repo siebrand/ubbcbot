@@ -5,6 +5,7 @@ from typing import Any
 from models.entities import AuthorizationStatus
 from services.routing.callback_router import CallbackRouter
 from services.telegram_client import TelegramClient
+from services.translator import Translator
 from utils.edit_context import EditContextManager
 
 logger = logging.getLogger()
@@ -850,7 +851,7 @@ class CallbackHandler:
 
     def _t(self, key: str, user_id: int | None = None, **params) -> str:
         """Translation helper for EditContextManager"""
-        return self.base_handler._t(key, user_id, **params)
+        return Translator(self.db).translate(key, user_id, **params)
 
     def _send_message(
         self,

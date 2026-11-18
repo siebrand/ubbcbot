@@ -47,7 +47,8 @@ sync service.
    every translation in both languages.
 3. **Risk: translations are loaded once per handler instance, not once per container.** `_translations` is an
    instance attribute (`base_handler.py:24`) and handlers are rebuilt on every request. So each request that
-   translates in several handlers parses `nl.json`/`en.json` several times. A module-level cache, loaded once per
+   translates in several handlers parses `nl.json`/`en.json` several times (**fixed** in step 3:
+   `services/translator.py` caches them per container). A module-level cache, loaded once per
    container, is enough.
 4. **Maintainability: offer-message sync is domain logic in the base class.** `sync_offer_messages`,
    `_build_offer_message`, `_edit_tracked_message`, `_sync_subscriber_messages_async` and

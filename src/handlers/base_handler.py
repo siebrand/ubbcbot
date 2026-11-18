@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from typing import Any
@@ -8,6 +7,7 @@ from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
 from services.export_expiry import ExportExpiryService
 from services.telegram_client import TelegramClient
+from services.translator import Translator, load_translations
 from utils.pagination import PaginationUtils
 from utils.validation import ValidationUtils
 
@@ -21,55 +21,23 @@ class BaseHandler:
         self.environment = environment
         self.telegram_token = telegram_token
         self._bot_username: str | None = None
-        self._translations: dict[str, dict[str, str]] = {}
         self.validator = ValidationUtils(db, self._t)
         self.box_status_manager = BoxStatusManager(db)
         self.export_expiry = ExportExpiryService(db, self._delete_message_result)
 
-    def _load_translations(self, lang: str) -> dict[str, str]:
-        """Load translations for given language"""
-        if lang in self._translations:
-            return self._translations[lang]
+    @property
+    def translator(self) -> Translator:
+        """Texts in the user's language. Built on use; the translation files are cached per container."""
+        return Translator(self.db)
 
-        # Default to Dutch for most users, fallback to English
-        lang_file = lang if lang in ["en", "nl"] else "nl"
-
-        try:
-            file_path = os.path.join(os.path.dirname(__file__), "..", "translations", f"{lang_file}.json")
-            with open(file_path, encoding="utf-8") as f:
-                self._translations[lang] = json.load(f)
-                return self._translations[lang]
-        except Exception as e:
-            logger.error(f"Error loading translations for {lang}: {e}")
-            # Fallback to English if Dutch fails
-            if lang_file != "en":
-                return self._load_translations("en")
-            return {}
+    @staticmethod
+    def _load_translations(lang: str) -> dict[str, str]:
+        """All texts of a language (see services/translator.py)"""
+        return load_translations(lang)
 
     def _t(self, key: str, user_id: int | None = None, force_group_lang: bool = False, **params) -> str:
         """Translate message key to user language"""
-        # Force Dutch for group messages
-        if force_group_lang:
-            lang = "nl"
-        else:
-            # Get user language preference, default to Dutch
-            lang = "nl"
-            if user_id:
-                customer = self.db.get_customer_by_telegram_id(user_id)
-                if customer and hasattr(customer, "language") and customer.language:
-                    lang = customer.language
-
-        translations = self._load_translations(lang)
-        message = translations.get(key, key)
-        if not params:
-            return message
-        try:
-            return message.format(**params)
-        except (KeyError, IndexError, ValueError) as e:
-            # A translation with a placeholder the caller does not pass (or a stray brace) must not break the
-            # command: send the text unfilled. Only the key and the error are logged, never the parameters.
-            logger.error(f"Translation {key!r} ({lang}) could not be filled in: {type(e).__name__}: {e}")
-            return message
+        return self.translator.translate(key, user_id, force_group_lang, **params)
 
     def _get_bot_username(self) -> str:
         """Get bot username from Telegram API"""
