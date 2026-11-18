@@ -13,17 +13,7 @@ class EditContextRepository(BaseRepository):
 
     def _contexts_for_chat(self, chat_id: int) -> list[dict]:
         """All raw context items of a chat (follows pagination)"""
-        params: dict = {
-            "FilterExpression": "chat_id = :chat_id",
-            "ExpressionAttributeValues": {":chat_id": chat_id},
-        }
-        items: list[dict] = []
-        while True:
-            response = self.table.scan(**params)
-            items.extend(response.get("Items", []))
-            if "LastEvaluatedKey" not in response:
-                return items
-            params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+        return self._scan_items(FilterExpression="chat_id = :chat_id", ExpressionAttributeValues={":chat_id": chat_id})
 
     def create_edit_context(self, context: EditContext) -> bool:
         """Store a context. A chat has at most one: a new prompt replaces any older one, so two open prompts
@@ -67,12 +57,12 @@ class EditContextRepository(BaseRepository):
         try:
             cutoff_time = datetime.now(UTC) - timedelta(hours=1)
 
-            response = self.table.scan(
+            items = self._scan_items(
                 FilterExpression="created_at < :cutoff", ExpressionAttributeValues={":cutoff": cutoff_time.isoformat()}
             )
 
             deleted_count = 0
-            for item in response.get("Items", []):
+            for item in items:
                 if self.delete_edit_context(item["context_id"]):
                     deleted_count += 1
 

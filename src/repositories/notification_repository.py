@@ -23,8 +23,8 @@ class NotificationRepository(BaseRepository):
 
     def get_notification_messages_by_offer(self, offer_id: int) -> list[NotificationMessage]:
         try:
-            response = self.table.query(IndexName="offer-index", KeyConditionExpression=Key("offer_id").eq(offer_id))
-            return [NotificationMessage(**item) for item in response.get("Items", [])]
+            items = self._query_items(IndexName="offer-index", KeyConditionExpression=Key("offer_id").eq(offer_id))
+            return [NotificationMessage(**item) for item in items]
         except Exception as e:
             logger.error(f"Error getting notification messages: {e}")
             return []

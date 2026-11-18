@@ -8,6 +8,7 @@ from typing import Any
 import boto3
 from boto3.dynamodb.conditions import Key
 
+from utils.dynamodb import read_all_pages
 from utils.log_redaction import configure_logging
 
 logger = logging.getLogger()
@@ -60,24 +61,27 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             return _build_response(200, cached)
 
         # Scan active offers
-        scan_resp = offers_table.scan(
-            FilterExpression="#s = :active",
-            ExpressionAttributeNames={"#s": "status"},
-            ExpressionAttributeValues={":active": "active"},
+        scanned = read_all_pages(
+            offers_table.scan,
+            {
+                "FilterExpression": "#s = :active",
+                "ExpressionAttributeNames": {"#s": "status"},
+                "ExpressionAttributeValues": {":active": "active"},
+            },
         )
-        active_offers = sorted(scan_resp.get("Items", []), key=lambda o: int(o["offer_id"]))
+        active_offers = sorted(scanned, key=lambda o: int(o["offer_id"]))
 
         offers = []
         for offer in active_offers:
             offer_id = int(offer["offer_id"])
 
-            boxes_resp = boxes_table.query(
-                IndexName="offer-index",
-                KeyConditionExpression=Key("offer_id").eq(offer_id),
+            boxes = read_all_pages(
+                boxes_table.query,
+                {"IndexName": "offer-index", "KeyConditionExpression": Key("offer_id").eq(offer_id)},
             )
             remaining = sum(
                 int(b["max_capacity"]) - int(b["current_quantity"])
-                for b in boxes_resp.get("Items", [])
+                for b in boxes
                 if int(b["current_quantity"]) < int(b["max_capacity"])
             )
 

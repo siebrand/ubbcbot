@@ -58,9 +58,8 @@ class OfferRepository(BaseRepository):
     def _list_offers_uncached(self) -> list[Offer]:
         """Internal method to get offers without caching (called by OfferCache)"""
         try:
-            response = self.table.scan(ConsistentRead=True)
             offers = []
-            for item in response.get("Items", []):
+            for item in self._scan_items(ConsistentRead=True):
                 # Convert Decimal fields to appropriate types
                 if "wholesale_box_size" in item:
                     item["wholesale_box_size"] = int(item["wholesale_box_size"])
@@ -77,12 +76,12 @@ class OfferRepository(BaseRepository):
         try:
             cutoff_date = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
-            response = self.table.scan(
+            items = self._scan_items(
                 FilterExpression="#status = :status AND created_at >= :cutoff",
                 ExpressionAttributeNames={"#status": "status"},
                 ExpressionAttributeValues={":status": "sold_out", ":cutoff": cutoff_date},
             )
-            return [Offer(**item) for item in response.get("Items", [])]
+            return [Offer(**item) for item in items]
         except Exception as e:
             logger.error(f"Error listing recent sold out offers: {e}")
             return []

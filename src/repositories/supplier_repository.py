@@ -37,12 +37,11 @@ class SupplierRepository(BaseRepository):
 
     def get_supplier_by_name(self, name: str) -> Supplier | None:
         try:
-            response = self.table.scan(
+            items = self._scan_items(
                 FilterExpression="#name = :name",
                 ExpressionAttributeNames={"#name": "name"},
                 ExpressionAttributeValues={":name": name.strip()},
             )
-            items = response.get("Items", [])
             if items:
                 return Supplier(**items[0])
             return None
@@ -76,8 +75,7 @@ class SupplierRepository(BaseRepository):
 
     def list_suppliers(self) -> list[Supplier]:
         try:
-            response = self.table.scan()
-            return [Supplier(**item) for item in response.get("Items", [])]
+            return [Supplier(**item) for item in self._scan_items()]
         except Exception as e:
             logger.error(f"Error listing suppliers: {e}")
             return []

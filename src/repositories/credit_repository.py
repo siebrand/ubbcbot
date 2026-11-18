@@ -7,6 +7,7 @@ from boto3.dynamodb.conditions import Key
 
 from models.entities import CreditTransaction, CustomerCredit
 from repositories.base_repository import BaseRepository
+from utils.dynamodb import read_all_pages
 
 logger = logging.getLogger(__name__)
 
@@ -145,13 +146,7 @@ class CreditRepository(BaseRepository):
                 "IndexName": "customer-index",
                 "KeyConditionExpression": Key("customer_id").eq(customer_id),
             }
-            items: list[dict] = []
-            while True:
-                response = self.transactions_table.query(**params)
-                items.extend(response.get("Items", []))
-                if "LastEvaluatedKey" not in response:
-                    break
-                params["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+            items = read_all_pages(self.transactions_table.query, params)
             transactions = [self._item_to_transaction(item) for item in items]
             return sorted(transactions, key=lambda t: str(t.created_at))
         except Exception as e:
@@ -161,14 +156,14 @@ class CreditRepository(BaseRepository):
     def get_customers_with_credit_balance(self, min_amount: Decimal | None = None) -> list[CustomerCredit]:
         try:
             if min_amount:
-                response = self.table.scan(
+                items = self._scan_items(
                     FilterExpression="current_balance >= :min_amount",
                     ExpressionAttributeValues={":min_amount": min_amount},
                 )
             else:
-                response = self.table.scan()
+                items = self._scan_items()
 
-            return [self._item_to_credit(item) for item in response.get("Items", [])]
+            return [self._item_to_credit(item) for item in items]
         except Exception as e:
             logger.error(f"Error getting customers with credit balance: {e}")
             return []
