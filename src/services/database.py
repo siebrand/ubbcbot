@@ -379,27 +379,25 @@ class DynamoDBService:
             logger.error(f"Error generating presigned URL: {e}")
             return None
 
+    # The delivery and labeling workflows: which suppliers and offers have boxes or orders in a status. The offers
+    # are read once (the cached list) and the suppliers once, instead of one read per offer and per supplier name.
+    def _offers_with_ids(self, offer_ids: set) -> list[Offer]:
+        return [offer for offer in self.list_offers() if offer.offer_id in offer_ids]
+
+    def _suppliers_of(self, offers: list[Offer]) -> list[Supplier]:
+        names = {offer.supplier_name.strip() for offer in offers if offer.supplier_name}
+        return [supplier for supplier in self.list_suppliers() if supplier.name in names]
+
+    def _offer_ids_with_boxes_in(self, box_status: str) -> set:
+        return {box.offer_id for box in self.box_repo.get_boxes_by_status(box_status)}
+
+    def _offer_ids_with_orders_in(self, order_status: str) -> set:
+        return {order.offer_id for order in self.order_repo.get_orders_by_status(order_status)}
+
     def get_suppliers_with_boxes_by_status(self, box_status: str) -> list[Supplier]:
         """Get suppliers that have boxes with specified status"""
         try:
-            # Get the offer IDs of the boxes with the specified status
-            offer_ids = {box.offer_id for box in self.box_repo.get_boxes_by_status(box_status)}
-
-            # Get supplier names from offers
-            supplier_names = set()
-            for offer_id in offer_ids:
-                offer = self.get_offer(offer_id)
-                if offer:
-                    supplier_names.add(offer.supplier_name)
-
-            # Get supplier objects
-            suppliers = []
-            for name in supplier_names:
-                supplier = self.get_supplier_by_name(name)
-                if supplier:
-                    suppliers.append(supplier)
-
-            return suppliers
+            return self._suppliers_of(self._offers_with_ids(self._offer_ids_with_boxes_in(box_status)))
         except Exception as e:
             logger.error(f"Error getting suppliers with {box_status} boxes: {e}")
             return []
@@ -407,17 +405,8 @@ class DynamoDBService:
     def get_offers_by_supplier_and_box_status(self, supplier_name: str, box_status: str) -> list[Offer]:
         """Get offers for a supplier that have boxes with specified status"""
         try:
-            # Get the offer IDs of the boxes with the specified status
-            offer_ids = {box.offer_id for box in self.box_repo.get_boxes_by_status(box_status)}
-
-            # Get offers for this supplier that have boxes with specified status
-            offers = []
-            for offer_id in offer_ids:
-                offer = self.get_offer(offer_id)
-                if offer and offer.supplier_name == supplier_name:
-                    offers.append(offer)
-
-            return offers
+            offers = self._offers_with_ids(self._offer_ids_with_boxes_in(box_status))
+            return [offer for offer in offers if offer.supplier_name == supplier_name]
         except Exception as e:
             logger.error(f"Error getting {box_status} offers by supplier: {e}")
             return []
@@ -432,19 +421,7 @@ class DynamoDBService:
 
     def get_boxes_by_offer_with_orders(self, offer_id: int) -> list[Box]:
         """Get boxes for an offer that have orders"""
-        try:
-            boxes = self.get_boxes_by_offer(offer_id)
-            boxes_with_orders = []
-
-            for box in boxes:
-                orders = self.get_orders_by_box(box.box_id)
-                if orders:  # Only include boxes that have orders
-                    boxes_with_orders.append(box)
-
-            return boxes_with_orders
-        except Exception as e:
-            logger.error(f"Error getting boxes with orders: {e}")
-            return []
+        return self.get_boxes_by_offer_with_order_status(offer_id, None)
 
     def get_suppliers_with_ready_for_labeling_offers(self) -> list[Supplier]:
         """Get suppliers that have orders with READY_FOR_LABELING status"""
@@ -461,24 +438,7 @@ class DynamoDBService:
     def get_suppliers_with_orders_by_status(self, order_status: str) -> list[Supplier]:
         """Get suppliers that have orders with specified status"""
         try:
-            # Get the offer IDs of the orders with the specified status (read through the status index)
-            offer_ids = {order.offer_id for order in self.order_repo.get_orders_by_status(order_status)}
-
-            # Get supplier names from offers
-            supplier_names = set()
-            for offer_id in offer_ids:
-                offer = self.get_offer(offer_id)
-                if offer:
-                    supplier_names.add(offer.supplier_name)
-
-            # Get supplier objects
-            suppliers = []
-            for name in supplier_names:
-                supplier = self.get_supplier_by_name(name)
-                if supplier:
-                    suppliers.append(supplier)
-
-            return suppliers
+            return self._suppliers_of(self._offers_with_ids(self._offer_ids_with_orders_in(order_status)))
         except Exception as e:
             logger.error(f"Error getting suppliers with {order_status} orders: {e}")
             return []
@@ -486,34 +446,20 @@ class DynamoDBService:
     def get_offers_by_supplier_and_order_status(self, supplier_name: str, order_status: str) -> list[Offer]:
         """Get offers for a supplier that have orders with specified status"""
         try:
-            # Get offer IDs of the orders with the specified status (read through the status index)
-            offer_ids = {order.offer_id for order in self.order_repo.get_orders_by_status(order_status)}
-
-            # Get offers for this supplier that have orders with specified status
-            offers = []
-            for offer_id in offer_ids:
-                offer = self.get_offer(offer_id)
-                if offer and offer.supplier_name == supplier_name:
-                    offers.append(offer)
-
-            return offers
+            offers = self._offers_with_ids(self._offer_ids_with_orders_in(order_status))
+            return [offer for offer in offers if offer.supplier_name == supplier_name]
         except Exception as e:
             logger.error(f"Error getting {order_status} offers by supplier: {e}")
             return []
 
-    def get_boxes_by_offer_with_order_status(self, offer_id: int, order_status: str) -> list[Box]:
-        """Get boxes for an offer that have orders with specified status"""
+    def get_boxes_by_offer_with_order_status(self, offer_id: int, order_status: str | None) -> list[Box]:
+        """Get boxes for an offer that have orders with specified status (None: any order)"""
         try:
-            boxes = self.get_boxes_by_offer(offer_id)
-            boxes_with_status_orders = []
-
-            for box in boxes:
-                orders = self.get_orders_by_box(box.box_id)
-                status_orders = [o for o in orders if o.status == order_status]
-                if status_orders:  # Only include boxes that have orders with specified status
-                    boxes_with_status_orders.append(box)
-
-            return boxes_with_status_orders
+            return [
+                box
+                for box in self.get_boxes_by_offer(offer_id)
+                if any(order_status is None or o.status == order_status for o in self.get_orders_by_box(box.box_id))
+            ]
         except Exception as e:
             logger.error(f"Error getting boxes with {order_status} orders: {e}")
             return []

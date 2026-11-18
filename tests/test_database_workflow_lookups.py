@@ -3,6 +3,8 @@
 Wholesale delivery starts from boxes with status "ordered"; labeling from orders with status "ready_for_labeling".
 """
 
+from unittest.mock import patch
+
 import pytest
 
 from models.entities import Box, Offer, Order, Supplier
@@ -56,6 +58,27 @@ class TestBoxStatus:
 
     def test_boxes_with_orders(self, db):
         assert sorted(b.box_id for b in db.get_boxes_by_offer_with_orders(1)) == ["b1"]
+
+
+class TestReads:
+    @pytest.mark.parametrize(
+        "lookup",
+        [
+            lambda db: db.get_suppliers_with_ordered_offers(),
+            lambda db: db.get_ordered_offers_by_supplier("Molen"),
+            lambda db: db.get_suppliers_with_ready_for_labeling_offers(),
+            lambda db: db.get_ready_for_labeling_offers_by_supplier("Molen"),
+        ],
+    )
+    def test_offers_and_suppliers_are_read_once_not_per_item(self, db, lookup):
+        with (
+            patch.object(db, "get_offer", side_effect=AssertionError("one read per offer")),
+            patch.object(db, "get_supplier_by_name", side_effect=AssertionError("one read per supplier")),
+            patch.object(db.supplier_repo.table, "scan", wraps=db.supplier_repo.table.scan) as supplier_scans,
+        ):
+            assert lookup(db)
+
+        assert supplier_scans.call_count <= 1
 
 
 class TestOrderStatus:
