@@ -89,6 +89,12 @@ class TestCall:
 
         assert TelegramClient(TOKEN).call("deleteMessage", {}) == TelegramResponse(ok=True, status_code=200)
 
+    def test_get_with_parameters(self):
+        with patch("services.telegram_client.requests.get", return_value=answer()) as get:
+            TelegramClient(TOKEN).call("getFile", {"file_id": "f1"}, get=True)
+
+        assert get.call_args.kwargs == {"params": {"file_id": "f1"}, "timeout": TIMEOUT_SECONDS}
+
     def test_a_list_result_has_no_single_message_id(self, post):
         post.return_value = answer(json={"result": [{"message_id": 1}, {"message_id": 2}]})
 
@@ -96,3 +102,34 @@ class TestCall:
 
         assert response.result == [{"message_id": 1}, {"message_id": 2}]
         assert response.message_id is None
+
+
+class TestDownloadFile:
+    def downloads(self, *answers):
+        return patch("services.telegram_client.requests.get", side_effect=list(answers))
+
+    def test_asks_for_the_path_then_downloads_the_content(self):
+        file = Mock(status_code=200, content=b"bytes")
+        with self.downloads(answer(json={"result": {"file_path": "photos/a.jpg"}}), file) as get:
+            assert TelegramClient(TOKEN).download_file("f1") == b"bytes"
+
+        assert get.call_args_list[0].kwargs["params"] == {"file_id": "f1"}
+        assert get.call_args_list[1].args[0] == f"https://api.telegram.org/file/bot{TOKEN}/photos/a.jpg"
+
+    def test_an_unknown_file(self):
+        with self.downloads(answer(400, text="Bad Request: invalid file_id")) as get:
+            assert TelegramClient(TOKEN).download_file("f1") is None
+
+        assert get.call_count == 1
+
+    def test_a_failed_download(self):
+        with self.downloads(answer(json={"result": {"file_path": "a"}}), Mock(status_code=404)):
+            assert TelegramClient(TOKEN).download_file("f1") is None
+
+    def test_a_network_error_while_downloading_does_not_log_the_token(self, caplog):
+        error = requests.ConnectionError(f"/file/bot{TOKEN}/a")
+        with self.downloads(answer(json={"result": {"file_path": "a"}}), error), caplog.at_level(logging.ERROR):
+            assert TelegramClient(TOKEN).download_file("f1") is None
+
+        assert "download failed: ConnectionError" in caplog.text
+        assert TOKEN not in caplog.text

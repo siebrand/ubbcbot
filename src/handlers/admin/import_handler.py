@@ -1,8 +1,6 @@
 import logging
 from typing import Any
 
-import requests
-
 from handlers.admin.offer.notifications import NotificationHandler
 from models.entities import BoxStatus, OfferStatus, Order
 from services.box_status_manager import BoxStatusManager
@@ -235,30 +233,7 @@ class ImportHandler(NotificationHandler):
 
     def _download_file(self, file_id: str) -> bytes | None:
         """Download file from Telegram"""
-        try:
-            # Get file path
-            url = f"https://api.telegram.org/bot{self.telegram_token}/getFile"
-            response = requests.get(url, params={"file_id": file_id}, timeout=10)
-
-            if response.status_code != 200:
-                logger.error(f"Failed to get file info: {response.status_code}")
-                return None
-
-            file_path = response.json()["result"]["file_path"]
-
-            # Download file
-            download_url = f"https://api.telegram.org/file/bot{self.telegram_token}/{file_path}"
-            download_response = requests.get(download_url, timeout=30)
-
-            if download_response.status_code != 200:
-                logger.error(f"Failed to download file: {download_response.status_code}")
-                return None
-
-            return download_response.content
-
-        except Exception as e:
-            logger.error(f"Error downloading file: {e}")
-            return None
+        return self.telegram.download_file(file_id)
 
     def handle_finalize_import(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /finalize_import command"""

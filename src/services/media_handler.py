@@ -2,7 +2,7 @@ import logging
 import uuid
 from typing import Any
 
-import requests
+from services.telegram_client import TelegramClient
 
 logger = logging.getLogger()
 
@@ -151,24 +151,4 @@ class MediaHandler:
 
     def _download_telegram_file(self, file_id: str) -> bytes | None:
         """Download file from Telegram"""
-        try:
-            # Get file path
-            url = f"https://api.telegram.org/bot{self.telegram_token}/getFile"
-            response = requests.get(url, params={"file_id": file_id}, timeout=20)
-
-            if response.status_code != 200:
-                return None
-
-            file_path = response.json()["result"]["file_path"]
-
-            # Download file
-            download_url = f"https://api.telegram.org/file/bot{self.telegram_token}/{file_path}"
-            file_response = requests.get(download_url, timeout=20)
-
-            if file_response.status_code == 200:
-                return file_response.content
-
-            return None
-        except Exception as e:
-            logger.error(f"Error downloading file: {e}")
-            return None
+        return TelegramClient(self.telegram_token).download_file(file_id)

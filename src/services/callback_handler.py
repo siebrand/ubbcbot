@@ -2,10 +2,9 @@ import logging
 import re
 from typing import Any
 
-import requests
-
 from models.entities import AuthorizationStatus
 from services.routing.callback_router import CallbackRouter
+from services.telegram_client import TelegramClient
 from utils.edit_context import EditContextManager
 
 logger = logging.getLogger()
@@ -789,42 +788,23 @@ class CallbackHandler:
 
         text shows a short popup to the tapping user only. The group sees nothing.
         """
-        try:
-            url = f"https://api.telegram.org/bot{self.telegram_token}/answerCallbackQuery"
-            data = {"callback_query_id": query_id}
-            if text:
-                data["text"] = text
-            response = requests.post(url, json=data, timeout=20)
-            return response.status_code == 200
-        except Exception as e:
-            logger.error(f"Error answering callback query: {e}")
-            return False
+        data = {"callback_query_id": query_id}
+        if text:
+            data["text"] = text
+        return self.telegram.call("answerCallbackQuery", data).ok
 
     def _edit_message_remove_keyboard(self, chat_id: int, message_id: int) -> bool:
         """Remove inline keyboard from a message"""
-        try:
-            url = f"https://api.telegram.org/bot{self.telegram_token}/editMessageReplyMarkup"
-            data: dict[str, Any] = {
-                "chat_id": chat_id,
-                "message_id": message_id,
-                "reply_markup": {"inline_keyboard": []},
-            }
-            response = requests.post(url, json=data, timeout=20)
-            return response.status_code == 200
-        except Exception as e:
-            logger.error(f"Error removing keyboard: {e}")
-            return False
+        data = {"chat_id": chat_id, "message_id": message_id, "reply_markup": {"inline_keyboard": []}}
+        return self.telegram.call("editMessageReplyMarkup", data).ok
 
     def _delete_message(self, chat_id: int, message_id: int) -> bool:
         """Delete a message entirely (both text and keyboard)"""
-        try:
-            url = f"https://api.telegram.org/bot{self.telegram_token}/deleteMessage"
-            data = {"chat_id": chat_id, "message_id": message_id}
-            response = requests.post(url, json=data, timeout=20)
-            return response.status_code == 200
-        except Exception as e:
-            logger.error(f"Error deleting message: {e}")
-            return False
+        return self.telegram.call("deleteMessage", {"chat_id": chat_id, "message_id": message_id}).ok
+
+    @property
+    def telegram(self) -> TelegramClient:
+        return TelegramClient(self.telegram_token)
 
     def _start_add_supplier(self, chat_id: int) -> dict[str, Any]:
         """Start add supplier process with text input"""

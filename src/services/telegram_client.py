@@ -13,7 +13,9 @@ import requests
 logger = logging.getLogger()
 
 API_URL = "https://api.telegram.org/bot{token}/{method}"
+FILE_URL = "https://api.telegram.org/file/bot{token}/{path}"
 TIMEOUT_SECONDS = 20
+DOWNLOAD_TIMEOUT_SECONDS = 30
 
 
 @dataclass(frozen=True)
@@ -44,7 +46,8 @@ class TelegramClient:
     ) -> TelegramResponse:
         """Call a Bot API method. Never raises: a failure is a response with ``ok`` False.
 
-        ``payload`` is sent as JSON, or as form fields when ``files`` are uploaded. ``get`` sends a GET without body.
+        ``payload`` is sent as JSON, or as form fields when ``files`` are uploaded. ``get`` sends a GET with the
+        payload (if any) as query parameters.
         """
         if not self.token:
             logger.error("Telegram token is empty")
@@ -52,7 +55,9 @@ class TelegramClient:
 
         url = API_URL.format(token=self.token, method=method)
         try:
-            if get:
+            if get and payload:
+                response = requests.get(url, params=payload, timeout=TIMEOUT_SECONDS)
+            elif get:
                 response = requests.get(url, timeout=TIMEOUT_SECONDS)
             elif files is not None:
                 response = requests.post(url, data=payload, files=files, timeout=TIMEOUT_SECONDS)
@@ -71,3 +76,21 @@ class TelegramClient:
         except Exception:
             result = None
         return TelegramResponse(ok=True, status_code=200, body=body, result=result)
+
+    def download_file(self, file_id: str) -> bytes | None:
+        """The content of a file a user sent (a photo, a CSV), or None when it cannot be fetched"""
+        info = self.call("getFile", {"file_id": file_id}, get=True)
+        path = info.result.get("file_path") if isinstance(info.result, dict) else None
+        if not path:
+            logger.error(f"Telegram getFile failed: status {info.status_code}")
+            return None
+
+        try:
+            response = requests.get(FILE_URL.format(token=self.token, path=path), timeout=DOWNLOAD_TIMEOUT_SECONDS)
+        except Exception as e:
+            logger.error(f"Telegram file download failed: {type(e).__name__}")
+            return None
+        if response.status_code != 200:
+            logger.error(f"Telegram file download failed: status {response.status_code}")
+            return None
+        return response.content
