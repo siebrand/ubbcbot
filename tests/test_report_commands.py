@@ -11,9 +11,11 @@ import pytest
 
 from handlers.admin.report_commands import MESSAGE_LIMIT, ReportCommands
 from models.entities import Customer, Order
+from services.reporting import EXCLUDED_CUSTOMER_IDS
 
 ADMIN_ID = 15005473
 THIS_YEAR = datetime.now(UTC).year
+EXCLUDED = EXCLUDED_CUSTOMER_IDS[0]
 
 
 def payment(customer_id, amount, at=None, event_type="PAYMENT_RECEIVED"):
@@ -124,6 +126,23 @@ class TestTopCustomers:
         assert env.handler.handle_report_top_customers(ADMIN_ID, []) == {"status": "no_data"}
         assert "Geen betalingen" in text(env)
 
+    def test_an_excluded_customer_is_not_ranked_or_counted(self, env):
+        known_customers(env, customer("c1", "Jan", "Jansen"), customer(EXCLUDED, "Piet", "Puk"))
+        env.db.get_events_by_type.return_value = [payment("c1", "10"), payment(EXCLUDED, "500")]
+
+        assert env.handler.handle_report_top_customers(ADMIN_ID, []) == {"status": "success"}
+
+        report = text(env)
+        assert "Piet P" not in report and "500.00" not in report
+        assert "€10.00" in report  # the total
+        assert "Klanten: 1" in report
+
+    def test_only_payments_of_an_excluded_customer_is_no_data(self, env):
+        env.db.get_events_by_type.return_value = [payment(EXCLUDED, "500")]
+
+        assert env.handler.handle_report_top_customers(ADMIN_ID, []) == {"status": "no_data"}
+        assert "Geen betalingen" in text(env)
+
     def test_a_failed_read_is_an_error_not_an_empty_report(self, env):
         env.db.get_events_by_type.side_effect = RuntimeError("boom")
 
@@ -197,6 +216,28 @@ class TestSalesByPeriod:
         assert env.handler.handle_report_sales_by_period(ADMIN_ID, []) == {"status": "no_data"}
         assert "Geen verkopen" in text(env)
 
+    @pytest.mark.parametrize("args", [["2025"], ["2025", "paid"]])
+    def test_orders_and_payments_of_an_excluded_customer_are_not_counted(self, env, args):
+        env.db.get_events_by_type.return_value = [
+            payment("c1", "20", datetime(2025, 3, 3, tzinfo=UTC)),
+            payment(EXCLUDED, "500", datetime(2025, 3, 4, tzinfo=UTC)),
+            payment(EXCLUDED, "300", datetime(2025, 7, 1, 12, tzinfo=UTC)),
+        ]
+
+        assert env.handler.handle_report_sales_by_period(ADMIN_ID, args) == {"status": "success"}
+
+        report = text(env)
+        assert re.search(r"mrt 2025\s+1× €\s+20\.00", report)
+        assert re.search(r"^jul 2025\s+–$", report, re.MULTILINE)
+        assert "Totaal: <b>1×</b>, <b>€20.00</b>" in report
+        assert "Beste: mrt 2025 (1×, €20.00)" in report
+
+    def test_only_sales_of_an_excluded_customer_is_no_data(self, env):
+        env.db.get_events_by_type.return_value = [payment(EXCLUDED, "500", event_type="ORDER_CREATED")]
+
+        assert env.handler.handle_report_sales_by_period(ADMIN_ID, []) == {"status": "no_data"}
+        assert "Geen verkopen" in text(env)
+
     def test_invalid_period(self, env):
         assert env.handler.handle_report_sales_by_period(ADMIN_ID, ["2025", "2026", "2027"]) == {
             "status": "invalid_args"
@@ -255,6 +296,14 @@ class TestCustomerReport:
         customer_id, start, end = env.db.get_order_history_by_customer.call_args.args
         assert customer_id == jan.customer_id and start.year == end.year == 2025
         env.db.get_orders_by_customer.assert_called_once_with(jan.customer_id, strict=True)
+
+    def test_an_excluded_customer_still_has_a_customer_report(self, env):
+        known_customers(env, customer(EXCLUDED, "Piet", "Puk", "pietje"))
+        env.db.get_order_history_by_customer.return_value = [payment(EXCLUDED, "500", datetime(2025, 2, 3, tzinfo=UTC))]
+
+        assert env.handler.handle_report_customer(ADMIN_ID, ["pietje", "2025"]) == {"status": "success"}
+
+        assert "Totaal betaald: <b>€500.00</b> (1×)" in text(env)
 
     def test_nothing_paid_and_nothing_open(self, env):
         self._jan(env)

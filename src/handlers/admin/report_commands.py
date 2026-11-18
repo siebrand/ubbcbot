@@ -38,6 +38,7 @@ class ReportCommands(BaseHandler):
         events = self._read(self.db.get_events_by_type, "PAYMENT_RECEIVED", period.start, period.end, strict=True)
         if events is None:
             return self._report_failed(chat_id)
+        events = reporting.without_excluded(events)
 
         header = [self._t("report_top_customers_title", chat_id), self._period_line(chat_id, period)]
         if not events:
@@ -91,6 +92,7 @@ class ReportCommands(BaseHandler):
         events = self._read(self.db.get_events_by_type, event_type, period.start, period.end, strict=True)
         if events is None:
             return self._report_failed(chat_id)
+        events = reporting.without_excluded(events)
 
         header = [
             self._t(f"report_sales_title_{granularity}", chat_id),

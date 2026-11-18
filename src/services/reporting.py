@@ -28,6 +28,9 @@ CLOSED_ORDER_STATUSES = {OrderStatus.COMPLETED.value, OrderStatus.CANCELLED.valu
 
 TOP_CUSTOMERS_LIMIT = 10
 
+# Customers whose orders and payments are left out of the top-customer and sales reports (not /report_customer)
+EXCLUDED_CUSTOMER_IDS = ("16f3c6d6-a32e-47d0-b3b6-22159aefde2b",)
+
 
 class PeriodError(ValueError):
     """An argument that is not a valid period. ``value`` is the offending text, ``reason`` "invalid" or "future"."""
@@ -196,6 +199,11 @@ def aggregate_by_bucket(events: Iterable, granularity: str) -> dict[date, Bucket
         key = bucket_start(local_moment(event.changed_at).date(), granularity)
         buckets.setdefault(key, Bucket()).add(event.amount)
     return buckets
+
+
+def without_excluded(events: Iterable) -> list:
+    """The events of every customer except those in EXCLUDED_CUSTOMER_IDS"""
+    return [event for event in events if event.customer_id not in EXCLUDED_CUSTOMER_IDS]
 
 
 def total(events: Iterable) -> Bucket:

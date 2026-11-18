@@ -306,6 +306,9 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
   - `/report_customer` shows a customer's payments per month, and the open order amount: the sum of `total_price` of
     their orders in the orders table that are not `completed` or `cancelled`. That amount is the current state, not
     limited to the period; the history table cannot show it, because cancellations are not recorded there.
+- **Excluded customers**: the orders and payments of the customers in `EXCLUDED_CUSTOMER_IDS` (`services/reporting.py`)
+  are left out of `/report_top_customers` and `/report_sales_by_period`, totals included. `/report_customer` still
+  shows them.
 - **Period**: `YYYY` is that calendar year, `YYYY-MM-DD` runs from that date until now, `YYYY-MM-DD YYYY-MM-DD` from the
   earlier through the later date (both whole days, in any order). Without a period: this year until now. A period
   never runs past now. Days, weeks and months are in Dutch time (Europe/Amsterdam); the stored times are UTC.
