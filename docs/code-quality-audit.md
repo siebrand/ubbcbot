@@ -113,9 +113,9 @@ The problems are in how routes are declared.
 3. **Bug: English-speaking customers get Dutch.** Of the `_t` calls in this file, 41 pass no `user_id`, so they always
    use Dutch. Most are admin texts, where Dutch is the default anyway. But `welcome_ubbc`, `help_general`,
    `help_orders`, `active_offers_customer`, `offer_not_found`, `offer_not_available`, `invalid_offer_id` and the order
-   buttons are what customers see.
+   buttons are what customers see. **Fixed** in step 1: every call in the file passes the user.
 4. **Bug: "Page" is hard-coded.** `f" - Page {page}/{total_pages}"` appears four times (`:336, :452, :462, :552`),
-   in English, in an otherwise translated message.
+   in English, in an otherwise translated message. **Fixed** in step 1 with the existing `page_indicator` key.
 5. **Maintainability: admin features in a customer handler.** The admin offer overview, the offer edit interface
    (`_show_edit_interface`), draft preview and publish buttons, and "view as user" are all in
    `handlers/customer/`. "View as user" works by passing a fake user ID, `999999` (`:631`).

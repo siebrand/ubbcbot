@@ -213,6 +213,15 @@ class TestListOffersForCustomers:
 
         assert env.handler.handle_list_offers(CHAT, CUSTOMER_ID, None) == {"status": "no_offers"}
 
+    def test_an_english_customer_gets_english(self, env):
+        english_customer(env)
+
+        env.handler.handle_list_offers(CHAT, CUSTOMER_ID, None)
+
+        text = sent(env)
+        assert text.startswith(env.handler._load_translations("en")["active_offers_customer"])
+        assert "(2/24 ordered)" in text
+
     def test_no_sold_out_offers(self, env):
         env.db.list_offers.side_effect = lambda: [o for o in OFFERS if o.status != "sold_out"]
 
@@ -237,7 +246,7 @@ class TestListOffersPagination:
 
         text = sent(many)
         assert offer_ids(text) == list(range(25, 5, -1))
-        assert "2/3" in text
+        assert " - Pagina 2/3\n" in text
         assert self.keyboard(many) == [
             "page_list_offers_1",
             "page_list_offers_1",
@@ -245,6 +254,19 @@ class TestListOffersPagination:
             "page_list_offers_3",
             "page_list_offers_3",
         ]
+
+    @pytest.mark.parametrize("args", [None, ["active"], ["all"], ["soldout"]])
+    def test_the_page_indicator_is_translated(self, many, args):
+        english_customer(many)
+        many.db.list_offers.side_effect = lambda: [
+            Offer(offer_id=i, name=f"Bier {i}", status="sold_out" if args == ["soldout"] else "active")
+            for i in range(1, 46)
+        ]
+
+        many.handler.handle_list_offers(CHAT, CUSTOMER_ID, args, page=2)
+
+        text = sent(many)
+        assert " - Page 2/3" in text and "Pagina" not in text
 
     def test_the_admin_filter_is_kept_in_the_page_buttons(self, many):
         many.handler.handle_list_offers(CHAT, ADMIN_ID, ["active"], page=1)
@@ -401,10 +423,28 @@ class TestViewOffer:
         assert "<De Molen>" not in text
         assert "<b>Lekker</b> fris" in text
 
+    def test_an_english_customer_gets_english_text_and_buttons(self, env, offer):
+        english_customer(env)
+        en = env.handler._load_translations("en")
+
+        env.handler.handle_view_offer(CHAT, CUSTOMER_ID, ["3"])
+
+        assert f"(20/24 {en['available_text']})" in sent(env)
+        texts = [b["text"] for row in last_call(env).kwargs["reply_markup"]["inline_keyboard"] for b in row]
+        assert texts == [en["order_1"], en["order_2"]]
+
     def test_an_unknown_offer(self, env):
         env.db.get_offer.return_value = None
 
         assert env.handler.handle_view_offer(CHAT, CUSTOMER_ID, ["8"]) == {"status": "offer_not_found"}
+
+    def test_an_english_customer_is_told_in_english_that_the_offer_is_unknown(self, env):
+        english_customer(env)
+        env.db.get_offer.return_value = None
+
+        env.handler.handle_view_offer(CHAT, CUSTOMER_ID, ["8"])
+
+        assert sent(env) == env.handler._load_translations("en")["offer_not_found"]
 
     def test_a_non_numeric_id(self, env):
         assert env.handler.handle_view_offer(CHAT, CUSTOMER_ID, ["acht"]) == {"status": "invalid_format"}
@@ -432,6 +472,16 @@ class TestStartAndHelp:
         env.handler.handle_start(CHAT, CUSTOMER_ID, ["orders"])
 
         assert sent(env) == env.handler._t("help_orders")
+
+    def test_start_and_help_sections_in_english(self, env):
+        english_customer(env)
+        en = env.handler._load_translations("en")
+
+        env.handler.handle_start(CHAT, CUSTOMER_ID)
+        env.handler.handle_help(CHAT, CUSTOMER_ID, ["orders"])
+
+        messages = [c.args[1] for c in env.handler._send_message.call_args_list]
+        assert messages == [en["welcome_ubbc"], en["help_orders"]]
 
     def test_help_lists_the_sections_with_the_bot_name(self, env):
         env.handler.handle_help(CHAT, CUSTOMER_ID)

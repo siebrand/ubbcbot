@@ -36,10 +36,10 @@ class InfoCommands(BaseHandler):
             return self._show_help_section(chat_id, user_id, section)
 
         # Show general help
-        message = self._t("welcome_ubbc")
+        message = self._t("welcome_ubbc", user_id)
 
         if self._is_admin(user_id):
-            message += self._t("admin_sections_available")
+            message += self._t("admin_sections_available", user_id)
 
         result = self._send_message(chat_id, message)
         success = result.get("success", False)
@@ -59,10 +59,10 @@ class InfoCommands(BaseHandler):
         bot_username = self._get_bot_username()
 
         # Show available sections
-        message = self._t("help_sections", bot_username=bot_username)
+        message = self._t("help_sections", user_id, bot_username=bot_username)
 
         if self._is_admin(user_id):
-            message += self._t("admin_help_sections", bot_username=bot_username)
+            message += self._t("admin_help_sections", user_id, bot_username=bot_username)
 
         # Replace bot_username placeholder
         message = message.format(bot_username=bot_username)
@@ -79,7 +79,7 @@ class InfoCommands(BaseHandler):
                 sections.extend(["suppliers", "offers", "users", "delivery", "import", "system", "reports"])
 
             for sect in sections:
-                message = self._get_section_help(sect)
+                message = self._get_section_help(sect, user_id)
                 self._send_message(chat_id, message)
 
             return {"status": "success"}
@@ -104,9 +104,9 @@ class InfoCommands(BaseHandler):
                 "system",
                 "reports",
             ] and not self._is_admin(user_id):
-                message = self._t("admin_only_section")
+                message = self._t("admin_only_section", user_id)
             else:
-                message = self._get_section_help(section)
+                message = self._get_section_help(section, user_id)
 
         else:
             available_sections = ["general", "orders", "all"]
@@ -119,26 +119,26 @@ class InfoCommands(BaseHandler):
         self._send_message(chat_id, message)
         return {"status": "success"}
 
-    def _get_section_help(self, section: str) -> str:
+    def _get_section_help(self, section: str, user_id: int) -> str:
         """Get help text for a specific section"""
         if section == "general":
-            return self._t("help_general")
+            return self._t("help_general", user_id)
         elif section == "orders":
-            return self._t("help_orders")
+            return self._t("help_orders", user_id)
         elif section == "suppliers":
-            return self._t("help_suppliers")
+            return self._t("help_suppliers", user_id)
         elif section == "offers":
-            return self._t("help_offers")
+            return self._t("help_offers", user_id)
         elif section == "users":
-            return self._t("help_users")
+            return self._t("help_users", user_id)
         elif section == "delivery":
-            return self._t("help_delivery")
+            return self._t("help_delivery", user_id)
         elif section == "import":
-            return self._t("help_import")
+            return self._t("help_import", user_id)
         elif section == "system":
-            return self._t("help_system")
+            return self._t("help_system", user_id)
         elif section == "reports":
-            return self._t("help_reports")
+            return self._t("help_reports", user_id)
         return ""
 
     def _format_offer_line(self, offer, status_emoji, user_id, total_ordered=None, total_capacity=None, is_draft=False):
@@ -324,7 +324,7 @@ class InfoCommands(BaseHandler):
 
             message += self._t("sold_out_offers_title", user_id)
             if total_pages > 1:
-                message += f" - Page {page}/{total_pages}"
+                message += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
             message += "\n\n"
 
             for offer in page_offers:
@@ -440,17 +440,17 @@ class InfoCommands(BaseHandler):
                     message += self._t("archived_offers", user_id)
 
                 if total_pages > 1:
-                    message += f" - Page {page}/{total_pages}"
+                    message += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
                 message += "\n\n"
             else:
                 # Show general title for multi-section views
                 if show_all:
-                    message += self._t("all_offers_admin")
+                    message += self._t("all_offers_admin", user_id)
                 else:
                     message += self._t("current_offers_admin", user_id)
 
                 if total_pages > 1:
-                    message += f" - Page {page}/{total_pages}"
+                    message += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
                 message += "\n\n"
 
             # Group paginated offers by status for display
@@ -465,11 +465,11 @@ class InfoCommands(BaseHandler):
                             message += "\n"
                         first_section = False
                         if status_type == "draft":
-                            message += self._t("draft_offers") + "\n"
+                            message += self._t("draft_offers", user_id) + "\n"
                         elif status_type == "import":
-                            message += self._t("import_offers") + "\n"
+                            message += self._t("import_offers", user_id) + "\n"
                         elif status_type == "active":
-                            message += self._t("active_offers") + "\n"
+                            message += self._t("active_offers", user_id) + "\n"
                         else:
                             status_emoji = {
                                 OfferStatus.SOLD_OUT.value: "🚫",
@@ -477,9 +477,9 @@ class InfoCommands(BaseHandler):
                                 OfferStatus.INACTIVE.value: "❌",
                             }.get(status_type, "❓")
                             status_label = {
-                                OfferStatus.SOLD_OUT.value: self._t("status_sold_out", user_id=None).upper(),
-                                OfferStatus.COMPLETED.value: self._t("status_completed", user_id=None).upper(),
-                                OfferStatus.INACTIVE.value: self._t("status_inactive", user_id=None).upper(),
+                                OfferStatus.SOLD_OUT.value: self._t("status_sold_out", user_id).upper(),
+                                OfferStatus.COMPLETED.value: self._t("status_completed", user_id).upper(),
+                                OfferStatus.INACTIVE.value: self._t("status_inactive", user_id).upper(),
                             }.get(status_type, status_type.upper())
                             message += f"{status_emoji} {status_label}:\n"
 
@@ -538,9 +538,9 @@ class InfoCommands(BaseHandler):
             # Paginate active offers
             page_offers, total_pages = PaginationUtils.paginate_list(active_offers, page, 20)
 
-            message += self._t("active_offers_customer")
+            message += self._t("active_offers_customer", user_id)
             if total_pages > 1:
-                message += f" - Page {page}/{total_pages}"
+                message += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
             message += "\n\n"
 
             for offer in page_offers:
@@ -595,12 +595,12 @@ class InfoCommands(BaseHandler):
             offer = self.db.get_offer(offer_id)
 
             if not offer:
-                self._send_message(chat_id, self._t("offer_not_found"))
+                self._send_message(chat_id, self._t("offer_not_found", user_id))
                 return {"status": "offer_not_found"}
 
             # Only show draft offers to admins
             if offer.status == OfferStatus.DRAFT.value and not self._is_admin(user_id):
-                self._send_message(chat_id, self._t("offer_not_available"))
+                self._send_message(chat_id, self._t("offer_not_available", user_id))
                 return {"status": "offer_not_available"}
 
             # Block DRAFT, IMPORT, INACTIVE for non-admins unless they have orders
@@ -609,12 +609,12 @@ class InfoCommands(BaseHandler):
             if not self._is_admin(user_id) and offer.status in RESTRICTED_STATUSES:
                 customer = self.db.get_customer_by_telegram_id(user_id)
                 if not customer or not self.db.get_orders_by_customer_and_offer(customer.customer_id, offer_id):
-                    self._send_message(chat_id, self._t("offer_not_available"))
+                    self._send_message(chat_id, self._t("offer_not_available", user_id))
                     return {"status": "offer_not_available"}
 
             # Handle edit mode for admins
             if edit_mode:
-                return self._show_edit_interface(chat_id, offer)
+                return self._show_edit_interface(chat_id, offer, user_id)
 
             # Send rich offer details
             if show_as_user:
@@ -626,33 +626,35 @@ class InfoCommands(BaseHandler):
             return {"status": "success"}
 
         except ValueError:
-            self._send_message(chat_id, self._t("invalid_offer_id"))
+            self._send_message(chat_id, self._t("invalid_offer_id", user_id))
             return {"status": "invalid_format"}
 
-    def _show_edit_interface(self, chat_id: int, offer) -> dict[str, Any]:
+    def _show_edit_interface(self, chat_id: int, offer, user_id: int) -> dict[str, Any]:
         """Show editing interface for offer"""
         message = self._t(
             "edit_offer_details",
+            user_id,
             offer_id=offer.offer_id,
             name=offer.name,
             price=offer.price_per_unit,
             box_size=offer.wholesale_box_size,
             status=offer.status,
             supplier=offer.supplier_name,
-            description=offer.description or self._t("not_set"),
+            description=offer.description or self._t("not_set", user_id),
             image_count=len(offer.images),
         )
 
+        offer_id = offer.offer_id
         keyboard = {
             "inline_keyboard": [
-                [{"text": self._t("edit_name"), "callback_data": f"edit_offer_name_{offer.offer_id}"}],
-                [{"text": self._t("edit_price"), "callback_data": f"edit_offer_price_{offer.offer_id}"}],
-                [{"text": self._t("edit_description"), "callback_data": f"edit_offer_description_{offer.offer_id}"}],
-                [{"text": self._t("upload_image"), "callback_data": f"upload_offer_image_{offer.offer_id}"}],
-                [{"text": self._t("clear_images"), "callback_data": f"clear_offer_images_{offer.offer_id}"}]
+                [{"text": self._t("edit_name", user_id), "callback_data": f"edit_offer_name_{offer_id}"}],
+                [{"text": self._t("edit_price", user_id), "callback_data": f"edit_offer_price_{offer_id}"}],
+                [{"text": self._t("edit_description", user_id), "callback_data": f"edit_offer_description_{offer_id}"}],
+                [{"text": self._t("upload_image", user_id), "callback_data": f"upload_offer_image_{offer_id}"}],
+                [{"text": self._t("clear_images", user_id), "callback_data": f"clear_offer_images_{offer_id}"}]
                 if offer.images
                 else [],
-                [{"text": self._t("exit_edit_mode"), "callback_data": f"view_offer_{offer.offer_id}"}],
+                [{"text": self._t("exit_edit_mode", user_id), "callback_data": f"view_offer_{offer_id}"}],
             ]
         }
 
@@ -699,7 +701,7 @@ class InfoCommands(BaseHandler):
 
         message = ""
         if is_draft and is_admin:
-            message = self._t("preview_offer_look") + "\n"
+            message = self._t("preview_offer_look", user_id) + "\n"
 
         # The name is plain text; the description is HTML (validated when the admin enters it)
         name = self._escape_html(offer.name)
@@ -717,52 +719,36 @@ class InfoCommands(BaseHandler):
 
         # Show admin-only info
         if is_admin:
-            message += self._t("box_size_units", size=offer.wholesale_box_size) + "\n"
-            message += self._t("supplier_name", name=self._escape_html(offer.supplier_name)) + "\n"
-            message += self._t("status_label", status=offer.status) + "\n"
+            message += self._t("box_size_units", user_id, size=offer.wholesale_box_size) + "\n"
+            message += self._t("supplier_name", user_id, name=self._escape_html(offer.supplier_name)) + "\n"
+            message += self._t("status_label", user_id, status=offer.status) + "\n"
 
         if offer.status != OfferStatus.ACTIVE.value and not is_admin:
-            message += f"{self._t('product_cannot_be_ordered')}\n"
+            message += f"{self._t('product_cannot_be_ordered', user_id)}\n"
 
         message += f"\n{offer.description}\n"
 
         # Add order buttons for active offers
+        offer_id = offer.offer_id
+        edit_button = [{"text": self._t("edit_offer_button", user_id), "callback_data": f"view_offer_{offer_id}_edit"}]
         reply_markup = None
         if offer.status == OfferStatus.ACTIVE.value:
-            # message += "\n" + self._t('order_with_command', offer_id=offer.offer_id)
-            if is_admin:
-                reply_markup = {
-                    "inline_keyboard": [
-                        [
-                            {"text": self._t("order_1"), "callback_data": f"order_{offer.offer_id}_1"},
-                            {"text": self._t("order_2"), "callback_data": f"order_{offer.offer_id}_2"},
-                        ],
-                        [{"text": self._t("edit_offer_button"), "callback_data": f"view_offer_{offer.offer_id}_edit"}],
-                    ]
-                }
-            else:
-                reply_markup = {
-                    "inline_keyboard": [
-                        [
-                            {"text": self._t("order_1"), "callback_data": f"order_{offer.offer_id}_1"},
-                            {"text": self._t("order_2"), "callback_data": f"order_{offer.offer_id}_2"},
-                        ]
-                    ]
-                }
+            order_buttons = [
+                {"text": self._t("order_1", user_id), "callback_data": f"order_{offer_id}_1"},
+                {"text": self._t("order_2", user_id), "callback_data": f"order_{offer_id}_2"},
+            ]
+            rows = [order_buttons, edit_button] if is_admin else [order_buttons]
+            reply_markup = {"inline_keyboard": rows}
         elif is_admin and offer.status == OfferStatus.DRAFT.value:
             # Draft preview: single message with the distinct draft actions
             reply_markup = {
                 "inline_keyboard": [
-                    [{"text": self._t("edit_details"), "callback_data": f"view_offer_{offer.offer_id}_edit"}],
-                    [{"text": self._t("publish_offer_btn"), "callback_data": f"publish_offer_{offer.offer_id}"}],
+                    [{"text": self._t("edit_details", user_id), "callback_data": f"view_offer_{offer_id}_edit"}],
+                    [{"text": self._t("publish_offer_btn", user_id), "callback_data": f"publish_offer_{offer_id}"}],
                 ]
             }
         elif is_admin:
             # Add edit button for admins on non-active offers
-            reply_markup = {
-                "inline_keyboard": [
-                    [{"text": self._t("edit_offer_button"), "callback_data": f"view_offer_{offer.offer_id}_edit"}]
-                ]
-            }
+            reply_markup = {"inline_keyboard": [edit_button]}
 
         self._send_message(chat_id, message, reply_markup=reply_markup, parse_mode="HTML")
