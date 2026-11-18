@@ -195,10 +195,9 @@ class CustomerRepository(BaseRepository):
     def _get_customer_by_telegram_id_uncached(self, telegram_user_id: int) -> Customer | None:
         """Internal method to get customer by telegram ID without caching"""
         try:
-            response = self.table.scan(
+            items = self._scan_items(
                 FilterExpression="telegram_user_id = :tid", ExpressionAttributeValues={":tid": telegram_user_id}
             )
-            items = response.get("Items", [])
             if items:
                 return Customer(**items[0])
             return None
@@ -213,10 +212,10 @@ class CustomerRepository(BaseRepository):
     def _get_customers_by_status_uncached(self, status: str) -> list[Customer]:
         """Internal method to get customers by status without caching"""
         try:
-            response = self.table.scan(
+            items = self._scan_items(
                 FilterExpression="authorization_status = :status", ExpressionAttributeValues={":status": status}
             )
-            return [Customer(**item) for item in response.get("Items", [])]
+            return [Customer(**item) for item in items]
         except Exception as e:
             logger.error(f"Error getting customers by status: {e}")
             return []
@@ -228,11 +227,11 @@ class CustomerRepository(BaseRepository):
     def _get_subscribers_uncached(self) -> list[Customer]:
         """Internal method to get subscribers without caching"""
         try:
-            response = self.table.scan(
+            items = self._scan_items(
                 FilterExpression="subscribed_to_offers = :subscribed", ExpressionAttributeValues={":subscribed": True}
             )
             customers = []
-            for item in response.get("Items", []):
+            for item in items:
                 # Handle missing fields for backward compatibility
                 if "is_guest" not in item:
                     item["is_guest"] = False
@@ -251,10 +250,9 @@ class CustomerRepository(BaseRepository):
     def get_customer_by_username(self, username: str) -> Customer | None:
         try:
             username = username.strip().lstrip("@")
-            response = self.table.scan(
+            items = self._scan_items(
                 FilterExpression="username = :username", ExpressionAttributeValues={":username": username}
             )
-            items = response.get("Items", [])
             if items:
                 return Customer(**items[0])
             return None

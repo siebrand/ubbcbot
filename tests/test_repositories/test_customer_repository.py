@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 
 from models.entities import AuthorizationStatus, Customer
@@ -90,3 +92,36 @@ class TestCustomerRepository:
         subs = customer_repo.get_subscribers()
         assert len(subs) == 1
         assert subs[0].telegram_user_id == 1
+
+
+class TestEveryPageIsRead:
+    """A scan returns at most 1 MB per call. One item per call forces a page per customer, so a customer
+    on a later page must still be found (or an unregistered-looking customer is turned away)."""
+
+    @pytest.fixture
+    def paged(self, customer_repo):
+        for i in range(1, 6):
+            customer_repo.table.put_item(
+                Item={
+                    "customer_id": f"c{i}",
+                    "telegram_user_id": i,
+                    "username": f"user{i}",
+                    "authorization_status": AuthorizationStatus.APPROVED.value,
+                    "subscribed_to_offers": True,
+                }
+            )
+        original = customer_repo.table.scan
+        with patch.object(customer_repo.table, "scan", side_effect=lambda **kw: original(Limit=1, **kw)):
+            yield customer_repo
+
+    def test_by_telegram_id(self, paged):
+        assert paged._get_customer_by_telegram_id_uncached(5).customer_id == "c5"
+
+    def test_by_username(self, paged):
+        assert paged.get_customer_by_username("@user5").customer_id == "c5"
+
+    def test_by_status(self, paged):
+        assert len(paged._get_customers_by_status_uncached(AuthorizationStatus.APPROVED.value)) == 5
+
+    def test_subscribers(self, paged):
+        assert len(paged._get_subscribers_uncached()) == 5
