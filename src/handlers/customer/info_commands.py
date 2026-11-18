@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Any
 
 from handlers.base_handler import BaseHandler
@@ -9,12 +10,14 @@ from utils.s3_url import is_s3_url
 
 logger = logging.getLogger(__name__)
 
+# /help <section>: the text of a section is the translation help_<section>. In this order for /help all.
+CUSTOMER_HELP_SECTIONS = ("general", "orders")
+ADMIN_HELP_SECTIONS = ("suppliers", "offers", "users", "delivery", "import", "system", "reports")
+
 
 class InfoCommands(BaseHandler):
     def handle_privacy(self, chat_id: int, user_id: int, args: list | None = None) -> dict[str, Any]:
         """Handle /privacy command: reply with a link to the rendered privacy statement."""
-        import os
-
         privacy_url = os.environ.get("PRIVACY_URL", "")
         message = self._t("privacy_info", user_id, url=privacy_url)
         self._send_message(chat_id, message, parse_mode="HTML")
@@ -22,10 +25,6 @@ class InfoCommands(BaseHandler):
 
     def handle_start(self, chat_id: int, user_id: int, args: list | None = None) -> dict[str, Any]:
         """Handle /start command with optional help section parameter"""
-        import logging
-
-        logger = logging.getLogger()
-
         if self.environment == "test":
             logger.info(f"Processing /start command for user {user_id}, chat {chat_id}")
 
@@ -64,82 +63,30 @@ class InfoCommands(BaseHandler):
         if self._is_admin(user_id):
             message += self._t("admin_help_sections", user_id, bot_username=bot_username)
 
-        # Replace bot_username placeholder
-        message = message.format(bot_username=bot_username)
-
         self._send_message(chat_id, message, parse_mode="Markdown")
         return {"status": "success"}
 
     def _show_help_section(self, chat_id: int, user_id: int, section: str) -> dict[str, Any]:
         """Show help for specific section"""
+        is_admin = self._is_admin(user_id)
+        visible = CUSTOMER_HELP_SECTIONS + (ADMIN_HELP_SECTIONS if is_admin else ())
+
         if section == "all":
             # Show all available sections in separate messages
-            sections = ["general", "orders"]
-            if self._is_admin(user_id):
-                sections.extend(["suppliers", "offers", "users", "delivery", "import", "system", "reports"])
-
-            for sect in sections:
-                message = self._get_section_help(sect, user_id)
-                self._send_message(chat_id, message)
-
+            for name in visible:
+                self._send_message(chat_id, self._t(f"help_{name}", user_id))
             return {"status": "success"}
 
-        elif section in [
-            "general",
-            "orders",
-            "suppliers",
-            "offers",
-            "users",
-            "delivery",
-            "import",
-            "system",
-            "reports",
-        ]:
-            if section in [
-                "suppliers",
-                "offers",
-                "users",
-                "delivery",
-                "import",
-                "system",
-                "reports",
-            ] and not self._is_admin(user_id):
-                message = self._t("admin_only_section", user_id)
-            else:
-                message = self._get_section_help(section, user_id)
-
+        if section in visible:
+            message = self._t(f"help_{section}", user_id)
+        elif section in ADMIN_HELP_SECTIONS:
+            message = self._t("admin_only_section", user_id)
         else:
-            available_sections = ["general", "orders", "all"]
-            if self._is_admin(user_id):
-                available_sections.extend(["suppliers", "offers", "users", "delivery", "import", "system", "reports"])
-
-            sections_text = ", ".join(available_sections)
-            message = self._t("unknown_section", user_id, section=section, sections=sections_text)
+            sections = CUSTOMER_HELP_SECTIONS + ("all",) + (ADMIN_HELP_SECTIONS if is_admin else ())
+            message = self._t("unknown_section", user_id, section=section, sections=", ".join(sections))
 
         self._send_message(chat_id, message)
         return {"status": "success"}
-
-    def _get_section_help(self, section: str, user_id: int) -> str:
-        """Get help text for a specific section"""
-        if section == "general":
-            return self._t("help_general", user_id)
-        elif section == "orders":
-            return self._t("help_orders", user_id)
-        elif section == "suppliers":
-            return self._t("help_suppliers", user_id)
-        elif section == "offers":
-            return self._t("help_offers", user_id)
-        elif section == "users":
-            return self._t("help_users", user_id)
-        elif section == "delivery":
-            return self._t("help_delivery", user_id)
-        elif section == "import":
-            return self._t("help_import", user_id)
-        elif section == "system":
-            return self._t("help_system", user_id)
-        elif section == "reports":
-            return self._t("help_reports", user_id)
-        return ""
 
     def _format_offer_line(self, offer, status_emoji, user_id, total_ordered=None, total_capacity=None, is_draft=False):
         """Format a single offer line with consistent markup. The name is plain text, like in the announcement."""
