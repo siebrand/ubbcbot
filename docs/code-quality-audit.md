@@ -1,6 +1,19 @@
 # Code quality audit: the four largest files in `src/`
 
-Status: **proposal** (2026-11-18). Nothing below has been implemented yet.
+Status: **largely implemented** (2026-11-19). Each finding below says what was done; "What is left" at the end
+lists what was not, and why.
+
+| File                                     | Lines before → after | Coverage before → after | Functions over complexity 10 |
+|------------------------------------------|---------------------:|------------------------:|-----------------------------:|
+| `src/services/callback_handler.py`       |            903 → 887 |           93.2% → 98.1% |                        0 → 0 |
+| `src/handlers/customer/info_commands.py` |            775 → 467 |           18.8% → 91.6% |                        2 → 0 |
+| `src/services/database.py`               |            690 → 462 |           53.7% → 73.4% |                        0 → 0 |
+| `src/handlers/base_handler.py`           |            642 → 480 |           60.8% → 91.4% |                        0 → 0 |
+
+Total coverage went from 54.7% to 62.5% (`fail_under` 54 → 62). The callback handler barely shrank in lines: its
+routes gained `customer=` and `keyboard=` attributes, which is what replaced the separate allowlist and keyboard rules.
+
+The original audit follows.
 
 The four largest Python files in `src/` hold almost a sixth of the code (3,010 of 17,384 lines). They are also the
 files almost every change touches: every button goes through the callback handler, every message through the base
@@ -349,3 +362,25 @@ That change is wide but mechanical, so it is best done file by file when a file 
 Line counts are estimates. The more useful measures are that `handle_list_offers` drops from complexity 51 to below
 10, that `info_commands.py` rises from 19% coverage, and that there is one place each for the Telegram delivery rules,
 the translations and the customer callback allowlist.
+
+## What is left
+
+The result is the table at the top: the measures above were reached, the line estimates not everywhere. Not done,
+deliberately, each because it changes more than it cleans up on its own:
+
+- **The callback routes as a table of strings** (step 5). The routes kept their lambdas; authorization, keyboard
+  policy and public handler methods were the parts that made the lambdas risky, and those are done. A table of
+  `(pattern, handler, method, argument types)` would mostly move the same information.
+- **The admin views out of `InfoCommands`** (step 4): this means moving the `view_offer_<id>_edit` route to an admin
+  handler and out of the customer routes. A good next change, with its own review.
+- **Audit logging out of the data layer** (step 6): every caller of `db.update_order` would change, and the payment
+  events feed the purchase reports. Worth an `OrderService` of its own, with the reports' tests as safety net.
+- **The inline offer-message edits out of `BaseHandler`** (step 7): the Lambda hand-off moved; the edits are used by
+  the handlers, `notification_sender.py` and many tests directly.
+- **Typed results** (later): unchanged.
+
+Found and fixed along the way, beyond the audit: every repository scan and query read only the first 1 MB page (a
+registered customer could look unknown once the customers table grew), the bot token could reach the logs and the
+message sender's failure report to the admin, three input hints were hard-coded English, and `/list_offers completed`
+and `inactive` had no title. Open question for the owner: the sold-out list is titled "last 7 days" but shows every
+sold-out offer; one of the two is wrong.
