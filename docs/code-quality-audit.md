@@ -84,7 +84,9 @@ The problems are in how routes are declared.
    (`callback_handler.py:15-25`) has to be kept in step with the routes registered further down by hand. A customer
    button added to the router but not to the pattern is refused, which is the safe direction. But nothing ties the
    two together, and the edit mode of `view_offer_*_edit` relies on a check in another file
-   (`handle_view_offer` in `info_commands.py`).
+   (`handle_view_offer` in `info_commands.py`). **Done** in step 5: the route a tap matches decides (`customer=True`),
+   `CUSTOMER_CALLBACK_PATTERN` is gone, and a test lists exactly the routes open to customers. The
+   `page_list_offers` route only takes a word as filter now (`\w+`, it was `.+`), like the allowlist did.
 2. **Maintainability: the routes call private methods of other classes.** `_execute_fill_boxes`,
    `_execute_fill_and_create`, `_execute_create_boxes`, `_execute_cancel_orders`, `_show_audit_offer_selection`,
    `_execute_audit_offer` (`callback_handler.py:250-281`), `info._show_fomo` (`:324`),
@@ -93,7 +95,8 @@ The problems are in how routes are declared.
 3. **Maintainability: whether to remove the keyboard after a tap is decided apart from the route.**
    `_should_remove_keyboard` (`callback_handler.py:771-781`) and the `process_payment_` special case (`:734-739`)
    decide by prefix, so a new route gets the default behaviour unless someone remembers this list. The function also
-   has a redundant branch: `page_info` is tested twice.
+   has a redundant branch: `page_info` is tested twice. **Done** in step 5: a route says `keyboard=KEEP_KEYBOARD`,
+   `REMOVE_KEYBOARD` (default) or `DELETE_MESSAGE`.
 4. **Bug: a hard-coded English placeholder, and a context created behind the manager's back.**
    `_request_cancellation_reason` (`callback_handler.py:886-899`) creates an `EditContext` directly instead of through
    `EditContextManager`, and sets `input_field_placeholder` to `"Enter reason"`, which doesn't follow the translation

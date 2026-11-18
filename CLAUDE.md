@@ -30,8 +30,10 @@ client for messages sent from the admin's own Telegram account.
 
 ## Access control (security boundary)
 - Admin = the single Telegram ID in `ADMIN_USER_ID` (`config.py`).
-- Callback data is client-supplied. Any new customer-facing callback must be added to
-  `CUSTOMER_CALLBACK_PATTERN` in `callback_handler.py`; everything else is admin-only by default.
+- Callback data is client-supplied. The route a tap matches decides who may use it: a customer-facing callback is
+  registered with `customer=True` (and added to the list in `test_exactly_these_routes_are_open_to_customers`);
+  every other route, and data that matches no route, is admin-only. A route also says what happens to the tapped
+  message (`keyboard=KEEP_KEYBOARD`, `REMOVE_KEYBOARD` (default) or `DELETE_MESSAGE`).
 - A new typed command is a line in `COMMAND_ROUTES`; `admin_only=True` (`admin_command`) is the safe choice. Never add
   a command as a branch in `CommandRouter`: the single flag is what keeps the admin check in one place.
 - Handlers that take only `chat_id` cannot check the caller: never expose them without a gate in front.

@@ -3,26 +3,17 @@ import re
 from typing import Any
 
 from models.entities import AuthorizationStatus
-from services.routing.callback_router import CallbackRouter
+from services.routing.callback_router import DELETE_MESSAGE, KEEP_KEYBOARD, REMOVE_KEYBOARD, CallbackRouter
 from services.telegram_client import TelegramClient
 from services.translator import Translator
 from utils.edit_context import EditContextManager
 
 logger = logging.getLogger()
 
-# Callbacks an approved customer may trigger. Every other callback is admin-only.
-# Callback data is client-supplied, so this allowlist is the authorization boundary.
-CUSTOMER_CALLBACK_PATTERN = re.compile(
-    r"^(?:order_\d+_\d+"
-    r"|confirm_order_\d+_\d+"
-    r"|view_offer_\d+(?:_edit)?"  # edit mode is gated by _is_admin in handle_view_offer
-    r"|cancel_confirmation"
-    r"|page_info"
-    r"|page_list_offers(?:_\w+)?_\d+"
-    r"|page_changelog_\d+"
-    r"|page_(?:list_)?my_orders_\d+_\d+"  # target user is checked in _route_pagination
-    r")$"
-)
+# Authorization: callback data is client-supplied, so the route a tap matches decides who may trigger it. A route
+# registered with customer=True is open to approved customers; every other route, and data that matches no route,
+# is admin-only. The customer routes are: order_, confirm_order_, view_offer_, cancel_confirmation and the pages of
+# the offer list, the changelog and the customer's own orders.
 
 
 class CallbackHandler:
@@ -43,7 +34,7 @@ class CallbackHandler:
         self._register_routes()
 
     def _register_routes(self):
-        """Register callback patterns with router (Phase 3 Batch B: add order patterns)"""
+        """Register every callback pattern. The first match wins, so specific patterns come before broad ones."""
         # Approve user patterns - register more specific pattern first
         self.router.register(
             r"^approve_user_select_(.+)$",
@@ -78,7 +69,9 @@ class CallbackHandler:
             ),
         )
         self.router.register(
-            r"^cancel_confirmation$", lambda match, ctx: self._send_message(ctx["chat_id"], self._t("action_cancelled"))
+            r"^cancel_confirmation$",
+            lambda match, ctx: self._send_message(ctx["chat_id"], self._t("action_cancelled", ctx["user_id"])),
+            customer=True,
         )
         self.router.register(
             r"^cancel_action$",
@@ -99,9 +92,10 @@ class CallbackHandler:
             lambda match, ctx: self.handlers["customer_order"].handle_confirm_order(
                 ctx["reply_chat_id"], ctx["user_id"], [match.group(1), match.group(2)]
             ),
+            customer=True,
         )
 
-        # Edit patterns - most specific first (Phase 3 Batch A)
+        # Edit patterns - most specific first
         self.router.register(
             r"^edit_user_select_(.+)$",
             lambda match, ctx: self.handlers["user"].handle_edit_user_select(ctx["chat_id"], match.group(1)),
@@ -113,39 +107,45 @@ class CallbackHandler:
         # Generic edit buttons (edit_<entity>_<field>_<id>) and the /edit_order flow
         self._register_edit_routes()
 
-        # Order patterns - most specific first (Phase 3 Batch B)
+        # Order patterns - most specific first. The order buttons stay: an offer can be ordered more than once.
         self.router.register(
             r"^order_for_quantity_([^_]+)_(\d+)_(\d+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_create_order_for_quantity_select(
                 ctx["chat_id"], match.group(1), match.group(2), match.group(3)
             ),
+            keyboard=KEEP_KEYBOARD,
         )
         self.router.register(
             r"^order_for_other_([^_]+)_(\d+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_create_order_for_other_quantity(
                 ctx["chat_id"], match.group(1), match.group(2)
             ),
+            keyboard=KEEP_KEYBOARD,
         )
         self.router.register(
             r"^order_for_offer_([^_]+)_(\d+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_create_order_for_offer_select(
                 ctx["chat_id"], match.group(1), match.group(2)
             ),
+            keyboard=KEEP_KEYBOARD,
         )
         self.router.register(
             r"^order_for_user_select_(.+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_create_order_for_user_select(
                 ctx["chat_id"], match.group(1)
             ),
+            keyboard=KEEP_KEYBOARD,
         )
         self.router.register(
             r"^order_(\d+)_(\d+)$",
             lambda match, ctx: self.handlers["customer_order"].handle_create_order(
                 ctx["reply_chat_id"], ctx["user_id"], [match.group(1), match.group(2)]
             ),
+            customer=True,
+            keyboard=KEEP_KEYBOARD,
         )
 
-        # Offer/Supplier patterns - most specific first (Phase 3 Batch C)
+        # Offer/Supplier patterns - most specific first
         self.router.register(
             r"^offer_orders_detail_(\d+)_(\d+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_list_offer_orders_detail_page(
@@ -169,6 +169,7 @@ class CallbackHandler:
             lambda match, ctx: self.handlers["info"].handle_view_offer(
                 ctx["chat_id"], ctx["user_id"], [match.group(1)] + ([match.group(2)] if match.group(2) else [])
             ),
+            customer=True,  # edit mode is gated by _is_admin in handle_view_offer
         )
         self.router.register(
             r"^wholesale_select_(\d+)$",
@@ -195,7 +196,7 @@ class CallbackHandler:
             lambda match, ctx: self._handle_clear_offer_images(ctx["chat_id"], ctx["user_id"], match.group(1)),
         )
 
-        # User/Status patterns (Phase 3 Batch D)
+        # User/Status patterns
         self.router.register(
             r"^user_orders_select_(.+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_list_user_orders_select(
@@ -246,7 +247,7 @@ class CallbackHandler:
             r"^enter_username_order_for$", lambda match, ctx: self._start_order_for_input(ctx["chat_id"])
         )
 
-        # Audit patterns (Phase 3 Batch E)
+        # Audit patterns
         self.router.register(
             r"^audit_fill_boxes_(\d+)_(\d+)$",
             lambda match, ctx: self.handlers["offer"]._execute_fill_boxes(
@@ -280,7 +281,7 @@ class CallbackHandler:
             lambda match, ctx: self.handlers["offer"]._execute_audit_offer(ctx["chat_id"], int(match.group(1))),
         )
 
-        # Delivery/Export patterns (Phase 3 Batch F)
+        # Delivery/Export patterns
         self.router.register(
             r"^export_orders_(.+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_export_orders_callback(
@@ -305,6 +306,8 @@ class CallbackHandler:
             lambda match, ctx: self.handlers["delivery_overview"].handle_process_customer_paid(
                 ctx["chat_id"], match.group(1), int(match.group(2))
             ),
+            # The handler sends the list again; the old one (text and buttons) would be stale
+            keyboard=DELETE_MESSAGE,
         )
         self.router.register(
             r"^remind_payment_(.+)_(\d+)$",
@@ -317,7 +320,7 @@ class CallbackHandler:
             lambda match, ctx: self._request_cancellation_reason(ctx["chat_id"], match.group(1)),
         )
 
-        # Navigation patterns (Phase 3 Batch G - Final)
+        # Navigation patterns
         self.router.register(
             r"^fomo_user_select_(.+)$",
             lambda match, ctx: (
@@ -334,7 +337,11 @@ class CallbackHandler:
             r"^process_wholesale$",
             lambda match, ctx: self.handlers["offer"].handle_process_wholesale(ctx["chat_id"], []),
         )
-        self.router.register(r"^create_supplier_start$", lambda match, ctx: self._start_add_supplier(ctx["chat_id"]))
+        self.router.register(
+            r"^create_supplier_start$",
+            lambda match, ctx: self._start_add_supplier(ctx["chat_id"]),
+            keyboard=KEEP_KEYBOARD,
+        )
 
         # Delivery (wd_) and labeling (lc_) workflows
         self._register_workflow_routes()
@@ -350,26 +357,31 @@ class CallbackHandler:
         """Pagination buttons: ``page_<list>[_<filter>]_<page>``, built by PaginationUtils.
 
         Every list has its own route, so a filter may contain underscores (``sold_out``) and nothing has to
-        be guessed from the number of segments. Customers may only use the three customer lists; that is
-        enforced before routing by ``CUSTOMER_CALLBACK_PATTERN``.
+        be guessed from the number of segments. Customers may only use the three customer lists (and the
+        page indicator). Paging keeps the keyboard: it is the way to the next page.
         """
-        register = self.router.register
+
+        def register(pattern, handler, customer=False):
+            self.router.register(pattern, handler, customer=customer, keyboard=KEEP_KEYBOARD)
 
         # page_info is the "3/7" indicator in the middle of the keyboard: nothing to do
-        register(r"^page_info$", lambda m, ctx: None)
+        register(r"^page_info$", lambda m, ctx: None, customer=True)
 
         # Customer lists
         register(
-            r"^page_list_offers(?:_(.+))?_(\d+)$",
+            r"^page_list_offers(?:_(\w+))?_(\d+)$",
             lambda m, ctx: self.handlers["info"].handle_list_offers(
                 ctx["chat_id"], ctx["user_id"], [m.group(1)] if m.group(1) else None, int(m.group(2))
             ),
+            customer=True,
         )
         register(
             r"^page_changelog_(\d+)$",
             lambda m, ctx: self.handlers["changelog"].handle_changelog(ctx["chat_id"], ctx["user_id"], int(m.group(1))),
+            customer=True,
         )
-        register(r"^page_(?:list_)?my_orders_(\d+)_(\d+)$", self._my_orders_page)
+        # The user in the button is checked in _my_orders_page
+        register(r"^page_(?:list_)?my_orders_(\d+)_(\d+)$", self._my_orders_page, customer=True)
 
         # Admin lists. Older buttons carry no filter (page_suppliers_2): that was always the active list.
         register(
@@ -614,16 +626,24 @@ class CallbackHandler:
             lambda m, ctx: self.handlers["wholesale_delivery"].handle_partial_action(
                 ctx["chat_id"], m.group(1), m.group(2), int(m.group(3))
             ),
+            keyboard=self._workflow_keyboard("wd"),
         )
 
         for prefix, *_ in workflows:
             self.router.register(
                 rf"^{prefix}_",
                 lambda m, ctx: self._send_message(ctx["chat_id"], self._t("unknown_callback", ctx["user_id"])),
+                keyboard=self._workflow_keyboard(prefix),
             )
 
+    @staticmethod
+    def _workflow_keyboard(prefix: str) -> str:
+        """The delivery workflow edits its message step by step, so its keyboard stays; labeling's does not"""
+        return KEEP_KEYBOARD if prefix == "wd" else REMOVE_KEYBOARD
+
     def _register_workflow(self, prefix: str, key: str, action_method: str, complete_method: str, confirm_method: str):
-        register = self.router.register
+        def register(pattern, handler):
+            self.router.register(pattern, handler, keyboard=self._workflow_keyboard(prefix))
 
         register(
             rf"^{prefix}_sup:([^:]+)$",
@@ -721,28 +741,26 @@ class CallbackHandler:
             # in a group), so an admin tapping a button on an old message in a group continues there.
             handler_chat_id = user_id if is_group and self._is_admin(user_id) else chat_id
 
-            # Try router first (Phase 3 complete: all patterns migrated)
             context = {
                 "chat_id": handler_chat_id,
                 "user_id": user_id,
                 "message_id": message_id,
                 "reply_chat_id": reply_chat_id,
             }
-            router_handled = self.router.dispatch(data, context)
+            route, match = self.router.match(data)
+            if route:
+                route.handler(match, context)
 
-            # Determine if we should remove the keyboard
-            if data.startswith("process_payment_"):
-                # Payment name-button click: remove the stale list message entirely
-                # (text + buttons), since the handler re-renders a fresh list below.
+            # The route says what happens to the tapped message: an unknown button loses its keyboard
+            keyboard = route.keyboard if route else REMOVE_KEYBOARD
+            if keyboard == DELETE_MESSAGE:
                 self._delete_message(chat_id, message_id)
-            elif self._should_remove_keyboard(data):
+            elif keyboard == REMOVE_KEYBOARD:
                 self._edit_message_remove_keyboard(chat_id, message_id)
 
-            # If router handled it, return early
-            if router_handled:
+            if route:
                 logger.info(f"Callback handled by router: {data}")
                 return {"status": "handled_by_router"}
-
             return {"status": "unknown_callback"}
 
         except Exception as e:
@@ -755,7 +773,7 @@ class CallbackHandler:
         if self._is_admin(user_id):
             return None
 
-        if not CUSTOMER_CALLBACK_PATTERN.match(data):
+        if not self.customer_callback(data):
             logger.warning(f"Blocked admin-only callback from non-admin user {user_id}: {data}")
             self._send_message(user_id, self._t("admin_only", user_id))
             return {"status": "unauthorized"}
@@ -768,17 +786,10 @@ class CallbackHandler:
 
         return None
 
-    def _should_remove_keyboard(self, data: str) -> bool:
-        """Determine if keyboard should be removed after callback"""
-        if data.startswith("page_") and data != "page_info":
-            return False
-        if data == "page_info":
-            return False
-        if data.startswith("wd_"):
-            return False
-        if data.startswith("order_"):
-            return False
-        return data != "create_supplier_start"
+    def customer_callback(self, data: str) -> bool:
+        """Whether approved customers may trigger this callback: its route is registered with customer=True"""
+        route, _ = self.router.match(data)
+        return bool(route and route.customer)
 
     def _store_edit_context(self, chat_id: int, edit_type: str, entity_id: str):
         """Store edit context in DynamoDB for processing replies"""

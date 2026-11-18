@@ -17,7 +17,7 @@ from unittest.mock import Mock, call
 import pytest
 from handler_classes import handler_mock_spec
 
-from services.callback_handler import CUSTOMER_CALLBACK_PATTERN, CallbackHandler
+from services.callback_handler import CallbackHandler
 from utils.pagination import PaginationUtils
 
 ADMIN_ID = 15005473
@@ -420,12 +420,37 @@ class TestAuthorization:
         assert all_handler_calls(env) == {}
 
     def test_the_customer_allowlist_covers_exactly_the_customer_pagination(self):
+        handler = make_env().handler
         for data, _ in PAGE_CUSTOMER:
-            assert CUSTOMER_CALLBACK_PATTERN.match(data), data
+            assert handler.customer_callback(data), data
 
     @pytest.mark.parametrize("data", [d for d, _ in ADMIN_ONLY_ROWS if d != "page_info"])
     def test_no_admin_callback_is_on_the_customer_allowlist(self, data):
-        assert not CUSTOMER_CALLBACK_PATTERN.match(data), data
+        assert not make_env().handler.customer_callback(data), data
+
+    def test_exactly_these_routes_are_open_to_customers(self):
+        """The authorization boundary: adding a customer route must be a deliberate change of this list"""
+        routes = make_env().handler.router.routes
+
+        assert sorted(route.pattern for route in routes if route.customer) == sorted(
+            [
+                r"^cancel_confirmation$",
+                r"^confirm_order_(\d+)_(\d+)$",
+                r"^order_(\d+)_(\d+)$",
+                r"^page_(?:list_)?my_orders_(\d+)_(\d+)$",
+                r"^page_changelog_(\d+)$",
+                r"^page_info$",
+                r"^page_list_offers(?:_(\w+))?_(\d+)$",
+                r"^view_offer_(\d+)(?:_(edit))?$",
+            ]
+        )
+
+    @pytest.mark.parametrize("data", ["completely_unknown_thing", "page_list_offers_<b>_2", "order_7_1_extra"])
+    def test_data_that_matches_no_customer_route_is_admin_only(self, data):
+        env = make_env()
+
+        assert tap(env, data, user_id=CUSTOMER_ID) == {"status": "unauthorized"}
+        assert all_handler_calls(env) == {}
 
 
 # --- the keyboard of the tapped message ----------------------------------------------------------------
@@ -476,17 +501,17 @@ class TestRouteTable:
         routes = make_env().handler.router.routes
         first_matches = set()
         for data in self._samples():
-            for regex, _, pattern in routes:
-                if regex.match(data):
-                    first_matches.add(pattern)
+            for route in routes:
+                if route.regex.match(data):
+                    first_matches.add(route.pattern)
                     break
 
-        migrated = [pattern for _, _, pattern in routes if self.MIGRATED.match(pattern)]
+        migrated = [route.pattern for route in routes if self.MIGRATED.match(route.pattern)]
         assert len(migrated) > 90
         assert [pattern for pattern in migrated if pattern not in first_matches] == []
 
     def test_no_pattern_is_registered_twice(self):
-        patterns = [pattern for _, _, pattern in make_env().handler.router.routes]
+        patterns = [route.pattern for route in make_env().handler.router.routes]
 
         assert len(patterns) == len(set(patterns))
 
@@ -499,7 +524,7 @@ class TestStartup:
         env = make_env()
 
         assert len(env.handler.router.routes) > 40
-        assert all(regex.pattern for regex, _, _ in env.handler.router.routes)
+        assert all(route.regex.pattern for route in env.handler.router.routes)
 
     def test_unknown_data_is_reported_not_raised(self):
         env = make_env()

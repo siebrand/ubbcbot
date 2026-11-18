@@ -16,7 +16,7 @@ from models.entities import (
     OrderHistory,
     OrderStatus,
 )
-from services.callback_handler import CUSTOMER_CALLBACK_PATTERN, CallbackHandler
+from services.callback_handler import CallbackHandler
 from services.command_router import CommandRouter
 from services.customer_deletion import CustomerDeletionService
 from services.database import DynamoDBService
@@ -334,8 +334,9 @@ class TestDeleteUserConfirm:
 
 class TestAuthorizationAndRouting:
     def test_customer_callbacks_never_match_the_delete_callbacks(self):
+        callbacks = CallbackHandler(Mock(), 1, "test", "token", handlers={}, media_handler=Mock())
         for data in ("delete_user_confirm_abc", "delete_user_select_abc"):
-            assert CUSTOMER_CALLBACK_PATTERN.match(data) is None
+            assert not callbacks.customer_callback(data)
 
     @pytest.mark.parametrize(
         "data, method",

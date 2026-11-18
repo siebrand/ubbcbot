@@ -5,16 +5,37 @@ Handlers register patterns and the router dispatches to the correct handler
 
 import re
 from collections.abc import Callable
-from typing import Any
+from typing import Any, NamedTuple
+
+# What happens to the keyboard of the tapped message after the callback
+REMOVE_KEYBOARD = "remove"  # the buttons are gone, so an old message cannot be tapped twice
+KEEP_KEYBOARD = "keep"  # navigation (pages, the delivery workflow, order buttons) keeps working
+DELETE_MESSAGE = "delete"  # the handler sends a fresh message that replaces this one
+
+
+class Route(NamedTuple):
+    regex: re.Pattern
+    handler: Callable
+    pattern: str
+    # Open to approved customers. Callback data is client-supplied: everything else is admin-only.
+    customer: bool = False
+    keyboard: str = REMOVE_KEYBOARD
 
 
 class CallbackRouter:
-    """Routes callback queries to registered handlers based on regex patterns"""
+    """Routes callback queries to registered handlers based on regex patterns. The first match wins."""
 
     def __init__(self):
-        self.routes = []  # List of (compiled_regex, handler_func, pattern_str)
+        self.routes: list[Route] = []
 
-    def register(self, pattern: str, handler_func: Callable, aliases: list[str] | None = None):
+    def register(
+        self,
+        pattern: str,
+        handler_func: Callable,
+        aliases: list[str] | None = None,
+        customer: bool = False,
+        keyboard: str = REMOVE_KEYBOARD,
+    ):
         """
         Register a callback handler.
 
@@ -22,15 +43,19 @@ class CallbackRouter:
             pattern: Regex pattern (e.g., r"^approve_(\\d+)$")
             handler_func: Function to call when matched (receives match object and context)
             aliases: Optional list of alternative patterns
+            customer: Whether approved customers may trigger it (default: admin only)
+            keyboard: What happens to the keyboard of the tapped message (REMOVE_KEYBOARD, KEEP_KEYBOARD, ...)
         """
-        compiled = re.compile(pattern)
-        self.routes.append((compiled, handler_func, pattern))
+        for each in [pattern, *(aliases or [])]:
+            self.routes.append(Route(re.compile(each), handler_func, each, customer, keyboard))
 
-        # Register aliases pointing to same handler
-        if aliases:
-            for alias in aliases:
-                compiled_alias = re.compile(alias)
-                self.routes.append((compiled_alias, handler_func, alias))
+    def match(self, callback_data: str) -> tuple[Route, re.Match] | tuple[None, None]:
+        """The first route that matches, with its match; (None, None) when none does"""
+        for route in self.routes:
+            found = route.regex.match(callback_data)
+            if found:
+                return route, found
+        return None, None
 
     def dispatch(self, callback_data: str, context: dict[str, Any]) -> bool:
         """
@@ -43,9 +68,8 @@ class CallbackRouter:
         Returns:
             True if handled, False if no pattern matched
         """
-        for regex, handler, _pattern_str in self.routes:
-            match = regex.match(callback_data)
-            if match:
-                handler(match, context)
-                return True
-        return False
+        route, found = self.match(callback_data)
+        if route is None:
+            return False
+        route.handler(found, context)
+        return True

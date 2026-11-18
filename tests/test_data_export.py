@@ -781,9 +781,10 @@ class TestAuthorization:
         handlers["data_export"].handle_clear_data_export.assert_not_called()
 
     def test_the_clear_selection_button_is_admin_only(self):
-        from services.callback_handler import CUSTOMER_CALLBACK_PATTERN
+        from services.callback_handler import CallbackHandler
 
-        assert CUSTOMER_CALLBACK_PATTERN.match("clear_data_export_select_abc-123") is None
+        callbacks = CallbackHandler(Mock(), ADMIN_ID, "test", "token", {}, Mock())
+        assert not callbacks.customer_callback("clear_data_export_select_abc-123")
 
     def test_the_clear_selection_button_routes_to_the_handler_for_the_admin(self):
         from services.callback_handler import CallbackHandler
@@ -803,6 +804,7 @@ class TestAuthorization:
 
     @pytest.mark.parametrize("data", ["export_user_data_select_abc-123"])
     def test_the_selection_button_is_admin_only(self, data):
-        from services.callback_handler import CUSTOMER_CALLBACK_PATTERN
+        from services.callback_handler import CallbackHandler
 
-        assert CUSTOMER_CALLBACK_PATTERN.match(data) is None
+        callbacks = CallbackHandler(Mock(), ADMIN_ID, "test", "token", {}, Mock())
+        assert not callbacks.customer_callback(data)
