@@ -3,8 +3,6 @@ import os
 from datetime import datetime
 from typing import Any
 
-import boto3
-
 from models.entities import Box, Customer, Offer, Order, Supplier
 from repositories.box_repository import BoxRepository
 from repositories.credit_repository import CreditRepository
@@ -17,16 +15,15 @@ from repositories.order_repository import OrderRepository
 from repositories.processed_update_repository import ProcessedUpdateRepository
 from repositories.supplier_repository import SupplierRepository
 from repositories.system_repository import SystemRepository
-from utils.s3_url import extract_s3_key
+from services.image_store import ImageStore
 
 logger = logging.getLogger(__name__)
 
 
 class DynamoDBService:
     def __init__(self):
-        self.s3 = boto3.client("s3")
         self.table_prefix = os.environ.get("DYNAMODB_TABLE_PREFIX", "ubbc-bot-test")
-        self.s3_bucket = os.environ.get("S3_BUCKET_NAME", f"{self.table_prefix}-images")
+        self.images = ImageStore()
 
         # Initialize repositories
         self.system_repo = SystemRepository()
@@ -301,31 +298,12 @@ class DynamoDBService:
     def cleanup_old_edit_contexts(self) -> int:
         return self.edit_context_repo.cleanup_old_edit_contexts()
 
+    # Offer images (S3): see services/image_store.py
     def upload_image_to_s3(self, file_content: bytes, file_name: str, offer_id: int) -> str | None:
-        """Upload image to S3 and return URL"""
-        try:
-            key = f"offers/{offer_id}/{file_name}"
-            self.s3.put_object(Bucket=self.s3_bucket, Key=key, Body=file_content, ContentType="image/jpeg")
-            return f"https://{self.s3_bucket}.s3.amazonaws.com/{key}"
-        except Exception as e:
-            logger.error(f"Error uploading image to S3: {e}")
-            return None
+        return self.images.upload(file_content, file_name, offer_id)
 
     def get_presigned_url(self, s3_url: str, expiration: int = 3600) -> str | None:
-        """Generate presigned URL for S3 object"""
-        try:
-            # Extract key from S3 URL (host-validated, not a substring match)
-            key = extract_s3_key(s3_url)
-            if key is None:
-                return None
-
-            presigned_url = self.s3.generate_presigned_url(
-                "get_object", Params={"Bucket": self.s3_bucket, "Key": key}, ExpiresIn=expiration
-            )
-            return presigned_url
-        except Exception as e:
-            logger.error(f"Error generating presigned URL: {e}")
-            return None
+        return self.images.presigned_url(s3_url, expiration)
 
     # The delivery and labeling workflows: which suppliers and offers have boxes or orders in a status. The offers
     # are read once (the cached list) and the suppliers once, instead of one read per offer and per supplier name.
@@ -416,18 +394,7 @@ class DynamoDBService:
         return self.offer_repo.delete_offer(offer_id)
 
     def delete_offer_images(self, offer_id: int) -> bool:
-        """Delete all images for an offer from S3"""
-        try:
-            prefix = f"offers/{offer_id}/"
-            response = self.s3.list_objects_v2(Bucket=self.s3_bucket, Prefix=prefix)
-
-            if "Contents" in response:
-                objects = [{"Key": obj["Key"]} for obj in response["Contents"]]
-                self.s3.delete_objects(Bucket=self.s3_bucket, Delete={"Objects": objects})
-            return True
-        except Exception as e:
-            logger.error(f"Error deleting offer images: {e}")
-            return False
+        return self.images.delete_offer_images(offer_id)
 
     # Order history (purchase analytics) operations
     def create_order_history(self, history) -> bool:
