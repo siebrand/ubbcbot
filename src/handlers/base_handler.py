@@ -107,6 +107,20 @@ class BaseHandler:
         name = " ".join(part for part in (customer.first_name, customer.last_name) if part) if customer else ""
         return self._escape_html(name) if name else self._t("unknown", user_id=None)
 
+    def _get_public_name(self, customer):
+        """Customer's public display name (Firstname L), escaped for HTML.
+
+        The format of the group order notification, also used in reports: never the full last name.
+        """
+        name_parts = []
+        if customer.first_name:
+            name_parts.append(customer.first_name)
+        if customer.last_name:
+            name_parts.append(f"{customer.last_name[0]}")
+
+        name = " ".join(name_parts) if name_parts else customer.username or self._t("unknown", user_id=None)
+        return self._escape_html(name)
+
     def _send_message(
         self,
         chat_id: int,
