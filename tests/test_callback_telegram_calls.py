@@ -48,6 +48,13 @@ def test_delete_the_message(post, callbacks):
     assert call(post) == ("deleteMessage", {"chat_id": 5, "message_id": 9})
 
 
+def test_an_error_while_handling_a_tap_returns_only_the_exception_type(callbacks):
+    callbacks._answer_callback_query = Mock(side_effect=RuntimeError("customer Jan Jansen, 06-12345678"))
+    query = {"id": "q", "from": {"id": 1}, "message": {"chat": {"id": 1}, "message_id": 9}, "data": "admin:main"}
+
+    assert callbacks.handle_callback_query(query) == {"status": "error", "error": "RuntimeError"}
+
+
 def test_a_failed_call_is_false(post, callbacks):
     post.return_value = Mock(status_code=400, text="Bad Request: query is too old")
 

@@ -766,7 +766,8 @@ class CallbackHandler:
         except Exception as e:
             logger.error(f"Error handling callback query: {e}")
             logger.error(f"Callback data was: {callback_query.get('data', 'NO_DATA')}")
-            return {"status": "error", "error": str(e)}
+            # The result goes back up to the webhook: the type only, an exception message can hold data
+            return {"status": "error", "error": type(e).__name__}
 
     def _authorize_callback(self, user_id: int, data: str) -> dict[str, Any] | None:
         """Return an error result if user may not trigger this callback, None if allowed"""
