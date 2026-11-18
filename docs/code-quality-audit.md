@@ -64,7 +64,15 @@ sync service.
    handler has `self.environment`. That's fine in Lambda, but it is a second source of truth, and in tests it
    silently points at `test`.
 7. **Risk: a presigned URL is logged in the test environment.** `_send_photo` logs the first 150 characters of the
-   photo URL (`base_handler.py:453`), which for S3 images includes the signature.
+   photo URL (`base_handler.py:453`), which for S3 images includes the signature. **Fixed**: only the host is logged.
+
+**Step 2 done.** All Bot API traffic goes through `services/telegram_client.py` (`TelegramClient.call` and
+`download_file`): `BaseHandler`, `CallbackHandler`, `MediaHandler`, `ImportHandler` and the message sender. No other
+module imports `requests` or builds a Bot API URL. The delivery rules (guests, the production group block, TEST
+marking) deliberately stay per kind of message in `BaseHandler`: edits must keep working for the group announcement in
+production, so applying the group block to every call would be a behaviour change. While doing this, two leaks of the
+bot token were found and fixed: in log lines (the `requests` exception message contains the URL, so the log redaction
+now masks token-shaped strings) and in the message sender's failure report to the admin.
 
 ### `src/services/callback_handler.py`: 60 lambdas and a second allowlist
 

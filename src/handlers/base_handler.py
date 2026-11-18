@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from typing import Any
+from urllib.parse import urlsplit
 
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
@@ -371,7 +372,8 @@ class BaseHandler:
             data["caption"] = caption
 
         if self.environment == "test":
-            logger.info(f"Sending photo to chat {chat_id}: {photo_url[:150]}")
+            # Not the URL itself: a presigned S3 URL carries a signature that grants access to the image
+            logger.info(f"Sending photo to chat {chat_id}: {urlsplit(photo_url).hostname}")
         response = self.telegram.call("sendPhoto", data)
         if self.environment == "test":
             logger.info(f"Telegram API response: {response.status_code}")

@@ -1,6 +1,7 @@
 """What BaseHandler sends to Telegram, and to whom: guests are skipped, group chats in production only get
 messages meant for the group, and everything sent in the test environment is marked TEST."""
 
+import logging
 from unittest.mock import Mock, patch
 
 import pytest
@@ -87,6 +88,15 @@ class TestPhotos:
 
         assert method(post) == "sendPhoto"
         assert sent(post) == {"chat_id": USER, "photo": "https://x/a.jpg", "caption": "TEST - Pils"}
+
+    def test_a_presigned_url_is_not_logged(self, post, caplog):
+        url = "https://bucket.s3.amazonaws.com/offers/3/a.jpg?X-Amz-Signature=secret123&X-Amz-Expires=3600"
+
+        with caplog.at_level(logging.INFO):
+            handler("test")._send_photo(USER, url)
+
+        assert "secret123" not in caplog.text
+        assert "bucket.s3.amazonaws.com" in caplog.text
 
     def test_the_same_rules_as_messages(self, post):
         assert handler()._send_photo(GUEST, "u") == {"success": False, "skipped_guest": True}
