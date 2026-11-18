@@ -21,6 +21,41 @@ PERIOD_CODE_PATTERN = re.compile(r"^(\d{8})-(\d{8})$")
 DAY, WEEK, MONTH = "day", "week", "month"
 GRANULARITY_WORDS = {"day": DAY, "dag": DAY, "week": WEEK, "month": MONTH, "maand": MONTH}
 PAID_WORDS = {"paid", "betaald"}
+ANON_WORDS = {"anon", "anoniem"}
+
+# Made-up names for /report_top_customers anon: a fresh random draw each time, never the same name twice in a report
+ANON_NAMES = (
+    "Petra Pils",
+    "Sjaak Stout",
+    "Karel Kriek",
+    "Truus Tripel",
+    "Gijs Gueuze",
+    "Wim Witbier",
+    "Bram Bock",
+    "Doortje Dubbel",
+    "Henk Hop",
+    "Mieke Mout",
+    "Gerrit Gist",
+    "Liesbeth Lambiek",
+    "Saskia Saison",
+    "Bart Barleywine",
+    "Ingrid IPA",
+    "Pieter Porter",
+    "Fenna Flesopener",
+    "Klaas Kroonkurk",
+    "Tamara Tapkraan",
+    "Sem Schuimkraag",
+    "Quinn Quadrupel",
+    "Rianne Radler",
+    "Willem Weizen",
+    "Bea Brouwketel",
+    "Kees Kelder",
+    "Hanneke Hoppebel",
+    "Fons Fust",
+    "Greet Gerst",
+    "Anton Amber",
+    "Dirk Dubbelbock",
+)
 
 # Orders that are not paid yet: every status except paid (completed) and cancelled.
 # Matches the outstanding total in base_order_handler.py.

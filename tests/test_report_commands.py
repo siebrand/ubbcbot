@@ -9,9 +9,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from handlers.admin.report_commands import MESSAGE_LIMIT, ReportCommands
+from handlers.admin.report_commands import MESSAGE_LIMIT, NAME_WIDTH, ReportCommands
 from models.entities import Customer, Order
-from services.reporting import EXCLUDED_CUSTOMER_IDS
+from services.reporting import ANON_NAMES, EXCLUDED_CUSTOMER_IDS, TOP_CUSTOMERS_LIMIT
 
 ADMIN_ID = 15005473
 THIS_YEAR = datetime.now(UTC).year
@@ -136,6 +136,40 @@ class TestTopCustomers:
         assert "Piet P" not in report and "500.00" not in report
         assert "€10.00" in report  # the total
         assert "Klanten: 1" in report
+
+    @pytest.mark.parametrize("word", ["anon", "Anoniem"])
+    def test_anon_shows_made_up_names_only(self, env, word):
+        known_customers(env, customer("c1", "Jan", "Jansen"), customer("c2", "Piet", "Puk"))
+        env.db.get_events_by_type.return_value = [
+            payment("c1", "10"),
+            payment("c2", "25.50"),
+            payment("abcdef12-3456", "5"),  # a deleted customer
+        ]
+
+        assert env.handler.handle_report_top_customers(ADMIN_ID, ["2025", word]) == {"status": "success"}
+
+        report = text(env)
+        assert "Jan" not in report and "Piet P" not in report
+        assert "abcdef12" not in report and "verwijderde klant" not in report
+        shown = [name for name in ANON_NAMES if name in report]
+        assert len(shown) == 3
+        assert "25.50" in report and "€40.50" in report and "Klanten: 3" in report
+        assert env.db.get_events_by_type.call_args.args[1].year == 2025  # the word is not read as a period
+
+    def test_anon_names_differ_between_runs(self, env):
+        env.db.get_events_by_type.return_value = [payment(f"cust{i:02d}xx", str(i + 1)) for i in range(10)]
+
+        reports = set()
+        for _ in range(5):
+            env.handler._send_message.reset_mock()
+            env.handler.handle_report_top_customers(ADMIN_ID, ["anon"])
+            reports.add(text(env))
+
+        assert len(reports) > 1
+
+    def test_anon_names_are_unique_and_fit_the_name_column(self):
+        assert len(set(ANON_NAMES)) == len(ANON_NAMES) >= TOP_CUSTOMERS_LIMIT
+        assert all(len(name) <= NAME_WIDTH for name in ANON_NAMES)
 
     def test_only_payments_of_an_excluded_customer_is_no_data(self, env):
         env.db.get_events_by_type.return_value = [payment(EXCLUDED, "500")]

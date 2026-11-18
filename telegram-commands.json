@@ -75,7 +75,7 @@
     {"command": "reject_user", "description": "Reject a user: <name or username>"},
     {"command": "report_customer", "description": "Paid per month and open amount of a customer: <customer> [period]"},
     {"command": "report_sales_by_period", "description": "Sales per period: [period] [day|week|month] [paid]"},
-    {"command": "report_top_customers", "description": "Top customers by amount paid: [period]"},
+    {"command": "report_top_customers", "description": "Top customers by amount paid: [period] [anon]"},
     {"command": "send_delivery_overviews", "description": "Send delivery overviews to customers"},
     {"command": "send_payment_reminder", "description": "Send payment reminders"},
     {"command": "setup_test_data", "description": "Create test data (test environment only)"},

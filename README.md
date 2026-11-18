@@ -226,7 +226,7 @@ has every admin command.
 - `/delete_cancelled_orders` - Delete all cancelled orders from database
 - `/delete_completed_orders` - Delete all completed orders from database
 - `/audit_orders` - Audit orders - add update_date to orders missing it
-- `/report_top_customers [period]` - Top 10 customers by amount paid in the period (see "Purchase Reports")
+- `/report_top_customers [period] [anon]` - Top 10 customers by amount paid in the period; with `anon` made-up names instead of the real ones (see "Purchase Reports")
 - `/report_sales_by_period [period] [day|week|month] [paid]` - Number and value of the orders placed per day, week or month (default: month); with `paid` the payments received instead
 - `/report_customer <username|customer_id> [period]` - What one customer paid per month in the period, and the amount of their orders that are not paid yet
 - `/cancel` - Cancel pending operation (e.g., text input prompts)
@@ -300,7 +300,8 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
 - **What**: three read-only admin commands on the order history table (purchase analytics events), also as buttons for
   the current year in the Reports section of `/admin`:
   - `/report_top_customers` ranks customers by the sum of their `PAYMENT_RECEIVED` events (top 10, with the total and
-    the number of customers).
+    the number of customers). With `anon` (or `anoniem`) every customer, deleted ones included, gets a made-up beer
+    name from `ANON_NAMES` (`services/reporting.py`), drawn at random each time and never twice in one report.
   - `/report_sales_by_period` counts `ORDER_CREATED` events (or `PAYMENT_RECEIVED` with `paid`) and sums their amount
     per day, ISO week or month, with a bar per period and the best period.
   - `/report_customer` shows a customer's payments per month, and the open order amount: the sum of `total_price` of

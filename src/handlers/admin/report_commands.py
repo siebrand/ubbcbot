@@ -6,6 +6,7 @@ See services/reporting.py for the periods and calculations.
 """
 
 import logging
+import random
 from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
@@ -27,11 +28,13 @@ MAX_FILLED_BUCKETS = 62
 
 
 class ReportCommands(BaseHandler):
-    # --- /report_top_customers [period] ---------------------------------------------------------------
+    # --- /report_top_customers [period] [anon] --------------------------------------------------------
 
     def handle_report_top_customers(self, chat_id: int, args: list) -> dict[str, Any]:
-        """Customers ranked by the amount they paid in the period"""
-        period = self._period_or_error(chat_id, args, "usage_report_top_customers")
+        """Customers ranked by the amount they paid in the period. With "anon": made-up names instead."""
+        anon = any(word.lower() in reporting.ANON_WORDS for word in args)
+        period_args = [word for word in args if word.lower() not in reporting.ANON_WORDS]
+        period = self._period_or_error(chat_id, period_args, "usage_report_top_customers")
         if period is None:
             return {"status": "invalid_args"}
 
@@ -47,7 +50,10 @@ class ReportCommands(BaseHandler):
 
         ranked = reporting.totals_per_customer(events)
         top = ranked[: reporting.TOP_CUSTOMERS_LIMIT]
-        names = [self._report_name(t.customer_id, chat_id) for t in top]
+        if anon:
+            names = random.sample(reporting.ANON_NAMES, len(top))
+        else:
+            names = [self._report_name(t.customer_id, chat_id) for t in top]
         name_width = min(max(len(name) for name in names), NAME_WIDTH)
         amount_width = max(len(f"{t.amount:.2f}") for t in top)
         rows = [
