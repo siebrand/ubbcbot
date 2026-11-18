@@ -2,7 +2,8 @@
 
 Defense in depth: call sites should log identifiers (customer_id / Telegram user ID) instead of
 names, but a filter on the root logger masks the known PII shapes so a new log line cannot
-leak them by accident.
+leak them by accident. Bot tokens are masked too: a failed Telegram request reports its URL,
+and the token is part of that URL.
 """
 
 import logging
@@ -13,6 +14,9 @@ REDACTED = "***"
 
 # Telegram handles: "@name". The lookbehind skips e-mail addresses and word-embedded "@".
 _HANDLE_PATTERN = re.compile(r"(?<![\w@])@\w{2,}")
+
+# Telegram bot tokens: "<bot id>:<35 characters>", also inside a URL (".../bot<token>/sendMessage")
+_BOT_TOKEN_PATTERN = re.compile(r"(?<!\d)\d{6,}:[A-Za-z0-9_-]{30,}")
 
 # Known PII fields rendered as key=value, key: value, 'key': 'value' or "key": "value".
 _PII_KEYS = (
@@ -32,7 +36,8 @@ _FIELD_PATTERN = re.compile(
 
 
 def redact(message: str) -> str:
-    """Mask Telegram handles and known PII fields in a log message."""
+    """Mask bot tokens, Telegram handles and known PII fields in a log message."""
+    message = _BOT_TOKEN_PATTERN.sub(REDACTED, message)
     message = _FIELD_PATTERN.sub(lambda m: m.group("key") + REDACTED, message)
     return _HANDLE_PATTERN.sub("@" + REDACTED, message)
 

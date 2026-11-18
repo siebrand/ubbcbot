@@ -35,6 +35,22 @@ class TestRedact:
     def test_does_not_match_keys_inside_longer_words(self):
         assert redact("contactless=yes") == "contactless=yes"
 
+    def test_masks_a_bot_token_in_a_request_url(self):
+        token = "1234567890:XXX-abcdefghijklmnopqrstuvwxyz_0123"
+        error = (
+            "HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: "
+            f"/bot{token}/sendMessage (Caused by NewConnectionError)"
+        )
+
+        redacted = redact(error)
+
+        assert token not in redacted
+        assert f"/bot{REDACTED}/sendMessage" in redacted
+
+    def test_does_not_touch_times_or_ids_that_look_a_little_like_a_token(self):
+        message = "Order 12:30 for chat -1001234567890 message_id=42 at 2026-11-19T10:00:00"
+        assert redact(message) == message
+
 
 class TestFilter:
     def _record(self, msg, *args):
