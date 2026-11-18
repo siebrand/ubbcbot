@@ -174,7 +174,7 @@ class TestBaseNoOrdersDisplayName(CustomerDisplayNameTestBase):
     def show(self, customer):
         self.db.get_orders_by_customer.return_value = []
         with patch.object(BaseOrderHandler, "_send_message") as send:
-            self.handler._show_customer_orders(1, customer, user_id=ADMIN_ID)
+            self.handler.show_customer_orders(1, customer, user_id=ADMIN_ID)
         return self._sent_text(send)
 
     def test_full_name(self):
@@ -197,7 +197,7 @@ class TestBaseOrderListDisplayName(CustomerDisplayNameTestBase):
             patch.object(BaseOrderHandler, "_send_message") as send,
             patch.object(BaseOrderHandler, "_get_bot_username", return_value="test_bot"),
         ):
-            self.handler._show_customer_orders(1, customer, user_id=ADMIN_ID)
+            self.handler.show_customer_orders(1, customer, user_id=ADMIN_ID)
         return self._sent_text(send)
 
     def test_full_name(self):

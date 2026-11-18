@@ -35,7 +35,7 @@ class BaseOrderHandler(BaseHandler):
         name = " ".join(part for part in (customer.first_name, customer.last_name) if part)
         return name or self._t("unknown", user_id=None)
 
-    def _show_customer_orders(
+    def show_customer_orders(
         self, chat_id: int, customer, page: int = 1, show_order_ids: bool = False, user_id: int | None = None
     ) -> dict[str, Any]:
         """Shared method to display customer orders with pagination"""

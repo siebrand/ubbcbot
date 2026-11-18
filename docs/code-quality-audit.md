@@ -131,7 +131,12 @@ The problems are in how routes are declared.
    in English, in an otherwise translated message. **Fixed** in step 1 with the existing `page_indicator` key.
 5. **Maintainability: admin features in a customer handler.** The admin offer overview, the offer edit interface
    (`_show_edit_interface`), draft preview and publish buttons, and "view as user" are all in
-   `handlers/customer/`. "View as user" works by passing a fake user ID, `999999` (`:631`).
+   `handlers/customer/`. "View as user" works by passing a fake user ID, `999999` (`:631`). **Partly done** in step 4:
+   the fake ID is an explicit `as_customer` flag, the detail view is split into images, text and keyboard (the
+   complexity of `_send_offer_view` was 18), and the customer's order list uses the now public
+   `BaseOrderHandler.show_customer_orders`. The admin views still live in `InfoCommands`: moving them out also means
+   moving the `view_offer_<id>_edit` route to an admin handler (and out of `CUSTOMER_CALLBACK_PATTERN`), which is best
+   done with step 5.
 6. **Maintainability: smaller problems.**
    - `_get_section_help` is a ten-branch `if` chain over a fixed mapping, and the admin section list is written out
      three times (`:79`, `:98-105`, `:114`).

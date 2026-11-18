@@ -302,7 +302,7 @@ class InfoCommands(BaseHandler):
         from handlers.admin.order.base_order_handler import BaseOrderHandler
 
         base_handler = BaseOrderHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        return base_handler._show_customer_orders(chat_id, customer, page, show_order_ids=show_ids, user_id=user_id)
+        return base_handler.show_customer_orders(chat_id, customer, page, show_order_ids=show_ids, user_id=user_id)
 
     def handle_view_offer(self, chat_id: int, user_id: int, args: list | None = None) -> dict[str, Any]:
         """Handle offer details display and editing from deep link or command"""
@@ -341,13 +341,7 @@ class InfoCommands(BaseHandler):
             if edit_mode:
                 return self._show_edit_interface(chat_id, offer, user_id)
 
-            # Send rich offer details
-            if show_as_user:
-                # Show as regular user would see it
-                self._send_offer_view(chat_id, offer, user_id=999999)  # Fake non-admin user ID
-            else:
-                self._send_offer_view(chat_id, offer, user_id)
-
+            self._send_offer_view(chat_id, offer, user_id, as_customer=show_as_user)
             return {"status": "success"}
 
         except ValueError:
@@ -389,43 +383,37 @@ class InfoCommands(BaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {"status": "success"}
 
-    def _send_offer_view(self, chat_id: int, offer, user_id: int):
-        """Send rich offer details with images and description"""
-        # Send images as media group if available
-        if offer.images:
-            if len(offer.images) == 1:
-                # Single image
-                try:
-                    image_url = offer.images[0]
-                    if is_s3_url(image_url):
-                        presigned_url = self.db.get_presigned_url(image_url)
-                        if presigned_url:
-                            image_url = presigned_url
-                    self._send_photo(chat_id, image_url)
-                except Exception as e:
-                    logger.error(f"Failed to send image {image_url}: {e}")
-            else:
-                # Multiple images as media group
-                media_group = []
-                for image_url in offer.images[:10]:  # Telegram limit is 10 images per group
-                    try:
-                        if is_s3_url(image_url):
-                            presigned_url = self.db.get_presigned_url(image_url)
-                            if presigned_url:
-                                image_url = presigned_url
-                        media_group.append({"type": "photo", "media": image_url})
-                    except Exception as e:
-                        logger.error(f"Failed to prepare image {image_url}: {e}")
+    def _send_offer_view(self, chat_id: int, offer, user_id: int, as_customer: bool = False):
+        """Send rich offer details with images and description. ``as_customer``: the admin sees what customers see."""
+        is_admin = self._is_admin(user_id) and not as_customer
+        self._send_offer_images(chat_id, offer.images)
+        message = self._offer_view_text(offer, user_id, is_admin)
+        reply_markup = self._offer_view_keyboard(offer, user_id, is_admin)
+        self._send_message(chat_id, message, reply_markup=reply_markup, parse_mode="HTML")
 
-                if media_group:
-                    self._send_media_group(chat_id, media_group)
+    def _send_offer_images(self, chat_id: int, images: list) -> None:
+        """One image as a photo, more as an album (Telegram takes at most 10). S3 images are sent presigned."""
+        urls = []
+        for image_url in images[:10]:
+            try:
+                urls.append(self._viewable_url(image_url))
+            except Exception as e:
+                logger.error(f"Failed to prepare an offer image: {type(e).__name__}")
+        if not urls:
+            return
+        if len(images) == 1:
+            self._send_photo(chat_id, urls[0])
+        else:
+            self._send_media_group(chat_id, [{"type": "photo", "media": url} for url in urls])
 
-        # Build detailed message
-        is_draft = offer.status == OfferStatus.DRAFT.value
-        is_admin = self._is_admin(user_id)
+    def _viewable_url(self, image_url: str) -> str:
+        if is_s3_url(image_url):
+            return self.db.get_presigned_url(image_url) or image_url
+        return image_url
 
+    def _offer_view_text(self, offer, user_id: int, is_admin: bool) -> str:
         message = ""
-        if is_draft and is_admin:
+        if offer.status == OfferStatus.DRAFT.value and is_admin:
             message = self._t("preview_offer_look", user_id) + "\n"
 
         # The name is plain text; the description is HTML (validated when the admin enters it)
@@ -451,9 +439,10 @@ class InfoCommands(BaseHandler):
         if offer.status != OfferStatus.ACTIVE.value and not is_admin:
             message += f"{self._t('product_cannot_be_ordered', user_id)}\n"
 
-        message += f"\n{offer.description}\n"
+        return message + f"\n{offer.description}\n"
 
-        # Add order buttons for active offers
+    def _offer_view_keyboard(self, offer, user_id: int, is_admin: bool) -> dict | None:
+        """Order buttons when the offer is active; for the admin also edit (and publish for a draft)"""
         offer_id = offer.offer_id
         edit_button = [{"text": self._t("edit_offer_button", user_id), "callback_data": f"view_offer_{offer_id}_edit"}]
         reply_markup = None
@@ -475,5 +464,4 @@ class InfoCommands(BaseHandler):
         elif is_admin:
             # Add edit button for admins on non-active offers
             reply_markup = {"inline_keyboard": [edit_button]}
-
-        self._send_message(chat_id, message, reply_markup=reply_markup, parse_mode="HTML")
+        return reply_markup

@@ -28,7 +28,7 @@ class OrderViewing(BaseOrderHandler):
 
     def _show_user_orders(self, chat_id: int, customer, page: int = 1) -> dict[str, Any]:
         """Show orders for a specific customer with pagination"""
-        return self._show_customer_orders(chat_id, customer, page, show_order_ids=False, user_id=self.admin_user_id)
+        return self.show_customer_orders(chat_id, customer, page, show_order_ids=False, user_id=self.admin_user_id)
 
     def handle_export_orders(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /all_orders command"""

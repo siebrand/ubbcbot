@@ -334,6 +334,28 @@ class TestViewOffer:
         assert "Brouwerij" not in sent(env)
         assert self.buttons(env) == ["order_3_1", "order_3_2"]
 
+    def test_the_customer_view_of_the_admin_is_in_the_admins_language(self, env, offer):
+        env.db.get_customer_by_telegram_id.return_value = Customer(telegram_user_id=ADMIN_ID, language="en")
+
+        env.handler.handle_view_offer(CHAT, ADMIN_ID, ["3", "user"])
+
+        texts = [b["text"] for row in last_call(env).kwargs["reply_markup"]["inline_keyboard"] for b in row]
+        assert texts == [
+            env.handler._load_translations("en")["order_1"],
+            env.handler._load_translations("en")["order_2"],
+        ]
+
+    def test_an_image_that_cannot_be_prepared_is_left_out(self, env, offer):
+        offer.images = ["https://bucket.s3.amazonaws.com/a.jpg", "https://example.com/b.jpg"]
+        env.db.get_presigned_url.side_effect = RuntimeError("s3 down")
+
+        env.handler.handle_view_offer(CHAT, CUSTOMER_ID, ["3"])
+
+        assert env.handler._send_media_group.call_args.args[1] == [
+            {"type": "photo", "media": "https://example.com/b.jpg"}
+        ]
+        assert "Lekker fris" in sent(env)  # the offer itself is still shown
+
     def test_edit_mode_for_the_admin(self, env, offer):
         env.handler.handle_view_offer(CHAT, ADMIN_ID, ["3", "edit"])
 
