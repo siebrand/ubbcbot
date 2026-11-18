@@ -76,10 +76,6 @@ class DynamoDBService:
         """Get all offers with caching"""
         return self.offer_repo.list_offers()
 
-    def _list_offers_uncached(self) -> list[Offer]:
-        """Internal method to get offers without caching"""
-        return self.offer_repo._list_offers_uncached()
-
     def list_sold_out_offers_recent(self, days: int = 7) -> list[Offer]:
         """Get sold out offers from last N days"""
         return self.offer_repo.list_sold_out_offers_recent(days)
@@ -102,10 +98,6 @@ class DynamoDBService:
     def get_customer_by_telegram_id(self, telegram_user_id: int) -> Customer | None:
         """Get customer by telegram ID with caching"""
         return self.customer_repo.get_customer_by_telegram_id(telegram_user_id)
-
-    def _get_customer_by_telegram_id_uncached(self, telegram_user_id: int) -> Customer | None:
-        """Internal method to get customer by telegram ID without caching"""
-        return self.customer_repo._get_customer_by_telegram_id_uncached(telegram_user_id)
 
     # Box operations
     def create_box(self, box: Box) -> Box | None:
@@ -253,9 +245,9 @@ class DynamoDBService:
         """Get customers by status with caching"""
         return self.customer_repo.get_customers_by_status(status)
 
-    def _get_customers_by_status_uncached(self, status: str) -> list[Customer]:
-        """Internal method to get customers by status without caching"""
-        return self.customer_repo._get_customers_by_status_uncached(status)
+    def get_all_customers(self) -> list[Customer]:
+        """Every customer, whatever their approval status (cached)"""
+        return self.customer_repo.get_all_customers()
 
     def get_customer_by_username(self, username: str) -> Customer | None:
         return self.customer_repo.get_customer_by_username(username)

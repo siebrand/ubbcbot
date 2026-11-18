@@ -4,7 +4,6 @@ from typing import Any
 from handlers.base_handler import BaseHandler
 from models.entities import AuthorizationStatus
 from services.customer_deletion import CustomerDeletionService
-from services.user_cache import UserCache
 from utils.pagination import PaginationUtils
 from utils.update_utils import UpdateUtils
 
@@ -384,7 +383,7 @@ class UserCommands(BaseHandler):
         if status_filter == "subscribers":
             customers = self.db.get_subscribers()
         elif status_filter == "all":
-            customers = UserCache.get_all_customers(self.db)
+            customers = self.db.get_all_customers()
         else:
             customers = self.db.get_customers_by_status(status_filter)
 
@@ -579,7 +578,7 @@ class UserCommands(BaseHandler):
 
     def handle_list_guests(self, chat_id: int, page: int = 1) -> dict[str, Any]:
         """Handle /list_guests command with pagination"""
-        all_customers = UserCache.get_all_customers(self.db)
+        all_customers = self.db.get_all_customers()
         guests = [c for c in all_customers if c.is_guest]
 
         if not guests:
