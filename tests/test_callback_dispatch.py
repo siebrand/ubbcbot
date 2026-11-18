@@ -276,7 +276,7 @@ EDIT = [
     ("edit_customer_last_name_c1", EditCtx("handle_customer_edit", "last_name", "c1")),
     ("edit_customer_contact_c1", EditCtx("handle_customer_edit", "contact", "c1")),
     ("edit_customer_location_c1", EditCtx("handle_customer_edit", "location", "c1")),
-    ("edit_order_pick_abc12345", C("admin_order", call.editing._show_aspect_menu(CHAT, ORDER_OBJ))),
+    ("edit_order_pick_abc12345", C("admin_order", call.editing.show_aspect_menu(CHAT, ORDER_OBJ))),
     ("edit_order_box_abc12345", C("admin_order", call.editing.show_box_options(CHAT, "abc12345"))),
     ("edit_order_price_abc12345", C("admin_order", call.editing.prompt_price(CHAT, "abc12345"))),
     ("edit_order_status_abc12345", C("admin_order", call.editing.show_status_options(CHAT, "abc12345"))),
@@ -312,8 +312,8 @@ PAGE_ADMIN = [
     ("page_guests_2", C("user", call.handle_list_guests(CHAT, 2))),
     ("page_process_payment_2", C("admin_order", call.handle_process_payment(CHAT, [], 2))),
     ("page_remind_payment_2", C("admin_order", call.handle_send_payment_reminder(CHAT, [], 2))),
-    (f"page_user_orders_{CID}_2", C("admin_order", call.viewing._show_user_orders(CHAT, CUSTOMER_OBJ, 2))),
-    (f"page_list_user_orders_{CID}_3", C("admin_order", call.viewing._show_user_orders(CHAT, CUSTOMER_OBJ, 3))),
+    (f"page_user_orders_{CID}_2", C("admin_order", call.viewing.show_user_orders(CHAT, CUSTOMER_OBJ, 2))),
+    (f"page_list_user_orders_{CID}_3", C("admin_order", call.viewing.show_user_orders(CHAT, CUSTOMER_OBJ, 3))),
     ("page_foo_2", Silent()),  # unknown type
     ("page_x", Silent()),  # too short
 ]
@@ -510,6 +510,13 @@ class TestRouteTable:
         assert len(migrated) > 90
         assert [pattern for pattern in migrated if pattern not in first_matches] == []
 
+    def test_routes_only_call_public_handler_methods(self):
+        """A private method can be renamed without warning; a button that calls one would break silently"""
+        source = (Path(__file__).parent.parent / "src" / "services" / "callback_handler.py").read_text()
+
+        assert re.findall(r"self\.handlers\[[^]]+\](?:\.\w+)*\._\w+", source) == []
+        assert re.findall(r"(?:editing|viewing)\(\)\._\w+", source) == []
+
     def test_no_pattern_is_registered_twice(self):
         patterns = [route.pattern for route in make_env().handler.router.routes]
 
@@ -559,7 +566,7 @@ ROUND_TRIPS = [
         f"user_orders_{CID}",
         True,
         ADMIN_ID,
-        lambda p: C("admin_order", call.viewing._show_user_orders(CHAT, CUSTOMER_OBJ, p)),
+        lambda p: C("admin_order", call.viewing.show_user_orders(CHAT, CUSTOMER_OBJ, p)),
     ),
     pytest.param(
         f"my_orders_{CUSTOMER_ID}",

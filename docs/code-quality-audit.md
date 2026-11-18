@@ -91,7 +91,8 @@ The problems are in how routes are declared.
    `_execute_fill_and_create`, `_execute_create_boxes`, `_execute_cancel_orders`, `_show_audit_offer_selection`,
    `_execute_audit_offer` (`callback_handler.py:250-281`), `info._show_fomo` (`:324`),
    `admin_order.viewing._show_user_orders` (`:430`) and `editing()._show_aspect_menu` (`:548`) are all private. So a
-   rename in a handler breaks the callback handler without any warning from the IDE or ruff.
+   rename in a handler breaks the callback handler without any warning from the IDE or ruff. **Done** in step 5:
+   they are public, and a test fails when a route calls a private handler method.
 3. **Maintainability: whether to remove the keyboard after a tap is decided apart from the route.**
    `_should_remove_keyboard` (`callback_handler.py:771-781`) and the `process_payment_` special case (`:734-739`)
    decide by prefix, so a new route gets the default behaviour unless someone remembers this list. The function also

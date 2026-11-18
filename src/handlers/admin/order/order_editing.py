@@ -127,7 +127,7 @@ class OrderEditing(BaseOrderHandler):
             return self._show_order_disambiguation(chat_id, matches)
 
         order, _customer = matches[0]
-        return self._show_aspect_menu(chat_id, order)
+        return self.show_aspect_menu(chat_id, order)
 
     def _show_order_disambiguation(self, chat_id: int, matches: list) -> dict[str, Any]:
         message = self._t("multiple_orders_found_partial", chat_id, partial_id=matches[0][0].order_id[:8]) + "\n\n"
@@ -164,7 +164,7 @@ class OrderEditing(BaseOrderHandler):
             status=order.status,
         )
 
-    def _show_aspect_menu(self, chat_id: int, order) -> dict[str, Any]:
+    def show_aspect_menu(self, chat_id: int, order) -> dict[str, Any]:
         oid = order.order_id[:8]  # short id keeps callback_data within Telegram's 64-byte limit
         buttons = [
             [{"text": self._t("edit_order_aspect_box", chat_id), "callback_data": f"edit_order_box_{oid}"}],
@@ -332,4 +332,4 @@ class OrderEditing(BaseOrderHandler):
         refreshed order so the admin can make another change or exit."""
         order = self.db.get_order(order_id)
         if order:
-            self._show_aspect_menu(chat_id, order)
+            self.show_aspect_menu(chat_id, order)

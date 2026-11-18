@@ -249,7 +249,7 @@ class TestOrderViewing(unittest.TestCase):
             with patch.object(self.handler, "_escape_html") as mock_escape:
                 mock_escape.return_value = "John Doe"
 
-                result = self.handler._show_user_orders(123, mock_customer)
+                result = self.handler.show_user_orders(123, mock_customer)
 
         self.assertEqual(result["status"], "success")
         mock_send.assert_called_once()

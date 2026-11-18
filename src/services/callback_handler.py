@@ -250,35 +250,35 @@ class CallbackHandler:
         # Audit patterns
         self.router.register(
             r"^audit_fill_boxes_(\d+)_(\d+)$",
-            lambda match, ctx: self.handlers["offer"]._execute_fill_boxes(
+            lambda match, ctx: self.handlers["offer"].execute_fill_boxes(
                 ctx["chat_id"], int(match.group(1)), int(match.group(2))
             ),
         )
         self.router.register(
             r"^audit_fill_create_(\d+)_(\d+)$",
-            lambda match, ctx: self.handlers["offer"]._execute_fill_and_create(
+            lambda match, ctx: self.handlers["offer"].execute_fill_and_create(
                 ctx["chat_id"], int(match.group(1)), int(match.group(2))
             ),
         )
         self.router.register(
             r"^audit_create_boxes_(\d+)_(\d+)$",
-            lambda match, ctx: self.handlers["offer"]._execute_create_boxes(
+            lambda match, ctx: self.handlers["offer"].execute_create_boxes(
                 ctx["chat_id"], int(match.group(1)), int(match.group(2))
             ),
         )
         self.router.register(
             r"^audit_cancel_orders_(\d+)_(\d+)$",
-            lambda match, ctx: self.handlers["offer"]._execute_cancel_orders(
+            lambda match, ctx: self.handlers["offer"].execute_cancel_orders(
                 ctx["chat_id"], int(match.group(1)), int(match.group(2))
             ),
         )
         self.router.register(
             r"^audit_offers_page_(\d+)$",
-            lambda match, ctx: self.handlers["offer"]._show_audit_offer_selection(ctx["chat_id"], int(match.group(1))),
+            lambda match, ctx: self.handlers["offer"].show_audit_offer_selection(ctx["chat_id"], int(match.group(1))),
         )
         self.router.register(
             r"^audit_offer_(\d+)$",
-            lambda match, ctx: self.handlers["offer"]._execute_audit_offer(ctx["chat_id"], int(match.group(1))),
+            lambda match, ctx: self.handlers["offer"].execute_audit_offer(ctx["chat_id"], int(match.group(1))),
         )
 
         # Delivery/Export patterns
@@ -324,7 +324,7 @@ class CallbackHandler:
         self.router.register(
             r"^fomo_user_select_(.+)$",
             lambda match, ctx: (
-                self.handlers["info"]._show_fomo(ctx["chat_id"], ctx["user_id"], c)
+                self.handlers["info"].show_fomo(ctx["chat_id"], ctx["user_id"], c)
                 if (c := self.db.get_customer(match.group(1)))
                 else self._send_message(ctx["chat_id"], self._t("customer_not_found"))
             ),
@@ -439,7 +439,7 @@ class CallbackHandler:
         """A page of one customer's orders (admin)"""
         customer = self.db.get_customer(match.group(1))
         if customer:
-            return self.handlers["admin_order"].viewing._show_user_orders(ctx["chat_id"], customer, int(match.group(2)))
+            return self.handlers["admin_order"].viewing.show_user_orders(ctx["chat_id"], customer, int(match.group(2)))
         return None
 
     def _my_orders_page(self, match, ctx):
@@ -557,7 +557,7 @@ class CallbackHandler:
         # /edit_order: the order id is the first segment (a UUID prefix); a status value may contain underscores
         register(
             r"^edit_order_pick_(.+)$",
-            lambda m, ctx: editing()._show_aspect_menu(ctx["chat_id"], self.db.get_order(m.group(1))),
+            lambda m, ctx: editing().show_aspect_menu(ctx["chat_id"], self.db.get_order(m.group(1))),
         )
         register(r"^edit_order_box_(.+)$", lambda m, ctx: editing().show_box_options(ctx["chat_id"], m.group(1)))
         register(r"^edit_order_price_(.+)$", lambda m, ctx: editing().prompt_price(ctx["chat_id"], m.group(1)))
@@ -833,10 +833,6 @@ class CallbackHandler:
     def _start_order_for_input(self, chat_id: int) -> dict[str, Any]:
         """Start order_for process with text input"""
         return self.edit_context_manager.handle_input_prompts(chat_id, "order_for_input")
-
-    def _start_edit_supplier_input(self, chat_id: int) -> dict[str, Any]:
-        """Start edit supplier process with text input"""
-        return self.edit_context_manager.handle_input_prompts(chat_id, "edit_supplier_input")
 
     def _start_approve_user_input(self, chat_id: int) -> dict[str, Any]:
         """Start approve user process with text input"""

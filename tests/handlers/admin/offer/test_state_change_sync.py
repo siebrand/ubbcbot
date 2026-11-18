@@ -71,14 +71,14 @@ class TestAuditBoxChangesRecomputeStatus:
         h = self._handler()
         box = MagicMock(status="open", max_capacity=12, current_quantity=10, box_id="b1")
         h.db.get_boxes_by_offer.return_value = [box]
-        h._execute_fill_boxes(123, 933, 2)
+        h.execute_fill_boxes(123, 933, 2)
         h._check_offer_status_after_change.assert_called_once_with(933)
 
     def test_fill_boxes_without_free_capacity_does_not_recompute(self):
         h = self._handler()
         box = MagicMock(status="open", max_capacity=12, current_quantity=12, box_id="b1")
         h.db.get_boxes_by_offer.return_value = [box]
-        h._execute_fill_boxes(123, 933, 2)
+        h.execute_fill_boxes(123, 933, 2)
         h._check_offer_status_after_change.assert_not_called()
 
     def test_create_boxes_recomputes_status(self):

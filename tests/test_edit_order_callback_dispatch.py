@@ -63,7 +63,7 @@ class TestEditOrderCallbackDispatch(unittest.TestCase):
         self.db.get_order.return_value = order
         self.tap("edit_order_pick_oid-123")
         self.db.get_order.assert_called_once_with("oid-123")
-        self.editing._show_aspect_menu.assert_called_once_with(CHAT_ID, order)
+        self.editing.show_aspect_menu.assert_called_once_with(CHAT_ID, order)
 
     def test_an_unknown_edit_order_action_is_reported(self):
         self.tap("edit_order_nonsense_oid-123")

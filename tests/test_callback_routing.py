@@ -474,12 +474,12 @@ class TestCallbackRouting:
     @pytest.mark.parametrize(
         "callback_data,method",
         [
-            ("audit_offer_123", "_execute_audit_offer"),
-            ("audit_fill_boxes_123_5", "_execute_fill_boxes"),
-            ("audit_fill_create_456_10", "_execute_fill_and_create"),
-            ("audit_create_boxes_789_8", "_execute_create_boxes"),
-            ("audit_cancel_orders_111_3", "_execute_cancel_orders"),
-            ("audit_offers_page_2", "_show_audit_offer_selection"),
+            ("audit_offer_123", "execute_audit_offer"),
+            ("audit_fill_boxes_123_5", "execute_fill_boxes"),
+            ("audit_fill_create_456_10", "execute_fill_and_create"),
+            ("audit_create_boxes_789_8", "execute_create_boxes"),
+            ("audit_cancel_orders_111_3", "execute_cancel_orders"),
+            ("audit_offers_page_2", "show_audit_offer_selection"),
         ],
     )
     def test_audit_patterns(self, callback_handler, mock_handlers, callback_data, method):

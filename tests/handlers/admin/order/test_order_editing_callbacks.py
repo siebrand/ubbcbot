@@ -105,7 +105,7 @@ class TestOrderEditingCallbacks(unittest.TestCase):
         customer.last_name = "Mazeland"
         self.mock_db.get_customer.return_value = customer
 
-        self.handler._show_aspect_menu(123, self.order)
+        self.handler.show_aspect_menu(123, self.order)
         text = mock_send.call_args[0][1]
         # details present above the buttons
         self.assertIn(self.order.order_id[:8], text)

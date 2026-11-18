@@ -207,16 +207,16 @@ class BoxManagementHandler(OfferBaseHandler):
         """Handle /audit_offer command - check and fix order/box discrepancies"""
         if not args:
             # Show button interface to select offer
-            return self._show_audit_offer_selection(chat_id)
+            return self.show_audit_offer_selection(chat_id)
 
         try:
             offer_id = int(args[0])
-            return self._execute_audit_offer(chat_id, offer_id)
+            return self.execute_audit_offer(chat_id, offer_id)
         except ValueError:
             self._send_message(chat_id, self._t("invalid_offer_id", chat_id))
             return {"status": "invalid_format"}
 
-    def _show_audit_offer_selection(self, chat_id: int, page: int = 1) -> dict[str, Any]:
+    def show_audit_offer_selection(self, chat_id: int, page: int = 1) -> dict[str, Any]:
         """Show paginated list of offers for audit selection"""
         from models.entities import OfferStatus
 
@@ -267,7 +267,7 @@ class BoxManagementHandler(OfferBaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {"status": "success"}
 
-    def _execute_audit_offer(self, chat_id: int, offer_id: int) -> dict[str, Any]:
+    def execute_audit_offer(self, chat_id: int, offer_id: int) -> dict[str, Any]:
         """Execute audit for specific offer"""
         offer = self.db.get_offer(offer_id)
 
@@ -455,7 +455,7 @@ class BoxManagementHandler(OfferBaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {"status": "awaiting_confirmation"}
 
-    def _execute_fill_boxes(self, chat_id: int, offer_id: int, excess_units: int) -> dict[str, Any]:
+    def execute_fill_boxes(self, chat_id: int, offer_id: int, excess_units: int) -> dict[str, Any]:
         """Execute filling existing boxes after confirmation"""
         offer = self.db.get_offer(offer_id)
         if not offer:
@@ -495,7 +495,7 @@ class BoxManagementHandler(OfferBaseHandler):
         self._send_message(chat_id, self._t("audit_boxes_filled", chat_id, offer_id=offer_id, filled=filled_units))
         return {"status": "boxes_filled", "filled": filled_units}
 
-    def _execute_fill_and_create(self, chat_id: int, offer_id: int, excess_units: int) -> dict[str, Any]:
+    def execute_fill_and_create(self, chat_id: int, offer_id: int, excess_units: int) -> dict[str, Any]:
         """Execute filling existing boxes and creating new ones after confirmation"""
         offer = self.db.get_offer(offer_id)
         if not offer:
@@ -503,7 +503,7 @@ class BoxManagementHandler(OfferBaseHandler):
             return {"status": "offer_not_found"}
 
         # First fill existing capacity
-        fill_result = self._execute_fill_boxes(chat_id, offer_id, excess_units)
+        fill_result = self.execute_fill_boxes(chat_id, offer_id, excess_units)
         filled_units = fill_result.get("filled", 0)
 
         # Create new boxes for remaining units
@@ -526,7 +526,7 @@ class BoxManagementHandler(OfferBaseHandler):
 
         return {"status": "filled_and_created", "filled": filled_units, "remaining": remaining_units}
 
-    def _execute_create_boxes(self, chat_id: int, offer_id: int, excess_units: int) -> dict[str, Any]:
+    def execute_create_boxes(self, chat_id: int, offer_id: int, excess_units: int) -> dict[str, Any]:
         """Execute box creation after confirmation"""
         offer = self.db.get_offer(offer_id)
         if not offer:
@@ -535,7 +535,7 @@ class BoxManagementHandler(OfferBaseHandler):
 
         return self._add_box_capacity(chat_id, offer, excess_units)
 
-    def _execute_cancel_orders(self, chat_id: int, offer_id: int, excess_units: int) -> dict[str, Any]:
+    def execute_cancel_orders(self, chat_id: int, offer_id: int, excess_units: int) -> dict[str, Any]:
         """Execute order cancellation after confirmation"""
         offer = self.db.get_offer(offer_id)
         if not offer:

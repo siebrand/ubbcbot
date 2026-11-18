@@ -24,9 +24,9 @@ class OrderViewing(BaseOrderHandler):
         if error:
             return error
 
-        return self._show_user_orders(chat_id, customer)
+        return self.show_user_orders(chat_id, customer)
 
-    def _show_user_orders(self, chat_id: int, customer, page: int = 1) -> dict[str, Any]:
+    def show_user_orders(self, chat_id: int, customer, page: int = 1) -> dict[str, Any]:
         """Show orders for a specific customer with pagination"""
         return self.show_customer_orders(chat_id, customer, page, show_order_ids=False, user_id=self.admin_user_id)
 
@@ -397,7 +397,7 @@ class OrderViewing(BaseOrderHandler):
             self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
             return {"status": "user_not_found"}
 
-        return self._show_user_orders(chat_id, customer)
+        return self.show_user_orders(chat_id, customer)
 
     def handle_list_offer_orders_select(self, chat_id: int, offer_id: str) -> dict[str, Any]:
         """Handle offer selection from buttons for offer_orders"""

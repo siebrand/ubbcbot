@@ -257,7 +257,7 @@ class TestFomoForAnotherCustomer:
         return handler
 
     def test_the_html_header_escapes_the_name(self, handler):
-        handler._show_fomo(1, ADMIN_ID, _customer())
+        handler.show_fomo(1, ADMIN_ID, _customer())
 
         call = handler._send_message.call_args
         assert call.kwargs["parse_mode"] == "HTML"
@@ -266,7 +266,7 @@ class TestFomoForAnotherCustomer:
     def test_the_plain_nothing_to_order_message_keeps_the_real_name(self, handler):
         handler.db.list_offers.return_value = []
 
-        handler._show_fomo(1, ADMIN_ID, _customer(first_name="Bob", last_name="<Zed>"))
+        handler.show_fomo(1, ADMIN_ID, _customer(first_name="Bob", last_name="<Zed>"))
 
         call = handler._send_message.call_args
         assert "parse_mode" not in call.kwargs

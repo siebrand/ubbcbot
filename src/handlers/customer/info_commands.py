@@ -128,14 +128,14 @@ class InfoCommands(BaseHandler):
             customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "fomo_user_select")
             if error:
                 return {"status": "disambiguation_or_not_found"}
-            return self._show_fomo(chat_id, user_id, customer)
+            return self.show_fomo(chat_id, user_id, customer)
 
         customer, error = self._validate_customer(chat_id, user_id)
         if error:
             return error
-        return self._show_fomo(chat_id, user_id, customer)
+        return self.show_fomo(chat_id, user_id, customer)
 
-    def _show_fomo(self, chat_id: int, caller_user_id: int, customer) -> dict[str, Any]:
+    def show_fomo(self, chat_id: int, caller_user_id: int, customer) -> dict[str, Any]:
         """Show active offers the customer hasn't ordered yet"""
         active_offers = [o for o in self.db.list_offers() if o.status == OfferStatus.ACTIVE.value]
         orders = self.db.get_orders_by_customer(customer.customer_id)
