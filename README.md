@@ -299,9 +299,10 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
 
 - **What**: three read-only admin commands on the order history table (purchase analytics events), also as buttons for
   the current year in the Reports section of `/admin`:
-  - `/report_top_customers` ranks customers by the sum of their `PAYMENT_RECEIVED` events (top 10, with the total and
-    the number of customers). With `anon` (or `anoniem`) every customer, deleted ones included, gets a made-up beer
-    name from `ANON_NAMES` (`services/reporting.py`), drawn at random each time and never twice in one report.
+  - `/report_top_customers` ranks customers by the sum of their `PAYMENT_RECEIVED` events (top 10, with the total, the
+    number of customers and the share of the total paid by the top 10). With `anon` (or `anoniem`) every customer,
+    deleted ones included, gets a made-up beer name from `ANON_NAMES` (`services/reporting.py`), drawn at random each
+    time and never twice in one report.
   - `/report_sales_by_period` counts `ORDER_CREATED` events (or `PAYMENT_RECEIVED` with `paid`) and sums their amount
     per day, ISO week or month, with a bar per period and the best period.
   - `/report_customer` shows a customer's payments per month, and the open order amount: the sum of `total_price` of

@@ -668,7 +668,7 @@
   "report_no_sales": "Geen verkopen in deze periode.",
   "report_total_paid": "Totaal betaald: <b>€{amount:.2f}</b> ({count}×)",
   "report_customer_count": "Klanten: {customers}",
-  "report_top_shown": "Alleen de top {shown} staat in de lijst.",
+  "report_top_share": "Top {shown}: €{amount:.2f}, {percent:.1f}% van het totaal",
   "report_sales_total": "Totaal: <b>{count}×</b>, <b>€{amount:.2f}</b>",
   "report_sales_peak": "Beste: {label} ({count}×, €{amount:.2f})",
   "report_empty_periods_hidden": "Alleen perioden met verkopen staan in de lijst.",

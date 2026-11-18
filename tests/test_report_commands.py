@@ -120,7 +120,21 @@ class TestTopCustomers:
         report = text(env)
         assert "10. " in report and "11. " not in report
         assert "Klanten: 12" in report
-        assert "top 10" in report
+        assert "staat in de lijst" not in report
+        assert "Top 10: €75.00, 96.2% van het totaal" in report  # 3 + 4 + … + 12 of 1 + 2 + … + 12 = 78
+
+    def test_the_share_of_the_top_is_all_when_every_customer_is_listed(self, env):
+        env.db.get_events_by_type.return_value = [payment("c1", "10"), payment("c2", "30")]
+
+        env.handler.handle_report_top_customers(ADMIN_ID, [])
+
+        assert "Top 2: €40.00, 100.0% van het totaal" in text(env)
+
+    def test_no_share_when_nothing_was_paid(self, env):
+        env.db.get_events_by_type.return_value = [payment("c1", "0")]
+
+        assert env.handler.handle_report_top_customers(ADMIN_ID, []) == {"status": "success"}
+        assert "van het totaal" not in text(env)
 
     def test_no_payments(self, env):
         assert env.handler.handle_report_top_customers(ADMIN_ID, []) == {"status": "no_data"}

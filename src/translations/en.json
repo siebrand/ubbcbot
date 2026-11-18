@@ -668,7 +668,7 @@
   "report_no_sales": "No sales in this period.",
   "report_total_paid": "Total paid: <b>€{amount:.2f}</b> ({count}×)",
   "report_customer_count": "Customers: {customers}",
-  "report_top_shown": "Only the top {shown} are listed.",
+  "report_top_share": "Top {shown}: €{amount:.2f}, {percent:.1f}% of the total",
   "report_sales_total": "Total: <b>{count}×</b>, <b>€{amount:.2f}</b>",
   "report_sales_peak": "Best: {label} ({count}×, €{amount:.2f})",
   "report_empty_periods_hidden": "Only periods with sales are listed.",

@@ -66,8 +66,10 @@ class ReportCommands(BaseHandler):
             self._t("report_total_paid", chat_id, amount=overall.amount, count=overall.count),
             self._t("report_customer_count", chat_id, customers=len(ranked)),
         ]
-        if len(ranked) > len(top):
-            footer.append(self._t("report_top_shown", chat_id, shown=len(top)))
+        if overall.amount > 0:
+            top_amount = sum((t.amount for t in top), Decimal("0"))
+            percent = top_amount * 100 / overall.amount
+            footer.append(self._t("report_top_share", chat_id, shown=len(top), amount=top_amount, percent=percent))
         if any(name.startswith(DELETED_MARK) for name in names):
             footer.append(self._t("report_deleted_customer", chat_id, mark=DELETED_MARK))
 
