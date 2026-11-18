@@ -133,11 +133,15 @@ class TestListOffersForTheAdmin:
         assert text.count(":\n") == 1
         assert offer_ids(text) == ids
 
-    @pytest.mark.parametrize(("word", "ids"), [("completed", [6]), ("inactive", [7])])
-    def test_completed_and_inactive_list_only_that_status(self, env, word, ids):
+    @pytest.mark.parametrize(
+        ("word", "title", "ids"), [("completed", "✅ VOLTOOID:", [6]), ("inactive", "❌ INACTIEF:", [7])]
+    )
+    def test_completed_and_inactive_have_the_status_as_title(self, env, word, title, ids):
         env.handler.handle_list_offers(CHAT, ADMIN_ID, [word])
 
-        assert offer_ids(sent(env)) == ids
+        text = sent(env)
+        assert text.startswith(title + "\n\n")
+        assert offer_ids(text) == ids
 
     @pytest.mark.parametrize("word", ["soldout", "sold_out", "SOLD_OUT"])
     def test_sold_out_in_any_spelling(self, env, word):

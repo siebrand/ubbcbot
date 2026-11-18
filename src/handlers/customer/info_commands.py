@@ -385,6 +385,10 @@ class InfoCommands(BaseHandler):
                     message += self._t("import_offers", user_id)
                 elif show_archived:
                     message += self._t("archived_offers", user_id)
+                elif show_completed:
+                    message += f"✅ {self._t('status_completed', user_id).upper()}:"
+                elif show_inactive:
+                    message += f"❌ {self._t('status_inactive', user_id).upper()}:"
 
                 if total_pages > 1:
                     message += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
