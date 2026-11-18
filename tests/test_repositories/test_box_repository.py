@@ -71,6 +71,40 @@ class TestBoxRepository:
         assert "box-6" in box_ids
         assert "box-7" in box_ids
 
+    def test_get_boxes_by_status(self, box_repo):
+        box_repo.create_box(Box(box_id="s-1", offer_id=1, status="ordered", current_quantity=12))
+        box_repo.create_box(Box(box_id="s-2", offer_id=2, status="open"))
+        box_repo.create_box(Box(box_id="s-3", offer_id=3, status="ordered"))
+
+        boxes = box_repo.get_boxes_by_status("ordered")
+
+        assert sorted(b.box_id for b in boxes) == ["s-1", "s-3"]
+        assert all(isinstance(b.current_quantity, int) for b in boxes)
+
+    def test_get_boxes_by_status_on_error(self, box_repo):
+        with patch.object(box_repo.table, "scan", side_effect=RuntimeError("boom")):
+            assert box_repo.get_boxes_by_status("ordered") == []
+
+    @pytest.mark.parametrize(
+        ("read", "method"),
+        [
+            ("scan", lambda repo: repo.get_all_boxes()),
+            ("scan", lambda repo: repo.get_boxes_by_status("ordered")),
+            ("query", lambda repo: repo.get_boxes_by_offer(7)),
+        ],
+    )
+    def test_every_page_is_read(self, box_repo, read, method):
+        """DynamoDB returns at most 1 MB per call. One item per call forces a page per box."""
+        for i in range(5):
+            box_repo.create_box(Box(box_id=f"p-{i}", offer_id=7, status="ordered"))
+        original = getattr(box_repo.table, read)
+
+        with patch.object(box_repo.table, read, side_effect=lambda **kw: original(Limit=1, **kw)) as paged:
+            boxes = method(box_repo)
+
+        assert sorted(b.box_id for b in boxes) == [f"p-{i}" for i in range(5)]
+        assert paged.call_count >= 5
+
     def test_update_box(self, box_repo):
         box = Box(box_id="box-8", offer_id=7, current_quantity=0, max_capacity=12, status="open")
         box_repo.create_box(box)

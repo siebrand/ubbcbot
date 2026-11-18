@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr, Key
 
 from models.entities import Box
 from repositories.base_repository import BaseRepository
@@ -27,27 +27,25 @@ class BoxRepository(BaseRepository):
         try:
             response = self.table.get_item(Key={"box_id": box_id})
             if "Item" in response:
-                item = response["Item"]
-                if "current_quantity" in item:
-                    item["current_quantity"] = int(item["current_quantity"])
-                if "max_capacity" in item:
-                    item["max_capacity"] = int(item["max_capacity"])
-                return Box(**item)
+                return self._item_to_box(response["Item"])
             return None
         except Exception as e:
             logger.error(f"Error getting box: {e}")
             return None
 
+    @staticmethod
+    def _item_to_box(item: dict[str, Any]) -> Box:
+        """DynamoDB returns numbers as Decimal; the quantities are plain ints"""
+        if "current_quantity" in item:
+            item["current_quantity"] = int(item["current_quantity"])
+        if "max_capacity" in item:
+            item["max_capacity"] = int(item["max_capacity"])
+        return Box(**item)
+
     def get_boxes_by_offer(self, offer_id: int) -> list[Box]:
         try:
-            response = self.table.query(IndexName="offer-index", KeyConditionExpression=Key("offer_id").eq(offer_id))
-            boxes = []
-            for item in response.get("Items", []):
-                if "current_quantity" in item:
-                    item["current_quantity"] = int(item["current_quantity"])
-                if "max_capacity" in item:
-                    item["max_capacity"] = int(item["max_capacity"])
-                boxes.append(Box(**item))
+            items = self._query_items(IndexName="offer-index", KeyConditionExpression=Key("offer_id").eq(offer_id))
+            boxes = [self._item_to_box(item) for item in items]
             # Always return boxes in creation-time ascending order.
             # created_at is stored as an ISO 8601 string (lexicographically
             # sortable); normalize to string so a mix of str/datetime is safe.
@@ -67,18 +65,22 @@ class BoxRepository(BaseRepository):
     def get_all_boxes(self) -> list[Box]:
         """Scan all boxes with minimal fields"""
         try:
-            response = self.table.scan(
+            items = self._scan_items(
                 ProjectionExpression="box_id, offer_id, current_quantity, max_capacity, #status",
                 ExpressionAttributeNames={"#status": "status"},
             )
-            boxes = []
-            for item in response.get("Items", []):
-                item["current_quantity"] = int(item["current_quantity"])
-                item["max_capacity"] = int(item["max_capacity"])
-                boxes.append(Box(**item))
-            return boxes
+            return [self._item_to_box(item) for item in items]
         except Exception as e:
             logger.error(f"Error getting all boxes: {e}")
+            return []
+
+    def get_boxes_by_status(self, status: str) -> list[Box]:
+        """All boxes with this status. The table has no status index, so this is a (paginated) scan."""
+        try:
+            items = self._scan_items(FilterExpression=Attr("status").eq(status))
+            return [self._item_to_box(item) for item in items]
+        except Exception as e:
+            logger.error(f"Error getting {status} boxes: {e}")
             return []
 
     def increment_box_quantity(self, box_id: str, delta: int, max_capacity: int) -> bool:

@@ -138,6 +138,9 @@ The repositories exist and do the real work. The facade still does some of it to
    `get_offers_by_supplier_and_box_status` (`database.py:417`, `:451`) call `boxes_table.scan(...)` once and don't
    follow `LastEvaluatedKey`. Once the boxes table is larger than 1 MB, the delivery workflow misses suppliers and
    offers, with no error. The order-history queries had the same bug and were fixed recently (commit `99f05d4`).
+   `BoxRepository.get_all_boxes` (used by the offer list) and `get_boxes_by_offer` had it too. **Fixed** in step 1:
+   `BaseRepository` has `_scan_items`/`_query_items` that follow every page, and the facade uses
+   `BoxRepository.get_boxes_by_status`.
 2. **Maintainability: eleven legacy table handles.** `__init__` still opens a handle for every table (`:46-57`)
    "to be removed". Only `boxes_table` (the two scans above) and `offers_table` (`delete_offer`, which also bypasses
    `OfferRepository` and its cache handling) are used.

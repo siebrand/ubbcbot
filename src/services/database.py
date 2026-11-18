@@ -413,17 +413,8 @@ class DynamoDBService:
     def get_suppliers_with_boxes_by_status(self, box_status: str) -> list[Supplier]:
         """Get suppliers that have boxes with specified status"""
         try:
-            # Get all boxes with specified status
-            response = self.boxes_table.scan(
-                FilterExpression="#status = :status",
-                ExpressionAttributeNames={"#status": "status"},
-                ExpressionAttributeValues={":status": box_status},
-            )
-
-            # Get unique offer IDs from boxes
-            offer_ids = set()
-            for item in response.get("Items", []):
-                offer_ids.add(item["offer_id"])
+            # Get the offer IDs of the boxes with the specified status
+            offer_ids = {box.offer_id for box in self.box_repo.get_boxes_by_status(box_status)}
 
             # Get supplier names from offers
             supplier_names = set()
@@ -447,17 +438,8 @@ class DynamoDBService:
     def get_offers_by_supplier_and_box_status(self, supplier_name: str, box_status: str) -> list[Offer]:
         """Get offers for a supplier that have boxes with specified status"""
         try:
-            # Get all boxes with specified status
-            response = self.boxes_table.scan(
-                FilterExpression="#status = :status",
-                ExpressionAttributeNames={"#status": "status"},
-                ExpressionAttributeValues={":status": box_status},
-            )
-
-            # Get offer IDs from boxes
-            offer_ids = set()
-            for item in response.get("Items", []):
-                offer_ids.add(item["offer_id"])
+            # Get the offer IDs of the boxes with the specified status
+            offer_ids = {box.offer_id for box in self.box_repo.get_boxes_by_status(box_status)}
 
             # Get offers for this supplier that have boxes with specified status
             offers = []
