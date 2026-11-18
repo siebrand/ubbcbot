@@ -881,20 +881,15 @@ class CallbackHandler:
         force_group: bool = False,
     ) -> dict:
         """Send message helper for EditContextManager"""
-        return self.base_handler._send_message(chat_id, text, parse_mode, reply_markup, force_group)
+        return self.base_handler._send_message(
+            chat_id, text, parse_mode=parse_mode, reply_markup=reply_markup, force_group=force_group
+        )
 
     def _request_cancellation_reason(self, chat_id: int, order_id: str) -> dict[str, Any]:
         """Request cancellation reason from admin"""
-        from models.entities import EditContext
-
-        # Store edit context for cancellation reason
-        context = EditContext(chat_id=chat_id, edit_type="cancel_order_reason", entity_id=order_id)
-        self.db.create_edit_context(context)
-
-        self._send_message(
-            chat_id,
-            self._t("enter_cancellation_reason"),
-            reply_markup={"force_reply": True, "input_field_placeholder": "Enter reason"},
+        self.edit_context_manager.store_edit_context(chat_id, "cancel_order_reason", order_id)
+        self.edit_context_manager.prompt_for_text_input(
+            chat_id, "enter_cancellation_reason", self._t("placeholder_reason", chat_id)
         )
         return {"status": "awaiting_reason_input"}
 

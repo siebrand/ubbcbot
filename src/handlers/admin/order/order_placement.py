@@ -275,6 +275,6 @@ class OrderPlacement(BaseOrderHandler):
         self._send_message(
             chat_id,
             self._t("enter_quantity_1_to_10", chat_id),
-            reply_markup={"force_reply": True, "input_field_placeholder": "Enter quantity"},
+            reply_markup={"force_reply": True, "input_field_placeholder": self._t("placeholder_quantity", chat_id)},
         )
         return {"status": "awaiting_quantity_input"}

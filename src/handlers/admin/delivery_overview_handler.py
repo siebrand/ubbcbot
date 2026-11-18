@@ -75,9 +75,8 @@ class DeliveryOverviewHandler(BaseHandler):
         context_data = {"customers_data": customers_data, "current_batch": current_batch}
         self._store_context(chat_id, "payment_link_input", json.dumps(context_data))
 
-        self._send_message(
-            chat_id, message, reply_markup={"force_reply": True, "input_field_placeholder": "Enter payment link"}
-        )
+        placeholder = self._t("placeholder_payment_link", chat_id)
+        self._send_message(chat_id, message, reply_markup={"force_reply": True, "input_field_placeholder": placeholder})
         return {"status": "awaiting_payment_link"}
 
     def handle_payment_link_input(self, chat_id: int, payment_link: str, batch_str: str) -> dict[str, Any]:

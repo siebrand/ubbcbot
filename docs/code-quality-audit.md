@@ -87,7 +87,8 @@ The problems are in how routes are declared.
 4. **Bug: a hard-coded English placeholder, and a context created behind the manager's back.**
    `_request_cancellation_reason` (`callback_handler.py:886-899`) creates an `EditContext` directly instead of through
    `EditContextManager`, and sets `input_field_placeholder` to `"Enter reason"`, which doesn't follow the translation
-   convention.
+   convention. **Fixed** in step 1, together with the same hard-coded hints "Enter payment link"
+   (`delivery_overview_handler.py`) and "Enter quantity" (`order_placement.py`).
 5. **Maintainability: a second `BaseHandler` just to translate and send.** `CallbackHandler` lazily builds its own
    `BaseHandler` (`:862-884`) to get `_t` and `_send_message`. Several `_t(...)` calls pass no `user_id`, for example
    `action_cancelled`.
