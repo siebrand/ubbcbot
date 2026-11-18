@@ -53,7 +53,10 @@ sync service.
 4. **Maintainability: offer-message sync is domain logic in the base class.** `sync_offer_messages`,
    `_build_offer_message`, `_edit_tracked_message`, `_sync_subscriber_messages_async` and
    `_check_offer_status_after_change` (`base_handler.py:528-642`) are about offers and notifications, not about
-   handling commands. They are in the base class only because several handlers need them.
+   handling commands. They are in the base class only because several handlers need them. **Partly done** in step 7:
+   the hand-off to the NotificationSender Lambda is `services/offer_message_sync.py`. The inline edits stay in
+   `BaseHandler` for now: the handlers, their tests and `notification_sender.py` use those methods directly, so
+   moving them is a change of its own.
 5. **Maintainability: dead and duplicated code.**
    - `DecimalEncoder` (`base_handler.py:623`) is defined, but the payload holds no `Decimal`. (Correction: the offer
      id can be a `Decimal` from DynamoDB. **Fixed** in step 7 by sending `int(offer_id)`, without an encoder.)

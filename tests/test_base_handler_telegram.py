@@ -194,6 +194,18 @@ class TestOtherCalls:
         }
 
 
+@pytest.mark.parametrize(
+    ("text", "escaped"),
+    [
+        ("<b>\"Bier\" & 'Co'</b>", "&lt;b&gt;&quot;Bier&quot; &amp; &#x27;Co&#x27;&lt;/b&gt;"),
+        ("", ""),
+        (None, ""),
+    ],
+)
+def test_escape_html(text, escaped):
+    assert handler()._escape_html(text) == escaped
+
+
 class TestBotUsername:
     def test_asked_once_and_remembered(self):
         response = answer(result={"username": "ubbc_bot"})

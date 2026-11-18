@@ -1,3 +1,4 @@
+import html
 import logging
 from typing import Any
 from urllib.parse import urlsplit
@@ -62,16 +63,8 @@ class BaseHandler:
         return user_id == self.admin_user_id
 
     def _escape_html(self, text: str) -> str:
-        """Escape HTML special characters to prevent injection"""
-        if not text:
-            return ""
-        return (
-            text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;")
-            .replace("'", "&#x27;")
-        )
+        """Escape HTML special characters to prevent injection (also quotes, for attribute values)"""
+        return html.escape(text) if text else ""
 
     def _html_customer_name(self, customer) -> str:
         """Full name of a customer, escaped for use in an HTML message (parse_mode HTML).
