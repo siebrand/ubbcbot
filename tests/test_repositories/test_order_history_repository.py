@@ -1,5 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from unittest.mock import Mock
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -75,6 +77,65 @@ class TestOrderHistoryRepository:
             "PAYMENT_RECEIVED", start_date=now - timedelta(days=1), end_date=now + timedelta(days=1)
         )
         assert recent == []
+
+    def test_get_events_by_type_follows_pagination(self, history_repo):
+        """A result over 1 MB comes in pages; every page must be read"""
+        first = {"history_id": "h1", "customer_id": "c1", "event_type": "PAYMENT_RECEIVED", "amount": Decimal("1")}
+        second = {"history_id": "h2", "customer_id": "c2", "event_type": "PAYMENT_RECEIVED", "amount": Decimal("2")}
+        history_repo.table = Mock()
+        history_repo.table.query.side_effect = [
+            {"Items": [first], "LastEvaluatedKey": {"history_id": "h1"}},
+            {"Items": [second]},
+        ]
+
+        events = history_repo.get_events_by_type("PAYMENT_RECEIVED")
+
+        assert [e.history_id for e in events] == ["h1", "h2"]
+        assert history_repo.table.query.call_args_list[1].kwargs["ExclusiveStartKey"] == {"history_id": "h1"}
+
+    def test_get_events_by_type_returns_empty_list_on_error(self, history_repo):
+        history_repo.table = Mock()
+        history_repo.table.query.side_effect = RuntimeError("boom")
+
+        assert history_repo.get_events_by_type("PAYMENT_RECEIVED") == []
+
+    def test_get_events_by_type_strict_raises_on_error(self, history_repo):
+        history_repo.table = Mock()
+        history_repo.table.query.side_effect = RuntimeError("boom")
+
+        with pytest.raises(RuntimeError):
+            history_repo.get_events_by_type("PAYMENT_RECEIVED", strict=True)
+
+    def test_get_events_by_type_compares_non_utc_bounds_in_utc(self, history_repo):
+        """A bound in Amsterdam time is converted to UTC, the zone changed_at is stored in"""
+        moment = datetime(2026, 3, 1, 23, 30, tzinfo=UTC)  # 2 March 00:30 in Amsterdam
+        history_repo.create_order_history(
+            OrderHistory(customer_id="c", event_type="PAYMENT_RECEIVED", changed_at=moment, amount=Decimal("1"))
+        )
+        amsterdam = ZoneInfo("Europe/Amsterdam")
+
+        march_2 = history_repo.get_events_by_type(
+            "PAYMENT_RECEIVED",
+            datetime(2026, 3, 2, tzinfo=amsterdam),
+            datetime(2026, 3, 2, 23, 59, 59, 999999, tzinfo=amsterdam),
+        )
+
+        assert len(march_2) == 1
+
+    def test_get_events_by_customer_limits_to_the_range(self, history_repo):
+        now = datetime.now(UTC)
+        for days_ago in (1, 40):
+            history_repo.create_order_history(
+                OrderHistory(
+                    customer_id="cust-r",
+                    event_type="PAYMENT_RECEIVED",
+                    changed_at=now - timedelta(days=days_ago),
+                    amount=Decimal("3.00"),
+                )
+            )
+
+        assert len(history_repo.get_events_by_customer("cust-r")) == 2
+        assert len(history_repo.get_events_by_customer("cust-r", now - timedelta(days=7), now)) == 1
 
     def test_item_to_history_tolerates_legacy_attributes(self, history_repo):
         """A legacy row carrying dropped attributes still deserializes cleanly."""

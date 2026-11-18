@@ -598,12 +598,18 @@ class DynamoDBService:
         return self.order_history_repo.create_order_history(history)
 
     def get_events_by_type(
-        self, event_type: str, start_date: datetime | None = None, end_date: datetime | None = None
+        self,
+        event_type: str,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        strict: bool = False,
     ) -> list:
-        return self.order_history_repo.get_events_by_type(event_type, start_date, end_date)
+        return self.order_history_repo.get_events_by_type(event_type, start_date, end_date, strict=strict)
 
-    def get_order_history_by_customer(self, customer_id: str) -> list:
-        return self.order_history_repo.get_events_by_customer(customer_id)
+    def get_order_history_by_customer(
+        self, customer_id: str, start_date: datetime | None = None, end_date: datetime | None = None
+    ) -> list:
+        return self.order_history_repo.get_events_by_customer(customer_id, start_date, end_date)
 
     # Transaction methods for sensitive order operations
     def cancel_order(self, order_id: str, admin_id: int, reason: str) -> bool:
