@@ -10,6 +10,7 @@ from handlers.admin.import_handler import ImportHandler
 from handlers.admin.labeling_commands import LabelingCommands
 from handlers.admin.offer_commands import OfferCommands
 from handlers.admin.order_commands import AdminOrderCommands
+from handlers.admin.report_commands import ReportCommands
 
 # Import handlers
 from handlers.admin.supplier_commands import SupplierCommands
@@ -120,6 +121,7 @@ class BotService:
         )
         self.import_handler = ImportHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
         self.credit_commands = CreditCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
+        self.report_commands = ReportCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
 
         # Customer handlers
         self.customer_order_commands = CustomerOrderCommands(
@@ -156,6 +158,7 @@ class BotService:
             "credit": self.credit_commands,
             "customer_credit": self.customer_credit_commands,
             "data_export": self.data_export_commands,
+            "report": self.report_commands,
         }
 
         # Inject handlers into offer_commands for cross-handler calls
@@ -427,6 +430,8 @@ class BotService:
                 # Return to admin users menu
                 return self.admin_commands_handler.handle_admin_users(chat_id, user_id)
             return result
+        elif edit_type == "report_customer_input":
+            return self.report_commands.handle_report_customer(chat_id, (text or "").split())
         elif edit_type == "order_for_quantity_input":
             # Parse customer_id and offer_id from entity_id
             parts = entity_id.split("_", 1)

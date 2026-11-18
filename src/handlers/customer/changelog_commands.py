@@ -8,6 +8,15 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2026-11-18",
+                "content": """<b>Admin-Facing Updates</b>
+• <b>New Purchase Reports</b> - <code>/report_top_customers</code> ranks customers by amount paid, <code>/report_sales_by_period</code> shows orders (or payments) per day, week or month with a bar per period, and <code>/report_customer</code> shows what one customer paid per month and the amount of their orders not paid yet. Each takes a year, a start date or two dates (default: this year), and the new Reports section of <code>/admin</code> has buttons for this year
+• <b>Names in Reports</b> - Customers appear as "Firstname L", like in the group; a deleted customer shows as ✗ with the short customer ID
+
+<b>Behind the Scenes</b>
+• <b>Complete History Reads</b> - Reading the purchase history now follows every page, so long periods are never cut off""",
+            },
+            {
                 "title": "Up to 2026-11-15",
                 "content": """<b>User-Facing Updates</b>
 • <b>New /my_data Command</b> - Download all the data the bot has about you as a zip with JSON files (profile, orders, credit, purchase history and a README). Available once every 30 days, sent to your private chat and removed again after about an hour, so save it first

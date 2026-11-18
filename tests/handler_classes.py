@@ -7,6 +7,7 @@ from handlers.admin.import_handler import ImportHandler
 from handlers.admin.labeling_commands import LabelingCommands
 from handlers.admin.offer_commands import OfferCommands
 from handlers.admin.order_commands import AdminOrderCommands
+from handlers.admin.report_commands import ReportCommands
 from handlers.admin.supplier_commands import SupplierCommands
 from handlers.admin.test_commands import TestCommands as SetupDataCommands
 from handlers.admin.user_commands import UserCommands
@@ -32,6 +33,7 @@ HANDLER_CLASSES = {
     "info": InfoCommands,
     "labeling": LabelingCommands,
     "offer": OfferCommands,
+    "report": ReportCommands,
     "supplier": SupplierCommands,
     "test": SetupDataCommands,
     "user": UserCommands,

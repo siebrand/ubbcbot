@@ -189,4 +189,7 @@ COMMAND_ROUTES: dict[str, Route] = {
     "/audit_orders": admin_command("admin_order", "handle_audit_orders", private),
     "/admin": admin_command("admin_commands", "handle_admin", private_user),
     "/credit": admin_command("credit", "handle_credit", private_rest),
+    "/report_top_customers": admin_command("report", "handle_report_top_customers", private_rest),
+    "/report_sales_by_period": admin_command("report", "handle_report_sales_by_period", private_rest),
+    "/report_customer": admin_command("report", "handle_report_customer", private_rest),
 }

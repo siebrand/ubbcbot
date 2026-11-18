@@ -213,6 +213,12 @@ class CallbackHandler:
             ),
         )
         self.router.register(
+            r"^rptc_([^_]+)_(.+)$",  # /report_customer: rptc_<period code>_<customer_id>
+            lambda match, ctx: self.handlers["report"].handle_report_customer_select(
+                ctx["chat_id"], match.group(2), match.group(1)
+            ),
+        )
+        self.router.register(
             r"^export_user_data_select_(.+)$",
             lambda match, ctx: self.handlers["data_export"].handle_export_user_data_select(
                 ctx["chat_id"], match.group(1)
@@ -446,6 +452,7 @@ class CallbackHandler:
             "orders": panel("handle_admin_orders"),
             "users": panel("handle_admin_users"),
             "system": panel("handle_admin_system"),
+            "reports": panel("handle_admin_reports"),
             "close": lambda ctx: self._send_message(ctx["chat_id"], self._t("close_panel")),
             # Legacy names of sections that were merged
             "delivery": panel("handle_admin_workflow"),
@@ -500,6 +507,19 @@ class CallbackHandler:
             "audit_orders": lambda chat, user: self.handlers["admin_order"].handle_audit_orders(chat),
             "import_orders": lambda chat, user: self.handlers["import"].handle_import_orders(chat, user),
             "finalize_import": lambda chat, user: self.handlers["import"].handle_finalize_import(chat, []),
+            "report_top_customers": lambda chat, user: self.handlers["report"].handle_report_top_customers(chat, []),
+            "report_sales_month": lambda chat, user: self.handlers["report"].handle_report_sales_by_period(
+                chat, ["month"]
+            ),
+            "report_sales_week": lambda chat, user: self.handlers["report"].handle_report_sales_by_period(
+                chat, ["week"]
+            ),
+            "report_paid_month": lambda chat, user: self.handlers["report"].handle_report_sales_by_period(
+                chat, ["month", "paid"]
+            ),
+            "report_customer": lambda chat, user: self.edit_context_manager.handle_input_prompts(
+                chat, "report_customer_input"
+            ),
         }
         for action, run in commands.items():
             self.router.register(rf"^cmd[:_]{action}$", lambda match, ctx, run=run: run(ctx["chat_id"], ctx["user_id"]))

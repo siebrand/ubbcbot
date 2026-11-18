@@ -226,6 +226,9 @@ has every admin command.
 - `/delete_cancelled_orders` - Delete all cancelled orders from database
 - `/delete_completed_orders` - Delete all completed orders from database
 - `/audit_orders` - Audit orders - add update_date to orders missing it
+- `/report_top_customers [period]` - Top 10 customers by amount paid in the period (see "Purchase Reports")
+- `/report_sales_by_period [period] [day|week|month] [paid]` - Number and value of the orders placed per day, week or month (default: month); with `paid` the payments received instead
+- `/report_customer <username|customer_id> [period]` - What one customer paid per month in the period, and the amount of their orders that are not paid yet
 - `/cancel` - Cancel pending operation (e.g., text input prompts)
 
 ### Customer Commands
@@ -291,6 +294,28 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
 - **Never incomplete**: every source (orders, credit balance, credit transactions, purchase history) must be read
   successfully. A failed read fails the whole export instead of leaving that part out.
 - **Not included**: data Telegram keeps itself, technical logs (7 days) and short-lived message tracking records.
+
+### Purchase Reports
+
+- **What**: three read-only admin commands on the order history table (purchase analytics events), also as buttons for
+  the current year in the Reports section of `/admin`:
+  - `/report_top_customers` ranks customers by the sum of their `PAYMENT_RECEIVED` events (top 10, with the total and
+    the number of customers).
+  - `/report_sales_by_period` counts `ORDER_CREATED` events (or `PAYMENT_RECEIVED` with `paid`) and sums their amount
+    per day, ISO week or month, with a bar per period and the best period.
+  - `/report_customer` shows a customer's payments per month, and the open order amount: the sum of `total_price` of
+    their orders in the orders table that are not `completed` or `cancelled`. That amount is the current state, not
+    limited to the period; the history table cannot show it, because cancellations are not recorded there.
+- **Period**: `YYYY` is that calendar year, `YYYY-MM-DD` runs from that date until now, `YYYY-MM-DD YYYY-MM-DD` from the
+  earlier through the later date (both whole days, in any order). Without a period: this year until now. A period
+  never runs past now. Days, weeks and months are in Dutch time (Europe/Amsterdam); the stored times are UTC.
+- **Names**: the history table holds only the pseudonymous `customer_id`. Names are looked up when the report is shown,
+  in the public format of the group notification ("Firstname L", else the username), never with the full last name. A
+  customer whose record was deleted shows as `✗` with the first 8 characters of the customer ID.
+- **Indexes**: the reports use the existing `event-time-index` (event type and time) and `customer-index` (customer
+  and time) of the order history table, and the `customer-index` of the orders table. No table change is needed.
+- **Long reports** (for example per day over a year) are split over several messages. Periods without sales are shown
+  as a dash, except when there would be more than 62 rows; then only the periods with sales are listed.
 
 ### Export Expiry
 

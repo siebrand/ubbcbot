@@ -76,7 +76,7 @@ class InfoCommands(BaseHandler):
             # Show all available sections in separate messages
             sections = ["general", "orders"]
             if self._is_admin(user_id):
-                sections.extend(["suppliers", "offers", "users", "delivery", "import", "system"])
+                sections.extend(["suppliers", "offers", "users", "delivery", "import", "system", "reports"])
 
             for sect in sections:
                 message = self._get_section_help(sect)
@@ -93,6 +93,7 @@ class InfoCommands(BaseHandler):
             "delivery",
             "import",
             "system",
+            "reports",
         ]:
             if section in [
                 "suppliers",
@@ -101,6 +102,7 @@ class InfoCommands(BaseHandler):
                 "delivery",
                 "import",
                 "system",
+                "reports",
             ] and not self._is_admin(user_id):
                 message = self._t("admin_only_section")
             else:
@@ -109,7 +111,7 @@ class InfoCommands(BaseHandler):
         else:
             available_sections = ["general", "orders", "all"]
             if self._is_admin(user_id):
-                available_sections.extend(["suppliers", "offers", "users", "delivery", "import", "system"])
+                available_sections.extend(["suppliers", "offers", "users", "delivery", "import", "system", "reports"])
 
             sections_text = ", ".join(available_sections)
             message = self._t("unknown_section", user_id, section=section, sections=sections_text)
@@ -135,6 +137,8 @@ class InfoCommands(BaseHandler):
             return self._t("help_import")
         elif section == "system":
             return self._t("help_system")
+        elif section == "reports":
+            return self._t("help_reports")
         return ""
 
     def _format_offer_line(self, offer, status_emoji, user_id, total_ordered=None, total_capacity=None, is_draft=False):

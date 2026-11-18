@@ -26,6 +26,7 @@ class AdminCommandsHandler(BaseHandler):
                 ],
                 # Additional Categories
                 [
+                    {"text": self._t("admin_reports", user_id), "callback_data": "admin:reports"},
                     {"text": self._t("admin_system", user_id), "callback_data": "admin:system"},
                 ],
                 # Close
@@ -138,6 +139,26 @@ class AdminCommandsHandler(BaseHandler):
                     {"text": self._t("approve_user_btn", user_id), "callback_data": "cmd:approve_user"},
                     {"text": self._t("user_status_btn", user_id), "callback_data": "cmd:user_status"},
                 ],
+                [{"text": self._t("back_to_admin", user_id), "callback_data": "admin:main"}],
+            ]
+        }
+
+        self._send_message(chat_id, message, reply_markup=keyboard)
+        return {"status": "success"}
+
+    def handle_admin_reports(self, chat_id: int, user_id: int) -> dict[str, Any]:
+        """Show the purchase reports (this year); other periods via the commands"""
+        message = self._t("admin_reports_menu", user_id)
+
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": self._t("report_top_customers_btn", user_id), "callback_data": "cmd:report_top_customers"}],
+                [
+                    {"text": self._t("report_sales_month_btn", user_id), "callback_data": "cmd:report_sales_month"},
+                    {"text": self._t("report_sales_week_btn", user_id), "callback_data": "cmd:report_sales_week"},
+                ],
+                [{"text": self._t("report_paid_month_btn", user_id), "callback_data": "cmd:report_paid_month"}],
+                [{"text": self._t("report_customer_btn", user_id), "callback_data": "cmd:report_customer"}],
                 [{"text": self._t("back_to_admin", user_id), "callback_data": "admin:main"}],
             ]
         }

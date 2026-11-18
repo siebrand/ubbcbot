@@ -40,6 +40,7 @@ HANDLER_KEYS = (
     "info",
     "labeling",
     "offer",
+    "report",
     "supplier",
     "test",
     "user",
@@ -204,6 +205,7 @@ ADMIN_PANEL = [
     ("admin:orders", C("admin_commands", call.handle_admin_orders(CHAT, ADMIN_ID))),
     ("admin:users", C("admin_commands", call.handle_admin_users(CHAT, ADMIN_ID))),
     ("admin:system", C("admin_commands", call.handle_admin_system(CHAT, ADMIN_ID))),
+    ("admin:reports", C("admin_commands", call.handle_admin_reports(CHAT, ADMIN_ID))),
     ("admin:close", Says("close_panel")),
     ("admin:delivery", C("admin_commands", call.handle_admin_workflow(CHAT, ADMIN_ID))),  # legacy
     ("admin:import", C("admin_commands", call.handle_admin_offers(CHAT, ADMIN_ID))),  # legacy
@@ -247,6 +249,15 @@ CMD = [
     ("cmd:audit_orders", C("admin_order", call.handle_audit_orders(CHAT))),
     ("cmd:import_orders", C("import", call.handle_import_orders(CHAT, ADMIN_ID))),
     ("cmd:finalize_import", C("import", call.handle_finalize_import(CHAT, []))),
+    ("cmd:report_top_customers", C("report", call.handle_report_top_customers(CHAT, []))),
+    ("cmd:report_sales_month", C("report", call.handle_report_sales_by_period(CHAT, ["month"]))),
+    ("cmd:report_sales_week", C("report", call.handle_report_sales_by_period(CHAT, ["week"]))),
+    ("cmd:report_paid_month", C("report", call.handle_report_sales_by_period(CHAT, ["month", "paid"]))),
+    ("cmd:report_customer", Prompt("report_customer_input")),
+    (
+        f"rptc_20260101-20261118_{CID}",
+        C("report", call.handle_report_customer_select(CHAT, CID, "20260101-20261118")),
+    ),
     ("cmd_list_pending", C("user", call.handle_list_pending(CHAT))),  # old format
     ("cmd_list_guests", C("user", call.handle_list_guests(CHAT))),  # old format
     ("cmd:nonsense", Says("unknown_callback")),

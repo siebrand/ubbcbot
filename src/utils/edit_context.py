@@ -193,6 +193,11 @@ class EditContextManager:
                 "prompt_key": "enter_username_for_status",
                 "placeholder": self._t("placeholder_username"),
             },
+            "report_customer_input": {
+                "context_type": "report_customer_input",
+                "prompt_key": "enter_customer_for_report",
+                "placeholder": self._t("placeholder_username"),
+            },
         }
 
         if prompt_type in prompt_config:

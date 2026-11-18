@@ -24,6 +24,7 @@ from handlers.admin.import_handler import ImportHandler
 from handlers.admin.labeling_commands import LabelingCommands
 from handlers.admin.offer_commands import OfferCommands
 from handlers.admin.order_commands import AdminOrderCommands
+from handlers.admin.report_commands import ReportCommands
 from handlers.admin.supplier_commands import SupplierCommands
 from handlers.admin.test_commands import TestCommands as SetupDataCommands
 from handlers.admin.user_commands import UserCommands
@@ -61,6 +62,7 @@ HANDLER_CLASSES = {
     "info": InfoCommands,
     "labeling": LabelingCommands,
     "offer": OfferCommands,
+    "report": ReportCommands,
     "supplier": SupplierCommands,
     "test": SetupDataCommands,
     "user": UserCommands,
@@ -229,6 +231,9 @@ ADMIN_COMMANDS = [
     admin_row("/audit_orders", "admin_order", "handle_audit_orders", AD),
     admin_row("/admin", "admin_commands", "handle_admin", AD, U),
     admin_row("/credit jan 5 reason", "credit", "handle_credit", AD, ARGS),
+    admin_row("/report_top_customers 2026", "report", "handle_report_top_customers", AD, ARGS),
+    admin_row("/report_sales_by_period 2026 week", "report", "handle_report_sales_by_period", AD, ARGS),
+    admin_row("/report_customer jan 2026", "report", "handle_report_customer", AD, ARGS),
 ]
 
 CORPUS = CUSTOMER_COMMANDS + ADMIN_COMMANDS
@@ -846,6 +851,7 @@ class TestEditReplyTypes:
         "order_for_input": ("admin_order_commands", "handle_create_order_for"),
         "approve_user_input": ("user_commands", "handle_approve_user"),
         "user_status_input": ("user_commands", "handle_user_status"),
+        "report_customer_input": ("report_commands", "handle_report_customer"),
         "incomplete_delivery": ("wholesale_delivery_commands", "handle_incomplete_delivery_reply"),
         "payment_link_input": ("delivery_overview_handler", "handle_payment_link_input"),
         "cancel_order_reason": ("admin_order_commands", "handle_confirm_cancel_with_reason"),
