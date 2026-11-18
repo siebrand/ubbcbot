@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 
@@ -76,3 +77,17 @@ class TestOfferRepository:
         updated = offer_repo.get_offer(offer.offer_id)
         assert len(updated.images) == 1
         assert updated.images[0] == "http://example.com/img.jpg"
+
+    def test_delete_offer_removes_it_from_the_cached_list(self, offer_repo):
+        offer_repo.create_offer(Offer(name="Kriek"))
+        offer_repo.create_offer(Offer(name="Pils"))
+        assert len(offer_repo.list_offers()) == 2  # now cached
+
+        assert offer_repo.delete_offer(1) is True
+
+        assert offer_repo.get_offer(1) is None
+        assert [o.name for o in offer_repo.list_offers()] == ["Pils"]
+
+    def test_delete_offer_on_error(self, offer_repo):
+        with patch.object(offer_repo.table, "delete_item", side_effect=RuntimeError("boom")):
+            assert offer_repo.delete_offer(1) is False

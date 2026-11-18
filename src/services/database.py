@@ -17,7 +17,6 @@ from repositories.order_repository import OrderRepository
 from repositories.processed_update_repository import ProcessedUpdateRepository
 from repositories.supplier_repository import SupplierRepository
 from repositories.system_repository import SystemRepository
-from services.offer_cache import OfferCache
 from utils.s3_url import extract_s3_key
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 class DynamoDBService:
     def __init__(self):
-        self.dynamodb = boto3.resource("dynamodb")
         self.s3 = boto3.client("s3")
         self.table_prefix = os.environ.get("DYNAMODB_TABLE_PREFIX", "ubbc-bot-test")
         self.s3_bucket = os.environ.get("S3_BUCKET_NAME", f"{self.table_prefix}-images")
@@ -42,35 +40,6 @@ class DynamoDBService:
         self.notification_repo = NotificationRepository()
         self.edit_context_repo = EditContextRepository()
         self.processed_update_repo = ProcessedUpdateRepository()
-
-        # Initialize tables (Legacy - to be removed)
-        self.suppliers_table = self.dynamodb.Table(f"{self.table_prefix}-suppliers")
-        self.offers_table = self.dynamodb.Table(f"{self.table_prefix}-offers")
-        self.customers_table = self.dynamodb.Table(f"{self.table_prefix}-customers")
-        self.boxes_table = self.dynamodb.Table(f"{self.table_prefix}-boxes")
-        self.orders_table = self.dynamodb.Table(f"{self.table_prefix}-orders")
-        self.counters_table = self.dynamodb.Table(f"{self.table_prefix}-counters")
-        self.notifications_table = self.dynamodb.Table(f"{self.table_prefix}-notifications")
-        self.edit_contexts_table = self.dynamodb.Table(f"{self.table_prefix}-edit-contexts")
-        self.order_history_table = self.dynamodb.Table(f"{self.table_prefix}-order-history")
-        self.customer_credits_table = self.dynamodb.Table(f"{self.table_prefix}-customer-credits")
-        self.credit_transactions_table = self.dynamodb.Table(f"{self.table_prefix}-credit-transactions")
-
-    def _serialize_datetime(self, obj):
-        """Convert datetime objects to ISO strings"""
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        return obj
-
-    def _prepare_item(self, item: dict[str, Any]) -> dict[str, Any]:
-        """Prepare item for DynamoDB storage"""
-        prepared = {}
-        for key, value in item.items():
-            if isinstance(value, datetime):
-                prepared[key] = value.isoformat()
-            elif value is not None:
-                prepared[key] = value
-        return prepared
 
     def _get_next_offer_id(self) -> int:
         """Get next auto-incrementing offer ID"""
@@ -550,16 +519,7 @@ class DynamoDBService:
             return []
 
     def delete_offer(self, offer_id: int) -> bool:
-        try:
-            self.offers_table.delete_item(Key={"offer_id": offer_id})
-
-            # Invalidate cache
-            OfferCache.invalidate_cache()
-
-            return True
-        except Exception as e:
-            logger.error(f"Error deleting offer: {e}")
-            return False
+        return self.offer_repo.delete_offer(offer_id)
 
     def delete_offer_images(self, offer_id: int) -> bool:
         """Delete all images for an offer from S3"""

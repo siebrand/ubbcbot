@@ -130,3 +130,12 @@ class OfferRepository(BaseRepository):
         except Exception as e:
             logger.error(f"Error appending image to offer: {e}")
             return False
+
+    def delete_offer(self, offer_id: int) -> bool:
+        try:
+            self.table.delete_item(Key={"offer_id": offer_id})
+            OfferCache.invalidate_cache()
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting offer: {e}")
+            return False

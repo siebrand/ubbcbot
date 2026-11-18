@@ -190,7 +190,7 @@ class TestDeleteCustomer:
         assert deleted
         assert [o.order_id for o in db.get_orders_by_customer(customer.customer_id)] == [order.order_id]
         assert len(db.get_credit_transactions_by_customer(customer.customer_id)) == 1
-        stored = db.order_history_table.get_item(Key={"history_id": history.history_id}).get("Item")
+        stored = db.order_history_repo.table.get_item(Key={"history_id": history.history_id}).get("Item")
         assert stored is not None
         assert stored["customer_id"] == customer.customer_id
         assert "first_name" not in stored

@@ -149,11 +149,10 @@ class TestLookupsBySupplier:
         assert db.get_offers_by_supplier_and_order_status("HD", "awaiting_payment") == []
 
     def test_labeling_lists_do_not_scan_the_orders(self, db, catalogue):
-        with watching_scans(db.orders_table) as table_scan, watching_scans(db.order_repo.table) as repo_scan:
+        with watching_scans(db.order_repo.table) as repo_scan:
             db.get_suppliers_with_ready_for_labeling_offers()
             db.get_ready_for_labeling_offers_by_supplier("DK")
 
-        assert table_scan.call_count == 0
         assert repo_scan.call_count == 0
 
 
@@ -211,12 +210,11 @@ class TestBoxListsOfTheJobs:
         assert db.get_boxes_by_offer_with_ready_orders(3) == []
 
     def test_no_box_costs_a_scan_of_the_orders(self, db, boxes):
-        with watching_scans(db.orders_table) as table_scan, watching_scans(db.order_repo.table) as repo_scan:
+        with watching_scans(db.order_repo.table) as repo_scan:
             db.get_boxes_by_offer_with_ready_orders(1)
             for box_id in ("box-a", "box-b", "box-c", "box-d"):
                 db.get_orders_by_box(box_id)
 
-        assert table_scan.call_count == 0
         assert repo_scan.call_count == 0
 
 
