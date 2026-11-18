@@ -1,11 +1,11 @@
 import logging
-import os
 from typing import Any
 from urllib.parse import urlsplit
 
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
 from services.export_expiry import ExportExpiryService
+from services.offer_message_sync import start_subscriber_sync
 from services.telegram_client import TelegramClient
 from services.translator import Translator, load_translations
 from utils.pagination import PaginationUtils
@@ -484,34 +484,4 @@ class BaseHandler:
 
     def _sync_subscriber_messages_async(self, offer_id: int, cancelled: bool = False):
         """Hand off large subscriber-edit batches to the NotificationSender Lambda."""
-        import json
-        from decimal import Decimal
-
-        import boto3
-
-        try:
-            lambda_client = boto3.client("lambda")
-            function_name = os.environ.get(
-                "NOTIFICATION_LAMBDA_NAME", f"ubbc-bot-{os.environ.get('ENVIRONMENT', 'test')}-notification-sender"
-            )
-
-            class DecimalEncoder(json.JSONEncoder):
-                def default(self, obj):
-                    if isinstance(obj, Decimal):
-                        return float(obj)
-                    return super().default(obj)
-
-            payload = {
-                "action": "sync_offer_messages",
-                "offer_id": offer_id,
-                "cancelled": cancelled,
-                "environment": os.environ.get("ENVIRONMENT", "test"),
-            }
-            lambda_client.invoke(
-                FunctionName=function_name,
-                InvocationType="Event",
-                Payload=json.dumps(payload, cls=DecimalEncoder),
-            )
-            logger.info(f"Async subscriber-message sync invoked for offer {offer_id}")
-        except Exception as e:
-            logger.error(f"Failed to invoke async subscriber-message sync for offer {offer_id}: {e}")
+        start_subscriber_sync(offer_id, cancelled, self.environment)

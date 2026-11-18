@@ -55,7 +55,8 @@ sync service.
    `_check_offer_status_after_change` (`base_handler.py:528-642`) are about offers and notifications, not about
    handling commands. They are in the base class only because several handlers need them.
 5. **Maintainability: dead and duplicated code.**
-   - `DecimalEncoder` (`base_handler.py:623`) is defined, but the payload holds no `Decimal`.
+   - `DecimalEncoder` (`base_handler.py:623`) is defined, but the payload holds no `Decimal`. (Correction: the offer
+     id can be a `Decimal` from DynamoDB. **Fixed** in step 7 by sending `int(offer_id)`, without an encoder.)
    - `json`, `os` and `boto3` are imported again inside `_sync_subscriber_messages_async`.
    - `_escape_html` reimplements `html.escape`.
    - `_send_message_simple`, `_send_document`, `_build_pagination_keyboard` and `_paginate_list` are one-line wrappers
@@ -63,7 +64,7 @@ sync service.
 6. **Risk: the Lambda name comes from the environment, not from the handler.**
    `_sync_subscriber_messages_async` reads `ENVIRONMENT` from `os.environ` (`base_handler.py:619-633`), while the
    handler has `self.environment`. That's fine in Lambda, but it is a second source of truth, and in tests it
-   silently points at `test`.
+   silently points at `test`. **Fixed** in step 7.
 7. **Risk: a presigned URL is logged in the test environment.** `_send_photo` logs the first 150 characters of the
    photo URL (`base_handler.py:453`), which for S3 images includes the signature. **Fixed**: only the host is logged.
 
