@@ -1,0 +1,98 @@
+"""The Bot API transport: URL, token, timeout, error handling and what a response says."""
+
+import logging
+from unittest.mock import Mock, patch
+
+import pytest
+import requests
+
+from services.telegram_client import TIMEOUT_SECONDS, TelegramClient, TelegramResponse
+
+TOKEN = "1234567890:AAH-abcdefghijklmnopqrstuvwxyz_0123"
+
+
+def answer(status=200, json=None, text=""):
+    response = Mock(status_code=status, text=text)
+    response.json.return_value = json if json is not None else {"ok": True, "result": True}
+    return response
+
+
+@pytest.fixture
+def post():
+    with patch("services.telegram_client.requests.post") as post:
+        yield post
+
+
+class TestCall:
+    def test_posts_json_to_the_method_with_a_timeout(self, post):
+        post.return_value = answer(json={"ok": True, "result": {"message_id": 7}})
+
+        response = TelegramClient(TOKEN).call("sendMessage", {"chat_id": 1, "text": "hoi"})
+
+        post.assert_called_once_with(
+            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+            json={"chat_id": 1, "text": "hoi"},
+            timeout=TIMEOUT_SECONDS,
+        )
+        assert response == TelegramResponse(ok=True, status_code=200, body="", result={"message_id": 7})
+        assert response.message_id == 7
+
+    def test_files_are_sent_as_a_form(self, post):
+        post.return_value = answer()
+        files = {"document": ("a.csv", b"x", "text/csv")}
+
+        TelegramClient(TOKEN).call("sendDocument", {"chat_id": 1}, files=files)
+
+        assert post.call_args.kwargs == {"data": {"chat_id": 1}, "files": files, "timeout": TIMEOUT_SECONDS}
+
+    def test_get_sends_no_body(self):
+        with patch(
+            "services.telegram_client.requests.get", return_value=answer(json={"result": {"username": "b"}})
+        ) as get:
+            response = TelegramClient(TOKEN).call("getMe", get=True)
+
+        get.assert_called_once_with(f"https://api.telegram.org/bot{TOKEN}/getMe", timeout=TIMEOUT_SECONDS)
+        assert response.result == {"username": "b"}
+
+    def test_without_a_token_nothing_is_sent(self, post, caplog):
+        with caplog.at_level(logging.ERROR):
+            response = TelegramClient("").call("sendMessage", {})
+
+        post.assert_not_called()
+        assert response == TelegramResponse(ok=False)
+        assert "Telegram token is empty" in caplog.text
+
+    def test_an_error_answer_keeps_the_status_and_description(self, post):
+        post.return_value = answer(400, text='{"ok":false,"description":"Bad Request: chat not found"}')
+
+        response = TelegramClient(TOKEN).call("sendMessage", {})
+
+        assert (response.ok, response.status_code) == (False, 400)
+        assert response.says("CHAT NOT FOUND", "something else")
+        assert not response.says("message is not modified")
+        assert response.message_id is None
+
+    def test_a_network_error_is_a_failed_response_and_the_token_is_not_logged(self, post, caplog):
+        post.side_effect = requests.ConnectionError(f"Max retries exceeded with url: /bot{TOKEN}/sendMessage")
+
+        with caplog.at_level(logging.ERROR):
+            response = TelegramClient(TOKEN).call("sendMessage", {})
+
+        assert response == TelegramResponse(ok=False)
+        assert "sendMessage failed: ConnectionError" in caplog.text
+        assert TOKEN not in caplog.text
+
+    def test_a_200_without_json_has_no_result(self, post):
+        response = answer()
+        response.json.side_effect = ValueError("not json")
+        post.return_value = response
+
+        assert TelegramClient(TOKEN).call("deleteMessage", {}) == TelegramResponse(ok=True, status_code=200)
+
+    def test_a_list_result_has_no_single_message_id(self, post):
+        post.return_value = answer(json={"result": [{"message_id": 1}, {"message_id": 2}]})
+
+        response = TelegramClient(TOKEN).call("sendMediaGroup", {})
+
+        assert response.result == [{"message_id": 1}, {"message_id": 2}]
+        assert response.message_id is None

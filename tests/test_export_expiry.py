@@ -212,7 +212,7 @@ class TestTelegramHelpers:
         return BaseHandler(Mock(), ADMIN_ID, "test", "token")
 
     def test_delete_success(self, handler):
-        with patch("handlers.base_handler.requests.post", return_value=_response(200)):
+        with patch("services.telegram_client.requests.post", return_value=_response(200)):
             assert handler._delete_message_result(1, 2) == OK
 
     @pytest.mark.parametrize(
@@ -224,33 +224,33 @@ class TestTelegramHelpers:
         ],
     )
     def test_delete_of_a_message_that_is_gone_is_final(self, handler, body):
-        with patch("handlers.base_handler.requests.post", return_value=_response(400, body)):
+        with patch("services.telegram_client.requests.post", return_value=_response(400, body)):
             assert handler._delete_message_result(1, 2) == GONE
 
     @pytest.mark.parametrize("status", [429, 500, 502])
     def test_server_side_errors_are_retryable(self, handler, status):
-        with patch("handlers.base_handler.requests.post", return_value=_response(status, "try later")):
+        with patch("services.telegram_client.requests.post", return_value=_response(status, "try later")):
             assert handler._delete_message_result(1, 2) == TRANSIENT
 
     def test_network_errors_are_retryable(self, handler):
-        with patch("handlers.base_handler.requests.post", side_effect=OSError("down")):
+        with patch("services.telegram_client.requests.post", side_effect=OSError("down")):
             assert handler._delete_message_result(1, 2) == TRANSIENT
 
     def test_send_document_message_returns_the_message_id(self, handler):
-        with patch("handlers.base_handler.requests.post", return_value=_response(200)) as post:
+        with patch("services.telegram_client.requests.post", return_value=_response(200)) as post:
             result = handler._send_document_message(ADMIN_ID, "a,b", "x.csv", "caption")
 
         assert result == {"success": True, "message_id": 321}
         assert post.call_args.kwargs["data"]["caption"] == "TEST - caption"
 
     def test_send_document_message_failure(self, handler):
-        with patch("handlers.base_handler.requests.post", return_value=_response(400, "nope")):
+        with patch("services.telegram_client.requests.post", return_value=_response(400, "nope")):
             assert handler._send_document_message(ADMIN_ID, "a,b", "x.csv") == {"success": False}
 
     def test_send_document_keeps_returning_a_bool(self, handler):
-        with patch("handlers.base_handler.requests.post", return_value=_response(200)):
+        with patch("services.telegram_client.requests.post", return_value=_response(200)):
             assert handler._send_document(ADMIN_ID, "a,b", "x.csv") is True
-        with patch("handlers.base_handler.requests.post", return_value=_response(500)):
+        with patch("services.telegram_client.requests.post", return_value=_response(500)):
             assert handler._send_document(ADMIN_ID, "a,b", "x.csv") is False
 
 

@@ -347,7 +347,7 @@ class TestDataExporterLambda:
             response.json.return_value = {"result": {"message_id": 321}}
             return response
 
-        with patch("handlers.base_handler.requests.post", side_effect=post):
+        with patch("services.telegram_client.requests.post", side_effect=post):
             yield calls
 
     @pytest.fixture
@@ -424,7 +424,7 @@ class TestDataExporterLambda:
         def post(url, **kwargs):
             return MagicMock(status_code=500 if url.endswith("/sendDocument") else 200, text="err")
 
-        with patch("handlers.base_handler.requests.post", side_effect=post) as telegram_post:
+        with patch("services.telegram_client.requests.post", side_effect=post) as telegram_post:
             result = data_exporter.lambda_handler(event, None)
 
         assert result["statusCode"] == 500
@@ -586,7 +586,7 @@ class TestAdminExport:
 
         with (
             patch.object(DataExportService, "build_zip", side_effect=RuntimeError("boom")),
-            patch("handlers.base_handler.requests.post"),
+            patch("services.telegram_client.requests.post"),
         ):
             data_exporter.lambda_handler(event, None)
 
@@ -603,7 +603,7 @@ class TestAdminExport:
             response.json.return_value = {"result": {"message_id": 321}}
             return response
 
-        with patch("handlers.base_handler.requests.post", side_effect=post):
+        with patch("services.telegram_client.requests.post", side_effect=post):
             yield calls
 
 

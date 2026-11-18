@@ -24,14 +24,14 @@ class TestEditMessageText:
 
     def test_success(self):
         h = self._handler()
-        with patch("handlers.base_handler.requests.post", return_value=_resp(200)):
+        with patch("services.telegram_client.requests.post", return_value=_resp(200)):
             result = h._edit_message_text(123, 456, "hi", parse_mode="HTML")
         assert result == {"success": True, "not_found": False}
 
     def test_message_not_modified_is_success(self):
         h = self._handler()
         with patch(
-            "handlers.base_handler.requests.post",
+            "services.telegram_client.requests.post",
             return_value=_resp(400, "Bad Request: message is not modified"),
         ):
             result = h._edit_message_text(1, 2, "hi")
@@ -41,7 +41,7 @@ class TestEditMessageText:
     def test_message_not_found(self):
         h = self._handler()
         with patch(
-            "handlers.base_handler.requests.post",
+            "services.telegram_client.requests.post",
             return_value=_resp(400, "Bad Request: message to edit not found"),
         ):
             result = h._edit_message_text(1, 2, "hi")
@@ -49,7 +49,7 @@ class TestEditMessageText:
 
     def test_other_error(self):
         h = self._handler()
-        with patch("handlers.base_handler.requests.post", return_value=_resp(400, "Bad Request: something else")):
+        with patch("services.telegram_client.requests.post", return_value=_resp(400, "Bad Request: something else")):
             result = h._edit_message_text(1, 2, "hi")
         assert result == {"success": False, "not_found": False}
 
@@ -59,13 +59,13 @@ class TestEditMessageText:
 
     def test_reply_markup_omitted_when_none(self):
         h = self._handler()
-        with patch("handlers.base_handler.requests.post", return_value=_resp(200)) as post:
+        with patch("services.telegram_client.requests.post", return_value=_resp(200)) as post:
             h._edit_message_text(1, 2, "hi", reply_markup=None)
         assert "reply_markup" not in post.call_args.kwargs["json"]
 
     def test_empty_keyboard_sent_to_remove_buttons(self):
         h = self._handler()
-        with patch("handlers.base_handler.requests.post", return_value=_resp(200)) as post:
+        with patch("services.telegram_client.requests.post", return_value=_resp(200)) as post:
             h._edit_message_text(1, 2, "hi", reply_markup={"inline_keyboard": []})
         assert post.call_args.kwargs["json"]["reply_markup"] == {"inline_keyboard": []}
 

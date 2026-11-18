@@ -125,7 +125,7 @@ class TestSendMessageLogging:
         response = Mock(status_code=200)
         response.json.return_value = {"result": {"message_id": 5}}
 
-        with patch("handlers.base_handler.requests.post", return_value=response):
+        with patch("services.telegram_client.requests.post", return_value=response):
             result = handler._send_message(42, self.TEXT)
 
         assert result == {"success": True, "message_id": 5}
