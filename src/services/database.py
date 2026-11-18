@@ -222,12 +222,11 @@ class DynamoDBService:
             if not self.order_repo.update_order(order_id, updates):
                 return False
 
-            # Record a purchase analytics event only when an order is paid.
-            audit = AuditService(self)
-            new_order = self.get_order(order_id)
-
-            if new_order and "status" in updates and old_order.status != new_order.status:
-                audit.log_payment_if_completed(new_order, old_order.status, new_order.status, admin_id)
+            # Record a purchase analytics event only when an order is paid: read it back only if the status changed
+            if "status" in updates and updates["status"] != old_order.status:
+                new_order = self.get_order(order_id)
+                if new_order and old_order.status != new_order.status:
+                    AuditService(self).log_payment_if_completed(new_order, old_order.status, new_order.status, admin_id)
 
             return True
         except Exception as e:
@@ -458,43 +457,12 @@ class DynamoDBService:
 
     # Transaction methods for sensitive order operations
     def cancel_order(self, order_id: str, admin_id: int, reason: str) -> bool:
-        """Cancel an order (inventory correction handled by the status update)."""
-        try:
-            order = self.get_order(order_id)
-            if not order:
-                return False
-
-            return self.update_order(order_id, {"status": "cancelled"}, admin_id, reason)
-        except Exception as e:
-            logger.error(f"Error cancelling order: {e}")
-            return False
-
-    def adjust_order_price(self, order_id: str, new_price, admin_id: int, reason: str) -> bool:
-        """Adjust an order's total price."""
-        try:
-            from decimal import Decimal
-
-            order = self.get_order(order_id)
-            if not order:
-                return False
-
-            new_price = Decimal(str(new_price))
-            return self.update_order(order_id, {"total_price": new_price}, admin_id, reason)
-        except Exception as e:
-            logger.error(f"Error adjusting order price: {e}")
-            return False
+        """Cancel an order (inventory correction handled by the status update). False when there is no such order."""
+        return self.update_order(order_id, {"status": "cancelled"}, admin_id, reason)
 
     def mark_order_paid(self, order_id: str, admin_id: int) -> bool:
         """Mark an order as paid (records a PAYMENT_RECEIVED analytics event)."""
-        try:
-            order = self.get_order(order_id)
-            if not order:
-                return False
-
-            return self.update_order(order_id, {"status": "completed"}, admin_id, "Payment received")
-        except Exception as e:
-            logger.error(f"Error marking order paid: {e}")
-            return False
+        return self.update_order(order_id, {"status": "completed"}, admin_id, "Payment received")
 
     # Credit system operations
     def create_customer_credit(self, credit) -> bool:
