@@ -104,11 +104,12 @@ The problems are in how routes are declared.
    format lines and build a keyboard, and an unreachable `_send_message` at the end (`:571-572`). It is the
    customer-facing entry point of the bot, and it is barely tested: most of the file's 319 uncovered statements are
    here.
-2. **Bug: offer names and descriptions go into HTML messages unescaped.** `_format_offer_line` (`:144-163`) and
-   `_send_offer_view` (`:718-734`) put `offer.name` and `offer.description` straight into `parse_mode="HTML"` messages.
-   Offers are entered by the admin, so this isn't an injection risk. But a name like `Bier & Co` or a description with
-   `<` makes Telegram reject the whole message, and the offer list then doesn't appear at all. CLAUDE.md requires
-   escaping here.
+2. **Bug: offer names go into HTML messages unescaped.** `_format_offer_line` (`:144-163`) and `_send_offer_view`
+   (`:718-734`) put `offer.name` (and, in the detail view, the supplier name) straight into `parse_mode="HTML"`
+   messages. Offers are entered by the admin, so this isn't an injection risk. But a name like `Bier & Co` makes
+   Telegram reject the whole message, and the offer list then doesn't appear at all. The group announcement already
+   escapes the name. The description is different: it is HTML on purpose (Telegram formatting converted to HTML and
+   validated when the admin enters it), so it must stay unescaped. **Fixed** in step 1.
 3. **Bug: English-speaking customers get Dutch.** Of the `_t` calls in this file, 41 pass no `user_id`, so they always
    use Dutch. Most are admin texts, where Dutch is the default anyway. But `welcome_ubbc`, `help_general`,
    `help_orders`, `active_offers_customer`, `offer_not_found`, `offer_not_available`, `invalid_offer_id` and the order
@@ -179,8 +180,8 @@ routing change.
 
 ### Step 1: fix the bugs (small and independent)
 
-- Escape `offer.name` and `offer.description` in `info_commands.py`, and pass `user_id` to the customer-facing `_t`
-  calls there. Replace the hard-coded "Page" with a translation key (in `nl.json` and `en.json`).
+- Escape `offer.name` (not the description, which is HTML) in `info_commands.py`, and pass `user_id` to the
+  customer-facing `_t` calls there. Replace the hard-coded "Page" with a translation key (in `nl.json` and `en.json`).
 - Make the two box scans in `database.py` follow `LastEvaluatedKey`, or better, move them into `BoxRepository` as a
   paginated `get_boxes_by_status` (a GSI on `status`, if one exists, avoids the scan altogether).
 - Translate the "Enter reason" placeholder, and create the cancellation-reason context through

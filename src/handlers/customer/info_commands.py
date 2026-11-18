@@ -142,25 +142,16 @@ class InfoCommands(BaseHandler):
         return ""
 
     def _format_offer_line(self, offer, status_emoji, user_id, total_ordered=None, total_capacity=None, is_draft=False):
-        """Format a single offer line with consistent markup"""
+        """Format a single offer line with consistent markup. The name is plain text, like in the announcement."""
         bot_username = self._get_bot_username()
 
-        if is_draft:
-            return (
-                f"{status_emoji} <a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>"
-                f"<b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f}\n"
-            )
-        elif total_ordered is not None and total_capacity is not None:
-            return (
-                f"{status_emoji} <a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>"
-                f"<b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f} "
-                f"({total_ordered}/{total_capacity} {self._t('ordered_text', user_id)})\n"
-            )
-        else:
-            return (
-                f"{status_emoji} <a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>"
-                f"<b>{offer.offer_id}</b></a> <b>{offer.name}</b> €{offer.price_per_unit:.2f}\n"
-            )
+        line = (
+            f"{status_emoji} <a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>"
+            f"<b>{offer.offer_id}</b></a> <b>{self._escape_html(offer.name)}</b> €{offer.price_per_unit:.2f}"
+        )
+        if not is_draft and total_ordered is not None and total_capacity is not None:
+            line += f" ({total_ordered}/{total_capacity} {self._t('ordered_text', user_id)})"
+        return line + "\n"
 
     def _get_offer_capacity_info(
         self,
@@ -710,22 +701,24 @@ class InfoCommands(BaseHandler):
         if is_draft and is_admin:
             message = self._t("preview_offer_look") + "\n"
 
+        # The name is plain text; the description is HTML (validated when the admin enters it)
+        name = self._escape_html(offer.name)
         if offer.status == OfferStatus.ACTIVE.value:
             # Get availability for active offers
             total_ordered, total_capacity = self._get_offer_capacity_info(offer.offer_id, user_id)
             available = total_capacity - total_ordered
 
             message += (
-                f"<b>{offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f} "
+                f"<b>{offer.offer_id}. {name} €{offer.price_per_unit:.2f} "
                 f"({available}/{total_capacity} {self._t('available_text', user_id)})</b>\n\n"
             )
         else:
-            message += f"<b>{offer.offer_id}. {offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
+            message += f"<b>{offer.offer_id}. {name} €{offer.price_per_unit:.2f}</b>\n\n"
 
         # Show admin-only info
         if is_admin:
             message += self._t("box_size_units", size=offer.wholesale_box_size) + "\n"
-            message += self._t("supplier_name", name=offer.supplier_name) + "\n"
+            message += self._t("supplier_name", name=self._escape_html(offer.supplier_name)) + "\n"
             message += self._t("status_label", status=offer.status) + "\n"
 
         if offer.status != OfferStatus.ACTIVE.value and not is_admin:

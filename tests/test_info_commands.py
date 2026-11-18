@@ -167,6 +167,19 @@ class TestListOffersForTheAdmin:
 
         assert env.handler.handle_list_offers(CHAT, ADMIN_ID, None) == {"status": "no_offers"}
 
+    @pytest.mark.parametrize("args", [None, ["all"], ["draft"], ["soldout"], ["archived"]])
+    def test_names_are_escaped_in_every_view(self, env, args):
+        env.db.list_offers.side_effect = lambda: [
+            Offer(offer_id=status_id, name=f"Bier & Co <{status}>", status=status)
+            for status_id, status in enumerate(["draft", "active", "sold_out", "completed"], start=1)
+        ]
+
+        env.handler.handle_list_offers(CHAT, ADMIN_ID, args)
+
+        text = sent(env)
+        assert "Bier &amp; Co &lt;" in text
+        assert "Bier & Co" not in text
+
 
 class TestListOffersForCustomers:
     def test_only_active_offers_newest_first(self, env):
@@ -374,6 +387,19 @@ class TestViewOffer:
 
         env.db.get_presigned_url.assert_called_once_with(s3_url)
         env.handler._send_photo.assert_called_once_with(CHAT, "https://signed.example/a.jpg")
+
+    @pytest.mark.parametrize("user", [CUSTOMER_ID, ADMIN_ID])
+    def test_the_name_and_supplier_are_escaped_and_the_description_is_html(self, env, offer, user):
+        offer.name = "Bier & Co <3"
+        offer.supplier_name = "Brouwerij <De Molen>"
+        offer.description = "<b>Lekker</b> fris"
+
+        env.handler.handle_view_offer(CHAT, user, ["3"])
+
+        text = sent(env)
+        assert "Bier &amp; Co &lt;3" in text and "Bier & Co" not in text
+        assert "<De Molen>" not in text
+        assert "<b>Lekker</b> fris" in text
 
     def test_an_unknown_offer(self, env):
         env.db.get_offer.return_value = None
