@@ -241,7 +241,11 @@ class InfoCommands(BaseHandler):
     def _send_admin_overview(
         self, chat_id: int, user_id: int, offers: list, word: str | None, page: int, boxes: dict, orders: dict
     ) -> dict[str, Any]:
-        """The admin's list: the statuses of the filter, with a header per status in the overview views"""
+        """The admin's list: the statuses of the filter, with a header per status in the overview views.
+
+        Here and not in an admin handler on purpose: it is the same /list_offers command and builds the same lines as
+        the customer list, so moving it would only move the _is_admin check.
+        """
         view = offer_listing.admin_view(word)
         listed = offer_listing.offers_in_view(offers, view)
         page_items, total_pages = PaginationUtils.paginate_list(listed, page, offer_listing.PAGE_SIZE)

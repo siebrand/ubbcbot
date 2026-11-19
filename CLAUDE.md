@@ -51,6 +51,9 @@ client for messages sent from the admin's own Telegram account.
   panel, help text, translations, `telegram-commands.json` (the command menus; then run `setup-commands.sh`) and README
   together.
 - Escape user-supplied strings (`_escape_html`) in any `parse_mode="HTML"` message.
+- Message a customer through `_notify_customer` (it skips guests and translates for the customer), never
+  `_send_message(customer.telegram_user_id, ...)`: guests have negative ids (-1, -2, ...) like groups, so
+  `_send_message` cannot tell them apart.
 - Use `logger`, not `print`. Never log tokens, contact info or free-text user input.
 - Resource naming `ubbc-bot-{env}-{type}`; secrets only in SSM under `/ubbc-bot/{env}/`
   (`telegram-bot-token`, `telegram-webhook-secret`, `telegram-api-id`, `telegram-api-hash`, `telegram-session`).

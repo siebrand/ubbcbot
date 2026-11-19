@@ -1,9 +1,10 @@
 # Code quality audit 3: what the bot sends
 
-Status: **in progress** (2026-11-19). Follows [code-quality-list.md](code-quality-list.md), which finished the ten
-largest files. Most of what remains wrong shows up in the messages people get: announcements, notifications from the
-Lambdas, the admin's order screens and the texts typed into the bot. This audit follows those messages through the
-code that the first two left alone, and adds two to-dos from the owner. Same priorities as before:
+Status: **in progress** (2026-11-19). Follows two earlier audits (of the four, then the ten largest files; see the
+git history of `docs/`), which are done. Most of what remains wrong shows up in the messages people get:
+announcements, notifications from the Lambdas, the admin's order screens and the texts typed into the bot. This audit
+follows those messages through the code that the first two left alone, and adds to-dos from the owner. Same
+priorities as before:
 
 - **High**: wrong behaviour, a security or privacy risk.
 - **Medium**: a structural problem with a clear payoff (duplication, repeated reads, text that bypasses the

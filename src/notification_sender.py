@@ -141,7 +141,8 @@ class NotificationSender(BaseHandler):
                 self._send_media_group(chat_id, media_group)
 
         # The same message as the group post and every later re-edit (the name escaped), buttons in the
-        # subscriber's language
+        # subscriber's language. The re-edits (OfferAnnouncements) use the group language: a tracked message
+        # row does not know its subscriber's language, and looking it up per row would cost a read each.
         builder = OfferMessageBuilder(self._get_bot_username(), lambda key: self._t(key, chat_id))
         message, reply_markup = builder.build(offer)
 
