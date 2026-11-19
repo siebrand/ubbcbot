@@ -305,7 +305,7 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
                                 "payment_received_notification",
                                 customer.telegram_user_id,
                                 total_amount=total_amount,
-                                location=customer.location,
+                                location=self._escape_html(customer.location),
                             ),
                             "from_admin": True,
                             "parse_mode": "HTML",

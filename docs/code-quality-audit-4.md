@@ -57,11 +57,12 @@ transactions (CLAUDE.md, Gotchas).
   for a credit (as the usage says) and required for a debt, in `issue_credit` too. `parse_credit_amount` takes
   "2.50" or "2,50" and refuses anything that is not a finite, non-zero amount of whole cents up to €1000
   (`MAX_CREDIT_AMOUNT`); `issue_credit` refuses a non-finite amount as well. `tests/test_credit_command.py`.
-- [ ] **A4. The payment-received message puts the pickup location into HTML unescaped**
+- [x] **A4. The payment-received message puts the pickup location into HTML unescaped**
   (`delivery_overview_handler.py`, `handle_process_customer_paid`: `payment_received_notification` is sent with
   `parse_mode="HTML"` and `location=customer.location`). The location is typed by the admin; a "<" in it makes
   Telegram refuse the message, so the customer never hears that the payment arrived (the delivery message escapes the
-  same field since audit 2). Fix: `_escape_html(customer.location)`. Test: a location with `<` and `&`.
+  same field since audit 2). Fix: `_escape_html(customer.location)`. Test: a location with `<` and `&`. **Done**:
+  escaped; `tests/test_payment_received_notification.py`. No other message puts the location in unescaped.
 - [ ] **A5. A rejection or approval is not seen by other warm containers** (`user_cache.py`). The cache of customers
   (by status and by Telegram id) lives per Lambda container without an expiry. Approving or rejecting a user
   invalidates it only in the container that handled the command; another warm container keeps the old status and
