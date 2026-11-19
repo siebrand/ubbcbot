@@ -132,10 +132,16 @@ class WholesalerDeliveryService:
                 )
                 remaining_to_allocate -= order.quantity
             else:
-                # Partial fulfillment - received units go to labeling, rest cancelled
+                # Partial fulfillment - the order shrinks to the received units (so they are delivered and charged),
+                # and the rest becomes a cancelled order of its own
                 self.db.update_order(
                     order.order_id,
-                    {"received_quantity": remaining_to_allocate, "status": OrderStatus.READY_FOR_LABELING.value},
+                    {
+                        "quantity": remaining_to_allocate,
+                        "received_quantity": remaining_to_allocate,
+                        "total_price": order.unit_price * remaining_to_allocate,
+                        "status": OrderStatus.READY_FOR_LABELING.value,
+                    },
                     admin_id=self.admin_user_id,
                     reason="Partial delivery - remaining cancelled",
                 )

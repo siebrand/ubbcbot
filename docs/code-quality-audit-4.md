@@ -25,7 +25,7 @@ transactions (CLAUDE.md, Gotchas).
 
 ## High priority
 
-- [ ] **A1. A partly cancelled wholesale delivery is never charged, and the customer is told it is coming**
+- [x] **A1. A partly cancelled wholesale delivery is never charged, and the customer is told it is coming**
   (`wholesaler_delivery.py`, `_process_partial_cancelled`). When fewer units arrive and the rest is cancelled, the
   order that is partly filled keeps its full `quantity` and `total_price`, gets `received_quantity` < `quantity` and
   goes to `ready_for_labeling`; a separate cancelled order is written for the missing units. The delivery overview
@@ -33,7 +33,10 @@ transactions (CLAUDE.md, Gotchas).
   delayed: the payment message lists the cancelled units under "will arrive later" and leaves the received units out
   of the amount to pay. Fix: reduce the filled order to the received units (`quantity`, `total_price`), so it is
   delivered and charged; keep the cancelled remainder as its own order. Test: a box of 6 ordered, 4 arrive, rest
-  cancelled → the overview charges 4 units and mentions nothing as delayed.
+  cancelled → the overview charges 4 units and mentions nothing as delayed. **Done**: the partly filled order now
+  gets `quantity` and `total_price` of the received units; the cancelled remainder stays its own order.
+  `tests/test_wholesale_partial_delivery.py` runs delivery, labeling and the overview against moto. Orders cut off
+  entirely, and the delayed path, were already right.
 - [ ] **A2. The CSV import creates orders for customers who are not approved** (`import_handler.py`,
   `handle_document_upload`). It matches the names against `validator.load_customers()`, which returns approved,
   unauthorized and rejected customers alike, and writes the order directly, past `handle_create_order`, which is
