@@ -122,6 +122,10 @@ transactions (CLAUDE.md, Gotchas).
   `BaseHandler._check_offer_status_after_change`. Fix: `sync_offer_messages` after the status change. Test: the last
   box labeled syncs the messages once. **Done**: synced once after the status is written (both the single box and
   the batch confirmation go through `_check_and_update_offer_status`). `tests/test_labeling_completes_offer.py`.
+  Found afterwards (owner's question): a sold-out offer with every box delivered became `completed` when the
+  *first* box was labeled, with other boxes still to label (and, since this fix, its announcements said so). It now
+  completes only when no box has orders left to label. An offer with units still for sale is `active`, not
+  `sold_out`, and is never completed by labeling.
 - [x] **B7. The labeling and credit screens bypass the admin's language** (`labeling_completion_handler.py`: every
   `_t` without the user; `credit_commands.py`: "No reason provided", the credit notification through
   `_send_message(customer.telegram_user_id, ...)` instead of `_notify_customer`; `test_commands.py`: "✓ Test message

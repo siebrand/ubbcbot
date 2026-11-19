@@ -15,7 +15,8 @@ BOX_ID = "abcdef12-0000-4000-8000-000000000000"
 def db():
     db = Mock()
     db.get_offer.return_value = Offer(offer_id=7, name="Pils", status=OfferStatus.SOLD_OUT.value)
-    db.get_boxes_by_offer_with_ready_orders.side_effect = [[Box(box_id=BOX_ID, offer_id=7)], []]
+    # The box to label is found; after labeling no box has orders left to label
+    db.get_boxes_by_offer_with_ready_orders.side_effect = [[Box(box_id=BOX_ID, offer_id=7)], [], []]
     db.get_orders_by_box.return_value = [Order(box_id=BOX_ID, status=OrderStatus.READY_FOR_LABELING.value)]
     db.update_order.return_value = True
     db.update_offer.return_value = True
@@ -37,6 +38,28 @@ def test_the_completed_offer_is_synced_once(handler, db):
 
     db.update_offer.assert_called_once_with(7, {"status": OfferStatus.COMPLETED.value})
     handler.sync_offer_messages.assert_called_once_with(7)
+
+
+def test_a_sold_out_offer_with_boxes_left_to_label_is_not_completed(handler, db):
+    """All boxes delivered, but only the first of two labeled: the offer stays sold out until the last one"""
+    other = Box(box_id="99999999-0000-4000-8000-000000000000", offer_id=7, status=BoxStatus.DELIVERED.value)
+    db.get_boxes_by_offer.return_value = [Box(box_id=BOX_ID, offer_id=7, status=BoxStatus.DELIVERED.value), other]
+    db.get_boxes_by_offer_with_ready_orders.side_effect = None
+    db.get_boxes_by_offer_with_ready_orders.return_value = [Box(box_id=BOX_ID, offer_id=7), other]
+    db.get_orders_by_box.side_effect = lambda box_id: (
+        [Order(box_id=BOX_ID, status=OrderStatus.READY_FOR_LABELING.value)] if box_id == BOX_ID else []
+    )
+
+    def label_first_box(order_id, updates, **kwargs):
+        db.get_boxes_by_offer_with_ready_orders.return_value = [other]
+        return True
+
+    db.update_order.side_effect = label_first_box
+
+    handler.handle_labeling_action(ADMIN_ID, "complete", BOX_ID[:8], 7, "sup12345")
+
+    db.update_offer.assert_not_called()
+    handler.sync_offer_messages.assert_not_called()
 
 
 def test_an_offer_that_is_not_completed_is_not_synced(handler, db):

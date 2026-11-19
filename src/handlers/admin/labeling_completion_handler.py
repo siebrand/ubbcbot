@@ -235,7 +235,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
             return self._send_message(chat_id, self._t("delivery_processing_failed", chat_id))
 
     def _check_and_update_offer_status(self, offer_id: int):
-        """Check if offer should be completed: must be SOLD_OUT and all boxes DELIVERED"""
+        """Check if offer should be completed: must be SOLD_OUT, all boxes DELIVERED and nothing left to label"""
         try:
             offer = self.db.get_offer(offer_id)
             if not offer or offer.status != OfferStatus.SOLD_OUT.value:
@@ -247,6 +247,10 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
 
             # Check if all boxes are delivered
             all_delivered = all(box.status == BoxStatus.DELIVERED.value for box in boxes)
+
+            # ... and labeled: a delivered box that still has orders to label keeps the offer sold out
+            if all_delivered and self.db.get_boxes_by_offer_with_ready_orders(offer_id):
+                return
 
             if all_delivered and self.db.update_offer(offer_id, {"status": OfferStatus.COMPLETED.value}):
                 logger.info(f"Updated offer {offer_id} status to COMPLETED - sold out and all boxes delivered")
