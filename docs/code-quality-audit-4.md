@@ -120,10 +120,11 @@ transactions (CLAUDE.md, Gotchas).
   check of the import. A first or last name alone no longer names a customer: the prompt and the README now say what
   the `username` column takes. The ambiguity tests now use namesakes, the only names that can still collide.
   `TestExactNames` in `tests/test_import_ambiguous.py`.
-- [ ] **B6. A completed offer keeps its order buttons after labeling** (`labeling_completion_handler.py`,
+- [x] **B6. A completed offer keeps its order buttons after labeling** (`labeling_completion_handler.py`,
   `_check_and_update_offer_status`). It sets the offer to `completed` but does not sync the announcements, unlike
   `BaseHandler._check_offer_status_after_change`. Fix: `sync_offer_messages` after the status change. Test: the last
-  box labeled syncs the messages once.
+  box labeled syncs the messages once. **Done**: synced once after the status is written (both the single box and
+  the batch confirmation go through `_check_and_update_offer_status`). `tests/test_labeling_completes_offer.py`.
 - [ ] **B7. The labeling and credit screens bypass the admin's language** (`labeling_completion_handler.py`: every
   `_t` without the user; `credit_commands.py`: "No reason provided", the credit notification through
   `_send_message(customer.telegram_user_id, ...)` instead of `_notify_customer`; `test_commands.py`: "✓ Test message

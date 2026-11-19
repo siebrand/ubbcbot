@@ -248,9 +248,9 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
             # Check if all boxes are delivered
             all_delivered = all(box.status == BoxStatus.DELIVERED.value for box in boxes)
 
-            if all_delivered:
-                # Update offer status to COMPLETED
-                self.db.update_offer(offer_id, {"status": OfferStatus.COMPLETED.value})
+            if all_delivered and self.db.update_offer(offer_id, {"status": OfferStatus.COMPLETED.value}):
                 logger.info(f"Updated offer {offer_id} status to COMPLETED - sold out and all boxes delivered")
+                # The announcements show the new status (and lose their order buttons)
+                self.sync_offer_messages(offer_id)
         except Exception as e:
             logger.error(f"Error checking offer status for offer {offer_id}: {e}")
