@@ -206,7 +206,7 @@ class InfoCommands(BaseHandler):
             self._send_message(chat_id, help_message)
             return {"status": "success"}
 
-        if word and page == 1 and not offer_listing.is_known_filter(word, is_admin):
+        if args and word and page == 1 and not offer_listing.is_known_filter(word, is_admin):
             # Shown before the list, on the first page only (the page buttons keep the word)
             self._send_message(chat_id, self._t("list_offers_unknown_filter", user_id, word=args[0][:30]))
 
