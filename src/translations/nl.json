@@ -626,6 +626,7 @@
   "import_errors_header": "\n❌ Fouten ({error_count}):",
   "multiple_matches": "meerdere overeenkomsten gevonden",
   "not_found": "niet gevonden",
+  "not_approved": "niet goedgekeurd",
   "grand_total": "totaal",
   "usage_finalize_import": "Gebruik: /finalize_import <aanbieding_id>",
   "finalize_import_wrong_status": "❌ Aanbieding moet IMPORT status hebben (huidige: {status})",

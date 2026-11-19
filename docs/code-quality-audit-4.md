@@ -37,13 +37,16 @@ transactions (CLAUDE.md, Gotchas).
   gets `quantity` and `total_price` of the received units; the cancelled remainder stays its own order.
   `tests/test_wholesale_partial_delivery.py` runs delivery, labeling and the overview against moto. Orders cut off
   entirely, and the delayed path, were already right.
-- [ ] **A2. The CSV import creates orders for customers who are not approved** (`import_handler.py`,
+- [x] **A2. The CSV import creates orders for customers who are not approved** (`import_handler.py`,
   `handle_document_upload`). It matches the names against `validator.load_customers()`, which returns approved,
   unauthorized and rejected customers alike, and writes the order directly, past `handle_create_order`, which is
   where approval is enforced (CLAUDE.md: "for every entry point"). The orders of a rejected customer are then never
   in a delivery overview (that only reads approved customers). Fix: load only approved customers; a line whose name
   only fits a customer who is not approved is an error line ("not approved"). Test: a file with a rejected customer's
-  name imports nothing for that line.
+  name imports nothing for that line. **Done**: names are matched against approved customers only; a line that only
+  fits customers who are not approved is an error line "not approved" (new key `not_approved`). Customers who are not
+  approved no longer make a name ambiguous either: two unapproved Carels used to refuse the whole file, one
+  approved Carel next to a rejected one now imports. Tests in `tests/test_import_ambiguous.py` (`TestNotApproved`).
 - [x] **A3. `/credit` without a reason always fails, and a malformed amount raises** (`credit_commands.py`,
   `credit_service.py`). The usage says `/credit <username> <amount> [reason]`, but `issue_credit` refuses an empty
   reason, so `/credit jan 5` answers "Failed to issue credit". `Decimal("abc")` raises `decimal.InvalidOperation`,

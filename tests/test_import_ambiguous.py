@@ -1,6 +1,7 @@
 """CSV import: a name that matches more than one customer refuses the whole file, and lists the collisions."""
 
 import re
+from dataclasses import replace
 from decimal import Decimal
 from unittest.mock import Mock
 
@@ -112,12 +113,11 @@ class TestAmbiguousCustomer:
         assert "Bob" not in text
 
     def test_every_ambiguous_line_is_listed(self, handler):
-        _upload(handler, _csv("alice", "bobc", "carel"))
+        _upload(handler, _csv("alice", "bobc", "alice"))
 
         text = _all_text(handler)
         assert re.search(r"(Line|Regel) 2:", text)
         assert re.search(r"(Line|Regel) 4:", text)
-        assert "Carel Dekker" in text and "Carel Evers" in text
 
     def test_there_are_no_buttons_to_tap(self, handler):
         _upload(handler, _csv("alice"))
@@ -130,6 +130,37 @@ class TestAmbiguousCustomer:
         assert result["status"] == "success"
         assert result["imported"] == 2
         assert [c.args[1] for c in handler._create_import_order.call_args_list] == [ALICE_A, ALICE_B]
+
+
+class TestNotApproved:
+    """Orders are only for approved customers (CLAUDE.md), also when they come from a file"""
+
+    def test_a_rejected_customer_gets_no_order_and_the_line_says_why(self, handler):
+        result = _upload(handler, _csv("bobc", "Dekker"))
+
+        assert (result["status"], result["imported"], result["errors"]) == ("success", 1, 1)
+        assert [c.args[1] for c in handler._create_import_order.call_args_list] == [BOB]
+        line = handler._t("import_line_error_customer", line=3, username="Dekker", reason=handler._t("not_approved"))
+        assert line in _all_text(handler)
+
+    def test_customers_who_are_not_approved_make_no_name_ambiguous(self, handler):
+        # Two Carels, neither approved: not a collision that refuses the file, but a line that is not imported
+        result = _upload(handler, _csv("bobc", "carel"))
+
+        assert (result["status"], result["imported"], result["errors"]) == ("success", 1, 1)
+        assert handler._t("not_approved") in _all_text(handler)
+
+    def test_a_name_that_fits_an_approved_customer_is_not_refused_for_a_rejected_namesake(self, handler):
+        approved_twin = replace(CAREL_TWIN, authorization_status=AuthorizationStatus.APPROVED.value)
+        handler.db.get_customers_by_status.side_effect = lambda status: {
+            AuthorizationStatus.APPROVED.value: [approved_twin],
+            AuthorizationStatus.REJECTED.value: [CAREL],
+        }.get(status, [])
+
+        result = _upload(handler, _csv("carel"))
+
+        assert (result["status"], result["imported"]) == ("success", 1)
+        assert [c.args[1] for c in handler._create_import_order.call_args_list] == [approved_twin]
 
 
 class TestUnchangedBehaviour:

@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from handlers.admin.offer.notifications import NotificationHandler
-from models.entities import BoxStatus, OfferStatus, Order, OrderStatus
+from models.entities import AuthorizationStatus, BoxStatus, OfferStatus, Order, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from utils.csv_parser import CSVParser
 
@@ -86,8 +86,11 @@ class ImportHandler(NotificationHandler):
         # Process rows
         rows = parse_result["rows"]
 
-        # A name that fits more than one customer cannot be imported: refuse the whole file, import nothing
-        customers = self.validator.load_customers()
+        # Only approved customers may order (CLAUDE.md); the others only explain why a line is not imported.
+        # A name that fits more than one approved customer cannot be imported: refuse the whole file, import nothing
+        all_customers = self.validator.load_customers()
+        customers = [c for c in all_customers if c.authorization_status == AuthorizationStatus.APPROVED.value]
+        not_approved = [c for c in all_customers if c.authorization_status != AuthorizationStatus.APPROVED.value]
         collisions = self._find_ambiguous_lines(rows, customers)
         if collisions:
             return self._refuse_ambiguous(chat_id, collisions)
@@ -126,7 +129,7 @@ class ImportHandler(NotificationHandler):
                 continue
 
             # Find customer (no interactive disambiguation: ambiguous names were refused above)
-            customer, error = self._find_customer_for_import(username, customers)
+            customer, error = self._find_customer_for_import(username, customers, not_approved)
             if error:
                 errors.append(self._t("import_line_error_customer", line=idx, username=username, reason=error))
                 continue
@@ -152,13 +155,15 @@ class ImportHandler(NotificationHandler):
         self._send_message(chat_id, summary)
         return {"status": "success", "imported": success_count, "errors": len(errors)}
 
-    def _find_customer_for_import(self, username: str, customers: list) -> tuple:
-        """Find the customer for a CSV line - returns (customer, None) or (None, reason text).
+    def _find_customer_for_import(self, username: str, customers: list, not_approved: list | None = None) -> tuple:
+        """Find the approved customer for a CSV line - returns (customer, None) or (None, reason text).
 
         No messages and no buttons: the CSV import has nobody to ask which customer was meant.
         """
         matches = self.validator.match_customers(username, customers)
         if not matches:
+            if self.validator.match_customers(username, not_approved or []):
+                return None, self._t("not_approved")
             return None, self._t("not_found")
         if len(matches) > 1:
             return None, self._t("multiple_matches")
