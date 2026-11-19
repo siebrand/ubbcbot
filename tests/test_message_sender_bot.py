@@ -72,6 +72,58 @@ class TestSendFromBot:
         post.assert_not_called()
 
 
+@pytest.fixture
+def pauses(monkeypatch):
+    """The pauses of the Lambda, recorded instead of waited for"""
+    recorded = []
+
+    async def pause(seconds):
+        recorded.append(seconds)
+
+    monkeypatch.setattr(message_sender, "_pause", pause)
+    return recorded
+
+
+class TestRateLimit:
+    def test_bot_messages_go_out_in_batches_with_a_pause_between(self, pauses, monkeypatch):
+        in_flight, most = 0, 0
+
+        async def fake_send(msg, environment, bot_token):
+            nonlocal in_flight, most
+            in_flight += 1
+            most = max(most, in_flight)
+            await asyncio.sleep(0)
+            in_flight -= 1
+            return {"success": True, "user_id": msg["user_id"]}
+
+        monkeypatch.setattr(message_sender, "send_from_bot", fake_send)
+        messages = [{"user_id": n, "message": "Je bier is er"} for n in range(1, 61)]
+
+        results = asyncio.run(message_sender.send_messages(messages, "prod", TOKEN))
+
+        assert [r["user_id"] for r in results] == list(range(1, 61))
+        assert most <= message_sender.BOT_BATCH_SIZE
+        assert len(pauses) == 2  # between the three batches of at most 25
+
+    def test_a_429_is_retried_after_the_time_telegram_asks(self, post, pauses):
+        too_many = '{"ok":false,"error_code":429,"description":"Too Many Requests","parameters":{"retry_after":3}}'
+        post.side_effect = [answer(429, text=too_many), answer()]
+
+        result = send({"user_id": 42, "message": "hoi"})
+
+        assert result == {"success": True, "user_id": 42}
+        assert post.call_count == 2
+        assert pauses == [3]
+
+    def test_a_message_that_stays_refused_is_reported_after_a_few_tries(self, post, pauses):
+        post.return_value = answer(429, text='{"ok":false,"parameters":{"retry_after":1}}')
+
+        result = send({"user_id": 42, "message": "hoi"})
+
+        assert result["success"] is False
+        assert post.call_count == message_sender.BOT_SEND_ATTEMPTS
+
+
 class TestFailureReport:
     def test_the_admin_gets_one_message_listing_the_failures(self, post, monkeypatch):
         monkeypatch.setenv("ADMIN_USER_ID", "777")

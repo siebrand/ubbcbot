@@ -21,6 +21,19 @@ configure_logging()
 _loop = None
 _user_client = None
 
+# Telegram allows a bot about 30 messages a second: batches of 25 with a second between them stay under it
+BOT_BATCH_SIZE = 25
+BOT_BATCH_PAUSE_SECONDS = 1
+# A message refused with 429 is tried again after Telegram's retry_after, at most this often in all
+BOT_SEND_ATTEMPTS = 3
+MAX_RETRY_AFTER_SECONDS = 30
+ADMIN_BATCH_SIZE = 5
+ADMIN_BATCH_PAUSE_SECONDS = 0.5
+
+
+async def _pause(seconds: float) -> None:
+    await asyncio.sleep(seconds)
+
 
 def get_event_loop():
     """Get or create event loop for Lambda container"""
@@ -89,28 +102,27 @@ async def send_messages(messages, environment, bot_token):
 
     results = []
 
-    # Send admin messages with limited concurrency (max 5 at a time)
     if admin_messages:
-        logger.info(f"Sending {len(admin_messages)} admin messages with concurrency limit")
-        for i in range(0, len(admin_messages), 5):
-            batch = admin_messages[i : i + 5]
-            tasks = [send_from_admin(msg, environment) for msg in batch]
-            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-            results.extend(batch_results)
-            logger.info(
-                f"Completed batch {i // 5 + 1}, "
-                f"sent {len([r for r in batch_results if isinstance(r, dict) and r.get('success')])} messages"
+        logger.info(f"Sending {len(admin_messages)} admin messages")
+        results.extend(
+            await _send_in_batches(
+                admin_messages,
+                lambda msg: send_from_admin(msg, environment),
+                ADMIN_BATCH_SIZE,
+                ADMIN_BATCH_PAUSE_SECONDS,
             )
-            import time
+        )
 
-            time.sleep(0.5)
-
-    # Send bot messages concurrently (faster, no connection overhead)
     if bot_messages:
         logger.info(f"Sending {len(bot_messages)} bot messages")
-        tasks = [send_from_bot(msg, environment, bot_token) for msg in bot_messages]
-        bot_results = await asyncio.gather(*tasks, return_exceptions=True)
-        results.extend(bot_results)
+        results.extend(
+            await _send_in_batches(
+                bot_messages,
+                lambda msg: send_from_bot(msg, environment, bot_token),
+                BOT_BATCH_SIZE,
+                BOT_BATCH_PAUSE_SECONDS,
+            )
+        )
 
     # Notify admin of failures
     failures = [r for r in results if isinstance(r, dict) and not r.get("success")]
@@ -118,6 +130,32 @@ async def send_messages(messages, environment, bot_token):
         await notify_admin_of_failures(failures, environment, bot_token)
 
     return results
+
+
+async def _send_in_batches(messages, send, batch_size, pause_seconds):
+    """Send a batch at a time, concurrently within the batch, with a pause between batches"""
+    results = []
+    for i in range(0, len(messages), batch_size):
+        if i:
+            await _pause(pause_seconds)
+        batch_results = await asyncio.gather(
+            *(send(msg) for msg in messages[i : i + batch_size]), return_exceptions=True
+        )
+        results.extend(batch_results)
+        sent = sum(1 for r in batch_results if isinstance(r, dict) and r.get("success"))
+        logger.info(f"Completed batch {i // batch_size + 1}, sent {sent} messages")
+    return results
+
+
+def _retry_after(response) -> int | None:
+    """The seconds Telegram asks to wait before trying again, for a 429; None for any other answer"""
+    if response.status_code != 429:
+        return None
+    try:
+        seconds = int(json.loads(response.body)["parameters"]["retry_after"])
+    except ValueError, KeyError, TypeError:
+        seconds = 1
+    return min(max(seconds, 1), MAX_RETRY_AFTER_SECONDS)
 
 
 async def send_from_admin(msg, environment):
@@ -192,7 +230,13 @@ async def send_from_bot(msg, environment, bot_token):
 
         # Run in executor to avoid blocking
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, lambda: TelegramClient(bot_token).call("sendMessage", payload))
+        for attempt in range(1, BOT_SEND_ATTEMPTS + 1):
+            response = await loop.run_in_executor(None, lambda: TelegramClient(bot_token).call("sendMessage", payload))
+            retry_after = _retry_after(response)
+            if retry_after is None or attempt == BOT_SEND_ATTEMPTS:
+                break
+            logger.warning(f"Telegram rate limit, retrying after {retry_after}s (attempt {attempt})")
+            await _pause(retry_after)
 
         if response.ok:
             return {"success": True, "user_id": user_id}

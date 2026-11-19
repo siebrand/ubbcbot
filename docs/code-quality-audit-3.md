@@ -57,10 +57,13 @@ priorities as before:
 
 ## Medium priority
 
-- [ ] **B1. The message Lambda sends every bot message at once** (`message_sender.py`, `send_messages`). Bot messages
+- [x] **B1. The message Lambda sends every bot message at once** (`message_sender.py`, `send_messages`). Bot messages
   go out with one `asyncio.gather`, with no limit; a batch of 50 payment overviews runs into Telegram's rate limit
   (about 30 messages a second) and the 429s come back as failures. The admin messages are already sent in batches of
-  five. Fix: the same batching for bot messages, and a retry after a 429 with its `retry_after`.
+  five. Fix: the same batching for bot messages, and a retry after a 429 with its `retry_after`. **Done**: one
+  `_send_in_batches` for both (bot: 25 with a second between batches; admin: 5 with half a second, as before, but
+  no longer a blocking `time.sleep` inside the event loop). A 429 is tried again after its `retry_after` (at most 30
+  seconds, three tries in all), so a 50-message batch stays well within the Lambda's 300 seconds.
 - [ ] **B2. The failure report of the message Lambda is hard-coded English** (`message_sender.py`,
   `notify_admin_of_failures`), and `notification_sender.py` hard-codes the admin's Telegram id (`15005473`) instead of
   `ADMIN_USER_ID`. Fix: translated texts; the id from `config.py`.
