@@ -2,13 +2,14 @@ import logging
 from typing import Any
 
 from handlers.base_handler import BaseHandler
+from handlers.payment_message import PaymentMessageMixin
 from models.entities import AuthorizationStatus, Box, BoxStatus, OfferStatus, Order, OrderStatus
 from services.box_status_manager import BoxStatusManager
 
 logger = logging.getLogger()
 
 
-class CustomerOrderCommands(BaseHandler):
+class CustomerOrderCommands(PaymentMessageMixin, BaseHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
         self.box_status_manager = BoxStatusManager(db)
@@ -143,7 +144,8 @@ class CustomerOrderCommands(BaseHandler):
         message += "\n\n"
         for order in existing_orders:
             order_date = to_cet_string(order.created_at, "%Y-%m-%d")
-            message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({order.status})\n"
+            status = self._t(f"status_{order.status}", user_id)
+            message += f"• [{order_date}] {order.quantity}x €{order.total_price:.2f} ({status})\n"
 
         message += self._t("confirm_additional_order", user_id, quantity=quantity)
 
@@ -327,70 +329,37 @@ class CustomerOrderCommands(BaseHandler):
 
     def handle_delete_cancelled_orders(self, chat_id: int, user_id: int) -> dict[str, Any]:
         """Handle /delete_cancelled_orders command - delete all cancelled orders for user"""
-        try:
-            # Get customer
-            customer = self.db.get_customer_by_telegram_id(user_id)
-            if not customer:
-                self._send_message(chat_id, self._t("customer_not_found", user_id))
-                return {"status": "customer_not_found"}
-
-            # Get all cancelled orders for the customer
-            cancelled_orders = self.db.get_orders_by_customer_and_status(customer.customer_id, "cancelled")
-
-            if not cancelled_orders:
-                self._send_message(chat_id, self._t("no_cancelled_orders", user_id))
-                return {"status": "no_cancelled_orders"}
-
-            # Delete all cancelled orders
-            deleted_count = 0
-            for order in cancelled_orders:
-                if self.db.delete_order(order.order_id):
-                    deleted_count += 1
-
-            if deleted_count > 0:
-                self._send_message(chat_id, self._t("cancelled_orders_deleted", user_id, count=deleted_count))
-                return {"status": "success", "deleted_count": deleted_count}
-            else:
-                self._send_message(chat_id, self._t("failed_delete_cancelled_orders", user_id))
-                return {"status": "error"}
-
-        except Exception as e:
-            logger.error(f"Error in handle_delete_cancelled_orders: {e}")
-            self._send_message(chat_id, self._t("failed_delete_cancelled_orders", user_id))
-            return {"status": "error"}
+        return self._delete_orders_with_status(chat_id, user_id, OrderStatus.CANCELLED.value)
 
     def handle_delete_completed_orders(self, chat_id: int, user_id: int) -> dict[str, Any]:
         """Handle /delete_completed_orders command - delete all completed orders for user"""
+        return self._delete_orders_with_status(chat_id, user_id, OrderStatus.COMPLETED.value)
+
+    def _delete_orders_with_status(self, chat_id: int, user_id: int, status: str) -> dict[str, Any]:
+        """Delete the customer's own cancelled or completed orders (the translation keys follow the status)"""
+        failed_key = f"failed_delete_{status}_orders"
         try:
-            # Get customer
             customer = self.db.get_customer_by_telegram_id(user_id)
             if not customer:
                 self._send_message(chat_id, self._t("customer_not_found", user_id))
                 return {"status": "customer_not_found"}
 
-            # Get all completed orders for the customer
-            completed_orders = self.db.get_orders_by_customer_and_status(customer.customer_id, "completed")
+            orders = self.db.get_orders_by_customer_and_status(customer.customer_id, status)
+            if not orders:
+                self._send_message(chat_id, self._t(f"no_{status}_orders", user_id))
+                return {"status": f"no_{status}_orders"}
 
-            if not completed_orders:
-                self._send_message(chat_id, self._t("no_completed_orders", user_id))
-                return {"status": "no_completed_orders"}
-
-            # Delete all completed orders
-            deleted_count = 0
-            for order in completed_orders:
-                if self.db.delete_order(order.order_id):
-                    deleted_count += 1
-
-            if deleted_count > 0:
-                self._send_message(chat_id, self._t("completed_orders_deleted", user_id, count=deleted_count))
-                return {"status": "success", "deleted_count": deleted_count}
-            else:
-                self._send_message(chat_id, self._t("failed_delete_completed_orders", user_id))
+            deleted_count = sum(1 for order in orders if self.db.delete_order(order.order_id))
+            if deleted_count == 0:
+                self._send_message(chat_id, self._t(failed_key, user_id))
                 return {"status": "error"}
 
+            self._send_message(chat_id, self._t(f"{status}_orders_deleted", user_id, count=deleted_count))
+            return {"status": "success", "deleted_count": deleted_count}
+
         except Exception as e:
-            logger.error(f"Error in handle_delete_completed_orders: {e}")
-            self._send_message(chat_id, self._t("failed_delete_completed_orders", user_id))
+            logger.error(f"Error deleting {status} orders: {type(e).__name__}")
+            self._send_message(chat_id, self._t(failed_key, user_id))
             return {"status": "error"}
 
     def handle_payment_info(self, chat_id: int, user_id: int) -> dict[str, Any]:
@@ -415,12 +384,7 @@ class CustomerOrderCommands(BaseHandler):
                 self._send_message(chat_id, self._t("no_payment_link_stored", user_id))
                 return {"status": "no_payment_link"}
 
-            from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
-
-            delivery_handler = DeliveryOverviewHandler(
-                self.db, self.admin_user_id, self.environment, self.telegram_token
-            )
-            message = delivery_handler._build_delivery_message(
+            message = self._build_delivery_message(
                 customer, awaiting_payment_orders, [], payment_link, is_reminder=False
             )
 

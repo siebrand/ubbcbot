@@ -57,6 +57,9 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   tests for H6). It built an `AdminOrderCommands` and called `_execute_cancel` on it, but that class is a facade
   without the method: the "cancel orders" button raised an `AttributeError`. **Done**: `_execute_cancel` lives in
   `BaseHandler` and tells the customer in their own language.
+- [x] **H9. A pickup location with `&` or `<` breaks the payment message** (`delivery_overview_handler.py`,
+  `_build_delivery_message`, found by the tests for H6). The message is sent as HTML, but the location was not
+  escaped, so Telegram can refuse the whole message. **Done**: escaped.
 
 ## Medium priority
 

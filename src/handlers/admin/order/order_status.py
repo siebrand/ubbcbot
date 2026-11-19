@@ -4,13 +4,14 @@ from typing import Any
 
 import boto3
 
+from handlers.payment_message import PaymentMessageMixin
 from models.entities import AuthorizationStatus, OrderStatus
 from utils.pagination import PaginationUtils
 
 from .base_order_handler import BaseOrderHandler
 
 
-class OrderStatusManagement(BaseOrderHandler):
+class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
     """Handles order status management functionality"""
 
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
@@ -234,17 +235,10 @@ class OrderStatusManagement(BaseOrderHandler):
             self._send_message(chat_id, self._t("no_payment_link_stored", user_id=None))
             return {"status": "no_payment_link"}
 
-        # Build reminder message using delivery overview helper
-        from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
-
-        delivery_handler = DeliveryOverviewHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-
         customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(
             "unknown", user_id=None
         )
-        message = delivery_handler._build_delivery_message(
-            customer, awaiting_payment_orders, [], payment_link, is_reminder=True
-        )
+        message = self._build_delivery_message(customer, awaiting_payment_orders, [], payment_link, is_reminder=True)
 
         # Ensure message is a plain string (convert any Decimal formatting)
         message = str(message)

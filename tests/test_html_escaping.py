@@ -193,7 +193,7 @@ class TestPaymentReminderToGuest:
         handler._send_message = Mock(return_value={"success": True})
         handler.handle_send_payment_reminder = Mock(return_value={"status": "customers_shown"})
 
-        with patch.object(DeliveryOverviewHandler, "_build_delivery_message", return_value="MSG"):
+        with patch.object(OrderStatusManagement, "_build_delivery_message", return_value="MSG"):
             handler.handle_send_payment_reminder_to_customer(1, guest.customer_id)
 
         admin_call = next(c for c in handler._send_message.call_args_list if c.args[0] == ADMIN_ID)
