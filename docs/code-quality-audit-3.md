@@ -66,8 +66,8 @@ code that the first two left alone, and adds two to-dos from the owner. Same pri
 
 - [ ] **T1. `/list_offers` with an unknown filter says nothing about it.** `/list_offers cancelled` shows the default
   list as if no filter was given. Acknowledge the unknown word (and name the filters that exist) above the list.
-- [ ] **T2. Leave two more customers out of the reports**: `8a1bdd6b-c3c0-403d-9f49-b2f9acb738d4` and
-  `bc63908b-8f10-45a8-bb3e-cb89e5ea7e94` join `EXCLUDED_CUSTOMER_IDS` (`services/reporting.py`).
+- [x] **T2. Leave two more customers out of the reports**: `8a1bdd6b-c3c0-403d-9f49-b2f9acb738d4` and
+  `bc63908b-8f10-45a8-bb3e-cb89e5ea7e94` join `EXCLUDED_CUSTOMER_IDS` (`services/reporting.py`). **Done.**
 
 ## Order of work
 

@@ -185,8 +185,9 @@ class TestTopCustomers:
         assert len(set(ANON_NAMES)) == len(ANON_NAMES) >= TOP_CUSTOMERS_LIMIT
         assert all(len(name) <= NAME_WIDTH for name in ANON_NAMES)
 
-    def test_only_payments_of_an_excluded_customer_is_no_data(self, env):
-        env.db.get_events_by_type.return_value = [payment(EXCLUDED, "500")]
+    @pytest.mark.parametrize("excluded", EXCLUDED_CUSTOMER_IDS)
+    def test_only_payments_of_an_excluded_customer_is_no_data(self, env, excluded):
+        env.db.get_events_by_type.return_value = [payment(excluded, "500")]
 
         assert env.handler.handle_report_top_customers(ADMIN_ID, []) == {"status": "no_data"}
         assert "Geen betalingen" in text(env)

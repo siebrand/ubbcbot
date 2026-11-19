@@ -64,7 +64,11 @@ CLOSED_ORDER_STATUSES = {OrderStatus.COMPLETED.value, OrderStatus.CANCELLED.valu
 TOP_CUSTOMERS_LIMIT = 10
 
 # Customers whose orders and payments are left out of the top-customer and sales reports (not /report_customer)
-EXCLUDED_CUSTOMER_IDS = ("16f3c6d6-a32e-47d0-b3b6-22159aefde2b",)
+EXCLUDED_CUSTOMER_IDS = (
+    "16f3c6d6-a32e-47d0-b3b6-22159aefde2b",
+    "8a1bdd6b-c3c0-403d-9f49-b2f9acb738d4",
+    "bc63908b-8f10-45a8-bb3e-cb89e5ea7e94",
+)
 
 
 class PeriodError(ValueError):
