@@ -104,14 +104,15 @@ class TestImportHandler(unittest.TestCase):
         box = Box(box_id="box1", offer_id=1, current_quantity=5, max_capacity=12, status=BoxStatus.OPEN.value)
 
         self.db.get_boxes_by_offer.return_value = [box]
-        self.db.create_order.return_value = Mock(order_id="order1")
+        self.db.create_order_with_box_increment.return_value = Mock(order_id="order1")
 
-        with patch.object(self.handler.box_status_manager, "update_box_after_order_placement") as mock_update:
-            result = self.handler._create_import_order(offer, customer)
+        result = self.handler._create_import_order(offer, customer)
 
-            self.assertTrue(result["success"])
-            self.db.create_order.assert_called_once()
-            mock_update.assert_called_once_with("box1", 1)
+        self.assertTrue(result["success"])
+        order, box_id, quantity, max_capacity = self.db.create_order_with_box_increment.call_args.args
+        self.assertEqual((order.box_id, box_id, quantity, max_capacity), ("box1", "box1", 1, 12))
+        self.db.create_order.assert_not_called()
+        self.db.update_box.assert_not_called()  # 6 of 12: not full
 
     def test_create_import_order_creates_new_box(self):
         """Test creating import order creates new box when none available"""
@@ -129,14 +130,13 @@ class TestImportHandler(unittest.TestCase):
 
         self.db.get_boxes_by_offer.return_value = []
         self.db.create_box.return_value = new_box
-        self.db.create_order.return_value = Mock(order_id="order1")
+        self.db.create_order_with_box_increment.return_value = Mock(order_id="order1")
 
-        with patch.object(self.handler.box_status_manager, "update_box_after_order_placement"):
-            result = self.handler._create_import_order(offer, customer)
+        result = self.handler._create_import_order(offer, customer)
 
-            self.assertTrue(result["success"])
-            self.db.create_box.assert_called_once()
-            self.db.create_order.assert_called_once()
+        self.assertTrue(result["success"])
+        self.db.create_box.assert_called_once()
+        self.db.create_order_with_box_increment.assert_called_once()
 
     def test_finalize_import_sold_out(self):
         """Test finalizing import when offer is sold out"""

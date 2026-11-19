@@ -97,10 +97,14 @@ transactions (CLAUDE.md, Gotchas).
   (`wholesaler_delivery.py`, `notify_customer_of_delay` and `notify_customer_of_cancellation` only log "STUB").
   Fix: tell them through `_notify_customer` (translated, guests skipped), or remove the stubs and say in the delivery
   messages what happened. Decide with the owner which; the delivery overview already mentions delayed units.
-- [ ] **B3. An imported order and its box are two writes** (`import_handler.py`, `_create_import_order`): the order
+- [x] **B3. An imported order and its box are two writes** (`import_handler.py`, `_create_import_order`): the order
   is written with `create_order` and the box incremented afterwards, so an import that runs while customers order
   can overfill a box or leave an order without its unit in the box. Fix: `create_order_with_box_increment` (the
-  transaction customers' orders use), and try the next box when it is rejected.
+  transaction customers' orders use), and try the next box when it is rejected. **Done**: the order and its unit
+  are one transaction; when it is rejected the boxes are read again (up to `MAX_BOX_ATTEMPTS`, 3) and the next box
+  with room, or a new one, is tried. The FULL status follow-up is the same as for customers' orders. Before, the
+  failed box increment was ignored: the order sat in a full box that had no unit for it.
+  `tests/test_import_atomic.py` (moto).
 - [ ] **B4. Finalizing an import offer without boxes announces it but leaves it in `import`**
   (`import_handler.py`, `handle_finalize_import`). `update_offer_status_after_change` returns None when the offer has
   no boxes; the handler then sets `offer.status = ACTIVE` on the object only, announces it, and the table still says

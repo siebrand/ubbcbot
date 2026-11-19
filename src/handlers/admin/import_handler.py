@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from handlers.admin.offer.notifications import NotificationHandler
-from models.entities import AuthorizationStatus, BoxStatus, OfferStatus, Order, OrderStatus
+from models.entities import AuthorizationStatus, Box, BoxStatus, OfferStatus, Order, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from utils.csv_parser import CSVParser
 
@@ -14,6 +14,8 @@ class ImportHandler(NotificationHandler):
 
     MAX_AMBIGUOUS_LINES_SHOWN = 10
     MAX_CANDIDATES_SHOWN = 5
+    # How often an import order tries a box again after the box it chose filled up in the meantime
+    MAX_BOX_ATTEMPTS = 3
 
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
@@ -195,46 +197,51 @@ class ImportHandler(NotificationHandler):
         return {"status": "ambiguous_customers", "lines": [line for line, _, _ in collisions]}
 
     def _create_import_order(self, offer, customer) -> dict[str, Any]:
-        """Create order for import (quantity=1, no announcement)"""
+        """Create order for import (quantity=1, no announcement).
+
+        The order and its unit in the box are one transaction (as for customers' orders). When the box filled up
+        between reading it and writing (customers may order while the import runs), the boxes are read again and
+        the next one with room is tried.
+        """
         try:
-            # Get or create box
-            boxes = self.db.get_boxes_by_offer(offer.offer_id)
-            open_boxes = [b for b in boxes if b.status == BoxStatus.OPEN.value and b.current_quantity < b.max_capacity]
-
-            if open_boxes:
-                box = open_boxes[0]
-            else:
-                # Create new box
-                from models.entities import Box
-
-                box = Box(offer_id=offer.offer_id, max_capacity=offer.wholesale_box_size, status=BoxStatus.OPEN.value)
-                box = self.db.create_box(box)
+            for _ in range(self.MAX_BOX_ATTEMPTS):
+                box = self._import_box(offer)
                 if not box:
                     return {"success": False}
 
-            # Create order
-            order = Order(
-                customer_id=customer.customer_id,
-                box_id=box.box_id,
-                offer_id=offer.offer_id,
-                quantity=1,
-                unit_price=offer.price_per_unit,
-                total_price=offer.price_per_unit,
-                placed_by_admin=True,
-            )
+                order = Order(
+                    customer_id=customer.customer_id,
+                    box_id=box.box_id,
+                    offer_id=offer.offer_id,
+                    quantity=1,
+                    unit_price=offer.price_per_unit,
+                    total_price=offer.price_per_unit,
+                    placed_by_admin=True,
+                )
+                if not self.db.create_order_with_box_increment(order, box.box_id, 1, box.max_capacity):
+                    continue
 
-            created_order = self.db.create_order(order)
-            if not created_order:
-                return {"success": False}
+                # Best-effort status follow-up, as for customers' orders: the box is FULL at capacity
+                if box.current_quantity + 1 >= box.max_capacity:
+                    self.db.update_box(box.box_id, {"status": BoxStatus.FULL.value})
+                return {"success": True}
 
-            # Update box
-            self.box_status_manager.update_box_after_order_placement(box.box_id, 1)
-
-            return {"success": True}
+            logger.error(f"Import order for offer {offer.offer_id} found no box with room")
+            return {"success": False}
 
         except Exception as e:
             logger.error(f"Error creating import order: {e}")
             return {"success": False}
+
+    def _import_box(self, offer) -> Box | None:
+        """The first open box of the offer with room, or a new one"""
+        boxes = self.db.get_boxes_by_offer(offer.offer_id)
+        open_boxes = [b for b in boxes if b.status == BoxStatus.OPEN.value and b.current_quantity < b.max_capacity]
+        if open_boxes:
+            return open_boxes[0]
+        return self.db.create_box(
+            Box(offer_id=offer.offer_id, max_capacity=offer.wholesale_box_size, status=BoxStatus.OPEN.value)
+        )
 
     def _download_file(self, file_id: str) -> bytes | None:
         """Download file from Telegram"""
