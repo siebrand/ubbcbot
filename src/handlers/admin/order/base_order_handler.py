@@ -2,8 +2,20 @@ from decimal import Decimal
 from typing import Any
 
 from handlers.base_handler import BaseHandler
-from models.entities import AuthorizationStatus
+from models.entities import AuthorizationStatus, OrderStatus
 from utils.pagination import PaginationUtils
+
+# The mark of each order status in the order lists; the lists show the statuses in the order of OrderStatus
+ORDER_STATUS_EMOJI = {
+    OrderStatus.PENDING.value: "⏳",
+    OrderStatus.ORDERED.value: "📦",
+    OrderStatus.RECEIVED_PARTIAL_DELAYED.value: "🚚",
+    OrderStatus.READY_FOR_LABELING.value: "🏷️",
+    OrderStatus.LABELING_COMPLETED.value: "✅",
+    OrderStatus.AWAITING_PAYMENT.value: "💳",
+    OrderStatus.COMPLETED.value: "✅",
+    OrderStatus.CANCELLED.value: "❌",
+}
 
 
 class BaseOrderHandler(BaseHandler):
@@ -99,15 +111,7 @@ class BaseOrderHandler(BaseHandler):
 
         # Flatten items for pagination
         all_items = []
-        for status in [
-            "pending",
-            "ordered",
-            "ready_for_labeling",
-            "labeling_completed",
-            "awaiting_payment",
-            "completed",
-            "cancelled",
-        ]:
+        for status in ORDER_STATUS_EMOJI:
             if status in status_groups:
                 all_items.extend([(status, item) for item in status_groups[status]["items"]])
 
@@ -151,15 +155,7 @@ class BaseOrderHandler(BaseHandler):
 
                 if current_status is not None:
                     message += "\n"
-                status_emoji = {
-                    "pending": "⏳",
-                    "ordered": "📦",
-                    "ready_for_labeling": "🏷️",
-                    "labeling_completed": "✅",
-                    "awaiting_payment": "💳",
-                    "cancelled": "❌",
-                    "completed": "✅",
-                }.get(status, "❓")
+                status_emoji = ORDER_STATUS_EMOJI.get(status, "❓")
                 status_label = self._t(f"status_{status}", user_id).upper()
                 message += f"{status_emoji} {status_label}:\n"
                 current_status = status

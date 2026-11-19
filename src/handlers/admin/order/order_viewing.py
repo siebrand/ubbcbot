@@ -3,7 +3,7 @@ from typing import Any
 from models.entities import AuthorizationStatus, OfferStatus, OrderStatus
 from services.export_expiry import EXPORT_LIFETIME_SECONDS
 
-from .base_order_handler import BaseOrderHandler
+from .base_order_handler import ORDER_STATUS_EMOJI, BaseOrderHandler
 
 
 class OrderViewing(BaseOrderHandler):
@@ -342,15 +342,7 @@ class OrderViewing(BaseOrderHandler):
 
             order_date = to_cet_string(order.created_at, "%Y-%m-%d")
 
-            status_emoji = {
-                "pending": "⏳",
-                "ordered": "📦",
-                "cancelled": "❌",
-                "ready_for_labeling": "🏷️",
-                "labeling_completed": "✅",
-                "awaiting_payment": "💳",
-                "completed": "✅",
-            }.get(order.status, "❓")
+            status_emoji = ORDER_STATUS_EMOJI.get(order.status, "❓")
 
             # Alternate diamond icons for better readability
             line_icon = "🔸" if i % 2 == 0 else "🔹"
