@@ -125,18 +125,48 @@ class TestRateLimit:
 
 
 class TestFailureReport:
+    FAILURES = [
+        {"user_id": 42, "customer_name": "Jan J", "error": "Forbidden: bot was blocked by the user"},
+        {"user_id": 43, "error": "x" * 300},
+    ]
+
+    def report(self, post, monkeypatch, *args):
+        monkeypatch.setattr(message_sender, "ADMIN_USER_ID", 777)
+        asyncio.run(message_sender.notify_admin_of_failures(self.FAILURES, "test", TOKEN, *args))
+        return post.call_args.kwargs["json"]
+
     def test_the_admin_gets_one_message_listing_the_failures(self, post, monkeypatch):
-        monkeypatch.setenv("ADMIN_USER_ID", "777")
-        failures = [
-            {"user_id": 42, "customer_name": "Jan J", "error": "Forbidden: bot was blocked by the user"},
-            {"user_id": 43, "error": "x" * 300},
-        ]
+        payload = self.report(post, monkeypatch, "en")
 
-        asyncio.run(message_sender.notify_admin_of_failures(failures, "test", TOKEN))
-
-        payload = post.call_args.kwargs["json"]
         assert payload["chat_id"] == 777
         assert payload["text"].startswith("TEST - ⚠️")
         assert "Jan J (ID: 42)" in payload["text"]
         assert "Unknown (ID: 43)" in payload["text"]
         assert "x" * 101 not in payload["text"]  # errors are cut at 100 characters
+
+    def test_the_report_is_dutch_unless_the_admin_chose_english(self, post, monkeypatch):
+        dutch = self.report(post, monkeypatch)["text"]
+        english = self.report(post, monkeypatch, "en")["text"]
+
+        assert "niet verstuurd" in dutch and "Onbekend (ID: 43)" in dutch
+        assert "not sent" in english and "Failed to send" not in english
+
+    def test_the_lambda_reports_in_the_language_of_the_event(self, monkeypatch):
+        reports = []
+
+        async def fake_send(msg, environment, bot_token):
+            return {"success": False, "user_id": msg["user_id"], "error": "blocked"}
+
+        async def fake_report(failures, environment, bot_token, language):
+            reports.append(language)
+
+        monkeypatch.setattr(message_sender, "send_from_bot", fake_send)
+        monkeypatch.setattr(message_sender, "notify_admin_of_failures", fake_report)
+        ssm = Mock()
+        ssm.get_parameter.return_value = {"Parameter": {"Value": TOKEN}}
+        event = {"messages": [{"user_id": 42, "message": "hoi"}], "environment": "prod", "admin_language": "en"}
+
+        with patch("message_sender.boto3.client", return_value=ssm):
+            message_sender.lambda_handler(event, None)
+
+        assert reports == ["en"]

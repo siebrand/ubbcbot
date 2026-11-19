@@ -40,6 +40,14 @@ class BaseHandler:
         """Translate message key to user language"""
         return self.translator.translate(key, user_id, force_group_lang, **params)
 
+    def _message_sender_event(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
+        """The event for the MessageSender Lambda, which has no database: it gets the admin's language with it"""
+        return {
+            "messages": messages,
+            "environment": self.environment,
+            "admin_language": self.translator.language(self.admin_user_id),
+        }
+
     def _get_bot_username(self) -> str:
         """Get bot username from Telegram API"""
         if self._bot_username:

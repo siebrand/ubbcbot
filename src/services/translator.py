@@ -50,12 +50,17 @@ class Translator:
         stray brace) is returned unfilled, so one wrong translation never breaks a command.
         """
         lang = DEFAULT_LANGUAGE if force_group_lang else self.language(user_id)
-        message = self.tables(lang).get(key, key)
-        if not params:
-            return message
-        try:
-            return message.format(**params)
-        except (KeyError, IndexError, ValueError) as e:
-            # Only the key and the error are logged, never the parameters
-            logger.error(f"Translation {key!r} ({lang}) could not be filled in: {type(e).__name__}: {e}")
-            return message
+        return text(lang, key, self.tables, **params)
+
+
+def text(lang: str, key: str, tables: Callable[[str], dict[str, str]] = load_translations, **params) -> str:
+    """The text of ``key`` in ``lang``, for code that knows the language and has no database (the Lambdas)"""
+    message = tables(lang).get(key, key)
+    if not params:
+        return message
+    try:
+        return message.format(**params)
+    except (KeyError, IndexError, ValueError) as e:
+        # Only the key and the error are logged, never the parameters
+        logger.error(f"Translation {key!r} ({lang}) could not be filled in: {type(e).__name__}: {e}")
+        return message

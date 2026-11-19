@@ -67,6 +67,7 @@ def handler():
     }
     db = Mock()
     db.get_customers_by_status.side_effect = lambda status: customers.get(status, [])
+    db.get_customer_by_telegram_id.return_value = None  # the admin has no language of their own: Dutch
     with patch("handlers.admin.test_commands.boto3.client"):
         handler = SetupDataCommands(db, ADMIN_ID, "prod", "token")
     handler.message_sender_lambda = "ubbc-bot-prod-message-sender"
@@ -171,6 +172,7 @@ class TestSending:
         assert json.loads(call["Payload"]) == {
             "messages": [{"user_id": 4242, "message": "hello there", "from_admin": True}],
             "environment": "prod",
+            "admin_language": "nl",
         }
         assert "4242" in _sent(handler)
 

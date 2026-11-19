@@ -268,8 +268,8 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
     ) -> dict[str, Any]:
         """Send message from admin account via MessageSender Lambda"""
         try:
-            payload = {
-                "messages": [
+            payload = self._message_sender_event(
+                [
                     {
                         "user_id": int(user_id),
                         "message": str(message),
@@ -277,9 +277,8 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
                         "parse_mode": parse_mode,
                         "disable_web_page_preview": disable_web_page_preview,
                     }
-                ],
-                "environment": self.environment,
-            }
+                ]
+            )
 
             response = self.lambda_client.invoke(
                 FunctionName=self.message_sender_lambda, InvocationType="RequestResponse", Payload=json.dumps(payload)

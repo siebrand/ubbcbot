@@ -14,7 +14,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
         box_status_manager = BoxStatusManager(db)
-        self.delivery_service = WholesalerDeliveryService(db, box_status_manager)
+        self.delivery_service = WholesalerDeliveryService(db, box_status_manager, admin_user_id)
 
     def _ordered_boxes(self, offer_id: int) -> list[Box]:
         """The boxes of an offer that are ordered and not yet delivered"""

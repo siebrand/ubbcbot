@@ -6,11 +6,12 @@ Handles async sending to avoid Lambda timeouts
 import asyncio
 import json
 import logging
-import os
 
 import boto3
 
+from config import ADMIN_USER_ID
 from services.telegram_client import TelegramClient
+from services.translator import DEFAULT_LANGUAGE, text
 from services.user_client import UserClient
 from utils.log_redaction import configure_logging
 
@@ -59,12 +60,14 @@ def lambda_handler(event, context):
                 "disable_web_page_preview": true (optional)
             }
         ],
-        "environment": "test"
+        "environment": "test",
+        "admin_language": "nl" (optional: the language of the failure report to the admin)
     }
     """
     try:
         messages = event.get("messages", [])
         environment = event.get("environment", "test")
+        admin_language = event.get("admin_language") or DEFAULT_LANGUAGE
 
         if not messages:
             return {"statusCode": 400, "body": json.dumps({"error": "No messages provided"})}
@@ -77,7 +80,7 @@ def lambda_handler(event, context):
 
         # Send messages
         loop = get_event_loop()
-        results = loop.run_until_complete(send_messages(messages, environment, bot_token))
+        results = loop.run_until_complete(send_messages(messages, environment, bot_token, admin_language))
 
         success_count = sum(1 for r in results if isinstance(r, dict) and r.get("success"))
         error_count = len(results) - success_count
@@ -94,7 +97,7 @@ def lambda_handler(event, context):
         return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
 
 
-async def send_messages(messages, environment, bot_token):
+async def send_messages(messages, environment, bot_token, admin_language=DEFAULT_LANGUAGE):
     """Send all messages with controlled concurrency"""
     # Separate admin and bot messages
     admin_messages = [msg for msg in messages if msg.get("from_admin")]
@@ -127,7 +130,7 @@ async def send_messages(messages, environment, bot_token):
     # Notify admin of failures
     failures = [r for r in results if isinstance(r, dict) and not r.get("success")]
     if failures:
-        await notify_admin_of_failures(failures, environment, bot_token)
+        await notify_admin_of_failures(failures, environment, bot_token, admin_language)
 
     return results
 
@@ -258,22 +261,27 @@ async def send_from_bot(msg, environment, bot_token):
         }
 
 
-async def notify_admin_of_failures(failures, environment, bot_token):
-    """Notify admin of failed message deliveries"""
+async def notify_admin_of_failures(failures, environment, bot_token, language=DEFAULT_LANGUAGE):
+    """Tell the admin, in their language, which messages were not delivered"""
     try:
-        admin_user_id = int(os.environ.get("ADMIN_USER_ID", "15005473"))
-
-        message = "⚠️ Failed to send messages:\n\n"
-        for failure in failures:
-            customer_name = failure.get("customer_name", "Unknown")
-            user_id = failure.get("user_id", "Unknown")
-            error = failure.get("error", "Unknown error")[:100]
-            message += f"• {customer_name} (ID: {user_id})\n  Error: {error}\n\n"
+        unknown = text(language, "unknown")
+        lines = [
+            text(
+                language,
+                "message_sender_failure_line",
+                # The result holds the key with None when the message had no name or id
+                name=failure.get("customer_name") or unknown,
+                user_id=failure.get("user_id") or unknown,
+                error=(failure.get("error") or text(language, "unknown_error"))[:100],
+            )
+            for failure in failures
+        ]
+        message = text(language, "message_sender_failures", lines="\n\n".join(lines))
 
         if environment == "test":
             message = f"TEST - {message}"
 
-        payload = {"chat_id": admin_user_id, "text": message}
+        payload = {"chat_id": ADMIN_USER_ID, "text": message}
 
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, lambda: TelegramClient(bot_token).call("sendMessage", payload))

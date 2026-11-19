@@ -1,5 +1,6 @@
 import logging
 
+from config import ADMIN_USER_ID
 from models.entities import Order, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
@@ -9,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class WholesalerDeliveryService:
     def __init__(
-        self, db_service: DynamoDBService, box_status_manager: BoxStatusManager, admin_user_id: int = 15005473
+        self, db_service: DynamoDBService, box_status_manager: BoxStatusManager, admin_user_id: int = ADMIN_USER_ID
     ):
         self.db = db_service
         self.box_status_manager = box_status_manager

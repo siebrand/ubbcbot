@@ -109,7 +109,7 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
                     messages.append(msg)
 
             # Invoke message sender Lambda
-            payload = {"messages": messages, "environment": self.environment}
+            payload = self._message_sender_event(messages)
 
             self.lambda_client.invoke(
                 FunctionName=self.message_sender_lambda,
@@ -297,8 +297,8 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
 
             # Notify customer via message sender (from admin) - skip for guest users
             if not customer.is_guest:
-                payload = {
-                    "messages": [
+                payload = self._message_sender_event(
+                    [
                         {
                             "user_id": int(customer.telegram_user_id),
                             "message": self._t(
@@ -310,9 +310,8 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
                             "from_admin": True,
                             "parse_mode": "HTML",
                         }
-                    ],
-                    "environment": self.environment,
-                }
+                    ]
+                )
                 self.lambda_client.invoke(
                     FunctionName=self.message_sender_lambda, InvocationType="Event", Payload=json.dumps(payload)
                 )

@@ -64,9 +64,13 @@ priorities as before:
   `_send_in_batches` for both (bot: 25 with a second between batches; admin: 5 with half a second, as before, but
   no longer a blocking `time.sleep` inside the event loop). A 429 is tried again after its `retry_after` (at most 30
   seconds, three tries in all), so a 50-message batch stays well within the Lambda's 300 seconds.
-- [ ] **B2. The failure report of the message Lambda is hard-coded English** (`message_sender.py`,
+- [x] **B2. The failure report of the message Lambda is hard-coded English** (`message_sender.py`,
   `notify_admin_of_failures`), and `notification_sender.py` hard-codes the admin's Telegram id (`15005473`) instead of
-  `ADMIN_USER_ID`. Fix: translated texts; the id from `config.py`.
+  `ADMIN_USER_ID`. Fix: translated texts; the id from `config.py`. **Done**: the message Lambda has no database, so the
+  handlers send the admin's language with the event (`BaseHandler._message_sender_event`, used by all four callers)
+  and the report is built with `translator.text`. The id comes from `config.py` in both Lambdas and in
+  `WholesalerDeliveryService`, which recorded `15005473` as the admin in the order audit of every wholesale delivery.
+  The reasons the Lambda gives for a failure ("User not in admin contacts", Telegram's own answer) stay as they are.
 - [ ] **B3. The admin's order screens bypass the translations**: "❌ Cancel Order for …", "◀️ Previous", "Page x/y",
   "Next ▶️" (`order/order_cancellation.py`); " - Page x/y" (`order/base_order_handler.py`). Status literals
   (`"pending"`, `"ordered"`, `"cancelled"`, `"completed"`) are used throughout `order/*.py`, `import_handler.py` and

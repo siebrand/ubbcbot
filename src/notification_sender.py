@@ -1,6 +1,7 @@
 import json
 import logging
 
+from config import ADMIN_USER_ID
 from handlers.base_handler import BaseHandler
 from services.database import DynamoDBService
 from services.offer_message_builder import OfferMessageBuilder
@@ -26,7 +27,7 @@ def lambda_handler(event, context):
         db = DynamoDBService()
 
         # Create notification handler
-        handler = NotificationSender(db, 15005473, environment, telegram_token)
+        handler = NotificationSender(db, ADMIN_USER_ID, environment, telegram_token)
 
         # Extract payload
         offer_id = event["offer_id"]

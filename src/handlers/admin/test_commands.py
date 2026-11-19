@@ -131,10 +131,7 @@ class TestCommands(BaseHandler):
 
         message = " ".join(args[1:])
         try:
-            payload = {
-                "messages": [{"user_id": user_id, "message": message, "from_admin": True}],
-                "environment": self.environment,
-            }
+            payload = self._message_sender_event([{"user_id": user_id, "message": message, "from_admin": True}])
 
             response = self.lambda_client.invoke(
                 FunctionName=self.message_sender_lambda, InvocationType="RequestResponse", Payload=json.dumps(payload)
