@@ -1,9 +1,10 @@
 from typing import Any
 
+from handlers.order_list import ACTIVE_ORDER_STATUSES
 from models.entities import EditContext, OfferStatus, OrderStatus
 from services.box_status_manager import BoxStatusManager
 
-from .base_order_handler import ACTIVE_ORDER_STATUSES, BaseOrderHandler
+from .base_order_handler import BaseOrderHandler
 
 
 class OrderPlacement(BaseOrderHandler):

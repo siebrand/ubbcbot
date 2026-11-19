@@ -84,10 +84,13 @@ priorities as before:
   the chain, which is the `/export_orders` filter, not `/list_user_orders`, is a table `EXPORT_FILTERS`; a test pins
   what each filter selects. Left: `PaginationUtils.build_pagination_keyboard` without `enhanced` still says
   "Previous"/"Page"/"Next" in English (see audit 4).
-- [ ] **B4. Five copies of "read the customer of a button, or say it is gone"** (`user_commands.py`:
+- [x] **B4. Five copies of "read the customer of a button, or say it is gone"** (`user_commands.py`:
   `handle_edit_user_select`, `handle_user_status_select`, `handle_approve_user_select`, `handle_approve_user_by_id`,
   `handle_reject_user_by_id`). Fix: one helper. `InfoCommands.handle_list_my_orders` builds a `BaseOrderHandler` to
-  call one method (the pattern of M6 in the previous list).
+  call one method (the pattern of M6 in the previous list). **Done**: `_with_button_customer`, with a test that pins
+  all five. The order list is `OrderListMixin` (`handlers/order_list.py`, with `ORDER_STATUS_EMOJI` and
+  `ACTIVE_ORDER_STATUSES`), used by `BaseOrderHandler` and `InfoCommands`. The second handler also sent the list
+  with its own `_send_message`, so a test that mocked the one of `InfoCommands` sent a real request to Telegram.
 - [ ] **B5. The workflow box lists read the orders of every box** (`database.py`,
   `get_boxes_by_offer_with_order_status`): one query per box, for each step of the wholesale delivery and labeling
   workflows. Fix: one query of the offer's orders, grouped by box.

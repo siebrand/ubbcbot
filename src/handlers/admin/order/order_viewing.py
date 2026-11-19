@@ -1,9 +1,10 @@
 from typing import Any
 
+from handlers.order_list import ACTIVE_ORDER_STATUSES, ORDER_STATUS_EMOJI
 from models.entities import AuthorizationStatus, OfferStatus, OrderStatus
 from services.export_expiry import EXPORT_LIFETIME_SECONDS
 
-from .base_order_handler import ACTIVE_ORDER_STATUSES, ORDER_STATUS_EMOJI, BaseOrderHandler
+from .base_order_handler import BaseOrderHandler
 
 # The order statuses each /export_orders filter selects
 _ALL_STATUSES = {status.value for status in OrderStatus}

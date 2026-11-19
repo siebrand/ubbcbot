@@ -1,11 +1,12 @@
 import logging
 from typing import Any
 
+from handlers.order_list import ACTIVE_ORDER_STATUSES
 from models.entities import BoxStatus, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from utils.timezone import to_utc_datetime
 
-from .base_order_handler import ACTIVE_ORDER_STATUSES, BaseOrderHandler
+from .base_order_handler import BaseOrderHandler
 
 logger = logging.getLogger(__name__)
 

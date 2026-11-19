@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Any
 
-from handlers.base_handler import BaseHandler
+from handlers.order_list import OrderListMixin
 from models.entities import OfferStatus, OrderStatus
 from services import offer_listing
 from utils.pagination import PaginationUtils
@@ -15,7 +15,7 @@ CUSTOMER_HELP_SECTIONS = ("general", "orders")
 ADMIN_HELP_SECTIONS = ("suppliers", "offers", "users", "delivery", "import", "system", "reports")
 
 
-class InfoCommands(BaseHandler):
+class InfoCommands(OrderListMixin):
     def handle_privacy(self, chat_id: int, user_id: int, args: list | None = None) -> dict[str, Any]:
         """Handle /privacy command: reply with a link to the rendered privacy statement."""
         privacy_url = os.environ.get("PRIVACY_URL", "")
@@ -306,11 +306,7 @@ class InfoCommands(BaseHandler):
             self._send_message(chat_id, self._t("customer_not_found", user_id))
             return {"status": "customer_not_found"}
 
-        # Import BaseOrderHandler to use shared method
-        from handlers.admin.order.base_order_handler import BaseOrderHandler
-
-        base_handler = BaseOrderHandler(self.db, self.admin_user_id, self.environment, self.telegram_token)
-        return base_handler.show_customer_orders(chat_id, customer, page, show_order_ids=show_ids, user_id=user_id)
+        return self.show_customer_orders(chat_id, customer, page, show_order_ids=bool(show_ids), user_id=user_id)
 
     def handle_view_offer(self, chat_id: int, user_id: int, args: list | None = None) -> dict[str, Any]:
         """The details of an offer, from a deep link, a button or /view_offer"""
