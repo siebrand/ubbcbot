@@ -3,7 +3,26 @@ from typing import Any
 from models.entities import AuthorizationStatus, OfferStatus, OrderStatus
 from services.export_expiry import EXPORT_LIFETIME_SECONDS
 
-from .base_order_handler import ORDER_STATUS_EMOJI, BaseOrderHandler
+from .base_order_handler import ACTIVE_ORDER_STATUSES, ORDER_STATUS_EMOJI, BaseOrderHandler
+
+# The order statuses each /export_orders filter selects
+_ALL_STATUSES = {status.value for status in OrderStatus}
+EXPORT_FILTERS: dict[str, set[str]] = {
+    "active": set(ACTIVE_ORDER_STATUSES),
+    "all": _ALL_STATUSES,
+    "full": _ALL_STATUSES,
+    **{
+        status.value: {status.value}
+        for status in (
+            OrderStatus.ORDERED,
+            OrderStatus.READY_FOR_LABELING,
+            OrderStatus.LABELING_COMPLETED,
+            OrderStatus.AWAITING_PAYMENT,
+            OrderStatus.COMPLETED,
+            OrderStatus.CANCELLED,
+        )
+    },
+}
 
 
 class OrderViewing(BaseOrderHandler):
@@ -62,39 +81,13 @@ class OrderViewing(BaseOrderHandler):
         # Get all customers and their orders
         customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
 
+        # An unknown filter selects nothing, and is answered with "no orders"
+        selected = EXPORT_FILTERS.get(status_filter, set())
         all_orders = []
         for customer in customers:
-            orders = self.db.get_orders_by_customer(customer.customer_id)
-            for order in orders:
-                if (
-                    status_filter == "active"
-                    and order.status not in ["pending", "ordered"]
-                    or status_filter == "cancelled"
-                    and order.status != "cancelled"
-                    or status_filter == "ordered"
-                    and order.status != "ordered"
-                    or status_filter == "ready_for_labeling"
-                    and order.status != OrderStatus.READY_FOR_LABELING.value
-                    or status_filter == "labeling_completed"
-                    and order.status != OrderStatus.LABELING_COMPLETED.value
-                    or status_filter == "awaiting_payment"
-                    and order.status != OrderStatus.AWAITING_PAYMENT.value
-                    or status_filter == "completed"
-                    and order.status != OrderStatus.COMPLETED.value
-                    or status_filter not in ["all", "full"]
-                    and status_filter
-                    not in [
-                        "active",
-                        "cancelled",
-                        "ordered",
-                        "ready_for_labeling",
-                        "labeling_completed",
-                        "awaiting_payment",
-                        "completed",
-                    ]
-                ):
-                    continue
-                all_orders.append((customer, order))
+            for order in self.db.get_orders_by_customer(customer.customer_id):
+                if order.status in selected:
+                    all_orders.append((customer, order))
 
         if not all_orders:
             keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin"), "callback_data": "admin:main"}]]}
@@ -308,7 +301,7 @@ class OrderViewing(BaseOrderHandler):
         page_orders, total_pages = self._paginate_list(orders, page, 10)
 
         # Calculate totals
-        active_orders = [o for o in orders if o.status in ["pending", "ordered"]]
+        active_orders = [o for o in orders if o.status in ACTIVE_ORDER_STATUSES]
         total_quantity = sum(o.quantity for o in orders)
         active_quantity = sum(o.quantity for o in active_orders)
         total_value = sum(o.total_price for o in orders)

@@ -1,9 +1,9 @@
 from typing import Any
 
-from models.entities import EditContext, OfferStatus
+from models.entities import EditContext, OfferStatus, OrderStatus
 from services.box_status_manager import BoxStatusManager
 
-from .base_order_handler import BaseOrderHandler
+from .base_order_handler import ACTIVE_ORDER_STATUSES, BaseOrderHandler
 
 
 class OrderPlacement(BaseOrderHandler):
@@ -140,7 +140,7 @@ class OrderPlacement(BaseOrderHandler):
             existing_orders = [
                 o
                 for o in self.db.get_orders_by_customer(customer.customer_id)
-                if o.offer_id == offer_id and o.status in ["pending", "ordered"]
+                if o.offer_id == offer_id and o.status in ACTIVE_ORDER_STATUSES
             ]
             total_existing = sum(order.quantity for order in existing_orders)
 
@@ -180,7 +180,7 @@ class OrderPlacement(BaseOrderHandler):
             # Get the actual order to show correct status
             orders = self.db.get_orders_by_customer(customer.customer_id)
             latest_order = max(orders, key=lambda o: o.created_at) if orders else None
-            order_status = latest_order.status if latest_order else "pending"
+            order_status = latest_order.status if latest_order else OrderStatus.PENDING.value
 
             # Tell the customer, in their language (a guest has no Telegram and gets nothing)
             pm_result = self._notify_customer(

@@ -1,11 +1,11 @@
 import logging
 from typing import Any
 
-from models.entities import BoxStatus
+from models.entities import BoxStatus, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from utils.timezone import to_utc_datetime
 
-from .base_order_handler import BaseOrderHandler
+from .base_order_handler import ACTIVE_ORDER_STATUSES, BaseOrderHandler
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ class OrderCancellation(BaseOrderHandler):
             self._send_message(chat_id, self._t("order_not_found_full_id", chat_id, order_id=order_id))
             return {"status": "order_not_found"}
 
-        if order.status == "cancelled":
+        if order.status == OrderStatus.CANCELLED.value:
             self._send_message(chat_id, self._t("order_already_cancelled_full_id", chat_id, order_id=order_id))
             return {"status": "already_cancelled"}
 
@@ -174,7 +174,7 @@ class OrderCancellation(BaseOrderHandler):
 
     def _show_user_orders_for_cancel(self, chat_id: int, customer, page: int = 1) -> dict[str, Any]:
         """Show user's active orders with cancel buttons"""
-        orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.status in ["pending", "ordered"]]
+        orders = [o for o in self.db.get_orders_by_customer(customer.customer_id) if o.status in ACTIVE_ORDER_STATUSES]
         # Newest order first. The database returns them in no particular order, and the pages follow this list.
         orders.sort(key=lambda o: (to_utc_datetime(o.created_at), o.order_id), reverse=True)
 

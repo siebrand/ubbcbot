@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from models.entities import AuthorizationStatus
+from models.entities import AuthorizationStatus, OrderStatus
 
 from .base_order_handler import BaseOrderHandler
 
@@ -23,7 +23,9 @@ class OrderMaintenance(BaseOrderHandler):
 
             for customer in customers:
                 # Get cancelled orders
-                cancelled_orders = self.db.get_orders_by_customer_and_status(customer.customer_id, "cancelled")
+                cancelled_orders = self.db.get_orders_by_customer_and_status(
+                    customer.customer_id, OrderStatus.CANCELLED.value
+                )
                 for order in cancelled_orders:
                     if order.update_date:
                         try:
@@ -35,7 +37,9 @@ class OrderMaintenance(BaseOrderHandler):
                             continue
 
                 # Get completed orders
-                completed_orders = self.db.get_orders_by_customer_and_status(customer.customer_id, "completed")
+                completed_orders = self.db.get_orders_by_customer_and_status(
+                    customer.customer_id, OrderStatus.COMPLETED.value
+                )
                 for order in completed_orders:
                     if order.update_date:
                         try:

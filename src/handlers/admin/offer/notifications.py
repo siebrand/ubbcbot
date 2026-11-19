@@ -1,7 +1,7 @@
 import logging
 import os
 
-from models.entities import AuthorizationStatus
+from models.entities import AuthorizationStatus, OrderStatus
 from utils.s3_url import is_s3_url
 
 from .base import OfferBaseHandler
@@ -85,7 +85,7 @@ class NotificationHandler(OfferBaseHandler):
         boxes = self.db.get_boxes_by_offer(offer_id)
         total_capacity = sum(box.max_capacity for box in boxes)
         all_orders = self.db.get_orders_by_offer(offer_id)
-        active_orders = [o for o in all_orders if o.status in ["pending", "ordered"]]
+        active_orders = [o for o in all_orders if o.status in (OrderStatus.PENDING.value, OrderStatus.ORDERED.value)]
         total_ordered = sum(order.quantity for order in active_orders)
         return total_ordered, total_capacity
 

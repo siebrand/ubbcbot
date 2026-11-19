@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from handlers.admin.offer.notifications import NotificationHandler
-from models.entities import BoxStatus, OfferStatus, Order
+from models.entities import BoxStatus, OfferStatus, Order, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from utils.csv_parser import CSVParser
 
@@ -263,8 +263,8 @@ class ImportHandler(NotificationHandler):
             for box_id in box_ids:
                 orders = self.db.get_orders_by_box(box_id)
                 for order in orders:
-                    if order.status == "pending":
-                        self.db.update_order(order.order_id, {"status": "ordered"})
+                    if order.status == OrderStatus.PENDING.value:
+                        self.db.update_order(order.order_id, {"status": OrderStatus.ORDERED.value})
 
         # Update offer status based on box states
         new_status = self.box_status_manager.update_offer_status_after_change(offer.offer_id)
@@ -314,7 +314,7 @@ class ImportHandler(NotificationHandler):
         for offer in import_offers:
             # Get order count
             orders = self.db.get_orders_by_offer(offer.offer_id)
-            order_count = len([o for o in orders if o.status == "pending"])
+            order_count = len([o for o in orders if o.status == OrderStatus.PENDING.value])
 
             message += f"🍺 {offer.offer_id}. {offer.name} ({order_count} orders)\n"
             keyboard_buttons.append(

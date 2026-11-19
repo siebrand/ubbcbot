@@ -2,7 +2,7 @@ import logging
 from decimal import Decimal
 from typing import Any
 
-from models.entities import BoxStatus
+from models.entities import BoxStatus, OrderStatus
 from services.box_status_manager import BoxStatusManager
 
 from .base_order_handler import BaseOrderHandler
@@ -91,16 +91,7 @@ class OrderEditing(BaseOrderHandler):
     # ------------------------------------------------------------------ status
     def _status_options(self) -> list[str]:
         """Order statuses offered for editing, in workflow order."""
-        return [
-            "pending",
-            "ordered",
-            "received_partial_delayed",
-            "ready_for_labeling",
-            "labeling_completed",
-            "awaiting_payment",
-            "completed",
-            "cancelled",
-        ]
+        return [status.value for status in OrderStatus]
 
     def _apply_status_change(self, order, new_status: str) -> tuple[bool, str]:
         """Set the order's status (no guards; any workflow status allowed)."""

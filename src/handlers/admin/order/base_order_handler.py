@@ -17,6 +17,9 @@ ORDER_STATUS_EMOJI = {
     OrderStatus.CANCELLED.value: "❌",
 }
 
+# An order that still takes room in a box and can be cancelled
+ACTIVE_ORDER_STATUSES = (OrderStatus.PENDING.value, OrderStatus.ORDERED.value)
+
 
 class BaseOrderHandler(BaseHandler):
     """Base class for order-related handlers with shared utilities"""
@@ -34,7 +37,7 @@ class BaseOrderHandler(BaseHandler):
             for order in self.db.get_orders_by_customer(customer.customer_id):
                 if not order.order_id.startswith(partial_id):
                     continue
-                if not include_cancelled and order.status == "cancelled":
+                if not include_cancelled and order.status == OrderStatus.CANCELLED.value:
                     continue
                 matches.append((order, customer))
         return matches
@@ -132,7 +135,9 @@ class BaseOrderHandler(BaseHandler):
         message += "\n\n"
 
         # Calculate grand total once (excluding cancelled and completed)
-        non_cancelled_statuses = [s for s in status_groups if s not in ["cancelled", "completed"]]
+        non_cancelled_statuses = [
+            s for s in status_groups if s not in (OrderStatus.CANCELLED.value, OrderStatus.COMPLETED.value)
+        ]
         grand_total = (
             sum(status_groups[s]["total_price"] for s in non_cancelled_statuses)
             if len(non_cancelled_statuses) > 1
@@ -146,7 +151,7 @@ class BaseOrderHandler(BaseHandler):
         for item_index, (status, ((_offer_id, _unit_price, _order_status), data)) in enumerate(page_items):
             if status != current_status:
                 # Show subtotal for previous section (except cancelled)
-                if current_status is not None and current_status != "cancelled":
+                if current_status is not None and current_status != OrderStatus.CANCELLED.value:
                     status_label = self._t(f"status_{current_status}", user_id)
                     subtotal_line = f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}"
                     if grand_total is not None:
@@ -171,7 +176,7 @@ class BaseOrderHandler(BaseHandler):
             )
 
             # Create clickable offer link on offer_id for non-cancelled orders
-            if status != "cancelled":
+            if status != OrderStatus.CANCELLED.value:
                 offer_id_link = (
                     f"<a href='https://t.me/{bot_username}?start=view_offer_{data['offer_id']}'>{data['offer_id']}</a>"
                 )
@@ -191,7 +196,7 @@ class BaseOrderHandler(BaseHandler):
                 )
 
         # Show subtotal for last section (except cancelled)
-        if current_status is not None and current_status != "cancelled":
+        if current_status is not None and current_status != OrderStatus.CANCELLED.value:
             status_label = self._t(f"status_{current_status}", user_id)
             subtotal_line = f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}"
             if grand_total is not None:

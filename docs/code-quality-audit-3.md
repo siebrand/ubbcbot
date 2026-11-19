@@ -71,11 +71,19 @@ priorities as before:
   and the report is built with `translator.text`. The id comes from `config.py` in both Lambdas and in
   `WholesalerDeliveryService`, which recorded `15005473` as the admin in the order audit of every wholesale delivery.
   The reasons the Lambda gives for a failure ("User not in admin contacts", Telegram's own answer) stay as they are.
-- [ ] **B3. The admin's order screens bypass the translations**: "❌ Cancel Order for …", "◀️ Previous", "Page x/y",
+- [x] **B3. The admin's order screens bypass the translations**: "❌ Cancel Order for …", "◀️ Previous", "Page x/y",
   "Next ▶️" (`order/order_cancellation.py`); " - Page x/y" (`order/base_order_handler.py`). Status literals
   (`"pending"`, `"ordered"`, `"cancelled"`, `"completed"`) are used throughout `order/*.py`, `import_handler.py` and
   `offer/notifications.py` where `OrderStatus` exists, and the `/list_user_orders` status filter is a chain of
-  `and`/`or` (`order/order_viewing.py`).
+  `and`/`or` (`order/order_viewing.py`). **Done** in three commits. (1) The texts: " - Page x/y" was also in the
+  customer's `/my_orders`, whose status names, totals and dates were Dutch for everyone; that list, the cancel list
+  and the payment reminder list ("Payment Reminders - Page", "orders") now use the reader's language. (2) Found on
+  the way: the order list walked a hand-written list of seven statuses, so orders in `received_partial_delayed` (a
+  delayed wholesale delivery) disappeared from `/my_orders` and `/list_user_orders`; `ORDER_STATUS_EMOJI` now covers
+  every `OrderStatus`. (3) The literals are `OrderStatus` (with `ACTIVE_ORDER_STATUSES` for pending and ordered), and
+  the chain, which is the `/export_orders` filter, not `/list_user_orders`, is a table `EXPORT_FILTERS`; a test pins
+  what each filter selects. Left: `PaginationUtils.build_pagination_keyboard` without `enhanced` still says
+  "Previous"/"Page"/"Next" in English (see audit 4).
 - [ ] **B4. Five copies of "read the customer of a button, or say it is gone"** (`user_commands.py`:
   `handle_edit_user_select`, `handle_user_status_select`, `handle_approve_user_select`, `handle_approve_user_by_id`,
   `handle_reject_user_by_id`). Fix: one helper. `InfoCommands.handle_list_my_orders` builds a `BaseOrderHandler` to
