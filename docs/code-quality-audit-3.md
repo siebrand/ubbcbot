@@ -1,7 +1,8 @@
 # Code quality audit 3: what the bot sends
 
-Status: **in progress** (2026-11-19). Follows two earlier audits (of the four, then the ten largest files; see the
-git history of `docs/`), which are done. Most of what remains wrong shows up in the messages people get:
+Status: **done** (2026-11-19; every item is checked, the next list is `code-quality-audit-4.md`). Follows two
+earlier audits (of the four, then the ten largest files; see the git history of `docs/`), which are done. Most of
+what remained wrong showed up in the messages people get:
 announcements, notifications from the Lambdas, the admin's order screens and the texts typed into the bot. This audit
 follows those messages through the code that the first two left alone, and adds to-dos from the owner. Same
 priorities as before:
@@ -134,4 +135,5 @@ priorities as before:
 ## Order of work
 
 The to-dos first (small and asked for), then the bugs per file with a test that fails before the fix: A3, A1, A2,
-then B1, B2 (the Lambdas), B3, B4 and last B5.
+then B1, B2 (the Lambdas), B3, B4 and last B5; then B6 and T3. All done. Coverage went from 73.5% to 74.9%;
+`fail_under` is now 74.
