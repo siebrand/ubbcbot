@@ -178,19 +178,29 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
         page_customers, total_pages = PaginationUtils.paginate_list(customers_awaiting_payment, page, 10)
 
         # Show customers with reminder buttons
-        message = f"🔔 Payment Reminders - Page {page}/{total_pages}:\n\n"
+        page_label = self._t("page_indicator", chat_id, page=page, total_pages=total_pages)
+        message = self._t("payment_reminders_title", chat_id, page=page_label) + "\n\n"
         keyboard_rows = []
 
         for customer, orders in page_customers:
             customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(
-                "unknown", user_id=None
+                "unknown", chat_id
             )
             total_amount = sum(order.total_price for order in orders)
-            message += f"👤 {customer_name}: €{total_amount:.2f} ({len(orders)} orders)\n"
+            message += (
+                self._t(
+                    "payment_reminder_customer_line",
+                    chat_id,
+                    name=customer_name,
+                    amount=f"{total_amount:.2f}",
+                    count=len(orders),
+                )
+                + "\n"
+            )
 
             # Button text: 🔔 Last, First €amount
             last_name = customer.last_name or ""
-            first_name = customer.first_name or self._t("unknown", user_id=None)
+            first_name = customer.first_name or self._t("unknown", chat_id)
             button_text = f"🔔 {last_name}, {first_name} €{total_amount:.2f}".strip()
             keyboard_rows.append(
                 [{"text": button_text, "callback_data": f"remind_payment_{customer.customer_id}_{page}"}]

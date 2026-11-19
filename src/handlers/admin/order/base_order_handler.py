@@ -44,7 +44,9 @@ class BaseOrderHandler(BaseHandler):
         if not orders:
             display_name = self._customer_display_name(customer)
             if user_id and self._is_admin(user_id):
-                keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin"), "callback_data": "admin:main"}]]}
+                keyboard = {
+                    "inline_keyboard": [[{"text": self._t("back_to_admin", user_id), "callback_data": "admin:main"}]]
+                }
                 self._send_message(chat_id, self._t("no_orders_for_user", name=display_name), reply_markup=keyboard)
             else:
                 self._send_message(chat_id, self._t("no_orders", user_id))
@@ -53,13 +55,16 @@ class BaseOrderHandler(BaseHandler):
         # Sort orders by offer_id ascending
         orders.sort(key=lambda x: x.offer_id)
 
+        # Every text in the language of the reader: the customer, or the admin
+        language = self.translator.language(user_id)
+
         # Aggregate orders by offer, price and status
         aggregated = {}
         bot_username = self._get_bot_username()
 
         for order in orders:
             offer = self.db.get_offer(order.offer_id)
-            offer_name = offer.name if offer else self._t("unknown", user_id=None)
+            offer_name = offer.name if offer else self._t("unknown", user_id)
 
             key = (order.offer_id, order.unit_price, order.status)
             if key not in aggregated:
@@ -81,7 +86,7 @@ class BaseOrderHandler(BaseHandler):
             # Add date in localized format (d MMM yy)
             from utils.timezone import to_cet_localized
 
-            date_str = to_cet_localized(order.created_at, "nl")
+            date_str = to_cet_localized(order.created_at, language)
             aggregated[key]["dates"].add(date_str)
 
         # Group by status
@@ -114,12 +119,12 @@ class BaseOrderHandler(BaseHandler):
         display_name = self._escape_html(self._customer_display_name(customer))
 
         if is_admin:
-            message = self._t("user_orders_title", user_id=None, name=display_name)
+            message = self._t("user_orders_title", user_id, name=display_name)
         else:
             message = self._t("my_orders_title", user_id)
 
         if total_pages > 1:
-            message += f" - Page {page}/{total_pages}"
+            message += " - " + self._t("page_indicator", user_id, page=page, total_pages=total_pages)
         message += "\n\n"
 
         # Calculate grand total once (excluding cancelled and completed)
@@ -138,10 +143,10 @@ class BaseOrderHandler(BaseHandler):
             if status != current_status:
                 # Show subtotal for previous section (except cancelled)
                 if current_status is not None and current_status != "cancelled":
-                    status_label = self._t(f"status_{current_status}", user_id=None)
+                    status_label = self._t(f"status_{current_status}", user_id)
                     subtotal_line = f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}"
                     if grand_total is not None:
-                        subtotal_line += f" ({self._t('grand_total', user_id=None)}: €{grand_total:.2f})"
+                        subtotal_line += f" ({self._t('grand_total', user_id)}: €{grand_total:.2f})"
                     message += subtotal_line + "\n"
 
                 if current_status is not None:
@@ -155,7 +160,7 @@ class BaseOrderHandler(BaseHandler):
                     "cancelled": "❌",
                     "completed": "✅",
                 }.get(status, "❓")
-                status_label = self._t(f"status_{status}", user_id=None).upper()
+                status_label = self._t(f"status_{status}", user_id).upper()
                 message += f"{status_emoji} {status_label}:\n"
                 current_status = status
                 statuses_in_page.append(status)
@@ -164,7 +169,9 @@ class BaseOrderHandler(BaseHandler):
             line_icon = "🔸" if item_index % 2 == 0 else "🔹"
 
             date_display = (
-                f"[{list(data['dates'])[0]}]" if len(data["dates"]) == 1 else f"[{self._t('multiple_days_label')}]"
+                f"[{list(data['dates'])[0]}]"
+                if len(data["dates"]) == 1
+                else f"[{self._t('multiple_days_label', user_id)}]"
             )
 
             # Create clickable offer link on offer_id for non-cancelled orders
@@ -189,10 +196,10 @@ class BaseOrderHandler(BaseHandler):
 
         # Show subtotal for last section (except cancelled)
         if current_status is not None and current_status != "cancelled":
-            status_label = self._t(f"status_{current_status}", user_id=None)
+            status_label = self._t(f"status_{current_status}", user_id)
             subtotal_line = f"\n{status_label}: €{status_groups[current_status]['total_price']:.2f}"
             if grand_total is not None:
-                subtotal_line += f" ({self._t('grand_total', user_id=None)}: €{grand_total:.2f})"
+                subtotal_line += f" ({self._t('grand_total', user_id)}: €{grand_total:.2f})"
             message += subtotal_line + "\n"
 
         # Add pagination keyboard
@@ -204,7 +211,7 @@ class BaseOrderHandler(BaseHandler):
 
         # Add back button for admin
         if is_admin:
-            keyboard_buttons.append([{"text": self._t("back_to_admin"), "callback_data": "admin:main"}])
+            keyboard_buttons.append([{"text": self._t("back_to_admin", user_id), "callback_data": "admin:main"}])
 
         reply_markup = {"inline_keyboard": keyboard_buttons} if keyboard_buttons else None
         parse_mode = "HTML"

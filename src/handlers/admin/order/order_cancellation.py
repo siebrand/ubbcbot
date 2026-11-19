@@ -187,12 +187,13 @@ class OrderCancellation(BaseOrderHandler):
         page_orders, total_pages = self._paginate_list(orders, page, 10)
 
         display_name = self._escape_html(self._customer_display_name(customer))
-        message = f"❌ Cancel Order for {display_name} (Page {page}/{total_pages}):\n\n"
+        page_label = self._t("page_indicator", chat_id, page=page, total_pages=total_pages)
+        message = self._t("cancel_orders_for_title", chat_id, name=display_name, page=page_label) + "\n\n"
 
         keyboard_buttons = []
         for order in page_orders:
             offer = self.db.get_offer(order.offer_id)
-            offer_name = offer.name if offer else self._t("unknown", user_id=None)
+            offer_name = offer.name if offer else self._t("unknown", chat_id)
             from utils.timezone import to_cet_string
 
             order_date = to_cet_string(order.created_at, "%Y-%m-%d")
@@ -205,17 +206,23 @@ class OrderCancellation(BaseOrderHandler):
             nav_buttons = []
             if page > 1:
                 nav_buttons.append(
-                    {"text": "◀️ Previous", "callback_data": f"cancel_orders_page_{customer.customer_id}_{page - 1}"}
+                    {
+                        "text": self._t("previous", chat_id),
+                        "callback_data": f"cancel_orders_page_{customer.customer_id}_{page - 1}",
+                    }
                 )
-            nav_buttons.append({"text": f"Page {page}/{total_pages}", "callback_data": "page_info"})
+            nav_buttons.append({"text": page_label, "callback_data": "page_info"})
             if page < total_pages:
                 nav_buttons.append(
-                    {"text": "Next ▶️", "callback_data": f"cancel_orders_page_{customer.customer_id}_{page + 1}"}
+                    {
+                        "text": self._t("next", chat_id),
+                        "callback_data": f"cancel_orders_page_{customer.customer_id}_{page + 1}",
+                    }
                 )
             keyboard_buttons.append(nav_buttons)
 
         # Add cancel option at the bottom
-        keyboard_buttons.append([{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}])
+        keyboard_buttons.append([{"text": self._t("cancel", chat_id), "callback_data": "cancel_action"}])
 
         keyboard = {"inline_keyboard": keyboard_buttons}
         self._send_message(chat_id, message, reply_markup=keyboard)
