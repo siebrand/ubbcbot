@@ -62,4 +62,5 @@ client for messages sent from the admin's own Telegram account.
   overbook. Use DynamoDB `ConditionExpression`/transactions in new code that touches capacity or credits.
 - Prod redirects most group commands from customers to a private chat and blocks non-forced group messages; the test
   env does not. Admin commands are answered privately in both.
-- `BotService` is rebuilt per request; only the Telegram token and webhook secret are cached per container.
+- One `BotService` (with all handlers) is reused across warm invocations of a container (`BotService.get_instance`,
+  rebuilt only when `ENVIRONMENT` changes). Never keep per-request state (chat, user, prompt) on a handler.
