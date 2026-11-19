@@ -105,10 +105,12 @@ transactions (CLAUDE.md, Gotchas).
   with room, or a new one, is tried. The FULL status follow-up is the same as for customers' orders. Before, the
   failed box increment was ignored: the order sat in a full box that had no unit for it.
   `tests/test_import_atomic.py` (moto).
-- [ ] **B4. Finalizing an import offer without boxes announces it but leaves it in `import`**
+- [x] **B4. Finalizing an import offer without boxes announces it but leaves it in `import`**
   (`import_handler.py`, `handle_finalize_import`). `update_offer_status_after_change` returns None when the offer has
   no boxes; the handler then sets `offer.status = ACTIVE` on the object only, announces it, and the table still says
-  `import`. Fix: write the status, or refuse to finalize an offer without imported orders.
+  `import`. Fix: write the status, or refuse to finalize an offer without imported orders. **Done**: the status is
+  written (an import offer without orders may still go live; refusing would leave it stuck in `import`).
+  `tests/test_finalize_import.py` (moto).
 - [ ] **B5. The CSV import picks a customer by substring** (`validation.py`, `match_customers`, used by the
   import). "Bert" matches "Robert" when there is only one of them; the ambiguity check (audit 2) only catches names
   that match several customers. For an import, which has nobody to ask, match the full name or username exactly

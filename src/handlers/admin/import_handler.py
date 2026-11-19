@@ -284,7 +284,10 @@ class ImportHandler(NotificationHandler):
         if new_status == OfferStatus.SOLD_OUT.value:
             self._send_success(chat_id, "finalize_import_sold_out", "success", offer_id=offer.offer_id, name=offer.name)
         else:
-            # Offer is ACTIVE, announce it
+            # Offer is ACTIVE, announce it. Without boxes (nothing imported) the status was not changed: write it,
+            # or the announced offer stays in import
+            if new_status is None:
+                self.db.update_offer(offer.offer_id, {"status": OfferStatus.ACTIVE.value})
             offer.status = OfferStatus.ACTIVE.value
             self._announce_offer(offer)
             self._send_success(chat_id, "finalize_import_active", "success", offer_id=offer.offer_id, name=offer.name)
