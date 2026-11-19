@@ -20,6 +20,7 @@ import pytest
 
 from handlers.admin.admin_commands import AdminCommandsHandler
 from handlers.admin.credit_commands import CreditCommands
+from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
 from handlers.admin.import_handler import ImportHandler
 from handlers.admin.labeling_commands import LabelingCommands
 from handlers.admin.offer_commands import OfferCommands
@@ -39,6 +40,7 @@ from models.entities import AuthorizationStatus, Customer
 from services.bot_service import BotService
 from services.command_router import CommandRouter
 from services.routing.command_table import COMMAND_ROUTES
+from services.routing.edit_reply_table import ANSWER_ROUTES
 
 ROOT = Path(__file__).resolve().parent.parent
 ADMIN_ID = 15005473
@@ -793,23 +795,14 @@ class TestUpdateEntryPoints:
 
     # --- photos for an offer ---
 
-    def test_a_photo_from_the_admin_goes_to_the_offer_image_upload(self):
-        bot = make_bot()
-        bot.db.get_edit_context_by_chat_id.return_value = prompt("offer_image_upload")
-
-        bot.process_update(message_update(ADMIN_ID, photo=[{"file_id": "p"}]))
-
-        bot._handle_edit_reply.assert_called_once()
-        bot.media_handler.handle_media_group_image.assert_not_called()
-
-    def test_a_photo_in_a_media_group_goes_to_the_media_handler(self):
+    def test_a_photo_from_the_admin_answers_the_image_prompt(self):
         bot = make_bot()
         bot.db.get_edit_context_by_chat_id.return_value = prompt("offer_image_upload")
 
         bot.process_update(message_update(ADMIN_ID, photo=[{"file_id": "p"}], media_group_id="g1"))
 
-        bot.media_handler.handle_media_group_image.assert_called_once()
-        bot._handle_edit_reply.assert_not_called()
+        bot._handle_edit_reply.assert_called_once()
+        bot.db.get_edit_context_by_chat_id.assert_called_once_with(ADMIN_ID)
 
     @pytest.mark.parametrize("sender", [APPROVED_ID, UNAUTHORIZED_ID, UNKNOWN_ID])
     def test_a_photo_from_anyone_else_is_ignored(self, sender):
@@ -828,69 +821,166 @@ class TestUpdateEntryPoints:
         bot.process_update(message_update(ADMIN_ID, GROUP, photo=[{"file_id": "p"}], media_group_id="g1"))
 
         bot.media_handler.handle_media_group_image.assert_not_called()
+        bot._handle_edit_reply.assert_not_called()
+
+
+X = _Marker("the typed text")
+E = _Marker("the entity of the prompt")
 
 
 class TestEditReplyTypes:
-    """The reply to a prompt is dispatched on the type of the prompt. Only the admin can have a prompt, but the
-    table of types is the last if/elif chain of the update flow, so each type is pinned here."""
+    """The reply to a prompt goes to the handler that ANSWER_ROUTES names for the type of the prompt. Every
+    handler is an autospec of the real class, so a route to a missing method or with the wrong arguments fails."""
 
-    EDIT_TYPES = {
-        "supplier_name": ("supplier_commands", "handle_update_supplier_name"),
-        "supplier_contact": ("supplier_commands", "handle_update_supplier_contact"),
-        "supplier_full_name": ("supplier_commands", "handle_update_supplier_full_name"),
-        "offer_name": ("offer_commands", "handle_update_offer_name"),
-        "offer_price": ("offer_commands", "handle_update_offer_price"),
-        "offer_description": ("offer_commands", "handle_update_offer_description"),
-        "customer_first_name": ("user_commands", "handle_update_user_first_name"),
-        "customer_last_name": ("user_commands", "handle_update_user_last_name"),
-        "customer_contact": ("user_commands", "handle_update_user_contact"),
-        "customer_location": ("user_commands", "handle_update_user_location"),
-        "create_supplier_name": ("supplier_commands", "_create_supplier"),
-        "list_user_orders_input": ("admin_order_commands", "handle_list_user_orders"),
-        "cancel_order_input": ("admin_order_commands", "handle_cancel_order"),
-        "order_for_input": ("admin_order_commands", "handle_create_order_for"),
-        "approve_user_input": ("user_commands", "handle_approve_user"),
-        "user_status_input": ("user_commands", "handle_user_status"),
-        "report_customer_input": ("report_commands", "handle_report_customer"),
-        "incomplete_delivery": ("wholesale_delivery_commands", "handle_incomplete_delivery_reply"),
-        "payment_link_input": ("delivery_overview_handler", "handle_payment_link_input"),
-        "cancel_order_reason": ("admin_order_commands", "handle_confirm_cancel_with_reason"),
+    # prompt type: (handler, method, arguments after the chat)
+    EXPECTED = {
+        "create_supplier_name": ("supplier", "create_supplier", (X,)),
+        "supplier_name": ("supplier", "handle_update_supplier_name", ([E, X],)),
+        "supplier_contact": ("supplier", "handle_update_supplier_contact", ([E, X],)),
+        "supplier_full_name": ("supplier", "handle_update_supplier_full_name", ([E, X],)),
+        "offer_name": ("offer", "handle_update_offer_name", ([E, X],)),
+        "offer_price": ("offer", "handle_update_offer_price", ([E, X],)),
+        "offer_description": ("offer", "handle_offer_description_answer", (E, X, [])),
+        "custom_wholesale_quantity": ("offer", "handle_custom_wholesale_quantity_answer", (E, X)),
+        "customer_first_name": ("user", "handle_update_user_first_name", ([E, X],)),
+        "customer_last_name": ("user", "handle_update_user_last_name", ([E, X],)),
+        "customer_contact": ("user", "handle_update_user_contact", ([E, X],)),
+        "customer_location": ("user", "handle_update_user_location", ([E, X],)),
+        "approve_user_input": ("user", "handle_approve_user", ([X],)),
+        "user_status_input": ("user", "handle_user_status", ([X],)),
+        "list_user_orders_input": ("admin_order", "handle_list_user_orders", ([X],)),
+        "cancel_order_input": ("admin_order", "handle_cancel_order", ([X],)),
+        "cancel_order_reason": ("admin_order", "handle_confirm_cancel_with_reason", (E, X)),
+        "order_for_input": ("admin_order", "handle_create_order_for", (ADMIN_ID, [X])),
+        "order_for_quantity_input": ("admin_order", "handle_create_order_for_quantity_answer", (E, X)),
+        "edit_order_price_input": ("admin_order", "handle_edit_order_price_answer", (E, X)),
+        "incomplete_delivery": ("wholesale_delivery", "handle_incomplete_delivery_reply", (ADMIN_ID, X, E)),
+        "payment_link_input": ("delivery_overview", "handle_payment_link_input", (X, E)),
+        "report_customer_input": ("report", "handle_report_customer", (["two", "words"],)),
     }
+    TEXT = "two words"
+    ENTITY = "7"
 
-    def _bot(self, edit_type: str):
+    def _bot(self):
         bot = BotService.__new__(BotService)
         bot.db = Mock()
-        bot.db.get_edit_context_by_chat_id.return_value = prompt(edit_type)
-        for attribute in {name for name, _ in self.EDIT_TYPES.values()}:
-            setattr(bot, attribute, Mock())
-        bot.offer_commands = Mock()
-        bot.admin_commands_handler = Mock()
+        classes = HANDLER_CLASSES | {"delivery_overview": DeliveryOverviewHandler}
+        bot.handlers = {key: create_autospec(cls, instance=True) for key, cls in classes.items()}
+        for handler in bot.handlers.values():
+            for name in dir(handler):
+                if name.startswith("handle_") or name == "create_supplier":
+                    getattr(handler, name).return_value = {"status": "success"}
         bot.media_handler = Mock()
-        bot.base_handler = Mock()
+        bot.info_commands = Mock()
         return bot
 
-    @pytest.mark.parametrize("edit_type", sorted(EDIT_TYPES))
+    def _resolve(self, value):
+        if value is X:
+            return self.TEXT
+        if value is E:
+            return self.ENTITY
+        if isinstance(value, list):
+            return [self._resolve(v) for v in value]
+        return value
+
+    def test_every_prompt_type_has_its_expected_route(self):
+        assert sorted(ANSWER_ROUTES) == sorted(self.EXPECTED)
+
+    @pytest.mark.parametrize("edit_type", sorted(EXPECTED))
     def test_each_prompt_type_reaches_its_handler(self, edit_type):
-        attribute, method = self.EDIT_TYPES[edit_type]
-        bot = self._bot(edit_type)
+        key, method, args = self.EXPECTED[edit_type]
+        bot = self._bot()
 
-        bot._handle_edit_reply(ADMIN_ID, ADMIN_ID, "the answer")
+        bot._handle_edit_reply(prompt(edit_type), ADMIN_ID, ADMIN_ID, self.TEXT, {"text": self.TEXT})
 
-        getattr(getattr(bot, attribute), method).assert_called_once()
+        getattr(bot.handlers[key], method).assert_called_once_with(ADMIN_ID, *(self._resolve(a) for a in args))
         bot.db.delete_edit_context.assert_called_once_with("ctx")
 
-    def test_every_prompt_type_in_the_source_is_in_the_table(self):
-        source = (ROOT / "src" / "services" / "bot_service.py").read_text()
+    def test_the_formatting_of_a_description_goes_along(self):
+        bot = self._bot()
+        entities = [{"type": "bold", "offset": 0, "length": 3}]
 
-        in_source = set(re.findall(r'edit_type == "([a-z_]+)"', source))
-        in_source |= set(re.findall(r"edit_type in \(([^)]*)\)", source))
+        bot._handle_edit_reply(prompt("offer_description"), ADMIN_ID, ADMIN_ID, "Pils", {"entities": entities})
 
-        handled_elsewhere = {"offer_image_upload", "order_for_quantity_input", "custom_wholesale_quantity"}
-        handled_elsewhere |= {"edit_order_price_input"}
-        assert sorted(in_source - set(self.EDIT_TYPES) - handled_elsewhere) == []
+        bot.handlers["offer"].handle_offer_description_answer.assert_called_once_with(ADMIN_ID, "7", "Pils", entities)
 
-    def test_a_reply_without_a_prompt_does_nothing(self):
-        bot = self._bot("offer_name")
-        bot.db.get_edit_context_by_chat_id.return_value = None
+    def test_an_empty_cancel_reason_gets_a_default(self):
+        bot = self._bot()
 
-        assert bot._handle_edit_reply(ADMIN_ID, ADMIN_ID, "x") == {"status": "no_context"}
+        bot._handle_edit_reply(prompt("cancel_order_reason"), ADMIN_ID, ADMIN_ID, "  ", {})
+
+        bot.handlers["admin_order"].handle_confirm_cancel_with_reason.assert_called_once_with(
+            ADMIN_ID, "7", "No reason provided"
+        )
+
+    @pytest.mark.parametrize(
+        "edit_type,method", [("approve_user_input", "handle_approve_user"), ("user_status_input", "handle_user_status")]
+    )
+    def test_an_unknown_user_goes_back_to_the_users_menu(self, edit_type, method):
+        bot = self._bot()
+        getattr(bot.handlers["user"], method).return_value = {"status": "user_not_found"}
+        bot.handlers["admin_commands"].handle_admin_users.return_value = {"status": "users_menu"}
+
+        result = bot._handle_edit_reply(prompt(edit_type), ADMIN_ID, ADMIN_ID, "nobody", {})
+
+        assert result == {"status": "users_menu"}
+        bot.handlers["admin_commands"].handle_admin_users.assert_called_once_with(ADMIN_ID, ADMIN_ID)
+
+    def test_an_unknown_prompt_type_is_closed_and_does_nothing(self):
+        bot = self._bot()
+
+        assert bot._handle_edit_reply(prompt("no_such_prompt"), ADMIN_ID, ADMIN_ID, "x", {}) == {
+            "status": "unknown_edit_type"
+        }
+        bot.db.delete_edit_context.assert_called_once_with("ctx")
+
+    def test_every_prompt_type_the_source_stores_has_an_answer(self):
+        """A prompt without a route throws the admin's answer away. Photos, files and buttons answer the others."""
+        stored = set()
+        for path in (ROOT / "src").rglob("*.py"):
+            source = path.read_text()
+            stored |= set(re.findall(r'store_edit_context\(\s*chat_id,\s*"([a-z_]+)"', source))
+            stored |= set(re.findall(r'_store_context\(\s*chat_id,\s*"([a-z_]+)"', source))
+            stored |= set(re.findall(r'edit_type="([a-z_]+)"', source))
+            stored |= set(re.findall(r'"context_type": "([a-z_]+)"', source))
+
+        answered_otherwise = {"offer_image_upload", "import_csv", "credit_customer_select"}
+        assert "supplier_name" in stored and "payment_link_input" in stored  # the patterns find something
+        assert sorted(stored - set(ANSWER_ROUTES) - answered_otherwise) == []
+
+
+class TestImagePrompt:
+    def _bot(self):
+        bot = BotService.__new__(BotService)
+        bot.db = Mock()
+        bot.media_handler = Mock()
+        bot.info_commands = Mock()
+        return bot
+
+    def test_a_photo_of_an_album_keeps_the_prompt_open(self):
+        bot = self._bot()
+        message = {"photo": [{"file_id": "p"}], "media_group_id": "g1"}
+
+        bot._handle_edit_reply(prompt("offer_image_upload"), ADMIN_ID, ADMIN_ID, "", message)
+
+        bot.media_handler.handle_media_group_image.assert_called_once_with(ADMIN_ID, "7", message)
+        bot.db.delete_edit_context.assert_not_called()
+
+    def test_a_single_photo_closes_the_prompt_and_shows_the_offer(self):
+        bot = self._bot()
+        bot.media_handler.handle_offer_image_upload.return_value = {"return_to_edit": True, "offer_id": 7}
+
+        bot._handle_edit_reply(prompt("offer_image_upload"), ADMIN_ID, ADMIN_ID, "", {"photo": [{"file_id": "p"}]})
+
+        bot.media_handler.handle_offer_image_upload.assert_called_once_with(ADMIN_ID, "7", [{"file_id": "p"}])
+        bot.db.delete_edit_context.assert_called_once_with("ctx")
+        bot.info_commands.handle_view_offer.assert_called_once_with(ADMIN_ID, ADMIN_ID, ["7", "edit"])
+
+    def test_a_failed_upload_keeps_the_prompt_open(self):
+        bot = self._bot()
+        bot.media_handler.handle_offer_image_upload.return_value = {"status": "upload_failed"}
+
+        result = bot._handle_edit_reply(prompt("offer_image_upload"), ADMIN_ID, ADMIN_ID, "", {"photo": [{}]})
+
+        assert result == {"status": "upload_failed"}
+        bot.db.delete_edit_context.assert_not_called()

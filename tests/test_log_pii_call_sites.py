@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from handlers.admin.offer_commands import OfferCommands
 from handlers.base_handler import BaseHandler
 from services.bot_service import BotService
 
@@ -28,6 +29,7 @@ def bot():
     service.offer_commands = Mock()
     service.user_commands = Mock()
     service.media_handler = Mock()
+    service.handlers = {"supplier": Mock(), "offer": Mock(), "user": Mock()}
     return service
 
 
@@ -88,9 +90,9 @@ def test_new_user_admin_notification_failure_log_has_no_name(bot, caplog):
 @pytest.mark.parametrize("edit_type", ["customer_contact", "customer_first_name", "offer_description"])
 def test_edit_reply_logs_never_contain_the_typed_text(bot, caplog, edit_type):
     caplog.set_level(logging.DEBUG)
-    bot.db.get_edit_context_by_chat_id.return_value = Mock(edit_type=edit_type, entity_id="e-1", context_id="ctx")
+    context = Mock(edit_type=edit_type, entity_id="e-1", context_id="ctx")
 
-    bot._handle_edit_reply(42, ADMIN_ID, FREE_TEXT, {})
+    bot._handle_edit_reply(context, 42, ADMIN_ID, FREE_TEXT, {})
 
     logs = _joined(caplog)
     assert f"text_length={len(FREE_TEXT)}" in logs
@@ -98,19 +100,17 @@ def test_edit_reply_logs_never_contain_the_typed_text(bot, caplog, edit_type):
         assert fragment not in logs
 
 
-def test_description_with_entities_logs_no_text_or_html(bot, caplog):
+def test_description_with_entities_logs_no_text_or_html(caplog):
     caplog.set_level(logging.DEBUG)
-    bot.db.get_edit_context_by_chat_id.return_value = Mock(
-        edit_type="offer_description", entity_id="e-1", context_id="ctx"
-    )
-    bot.media_handler.convert_entities_to_html.return_value = "<b>Kerkstraat 5</b>"
-    message = {"entities": [{"type": "bold", "offset": 0, "length": 10}]}
+    handler = OfferCommands(Mock(), ADMIN_ID, "test", "token")
+    handler.handle_update_offer_description = Mock(return_value={"status": "success"})
 
-    bot._handle_edit_reply(42, ADMIN_ID, "Kerkstraat 5", message)
+    handler.handle_offer_description_answer(42, "7", "Kerkstraat 5", [{"type": "bold", "offset": 0, "length": 10}])
 
     logs = _joined(caplog)
     assert "entity_count=1" in logs
     assert "Kerkstraat" not in logs
+    handler.handle_update_offer_description.assert_called_once_with(42, ["7", "<b>Kerkstraat</b> 5"])
 
 
 class TestSendMessageLogging:

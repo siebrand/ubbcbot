@@ -63,10 +63,13 @@ Low priority items (naming, comments, small style issues) are left out on purpos
 
 ## Medium priority
 
-- [ ] **M1. `_handle_edit_reply` is a 30-branch `if` chain** (`bot_service.py`, complexity 35). Each answer to a text
+- [x] **M1. `_handle_edit_reply` is a 30-branch `if` chain** (`bot_service.py`, complexity 35). Each answer to a text
   prompt is routed by `edit_type`; some branches also parse and validate the input (a quantity, a box count). Make it
   a table of edit types, like `COMMAND_ROUTES`, and move the parsing to the handlers. `process_update` (11) loses the
-  inline document and media-group handling along the way.
+  inline document and media-group handling along the way. **Done**: `ANSWER_ROUTES`
+  (`services/routing/edit_reply_table.py`); the quantity, box count and description formatting are read by the
+  handlers; `process_update` reads the edit context once (it was read twice) and hands documents and photos to small
+  methods. A test fails for a stored prompt type that nothing answers, which found the dead `edit_supplier_input`.
 - [x] **M2. `/list_boxes` reads per offer and per box** (`boxes.py`, `handle_list_boxes`, complexity 23): the boxes of
   every offer one by one, then the orders of every listed box. The status filter is a chain of `and`/`or`. **Done**:
   one scan of the boxes, one status-index query for the boxes ready for labeling, a filter table, and the audit's
@@ -86,11 +89,12 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   (`wholesale_delivery_handler.py`); "(no username)", "User", "matching '…'", "First name", "Last name", "Status:"
   (`user_commands.py`); "units" in the audit proposal (`boxes.py`); the raw order status in the duplicate-order warning
   (`customer/order_commands.py`). **Done**, per file, with the fixes above.
-- [ ] **M6. Handlers build other handlers to call their private methods**: the box audit builds `AdminOrderCommands`
+- [x] **M6. Handlers build other handlers to call their private methods**: the box audit builds `AdminOrderCommands`
   for `_execute_cancel` (`boxes.py`), `/payment_info` builds a `DeliveryOverviewHandler` (and with it a Lambda client)
   for `_build_delivery_message` (`customer/order_commands.py`), and the supplier prompt calls
   `supplier_commands._create_supplier` (`bot_service.py`). Done for `boxes.py` (`_execute_cancel` in `BaseHandler`)
-  and `customer/order_commands.py` (`PaymentMessageMixin`); `bot_service.py` follows with M1.
+  and `customer/order_commands.py` (`PaymentMessageMixin`); `bot_service.py` with M1 (`SupplierCommands.create_supplier`
+  is public). **Done.**
 - [x] **M7. Duplicated code**: rejecting a user (two copies) and showing a user's status (two copies, one with a
   hard-coded "Status:") in `user_commands.py`; choosing which orders to cancel (proposal and execution) in `boxes.py`;
   deleting cancelled and deleting completed orders in `customer/order_commands.py`; storing the delivery context next

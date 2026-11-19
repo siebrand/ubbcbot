@@ -111,6 +111,18 @@ class OfferManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t("invalid_offer_id"))
             return {"status": "invalid_format"}
 
+    def handle_custom_wholesale_quantity_answer(self, chat_id: int, offer_id: str, text: str) -> dict[str, Any]:
+        """The number of boxes the admin typed after "custom quantity": process the wholesale order with it"""
+        try:
+            boxes = int(text.strip())
+        except ValueError:
+            self._send_message(chat_id, self._t("invalid_format", chat_id))
+            return {"status": "invalid_format"}
+        if boxes <= 0:
+            self._send_message(chat_id, self._t("boxes_must_positive", chat_id))
+            return {"status": "invalid_quantity"}
+        return self.handle_confirm_process_wholesale(chat_id, [offer_id, str(boxes)])
+
     def handle_confirm_process_wholesale(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /confirm_process_wholesale: order boxes at the wholesaler and serve the pending orders from them"""
         offer, boxes_ordered, error = self._wholesale_arguments(chat_id, args)

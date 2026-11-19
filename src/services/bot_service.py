@@ -29,6 +29,7 @@ from services.callback_handler import CallbackHandler
 from services.command_router import CommandRouter
 from services.database import DynamoDBService
 from services.media_handler import MediaHandler
+from services.routing.edit_reply_table import ANSWER_ROUTES, PromptAnswer
 
 logger = logging.getLogger()
 
@@ -161,6 +162,7 @@ class BotService:
             "report": self.report_commands,
         }
 
+        self.handlers = handlers
         # Inject handlers into offer_commands for cross-handler calls
         self.offer_commands.handlers = handlers
 
@@ -206,23 +208,12 @@ class BotService:
             # Register customer if not exists
             self._register_customer_if_needed(message["from"])
 
-            # Handle document uploads for import
             if "document" in message and user_id == self.admin_user_id:
-                logger.info(
-                    f"Document upload detected: file_id={message['document']['file_id']}, "
-                    f"file_name={message['document'].get('file_name', 'unknown')}"
-                )
-                file_id = message["document"]["file_id"]
-                file_name = message["document"].get("file_name", "unknown")
-                result = self.import_handler.handle_document_upload(chat_id, user_id, file_id, file_name)
-                logger.info(f"Document upload result: {result}")
-                return result
+                return self._handle_document(chat_id, user_id, message["document"])
 
-            # Handle commands
             if text.startswith("/"):
                 return self.command_router.route_command(chat_id, user_id, text, message_id)
 
-            # Handle edit replies (when user responds to force reply).
             # Edit contexts are only created by admin flows and only ever read in the admin's private chat
             # (positive chat id). In a group nothing is consumed, so a stray message there cannot be taken
             # for the answer to an open prompt.
@@ -230,17 +221,7 @@ class BotService:
                 self.db.get_edit_context_by_chat_id(chat_id) if user_id == self.admin_user_id and chat_id > 0 else None
             )
             if context:
-                logger.info(f"Found edit context for chat {chat_id}: {context.edit_type}")
-                # Handle multiple images in media group
-                if context.edit_type == "offer_image_upload" and "photo" in message:
-                    media_group_id = message.get("media_group_id")
-                    if media_group_id:
-                        # Process media group images without returning to edit mode
-                        return self.media_handler.handle_media_group_image(chat_id, context.entity_id, message)
-                    else:
-                        return self._handle_edit_reply(chat_id, user_id, text, message)
-                else:
-                    return self._handle_edit_reply(chat_id, user_id, text, message)
+                return self._handle_edit_reply(context, chat_id, user_id, text, message)
 
             return {"status": "processed"}
 
@@ -350,128 +331,46 @@ class BotService:
         except Exception as e:
             logger.error(f"Failed to send new user notification to admin: {e}")
 
+    def _handle_document(self, chat_id: int, user_id: int, document: dict[str, Any]) -> dict[str, Any]:
+        """A file from the admin is a CSV import"""
+        file_id = document["file_id"]
+        file_name = document.get("file_name", "unknown")
+        logger.info(f"Document upload detected: file_id={file_id}, file_name={file_name}")
+        result = self.import_handler.handle_document_upload(chat_id, user_id, file_id, file_name)
+        logger.info(f"Document upload result: {result}")
+        return result
+
     def _handle_edit_reply(
-        self, chat_id: int, user_id: int, text: str, message: dict[str, Any] | None = None
+        self, context, chat_id: int, user_id: int, text: str, message: dict[str, Any]
     ) -> dict[str, Any]:
-        """Handle reply to edit prompt"""
-        context = self.db.get_edit_context_by_chat_id(chat_id)
-        if not context:
-            return {"status": "no_context"}
+        """The admin's answer to an open prompt: sent to the handler that ANSWER_ROUTES names for its type"""
+        logger.info(
+            f"Processing edit reply: type={context.edit_type}, entity_id={context.entity_id}, "
+            f"text_length={len(text or '')}"
+        )
+        if context.edit_type == "offer_image_upload" and "photo" in message:
+            return self._handle_offer_image(context, chat_id, user_id, message)
 
-        edit_type = context.edit_type
-        entity_id = context.entity_id
-
-        # Log for debugging
-        logger.info(f"Processing edit reply: type={edit_type}, entity_id={entity_id}, text_length={len(text or '')}")
-
-        # Handle image upload for offers
-        if edit_type == "offer_image_upload" and message and "photo" in message:
-            result = self.media_handler.handle_offer_image_upload(chat_id, entity_id, message["photo"])
-            logger.info(f"Image upload result: {result}")
-            # Return to edit interface after image upload and delete context
-            if result.get("return_to_edit"):
-                self.db.delete_edit_context(context.context_id)
-                logger.info(f"Returning to edit interface for offer {result['offer_id']}")
-                return self.info_commands.handle_view_offer(chat_id, user_id, [str(result["offer_id"]), "edit"])
-            # For media groups, keep context alive
-            return result
-
-        # Delete the context after use for non-image uploads
+        # The prompt is answered: whatever the answer, it is not read again
         self.db.delete_edit_context(context.context_id)
 
-        if edit_type == "supplier_name":
-            return self.supplier_commands.handle_update_supplier_name(chat_id, [entity_id, text])
-        elif edit_type == "supplier_contact":
-            return self.supplier_commands.handle_update_supplier_contact(chat_id, [entity_id, text])
-        elif edit_type == "supplier_full_name":
-            return self.supplier_commands.handle_update_supplier_full_name(chat_id, [entity_id, text])
-        elif edit_type == "offer_name":
-            return self.offer_commands.handle_update_offer_name(chat_id, [entity_id, text])
-        elif edit_type == "offer_price":
-            return self.offer_commands.handle_update_offer_price(chat_id, [entity_id, text])
-        elif edit_type == "offer_description":
-            # For descriptions, convert Telegram entities to HTML format
-            if message and "entities" in message and message["entities"]:
-                html_text = self.media_handler.convert_entities_to_html(text, message["entities"])
-                logger.info(
-                    f"Converting description: text_length={len(text or '')}, html_length={len(html_text)}, "
-                    f"entity_count={len(message['entities'])}"
-                )
-                return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, html_text])
-            else:
-                logger.info(f"No entities found - storing plain text: text_length={len(text or '')}")
-                return self.offer_commands.handle_update_offer_description(chat_id, [entity_id, text])
-        elif edit_type == "customer_first_name":
-            return self.user_commands.handle_update_user_first_name(chat_id, [entity_id, text])
-        elif edit_type == "customer_last_name":
-            return self.user_commands.handle_update_user_last_name(chat_id, [entity_id, text])
-        elif edit_type == "customer_contact":
-            return self.user_commands.handle_update_user_contact(chat_id, [entity_id, text])
-        elif edit_type == "customer_location":
-            return self.user_commands.handle_update_user_location(chat_id, [entity_id, text])
-        elif edit_type == "create_supplier_name":
-            return self.supplier_commands._create_supplier(chat_id, text)
-        elif edit_type == "list_user_orders_input":
-            return self.admin_order_commands.handle_list_user_orders(chat_id, [text])
-        elif edit_type == "cancel_order_input":
-            return self.admin_order_commands.handle_cancel_order(chat_id, [text])
-        elif edit_type == "incomplete_delivery":
-            return self.wholesale_delivery_commands.handle_incomplete_delivery_reply(chat_id, user_id, text, entity_id)
-        elif edit_type == "order_for_input":
-            return self.admin_order_commands.handle_create_order_for(chat_id, user_id, [text])
-        elif edit_type == "approve_user_input":
-            result = self.user_commands.handle_approve_user(chat_id, [text])
-            if result.get("status") == "user_not_found":
-                # Return to admin users menu
-                return self.admin_commands_handler.handle_admin_users(chat_id, user_id)
-            return result
-        elif edit_type == "user_status_input":
-            result = self.user_commands.handle_user_status(chat_id, [text])
-            if result.get("status") == "user_not_found":
-                # Return to admin users menu
-                return self.admin_commands_handler.handle_admin_users(chat_id, user_id)
-            return result
-        elif edit_type == "report_customer_input":
-            return self.report_commands.handle_report_customer(chat_id, (text or "").split())
-        elif edit_type == "order_for_quantity_input":
-            # Parse customer_id and offer_id from entity_id
-            parts = entity_id.split("_", 1)
-            if len(parts) == 2:
-                customer_id, offer_id = parts[0], parts[1]
-                try:
-                    quantity = int(text.strip())
-                    if 1 <= quantity <= 10:
-                        return self.admin_order_commands.handle_create_order_for_quantity_select(
-                            chat_id, customer_id, offer_id, str(quantity)
-                        )
-                    else:
-                        self.base_handler._send_message(
-                            chat_id, self.base_handler._t("quantity_must_be_1_to_10", chat_id)
-                        )
-                        return {"status": "invalid_quantity"}
-                except ValueError:
-                    self.base_handler._send_message(chat_id, self.base_handler._t("enter_valid_number", chat_id))
-                    return {"status": "invalid_format"}
-            return {"status": "invalid_context"}
-        elif edit_type == "payment_link_input":
-            return self.delivery_overview_handler.handle_payment_link_input(chat_id, text, entity_id)
-        elif edit_type == "custom_wholesale_quantity":
-            try:
-                boxes = int(text.strip())
-                if boxes > 0:
-                    return self.offer_commands.handle_confirm_process_wholesale(chat_id, [entity_id, str(boxes)])
-                else:
-                    self.base_handler._send_message(chat_id, self.base_handler._t("boxes_must_positive"))
-                    return {"status": "invalid_quantity"}
-            except ValueError:
-                self.base_handler._send_message(chat_id, self.base_handler._t("invalid_format"))
-                return {"status": "invalid_format"}
-        elif edit_type == "cancel_order_reason":
-            # Handle cancellation reason input
-            order_id = entity_id
-            reason = text.strip() if text.strip() else "No reason provided"
-            return self.admin_order_commands.handle_confirm_cancel_with_reason(chat_id, order_id, reason)
-        elif edit_type == "edit_order_price_input":
-            return self.admin_order_commands.editing.apply_price_input(chat_id, entity_id, text)
+        route = ANSWER_ROUTES.get(context.edit_type)
+        if route is None:
+            return {"status": "unknown_edit_type"}
+        answer = PromptAnswer(chat_id, user_id, text, context.entity_id, message)
+        result = getattr(self.handlers[route.handler], route.method)(*route.arguments(answer))
+        if route.users_menu_when_not_found and result.get("status") == "user_not_found":
+            return self.handlers["admin_commands"].handle_admin_users(chat_id, user_id)
+        return result
 
-        return {"status": "unknown_edit_type"}
+    def _handle_offer_image(self, context, chat_id: int, user_id: int, message: dict[str, Any]) -> dict[str, Any]:
+        """A photo for an offer. The prompt stays open for the other photos of an album (media group)."""
+        if message.get("media_group_id"):
+            return self.media_handler.handle_media_group_image(chat_id, context.entity_id, message)
+
+        result = self.media_handler.handle_offer_image_upload(chat_id, context.entity_id, message["photo"])
+        logger.info(f"Image upload result: {result}")
+        if result.get("return_to_edit"):
+            self.db.delete_edit_context(context.context_id)
+            return self.info_commands.handle_view_offer(chat_id, user_id, [str(result["offer_id"]), "edit"])
+        return result

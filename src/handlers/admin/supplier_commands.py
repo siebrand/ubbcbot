@@ -26,10 +26,10 @@ class SupplierCommands(BaseHandler):
             return {"status": "awaiting_input"}
 
         supplier_name = " ".join(args).strip()
-        return self._create_supplier(chat_id, supplier_name)
+        return self.create_supplier(chat_id, supplier_name)
 
-    def _create_supplier(self, chat_id: int, supplier_name: str) -> dict[str, Any]:
-        """Create supplier and show edit interface on success"""
+    def create_supplier(self, chat_id: int, supplier_name: str) -> dict[str, Any]:
+        """Create supplier and show edit interface on success (also the answer to the supplier name prompt)"""
         # Validate supplier name
         if len(supplier_name) > 50:
             return self._send_error(chat_id, "supplier_name_too_long", "invalid_name")

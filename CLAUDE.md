@@ -22,6 +22,9 @@ client for messages sent from the admin's own Telegram account.
     `CallbackRouter` (first match wins, so register specific patterns before broad ones). A callback that matches no
     route returns `unknown_callback`. `tests/test_callback_dispatch.py` taps every button and checks the result.
   - free-text replies → edit contexts (`utils/edit_context.py`, table `edit-contexts`, keyed by chat) → `BotService._handle_edit_reply`
+    → one table `services/routing/edit_reply_table.py` (`ANSWER_ROUTES`: handler, method and arguments per prompt type;
+    the handler checks the answer). A new prompt type needs a line there: `tests/test_command_dispatch.py` fails for a
+    stored prompt type that nothing answers.
 - Handlers: `src/handlers/admin/**`, `src/handlers/customer/**`, all subclass `handlers/base_handler.py`
 - Data: `services/database.py` facade → `repositories/*` (one per DynamoDB table); models and status enums in `models/entities.py`
 - Async Lambdas: `notification_sender.py` (offer broadcasts), `message_sender.py` (bot or admin account)

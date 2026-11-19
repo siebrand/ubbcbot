@@ -263,6 +263,22 @@ class OrderPlacement(BaseOrderHandler):
 
         return self._execute_order_for_customer(chat_id, customer, int(offer_id), int(quantity))
 
+    def handle_create_order_for_quantity_answer(self, chat_id: int, context_data: str, text: str) -> dict[str, Any]:
+        """The quantity the admin typed after "other quantity" (context: "<customer id>_<offer id>")"""
+        parts = context_data.split("_", 1)
+        if len(parts) != 2:
+            return {"status": "invalid_context"}
+        customer_id, offer_id = parts
+        try:
+            quantity = int(text.strip())
+        except ValueError:
+            self._send_message(chat_id, self._t("enter_valid_number", chat_id))
+            return {"status": "invalid_format"}
+        if not 1 <= quantity <= 10:
+            self._send_message(chat_id, self._t("quantity_must_be_1_to_10", chat_id))
+            return {"status": "invalid_quantity"}
+        return self.handle_create_order_for_quantity_select(chat_id, customer_id, offer_id, str(quantity))
+
     def handle_create_order_for_other_quantity(self, chat_id: int, customer_id: str, offer_id: str) -> dict[str, Any]:
         """Handle 'Other' quantity selection for create_order_for"""
         # Store context for text input

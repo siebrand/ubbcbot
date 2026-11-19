@@ -28,6 +28,9 @@ class AdminOrderCommands(BaseHandler):
     def handle_edit_order(self, chat_id: int, args: list) -> dict[str, Any]:
         return self.editing.handle_edit_order(chat_id, args)
 
+    def handle_edit_order_price_answer(self, chat_id: int, order_id: str, text: str) -> dict[str, Any]:
+        return self.editing.apply_price_input(chat_id, order_id, text)
+
     # Order Cancellation Methods
     def handle_cancel_order(self, chat_id: int, args: list) -> dict[str, Any]:
         return self.cancellation.handle_cancel_order(chat_id, args)
@@ -58,6 +61,9 @@ class AdminOrderCommands(BaseHandler):
         self, chat_id: int, customer_id: str, offer_id: str, quantity: str
     ) -> dict[str, Any]:
         return self.placement.handle_create_order_for_quantity_select(chat_id, customer_id, offer_id, quantity)
+
+    def handle_create_order_for_quantity_answer(self, chat_id: int, context_data: str, text: str) -> dict[str, Any]:
+        return self.placement.handle_create_order_for_quantity_answer(chat_id, context_data, text)
 
     def handle_create_order_for_other_quantity(self, chat_id: int, customer_id: str, offer_id: str) -> dict[str, Any]:
         return self.placement.handle_create_order_for_other_quantity(chat_id, customer_id, offer_id)

@@ -1,9 +1,13 @@
+import logging
 from decimal import Decimal
 from typing import Any
 
 from models.entities import OfferStatus
+from utils.telegram_entities import entities_to_html
 
 from .base import OfferBaseHandler
+
+logger = logging.getLogger()
 
 
 class OfferEditingHandler(OfferBaseHandler):
@@ -123,6 +127,13 @@ class OfferEditingHandler(OfferBaseHandler):
         except ValueError:
             self._send_message(chat_id, self._t("invalid_price_format"))
             return {"status": "invalid_format"}
+
+    def handle_offer_description_answer(self, chat_id: int, offer_id: str, text: str, entities: list) -> dict[str, Any]:
+        """The description the admin typed after the prompt; its formatting (entities) is kept as HTML"""
+        if entities:
+            text = entities_to_html(text, entities)
+            logger.info(f"Converted description: html_length={len(text)}, entity_count={len(entities)}")
+        return self.handle_update_offer_description(chat_id, [offer_id, text])
 
     def handle_update_offer_description(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /update_offer_description command"""
