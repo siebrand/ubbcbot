@@ -280,14 +280,6 @@ class OfferManagementHandler(OfferBaseHandler):
         customer = self.db.get_customer(customer_id)
         return customer.first_name if customer and customer.first_name else self._t("unknown", chat_id)
 
-    def _units(self, count: int, chat_id: int) -> str:
-        return self._t("unit", chat_id) if count == 1 else self._t("units", chat_id)
-
-    def _active_orders(self, offer_id: int) -> list:
-        """The orders of an offer that cancelling it would cancel"""
-        active = (OrderStatus.PENDING.value, OrderStatus.ORDERED.value)
-        return [o for o in self.db.get_orders_by_offer(offer_id) if o.status in active]
-
     def _pending_orders_by_offer(self) -> dict[int, list]:
         """The pending orders of the active and sold-out offers, read at once through the status index"""
         offer_ids = {

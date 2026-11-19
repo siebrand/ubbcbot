@@ -236,49 +236,6 @@ class OrderCancellation(BaseOrderHandler):
 
         return self._execute_cancel(order, box, chat_id, reason)
 
-    def _execute_cancel(self, order, box, chat_id: int, reason: str = "Manual cancellation") -> dict[str, Any]:
-        """Execute order cancellation"""
-        # Use transaction method for audit enforcement
-        if not self.db.cancel_order(order.order_id, self.admin_user_id, reason):
-            self._send_message(chat_id, self._t("failed_cancel_order"))
-            return {"status": "error"}
-
-        # Update box quantity and status
-        if not self.box_status_manager.update_box_after_order_cancellation(box.box_id, order.quantity):
-            logger.error(f"Failed to update box {box.box_id} after cancellation")
-
-        # Check if offer status should change after cancellation (syncs messages)
-        self._check_offer_status_after_change(order.offer_id)
-
-        # Get customer and offer info for notifications
-        customer = self.db.get_customer(order.customer_id)
-        offer = self.db.get_offer(order.offer_id)
-
-        # Notify customer with reason
-        if customer:
-            customer_message = self._t(
-                "order_cancelled_by_admin",
-                customer.telegram_user_id,
-                name=offer.name if offer else self._t("unknown", user_id=None),
-                quantity=order.quantity,
-                total=float(order.total_price),
-                reason=reason,
-            )
-            self._send_message(customer.telegram_user_id, customer_message)
-
-        # Confirm to admin
-        box = self.db.get_box(order.box_id)  # Refresh box data
-        admin_message = self._t(
-            "order_cancelled_success",
-            user_id=None,
-            order_id=order.order_id,
-            new_quantity=box.current_quantity if box else 0,
-            max_capacity=box.max_capacity if box else 0,
-        )
-        self._send_message(chat_id, admin_message)
-
-        return {"status": "success"}
-
     def handle_cancel_order_user_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
         """Handle user selection from disambiguation for cancel order"""
         customer = self.db.get_customer(customer_id)

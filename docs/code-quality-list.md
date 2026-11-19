@@ -53,6 +53,10 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   or README line that says otherwise), and remove `list_sold_out_offers_recent` if nothing uses it. **Done**: the title
   is "🚫 UITVERKOCHT:" / "🚫 SOLD OUT:", the customer help mentions `/list_offers sold_out` ("Alle uitverkochte
   aanbiedingen"), and the unused `list_sold_out_offers_recent` is gone.
+- [x] **H8. Cancelling orders from the box audit always fails** (`boxes.py`, `_cancel_excess_orders`, found by the
+  tests for H6). It built an `AdminOrderCommands` and called `_execute_cancel` on it, but that class is a facade
+  without the method: the "cancel orders" button raised an `AttributeError`. **Done**: `_execute_cancel` lives in
+  `BaseHandler` and tells the customer in their own language.
 
 ## Medium priority
 
@@ -60,8 +64,10 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   prompt is routed by `edit_type`; some branches also parse and validate the input (a quantity, a box count). Make it
   a table of edit types, like `COMMAND_ROUTES`, and move the parsing to the handlers. `process_update` (11) loses the
   inline document and media-group handling along the way.
-- [ ] **M2. `/list_boxes` reads per offer and per box** (`boxes.py`, `handle_list_boxes`, complexity 23): the boxes of
-  every offer one by one, then the orders of every listed box. The status filter is a chain of `and`/`or`.
+- [x] **M2. `/list_boxes` reads per offer and per box** (`boxes.py`, `handle_list_boxes`, complexity 23): the boxes of
+  every offer one by one, then the orders of every listed box. The status filter is a chain of `and`/`or`. **Done**:
+  one scan of the boxes, one status-index query for the boxes ready for labeling, a filter table, and the audit's
+  offer selection reads the suppliers once.
 - [x] **M3. Processing a wholesale order is one 230-line function** (`management.py`, complexity 27): planning (which
   order fits), writing, box clean-up and the summary are mixed. The "more offers to process?" check and the offer
   selection read the orders of every offer one by one, and the offer selections (`management.py`, `boxes.py`) scan

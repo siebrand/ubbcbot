@@ -1,6 +1,7 @@
 import logging
 
 from handlers.base_handler import BaseHandler
+from models.entities import OrderStatus
 
 logger = logging.getLogger()
 
@@ -9,6 +10,14 @@ class OfferBaseHandler(BaseHandler):
     """Base class for offer-related handlers with common utilities"""
 
     VALID_BOX_SIZES = [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24]
+
+    def _units(self, count: int, chat_id: int) -> str:
+        return self._t("unit", chat_id) if count == 1 else self._t("units", chat_id)
+
+    def _active_orders(self, offer_id: int) -> list:
+        """The orders of an offer that still take room in a box and can be cancelled"""
+        active = (OrderStatus.PENDING.value, OrderStatus.ORDERED.value)
+        return [o for o in self.db.get_orders_by_offer(offer_id) if o.status in active]
 
     def _validate_offer_name(self, name: str) -> tuple[bool, str]:
         """Validate offer name and return (is_valid, error_key)"""

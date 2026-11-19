@@ -2,8 +2,9 @@ import contextlib
 from datetime import datetime
 from typing import Any
 
-from models.entities import Box, BoxStatus, OfferStatus
+from models.entities import Box, BoxStatus, OfferStatus, OrderStatus
 from services.box_status_manager import BoxStatusManager
+from services.wholesale_plan import boxes_needed
 
 from .base import OfferBaseHandler
 
@@ -49,89 +50,83 @@ class BoxManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t("invalid_offer_id", chat_id))
             return {"status": "invalid_format"}
 
+    # The box statuses each /list_boxes filter shows (None: every status)
+    BOX_FILTERS = {
+        "active": {BoxStatus.OPEN.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value},
+        "ordered": {BoxStatus.ORDERED.value},
+        "full": {BoxStatus.FULL.value},
+        "delivered": {BoxStatus.DELIVERED.value},
+        "all": None,
+    }
+    # Per offer: ordered boxes first, then full, open and delivered
+    STATUS_PRIORITY = {
+        BoxStatus.ORDERED.value: 0,
+        BoxStatus.FULL.value: 1,
+        BoxStatus.OPEN.value: 2,
+        BoxStatus.DELIVERED.value: 3,
+    }
+    STATUS_EMOJIS = {
+        BoxStatus.OPEN.value: "🟢",
+        BoxStatus.FULL.value: "🔴",
+        BoxStatus.ORDERED.value: "📦",
+        BoxStatus.DELIVERED.value: "✅",
+    }
+
+    @classmethod
+    def _parse_list_boxes_args(cls, args: list) -> tuple[str, int | None, int]:
+        """(status filter, offer id or None, page) from `/list_boxes [status|offer_id] [page]`"""
+        status_filter, offer_filter, page_args = "active", None, []
+        if args:
+            if args[0].lower() in cls.BOX_FILTERS:
+                status_filter, page_args = args[0].lower(), args[1:2]
+            else:
+                with contextlib.suppress(ValueError):
+                    offer_filter = int(args[0])
+                    page_args = args[1:2]
+        page = 1
+        if page_args:
+            with contextlib.suppress(ValueError):
+                page = int(page_args[0])
+        return status_filter, offer_filter, page
+
+    @staticmethod
+    def _created_at_key(box) -> str:
+        """created_at is an ISO 8601 string (sortable as text), but may be a datetime"""
+        created_at = box.created_at
+        if isinstance(created_at, datetime):
+            return created_at.isoformat()
+        return str(created_at) if created_at is not None else ""
+
     def handle_list_boxes(self, chat_id: int, args: list | None = None) -> dict[str, Any]:
         """Handle /list_boxes command with pagination and optional status/offer filter"""
-        # Handle None args for backward compatibility
-        if args is None:
-            args = []
+        args = args or []
+        if args and args[0].lower() == "help":
+            self._send_message(chat_id, self._t("box_status_help", chat_id))
+            return {"status": "success"}
+        status_filter, offer_filter, page = self._parse_list_boxes_args(args)
 
-        # Parse arguments
-        page = 1
-        status_filter = "active"  # default
-        offer_filter = None
-
-        if args:
-            if args[0].lower() == "help":
-                self._send_message(chat_id, self._t("box_status_help", chat_id))
-                return {"status": "success"}
-            elif args[0].lower() in ["active", "ordered", "full", "delivered", "all"]:
-                status_filter = args[0].lower()
-                if len(args) > 1:
-                    with contextlib.suppress(ValueError):
-                        page = int(args[1])
-            else:
-                try:
-                    # Try to parse as offer_id
-                    offer_filter = int(args[0])
-                    if len(args) > 1:
-                        with contextlib.suppress(ValueError):
-                            page = int(args[1])
-                except ValueError:
-                    # Not an offer_id, try as page number
-                    with contextlib.suppress(ValueError):
-                        page = int(args[0])
-
-        offers = self.db.list_offers()
-
-        # Filter by offer_id if specified
+        offers = {offer.offer_id: offer for offer in self.db.list_offers()}
         if offer_filter:
-            offers = [o for o in offers if o.offer_id == offer_filter]
-            if not offers:
+            if offer_filter not in offers:
                 self._send_message(chat_id, self._t("offer_not_found", chat_id))
                 return {"status": "offer_not_found"}
+            boxes = self.db.get_boxes_by_offer(offer_filter)
+        else:
+            boxes = self.db.get_all_boxes()
 
-        # Build list of offer-box combinations and filter by box status
-        offer_boxes = []
-        for offer in offers:
-            boxes = self.db.get_boxes_by_offer(offer.offer_id)
-            for box in boxes:
-                # Filter boxes based on status
-                if (
-                    status_filter == "active"
-                    and box.status in [BoxStatus.OPEN.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]
-                    or status_filter == "ordered"
-                    and box.status == BoxStatus.ORDERED.value
-                    or status_filter == "full"
-                    and box.status == BoxStatus.FULL.value
-                    or status_filter == "delivered"
-                    and box.status == BoxStatus.DELIVERED.value
-                    or status_filter == "all"
-                ):
-                    offer_boxes.append((offer, box))
-
+        wanted = self.BOX_FILTERS[status_filter]
+        offer_boxes = [
+            (offers[box.offer_id], box)
+            for box in boxes
+            if box.offer_id in offers and (wanted is None or box.status in wanted)
+        ]
         if not offer_boxes:
             self._send_message(chat_id, self._t("no_boxes_found", chat_id, status=status_filter))
             return {"status": "no_boxes"}
 
-        # Sort: by offer_id, then by status priority (ordered > full > open), then by creation time ascending.
-        # created_at is stored as an ISO 8601 string (lexicographically sortable); normalize to a string
-        # so a mix of str/datetime values sorts safely.
-        status_priority = {
-            BoxStatus.ORDERED.value: 0,
-            BoxStatus.FULL.value: 1,
-            BoxStatus.OPEN.value: 2,
-            BoxStatus.DELIVERED.value: 3,
-        }
-
-        def _created_at_key(b):
-            created_at = b.created_at
-            if isinstance(created_at, datetime):
-                return created_at.isoformat()
-            return str(created_at) if created_at is not None else ""
-
-        offer_boxes.sort(key=lambda x: (x[0].offer_id, status_priority.get(x[1].status, 99), _created_at_key(x[1])))
-
-        # Paginate results
+        offer_boxes.sort(
+            key=lambda x: (x[0].offer_id, self.STATUS_PRIORITY.get(x[1].status, 99), self._created_at_key(x[1]))
+        )
         page_items, total_pages = self._paginate_list(offer_boxes, page, 10)
 
         message = (
@@ -141,66 +136,37 @@ class BoxManagementHandler(OfferBaseHandler):
         message += "```\n"
         message += self._t("box_status_table_header", chat_id) + "\n"
         message += self._t("box_status_table_separator", chat_id) + "\n"
-
         for offer, box in page_items:
-            status_emoji = {
-                BoxStatus.OPEN.value: "🟢",
-                BoxStatus.FULL.value: "🔴",
-                BoxStatus.ORDERED.value: "📦",
-                BoxStatus.DELIVERED.value: "✅",
-            }.get(box.status, "❓")
-
-            # Truncate offer name to fit table
-            offer_name = offer.name[:20] if len(offer.name) > 20 else offer.name
+            status_emoji = self.STATUS_EMOJIS.get(box.status, "❓")
             price_str = f"€{offer.price_per_unit:.2f}"
             units_str = f"{box.current_quantity}/{box.max_capacity}"
-            box_id_short = box.box_id[:8] if len(box.box_id) > 8 else box.box_id
-
             message += (
-                f"{status_emoji}     {str(offer.offer_id):<4}  {box_id_short:<8}  "
-                f"{offer_name:<20}  {price_str:>6}  {units_str:>5}\n"
+                f"{status_emoji}     {str(offer.offer_id):<4}  {box.box_id[:8]:<8}  "
+                f"{offer.name[:20]:<20}  {price_str:>6}  {units_str:>5}\n"
             )
-
         message += "```"
 
-        # Add pagination keyboard if needed
-        keyboard = None
+        rows = []
         if total_pages > 1:
             filter_key = f"offer_{offer_filter}" if offer_filter else status_filter
             keyboard = self._build_pagination_keyboard(page, total_pages, f"boxes_{filter_key}", enhanced=True)
+            rows = keyboard["inline_keyboard"]
 
-        # Add finish labeling buttons for boxes with ready orders
-        labeling_buttons = []
-        for _offer, box in page_items:
-            orders = self.db.get_orders_by_box(box.box_id)
-            ready_for_labeling = any(o.status == "ready_for_labeling" for o in orders)
-            if ready_for_labeling:
-                labeling_buttons.append(
-                    [
-                        {
-                            "text": self._t("finish_labeling_box", chat_id, box_id=box.box_id[:8]),
-                            "callback_data": f"finish_labeling_{box.box_id}",
-                        }
-                    ]
-                )
+        # A button to finish labeling, for the listed boxes with orders that are ready for it
+        ready = {o.box_id for o in self.db.get_all_orders(statuses=[OrderStatus.READY_FOR_LABELING.value])}
+        rows += [
+            [
+                {
+                    "text": self._t("finish_labeling_box", chat_id, box_id=box.box_id[:8]),
+                    "callback_data": f"finish_labeling_{box.box_id}",
+                }
+            ]
+            for _offer, box in page_items
+            if box.box_id in ready
+        ]
+        rows.append([{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}])
 
-        if labeling_buttons:
-            if keyboard:
-                keyboard["inline_keyboard"].extend(labeling_buttons)
-            else:
-                keyboard = {"inline_keyboard": labeling_buttons}
-
-        # Add back to admin button
-        if keyboard:
-            keyboard["inline_keyboard"].append(
-                [{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}]
-            )
-        else:
-            keyboard = {
-                "inline_keyboard": [[{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}]]
-            }
-
-        self._send_message(chat_id, message, reply_markup=keyboard, parse_mode="Markdown")
+        self._send_message(chat_id, message, reply_markup={"inline_keyboard": rows}, parse_mode="Markdown")
         return {"status": "success"}
 
     def handle_audit_offer(self, chat_id: int, args: list) -> dict[str, Any]:
@@ -218,8 +184,6 @@ class BoxManagementHandler(OfferBaseHandler):
 
     def show_audit_offer_selection(self, chat_id: int, page: int = 1) -> dict[str, Any]:
         """Show paginated list of offers for audit selection"""
-        from models.entities import OfferStatus
-
         offers = [
             o for o in self.db.list_offers() if o.status in [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value]
         ]
@@ -237,9 +201,10 @@ class BoxManagementHandler(OfferBaseHandler):
         message = self._t("select_offer_for_audit", chat_id, page=page, total_pages=total_pages) + "\n\n"
         keyboard_buttons = []
 
+        supplier_names = {supplier.name for supplier in self.db.list_suppliers()}
         for offer in page_offers:
-            supplier = self.db.get_supplier_by_name(offer.supplier_name)
-            supplier_name = supplier.name if supplier else self._t("unknown", user_id=None)
+            known = offer.supplier_name in supplier_names
+            supplier_name = offer.supplier_name if known else self._t("unknown", chat_id)
             button_text = f"🍺 {offer.name} - €{offer.price_per_unit:.2f} ({supplier_name})"
             keyboard_buttons.append([{"text": button_text, "callback_data": f"audit_offer_{offer.offer_id}"}])
 
@@ -275,9 +240,7 @@ class BoxManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t("offer_not_found", chat_id))
             return {"status": "offer_not_found"}
 
-        # Get active orders for this offer
-        all_orders = self.db.get_orders_by_offer(offer_id)
-        active_orders = [o for o in all_orders if o.status in ["pending", "ordered"]]
+        active_orders = self._active_orders(offer_id)
         total_ordered_units = sum(order.quantity for order in active_orders)
 
         # Get boxes and calculate total capacity
@@ -364,8 +327,7 @@ class BoxManagementHandler(OfferBaseHandler):
         elif unordered_boxes and total_capacity > 0:
             # Fill existing boxes and create new ones (only if unordered boxes exist)
             box_size = offer.wholesale_box_size
-            remaining_units = excess_units - total_capacity
-            boxes_needed = (remaining_units + box_size - 1) // box_size
+            new_boxes = boxes_needed(excess_units - total_capacity, box_size)
 
             message = self._t(
                 "audit_propose_fill_and_create",
@@ -373,7 +335,7 @@ class BoxManagementHandler(OfferBaseHandler):
                 offer_id=offer.offer_id,
                 excess=excess_units,
                 available=total_capacity,
-                boxes=boxes_needed,
+                boxes=new_boxes,
                 box_size=box_size,
             )
 
@@ -391,14 +353,14 @@ class BoxManagementHandler(OfferBaseHandler):
         elif not ordered_boxes:
             # No ordered boxes exist - create new boxes instead of canceling orders
             box_size = offer.wholesale_box_size
-            boxes_needed = (excess_units + box_size - 1) // box_size
+            new_boxes = boxes_needed(excess_units, box_size)
 
             message = self._t(
                 "audit_propose_create_boxes",
                 chat_id,
                 offer_id=offer.offer_id,
                 excess=excess_units,
-                boxes=boxes_needed,
+                boxes=new_boxes,
                 box_size=box_size,
             )
 
@@ -415,21 +377,12 @@ class BoxManagementHandler(OfferBaseHandler):
             }
         else:
             # No capacity available - need to cancel orders
-            sorted_orders = sorted(active_orders, key=lambda x: x.created_at, reverse=True)
-            orders_to_cancel = []
-            units_to_cancel = excess_units
-
-            for order in sorted_orders:
-                if units_to_cancel <= 0:
-                    break
-                orders_to_cancel.append(order)
-                units_to_cancel -= order.quantity
-
+            orders_to_cancel = self._orders_to_cancel(active_orders, excess_units)
             order_details = []
             for order in orders_to_cancel:
                 customer = self.db.get_customer(order.customer_id)
-                customer_name = customer.first_name if customer else self._t("unknown", user_id=None)
-                order_details.append(f"{customer_name} ({order.quantity} units)")
+                customer_name = customer.first_name if customer else self._t("unknown", chat_id)
+                order_details.append(f"{customer_name} ({order.quantity} {self._units(order.quantity, chat_id)})")
 
             message = self._t(
                 "audit_propose_cancel_orders",
@@ -462,25 +415,13 @@ class BoxManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t("offer_not_found", chat_id))
             return {"status": "offer_not_found"}
 
-        # Fill existing boxes with available capacity
+        # Unordered boxes first, then ordered ones; delivered boxes are done
         boxes = self.db.get_boxes_by_offer(offer_id)
         unordered_boxes = [b for b in boxes if b.status not in [BoxStatus.ORDERED.value, BoxStatus.DELIVERED.value]]
         ordered_boxes = [b for b in boxes if b.status == BoxStatus.ORDERED.value]
 
         filled_units = 0
-
-        # Fill unordered boxes first
-        for box in unordered_boxes:
-            if filled_units >= excess_units:
-                break
-            available = box.max_capacity - box.current_quantity
-            if available > 0:
-                fill_amount = min(available, excess_units - filled_units)
-                self.box_status_manager.update_box_after_order_placement(box.box_id, fill_amount)
-                filled_units += fill_amount
-
-        # Fill ordered boxes if needed
-        for box in ordered_boxes:
+        for box in unordered_boxes + ordered_boxes:
             if filled_units >= excess_units:
                 break
             available = box.max_capacity - box.current_quantity
@@ -542,20 +483,15 @@ class BoxManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t("offer_not_found", chat_id))
             return {"status": "offer_not_found"}
 
-        all_orders = self.db.get_orders_by_offer(offer_id)
-        active_orders = [o for o in all_orders if o.status in ["pending", "ordered"]]
-
-        return self._cancel_excess_orders(chat_id, offer, active_orders, excess_units)
+        return self._cancel_excess_orders(chat_id, offer, self._active_orders(offer_id), excess_units)
 
     def _add_box_capacity(self, chat_id: int, offer, needed_units: int) -> dict[str, Any]:
         """Add box capacity by creating new boxes and filling them with needed units"""
         box_size = offer.wholesale_box_size
-        boxes_needed = (needed_units + box_size - 1) // box_size
-
         created_boxes = 0
         remaining_units = needed_units
 
-        for _ in range(boxes_needed):
+        for _ in range(boxes_needed(needed_units, box_size)):
             box = Box(offer_id=offer.offer_id, max_capacity=box_size)
             created_box = self.db.create_box(box)
             if created_box:
@@ -577,34 +513,26 @@ class BoxManagementHandler(OfferBaseHandler):
             self._send_message(chat_id, self._t("audit_failed_create_boxes", chat_id))
             return {"status": "error"}
 
-    def _cancel_excess_orders(self, chat_id: int, offer, active_orders, excess_units: int) -> dict[str, Any]:
-        """Cancel excess orders using existing cancellation logic"""
-        # Sort orders by creation time (oldest first) for fair cancellation
-        sorted_orders = sorted(active_orders, key=lambda x: x.created_at)
-
-        cancelled_orders = []
-        units_to_cancel = excess_units
-
-        # Cancel orders until we've cancelled enough units
-        for order in reversed(sorted_orders):  # Cancel newest first
-            if units_to_cancel <= 0:
+    @staticmethod
+    def _orders_to_cancel(active_orders, excess_units: int) -> list:
+        """The newest orders, until together they hold the excess units"""
+        chosen, units = [], 0
+        for order in sorted(active_orders, key=lambda o: o.created_at, reverse=True):
+            if units >= excess_units:
                 break
-            cancelled_orders.append(order)
-            units_to_cancel -= order.quantity
+            chosen.append(order)
+            units += order.quantity
+        return chosen
 
-        # Execute cancellations using existing method
-        from handlers.admin.order_commands import AdminOrderCommands
-
-        order_handler = AdminOrderCommands(self.db, self.admin_user_id, self.environment, self.telegram_token)
-
+    def _cancel_excess_orders(self, chat_id: int, offer, active_orders, excess_units: int) -> dict[str, Any]:
+        """Cancel the newest orders until the excess is gone; each customer is told"""
         cancelled_count = 0
-        for order in cancelled_orders:
+        for order in self._orders_to_cancel(active_orders, excess_units):
             box = self.db.get_box(order.box_id)
-            if box:
-                result = order_handler._execute_cancel(order, box, chat_id)
-                if result["status"] == "success":
-                    cancelled_count += 1
+            if box and self._execute_cancel(order, box, chat_id)["status"] == "success":
+                cancelled_count += 1
 
+        capacity = sum(box.current_quantity for box in self.db.get_boxes_by_offer(offer.offer_id))
         self._send_message(
             chat_id,
             self._t(
@@ -612,9 +540,8 @@ class BoxManagementHandler(OfferBaseHandler):
                 chat_id,
                 offer_id=offer.offer_id,
                 cancelled=cancelled_count,
-                ordered=excess_units + sum(box.current_quantity for box in self.db.get_boxes_by_offer(offer.offer_id)),
-                capacity=sum(box.current_quantity for box in self.db.get_boxes_by_offer(offer.offer_id)),
+                ordered=excess_units + capacity,
+                capacity=capacity,
             ),
         )
-
         return {"status": "orders_cancelled", "cancelled": cancelled_count}

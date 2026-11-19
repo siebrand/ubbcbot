@@ -66,7 +66,7 @@ class BoxRepository(BaseRepository):
         """Scan all boxes with minimal fields"""
         try:
             items = self._scan_items(
-                ProjectionExpression="box_id, offer_id, current_quantity, max_capacity, #status",
+                ProjectionExpression="box_id, offer_id, current_quantity, max_capacity, #status, created_at",
                 ExpressionAttributeNames={"#status": "status"},
             )
             return [self._item_to_box(item) for item in items]

@@ -408,6 +408,37 @@ class BaseHandler:
         if new_status is not None:
             self.sync_offer_messages(offer_id)
 
+    def _execute_cancel(self, order, box, chat_id: int, reason: str = "Manual cancellation") -> dict[str, Any]:
+        """Cancel an order as the admin: the box gets the units back, the customer is told, the admin sees the box"""
+        if not self.db.cancel_order(order.order_id, self.admin_user_id, reason):
+            self._send_message(chat_id, self._t("failed_cancel_order", chat_id))
+            return {"status": "error"}
+
+        if not self.box_status_manager.update_box_after_order_cancellation(box.box_id, order.quantity):
+            logger.error(f"Failed to update box {box.box_id} after cancellation")
+        self._check_offer_status_after_change(order.offer_id)
+
+        offer = self.db.get_offer(order.offer_id)
+        self._notify_customer(
+            self.db.get_customer(order.customer_id),
+            "order_cancelled_by_admin",
+            name=offer.name if offer else self._t("unknown", chat_id),
+            quantity=order.quantity,
+            total=float(order.total_price),
+            reason=reason,
+        )
+
+        box = self.db.get_box(order.box_id)
+        admin_message = self._t(
+            "order_cancelled_success",
+            chat_id,
+            order_id=order.order_id,
+            new_quantity=box.current_quantity if box else 0,
+            max_capacity=box.max_capacity if box else 0,
+        )
+        self._send_message(chat_id, admin_message)
+        return {"status": "success"}
+
     def sync_offer_messages(self, offer_id: int, cancelled: bool = False):
         """Re-render all tracked announcement messages for an offer.
 
