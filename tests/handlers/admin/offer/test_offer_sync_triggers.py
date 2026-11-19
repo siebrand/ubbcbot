@@ -208,3 +208,35 @@ class TestTriggerRouting:
 
         h.handle_update_offer_description(123, ["9", "a", "new", "description"])
         h.sync_offer_messages.assert_called_once_with(9)
+
+
+class TestFirstSubscriberMessage:
+    """The first DM of an offer is the same message as the group post and its later re-edits"""
+
+    def _sender(self):
+        s = NotificationSender(MagicMock(), 1, "test", "token")
+        s._get_bot_username = MagicMock(return_value="ubbc_test_bot")
+        s._send_message = MagicMock(return_value={"success": True, "message_id": 9})
+        return s
+
+    def test_the_name_is_escaped_and_matches_the_re_edit(self):
+        offer = Offer(offer_id=5, name="Hop & <Co>", price_per_unit=Decimal("5.00"), status=OfferStatus.ACTIVE.value)
+        s = self._sender()
+
+        s._send_notification_to_customer(MagicMock(telegram_user_id=10, customer_id="c1"), offer, [])
+
+        text = s._send_message.call_args.args[1]
+        assert "Hop &amp; &lt;Co&gt;" in text and "<Co>" not in text
+        s._t = MagicMock(side_effect=lambda key, *a, **k: key)
+        assert text.split("\n")[0] == s.announcements.render(offer)[0].split("\n")[0]
+
+    def test_the_buttons_are_in_the_subscribers_language(self):
+        offer = Offer(offer_id=5, name="Saison", price_per_unit=Decimal("5.00"), status=OfferStatus.ACTIVE.value)
+        s = self._sender()
+        s._t = MagicMock(side_effect=lambda key, user_id=None, **k: f"{key}@{user_id}")
+
+        s._send_notification_to_customer(MagicMock(telegram_user_id=10, customer_id="c1"), offer, [])
+
+        markup = s._send_message.call_args.kwargs["reply_markup"]
+        assert [b["text"] for b in markup["inline_keyboard"][0]] == ["order_1@10", "order_2@10"]
+        s.db.create_notification_message.assert_called_once()

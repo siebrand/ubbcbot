@@ -3,6 +3,7 @@ import logging
 
 from handlers.base_handler import BaseHandler
 from services.database import DynamoDBService
+from services.offer_message_builder import OfferMessageBuilder
 from utils.log_redaction import configure_logging
 from utils.s3_url import is_s3_url
 
@@ -139,31 +140,10 @@ class NotificationSender(BaseHandler):
                 media_group = [{"type": "photo", "media": url} for url in presigned_images]
                 self._send_media_group(chat_id, media_group)
 
-        # Get bot username for linking
-        bot_username = self._get_bot_username()
-
-        # Combine header and offer details in single message
-        message = (
-            f"<b><a href='https://t.me/{bot_username}?start=view_offer_{offer.offer_id}'>{offer.offer_id}</a>. "
-            f"{offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
-        )
-        message += f"{offer.description}\n"
-
-        # Add order buttons
-        reply_markup = {
-            "inline_keyboard": [
-                [
-                    {
-                        "text": self._t("order_1", customer.telegram_user_id),
-                        "callback_data": f"order_{offer.offer_id}_1",
-                    },
-                    {
-                        "text": self._t("order_2", customer.telegram_user_id),
-                        "callback_data": f"order_{offer.offer_id}_2",
-                    },
-                ]
-            ]
-        }
+        # The same message as the group post and every later re-edit (the name escaped), buttons in the
+        # subscriber's language
+        builder = OfferMessageBuilder(self._get_bot_username(), lambda key: self._t(key, chat_id))
+        message, reply_markup = builder.build(offer)
 
         result = self._send_message(chat_id, message, parse_mode="HTML", reply_markup=reply_markup)
         if result and result.get("success"):

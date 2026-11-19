@@ -30,12 +30,14 @@ code that the first two left alone, and adds two to-dos from the owner. Same pri
   admin sees the order fail, although it was placed. **Done**: `CustomerOrderCommands.announce_order_for` announces
   the order in the group (not for guests, as the comment of the group sender says); `tests/test_order_for_flow.py`
   runs the whole flow and fails on the old call.
-- [ ] **A1. The first subscriber DM of an offer is built by hand, without escaping the name**
+- [x] **A1. The first subscriber DM of an offer is built by hand, without escaping the name**
   (`notification_sender.py`, `_send_notification_to_customer`). The group post and every later re-edit of the same DM
   come from `OfferMessageBuilder`, which escapes the name; the first DM builds its own HTML with `offer.name` as
   stored. A name with an HTML tag (the name check allows Telegram's tags) or `&` shows differently in the first DM
   than after any re-edit, or makes Telegram refuse the message for every subscriber. Fix: render the DM with
-  `OfferAnnouncements.render`, so the first message and its re-edits are the same.
+  `OfferAnnouncements.render`, so the first message and its re-edits are the same. **Done** with `OfferMessageBuilder`
+  itself, translated for the subscriber, so the order buttons of the first DM stay in the subscriber's language (the
+  re-edits use the group language, as before). An empty description no longer shows as "None".
 - [ ] **A2. The formatting of a typed description lands on the wrong characters** (`utils/telegram_entities.py`).
   Telegram counts entity offsets in UTF-16 code units; `entities_to_html` cuts the Python string by code points. Every
   emoji outside the basic plane (🍺, 🍻) before a bold or italic word shifts the tags one place, so they cut through a
