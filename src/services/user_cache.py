@@ -1,4 +1,5 @@
 import logging
+import time
 
 from models.entities import AuthorizationStatus, Customer
 
@@ -6,16 +7,34 @@ logger = logging.getLogger()
 
 
 class UserCache:
-    """Cache for user lists to reduce DynamoDB queries"""
+    """Cache for user lists to reduce DynamoDB queries.
+
+    It lives per Lambda container: a change made through another warm container does not invalidate it here. So
+    everything expires TTL_SECONDS after it was first read, and `BotService.process_update` forgets the sender of
+    every update, so the approval check always reads the sender's current status.
+    """
+
+    TTL_SECONDS = 60
 
     _customers_by_status: dict[str, list[Customer]] = {}
     _subscribers: list[Customer] | None = None
     _all_customers: list[Customer] | None = None
     _customers_by_telegram_id: dict[int, Customer] = {}
+    _filled_at: float | None = None
+
+    @classmethod
+    def _expire(cls):
+        """Empty the cache when it is older than TTL_SECONDS, and start the clock when it is (still) empty"""
+        now = time.monotonic()
+        if cls._filled_at is not None and now - cls._filled_at > cls.TTL_SECONDS:
+            cls.invalidate_cache()
+        if cls._filled_at is None:
+            cls._filled_at = now
 
     @classmethod
     def get_customers_by_status(cls, status: str, db_service) -> list[Customer]:
         """Get customers by status with caching"""
+        cls._expire()
         if status not in cls._customers_by_status:
             logger.info(f"Cache miss for customers with status: {status}")
             customers = db_service._get_customers_by_status_uncached(status)
@@ -29,6 +48,7 @@ class UserCache:
     @classmethod
     def get_subscribers(cls, db_service) -> list[Customer]:
         """Get subscribers with caching"""
+        cls._expire()
         if cls._subscribers is None:
             logger.info("Cache miss for subscribers")
             cls._subscribers = db_service._get_subscribers_uncached()
@@ -41,6 +61,7 @@ class UserCache:
     @classmethod
     def get_all_customers(cls, db_service) -> list[Customer]:
         """Get all customers with caching"""
+        cls._expire()
         if cls._all_customers is None:
             logger.info("Cache miss for all customers")
             # Combine all status lists
@@ -58,6 +79,7 @@ class UserCache:
     @classmethod
     def get_customer_by_telegram_id(cls, telegram_user_id: int, db_service) -> Customer | None:
         """Get customer by telegram ID with caching"""
+        cls._expire()
         if telegram_user_id not in cls._customers_by_telegram_id:
             logger.info(f"Cache miss for telegram_user_id: {telegram_user_id}")
             customer = db_service._get_customer_by_telegram_id_uncached(telegram_user_id)
@@ -75,6 +97,7 @@ class UserCache:
         cls._subscribers = None
         cls._all_customers = None
         cls._customers_by_telegram_id.clear()
+        cls._filled_at = None
 
     @classmethod
     def invalidate_status_cache(cls, status: str):

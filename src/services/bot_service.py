@@ -30,6 +30,7 @@ from services.command_router import CommandRouter
 from services.database import DynamoDBService
 from services.media_handler import MediaHandler
 from services.routing.edit_reply_table import ANSWER_ROUTES, PromptAnswer
+from services.user_cache import UserCache
 
 logger = logging.getLogger()
 
@@ -186,6 +187,12 @@ class BotService:
             if update_id is not None and not self.db.mark_update_processed(update_id):
                 return {"status": "duplicate"}
 
+            # Another warm container may have approved or rejected the sender since this one cached them: read
+            # the sender from the table once per update, so the approval checks see the current status
+            sender_id = self._sender_id(update)
+            if sender_id is not None:
+                UserCache.invalidate_customer_cache(sender_id)
+
             self._expire_exports_on_admin_update(update)
 
             # Handle callback queries (inline button presses)
@@ -230,11 +237,16 @@ class BotService:
             # The result goes back to the webhook: the type only, an exception message can hold data
             return {"status": "error", "error": type(e).__name__}
 
+    @staticmethod
+    def _sender_id(update: dict[str, Any]) -> int | None:
+        """The Telegram id of who sent the message or tapped the button, None for other updates"""
+        sender = (update.get("callback_query") or update.get("message") or {}).get("from") or {}
+        return sender.get("id")
+
     def _expire_exports_on_admin_update(self, update: dict[str, Any]) -> None:
         """Delete expired exports when the admin does something. Customer updates skip this check."""
         try:
-            sender = (update.get("callback_query") or update.get("message") or {}).get("from") or {}
-            if sender.get("id") == self.admin_user_id:
+            if self._sender_id(update) == self.admin_user_id:
                 self.base_handler.expire_exports()
         except Exception as e:
             logger.error(f"Error expiring exports: {e}")

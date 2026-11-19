@@ -63,13 +63,18 @@ transactions (CLAUDE.md, Gotchas).
   Telegram refuse the message, so the customer never hears that the payment arrived (the delivery message escapes the
   same field since audit 2). Fix: `_escape_html(customer.location)`. Test: a location with `<` and `&`. **Done**:
   escaped; `tests/test_payment_received_notification.py`. No other message puts the location in unescaped.
-- [ ] **A5. A rejection or approval is not seen by other warm containers** (`user_cache.py`). The cache of customers
+- [x] **A5. A rejection or approval is not seen by other warm containers** (`user_cache.py`). The cache of customers
   (by status and by Telegram id) lives per Lambda container without an expiry. Approving or rejecting a user
   invalidates it only in the container that handled the command; another warm container keeps the old status and
   goes on letting a rejected user order (or refusing an approved one) until it is recycled. Fix: a short time to live
   (a minute), or read the authorization status of the sender from the table on every update (one `GetItem`) and keep
   the cache only for lists. Test: two `BotService` instances share the table; a rejection through one is refused by
-  the other.
+  the other. **Done**: both. `process_update` forgets the sender's cache entry, so the first lookup of every update
+  reads the sender from the table and the later ones in the same update (the translator asks for every text) hit the
+  cache; everything else in `UserCache` expires after `TTL_SECONDS` (60). Found along the way: the uncached lookup by
+  Telegram id was a scan of the whole customers table; it is now a query of `telegram-user-index` (which the template
+  already has, with an ALL projection). The cache is per process, so two `BotService`s in one test would share it:
+  `tests/test_user_cache_freshness.py` changes the status in the table directly, as another container would.
 
 ## Medium priority
 

@@ -193,10 +193,13 @@ class CustomerRepository(BaseRepository):
         return UserCache.get_customer_by_telegram_id(telegram_user_id, self)
 
     def _get_customer_by_telegram_id_uncached(self, telegram_user_id: int) -> Customer | None:
-        """Internal method to get customer by telegram ID without caching"""
+        """Internal method to get customer by telegram ID without caching (every update reads its sender: a query
+        of the index, not a scan of the table)"""
         try:
-            items = self._scan_items(
-                FilterExpression="telegram_user_id = :tid", ExpressionAttributeValues={":tid": telegram_user_id}
+            items = self._query_items(
+                IndexName="telegram-user-index",
+                KeyConditionExpression="telegram_user_id = :tid",
+                ExpressionAttributeValues={":tid": telegram_user_id},
             )
             if items:
                 return Customer(**items[0])
