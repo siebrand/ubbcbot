@@ -45,7 +45,7 @@ class TestHandleDeliveryAction(WholesaleDeliveryHandlerTestBase):
         with patch.object(self.handler, "_send_message", return_value={"status": "sent"}) as send:
             result = self.handler.handle_delivery_action(CHAT_ID, DeliveryAction.FULL.value, "abcdef12", 1, "sup")
 
-        send.assert_called_once_with(CHAT_ID, self.handler._t("box_not_found"))
+        send.assert_called_once_with(CHAT_ID, self.handler._t("box_not_found", CHAT_ID))
         self.assertEqual(result, {"status": "sent"})
 
     def test_unknown_action_returns_status(self):
@@ -59,7 +59,7 @@ class TestHandleDeliveryAction(WholesaleDeliveryHandlerTestBase):
 class TestHandlePartialAction(WholesaleDeliveryHandlerTestBase):
     def setUp(self):
         super().setUp()
-        self.db.list_offers.return_value = [SimpleNamespace(offer_id=1)]
+        self.db.get_all_boxes.return_value = [self.box]
 
     def test_success_continues_workflow(self):
         with (
@@ -73,11 +73,11 @@ class TestHandlePartialAction(WholesaleDeliveryHandlerTestBase):
         self.assertEqual(result, {"status": "continued"})
 
     def test_unknown_box_is_reported(self):
-        self.db.get_boxes_by_offer_with_orders.return_value = []
+        self.db.get_all_boxes.return_value = []
         with patch.object(self.handler, "_send_message", return_value={"status": "sent"}) as send:
             result = self.handler.handle_partial_action(CHAT_ID, "delayed", "abcdef12", 5)
 
-        send.assert_called_once_with(CHAT_ID, self.handler._t("box_not_found"))
+        send.assert_called_once_with(CHAT_ID, self.handler._t("box_not_found", CHAT_ID))
         self.assertEqual(result, {"status": "sent"})
 
     def test_failed_delivery_is_reported_to_admin(self):
@@ -87,7 +87,7 @@ class TestHandlePartialAction(WholesaleDeliveryHandlerTestBase):
         ):
             result = self.handler.handle_partial_action(CHAT_ID, "delayed", "abcdef12", 5)
 
-        send.assert_called_once_with(CHAT_ID, self.handler._t("delivery_processing_failed"))
+        send.assert_called_once_with(CHAT_ID, self.handler._t("delivery_processing_failed", CHAT_ID))
         self.assertEqual(result, {"status": "sent"})
 
 

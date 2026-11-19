@@ -74,9 +74,10 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   the suppliers once per offer. **Done** for `management.py`: the plan is a pure function
   (`services/wholesale_plan.py`), the handler applies it in small steps, and the pending orders of all offers are read
   once through the status index. The `boxes.py` selection follows with M2.
-- [ ] **M4. The delivery workflow searches every offer for one box** (`wholesale_delivery_handler.py`,
+- [x] **M4. The delivery workflow searches every offer for one box** (`wholesale_delivery_handler.py`,
   `handle_partial_action`, `_continue_workflow_after_action`): it reads the boxes and orders of all offers to find a
-  box whose id it already knows (or knows the start of).
+  box whose id it already knows (or knows the start of). **Done**: one read of the box (`get_box`), or one scan of the
+  boxes when only the start of the id is known.
 - [ ] **M5. Text that bypasses the translations**: "(Page x/y)", "◀️ Prev", "Next ▶️" (`management.py`);
   "⏳ Delayed", "⏳ Remaining Delayed" and the English words passed into `partial_delivery_processed`
   (`wholesale_delivery_handler.py`); "(no username)", "User", "matching '…'", "First name", "Last name", "Status:"

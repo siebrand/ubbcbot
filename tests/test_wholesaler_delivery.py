@@ -159,7 +159,7 @@ class TestWholesalerDelivery(unittest.TestCase):
         # Mock handler setup
         mock_db = Mock()
         handler = WholesaleDeliveryHandler(mock_db, 15005473, "test", "test_token")
-        handler._t = Mock(side_effect=lambda key, **kwargs: f"TRANSLATED_{key}_{kwargs}")
+        handler._t = Mock(side_effect=lambda key, user_id=None, **kwargs: f"TRANSLATED_{key}_{kwargs}")
         handler._send_message = Mock(return_value={"status": "sent"})
 
         # Mock ordered boxes
