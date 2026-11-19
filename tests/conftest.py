@@ -1,4 +1,5 @@
 import os
+import socket
 import sys
 
 import boto3
@@ -13,6 +14,55 @@ sys.path.append(
 # Shaped like a real token (digits:30+ chars) so redaction tests work, but
 # does not match GitHub's Telegram secret pattern (which requires the AA prefix).
 FAKE_TOKEN = "1234567890:XXX-abcdefghijklmnopqrstuvwxyz_0123"
+
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
+
+@pytest.fixture(autouse=True)
+def network_attempts(monkeypatch):
+    """No test reaches the network: every connection (and name lookup) to another host is refused and recorded,
+    and a test that made one fails, also when the code under test swallowed the error (TelegramClient returns a
+    failed response). A missed mock of `_send_message` once sent a real request to Telegram (audit 3, B4).
+
+    moto answers inside botocore, before any connection, so `mock_aws` keeps working. A test that checks the guard
+    itself clears the list.
+    """
+    attempts: list = []
+    real_connect = socket.socket.connect
+    real_getaddrinfo = socket.getaddrinfo
+
+    def connect(sock, address):
+        if sock.family == getattr(socket, "AF_UNIX", None) or (
+            isinstance(address, tuple) and address[0] in _LOCAL_HOSTS
+        ):
+            return real_connect(sock, address)
+        attempts.append(address)
+        raise ConnectionRefusedError(f"Tests must not reach the network (connect to {address})")
+
+    def getaddrinfo(host, *args, **kwargs):
+        if host is None or host in _LOCAL_HOSTS:
+            return real_getaddrinfo(host, *args, **kwargs)
+        attempts.append(host)
+        raise socket.gaierror(f"Tests must not reach the network (lookup of {host})")
+
+    monkeypatch.setattr(socket.socket, "connect", connect)
+    monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
+    yield attempts
+    if attempts:
+        pytest.fail(f"The test tried to reach the network ({attempts}): mock the call", pytrace=False)
+
+
+@pytest.fixture
+def telegram_api():
+    """The Bot API answers every call with success; the mock records them (method, payload, ...)"""
+    from unittest.mock import patch
+
+    from services.telegram_client import TelegramClient, TelegramResponse
+
+    with patch.object(
+        TelegramClient, "call", autospec=True, return_value=TelegramResponse(ok=True, result={"message_id": 1})
+    ) as call:
+        yield call
 
 
 @pytest.fixture(scope="function")

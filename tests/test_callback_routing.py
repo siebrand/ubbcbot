@@ -56,8 +56,9 @@ class TestCallbackRouting:
         return Mock()
 
     @pytest.fixture
-    def callback_handler(self, mock_db, mock_handlers, mock_media_handler):
-        """Create actual CallbackHandler instance. Nothing is sent to Telegram: these tests check the routing."""
+    def callback_handler(self, mock_db, mock_handlers, mock_media_handler, telegram_api):
+        """Create actual CallbackHandler instance. Nothing is sent to Telegram: these tests check the routing.
+        (Some routes reach the Bot API by another way than the methods mocked here, hence telegram_api.)"""
         handler = CallbackHandler(
             db=mock_db,
             admin_user_id=15005473,

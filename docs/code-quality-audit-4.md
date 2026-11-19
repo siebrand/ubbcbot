@@ -128,9 +128,16 @@ transactions (CLAUDE.md, Gotchas).
 - [ ] **B9. The message Lambda returns the text of an exception** (`message_sender.py`, `lambda_handler`: the body
   holds `str(e)` and the log the full message). An SSM or Telethon error can name the parameter, the session or a
   user; the webhook and callback paths return only the exception type since audit 2. Fix: the type only, in both.
-- [ ] **B10. A test can reach the real Telegram API** (`tests/conftest.py`). In audit 3 (B4) a test sent a real
+- [x] **B10. A test can reach the real Telegram API** (`tests/conftest.py`). In audit 3 (B4) a test sent a real
   request because a second handler's `_send_message` was not mocked; nothing stops that. Fix: an autouse fixture that
   makes `requests` (and `boto3` outside moto) fail loudly in tests, so a missed mock is a failure, not a request.
+  **Done**: the autouse fixture `network_attempts` refuses every socket connection and name lookup to a host that
+  is not local, records it, and fails the test afterwards, also when the code swallowed the error (as
+  `TelegramClient.call` does). moto answers inside botocore, so it keeps working. It found **eight** tests that
+  sent real requests to api.telegram.org (callback routing, customer deletion and data export authorization,
+  order viewing: `answerCallbackQuery`, `editMessageReplyMarkup`, `getMe`, `sendMessage`, `sendDocument`); they
+  now use the new `telegram_api` fixture, which answers every Bot API call with success.
+  `tests/test_no_network.py` checks the guard.
 
 ## Order of work
 

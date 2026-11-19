@@ -710,6 +710,7 @@ class TestClearDataExport:
         assert "Jantje" not in logs
 
 
+@pytest.mark.usefixtures("telegram_api")
 class TestAuthorization:
     def _router(self, status):
         db = Mock()

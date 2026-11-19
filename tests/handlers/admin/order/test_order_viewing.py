@@ -7,10 +7,13 @@ from unittest.mock import Mock, patch
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../../../src"))
 
+import pytest
+
 from handlers.admin.order.order_viewing import OrderViewing
 from models.entities import OrderStatus
 
 
+@pytest.mark.usefixtures("telegram_api")  # the export sends its file and the order list its pages
 class TestOrderViewing(unittest.TestCase):
     """Test the OrderViewing module"""
 

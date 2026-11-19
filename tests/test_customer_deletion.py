@@ -332,6 +332,7 @@ class TestDeleteUserConfirm:
         assert "jantje" not in logs
 
 
+@pytest.mark.usefixtures("telegram_api")
 class TestAuthorizationAndRouting:
     def test_customer_callbacks_never_match_the_delete_callbacks(self):
         callbacks = CallbackHandler(Mock(), 1, "test", "token", handlers={}, media_handler=Mock())
