@@ -331,7 +331,10 @@ class ImportHandler(NotificationHandler):
             orders = self.db.get_orders_by_offer(offer.offer_id)
             order_count = len([o for o in orders if o.status == OrderStatus.PENDING.value])
 
-            message += f"🍺 {offer.offer_id}. {offer.name} ({order_count} orders)\n"
+            message += (
+                self._t("import_offer_line", chat_id, offer_id=offer.offer_id, name=offer.name, count=order_count)
+                + "\n"
+            )
             keyboard_buttons.append(
                 [{"text": f"{offer.offer_id}. {offer.name}", "callback_data": f"finalize_import_{offer.offer_id}"}]
             )

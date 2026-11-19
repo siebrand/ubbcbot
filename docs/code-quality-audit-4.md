@@ -125,11 +125,18 @@ transactions (CLAUDE.md, Gotchas).
   `BaseHandler._check_offer_status_after_change`. Fix: `sync_offer_messages` after the status change. Test: the last
   box labeled syncs the messages once. **Done**: synced once after the status is written (both the single box and
   the batch confirmation go through `_check_and_update_offer_status`). `tests/test_labeling_completes_offer.py`.
-- [ ] **B7. The labeling and credit screens bypass the admin's language** (`labeling_completion_handler.py`: every
+- [x] **B7. The labeling and credit screens bypass the admin's language** (`labeling_completion_handler.py`: every
   `_t` without the user; `credit_commands.py`: "No reason provided", the credit notification through
   `_send_message(customer.telegram_user_id, ...)` instead of `_notify_customer`; `test_commands.py`: "✓ Test message
   sent", "✗ Failed to send message"; `import_handler.py`: "({n} orders)"). Fix: translate with the reader, and
-  message customers through `_notify_customer`.
+  message customers through `_notify_customer`. **Done**: every text of the labeling handler has its reader (the
+  chat, or the admin in the keyboard builder, which has no chat); the credit notification goes through
+  `_notify_customer`, with "no reason" (`credit_no_reason`) in the customer's language; `/test_user_message` and the
+  finalize list use new keys, in the admin's language. Found along the way: `/test_user_message` showed the text of
+  an exception in the chat; it now shows the type only (as B9). The placeholder of `test_user_message_sent` is
+  `{telegram_id}`: `{user_id}` collides with the argument of `_t`. Many other handlers call `_t` without a reader
+  (the import screens, `_validate_args`, `_send_error` without `user_id`): that is one item for audit 5, not a fix
+  per screen here. `tests/test_admin_screens_language.py` (six of its seven tests fail on the old code).
 - [ ] **B8. The plain page buttons are English** (`utils/pagination.py`, `build_pagination_keyboard` without
   `enhanced`: "◀️ Previous", "Page x/y", "Next ▶️"; found in audit 3, B3). Used by the supplier list and
   `/changelog`. Fix: let the caller pass the translated labels, or use the enhanced (icon-only) buttons everywhere.

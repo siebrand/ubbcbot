@@ -87,13 +87,13 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         keyboard = [
             [
                 {
-                    "text": self._t("complete_labeling_btn", user_id=None),
+                    "text": self._t("complete_labeling_btn", self.admin_user_id),
                     "callback_data": f"lc_action:complete:{box_id_short}:{offer_id}:{supplier_id_short}",
                 }
             ],
             [
                 {
-                    "text": self._t("back_to_boxes", user_id=None),
+                    "text": self._t("back_to_boxes", self.admin_user_id),
                     "callback_data": f"lc_back:boxes:{offer_id}:{supplier_id_short}",
                 }
             ],
@@ -106,7 +106,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
     ) -> dict[str, Any]:
         """Handle labeling completion action"""
         if action != "complete":
-            return self._send_message(chat_id, self._t("unknown_action"))
+            return self._send_message(chat_id, self._t("unknown_action", chat_id))
 
         # Find the full box_id from the shortened version
         boxes = self.db.get_boxes_by_offer_with_ready_orders(offer_id)
@@ -117,14 +117,14 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
                 break
 
         if not box:
-            return self._send_message(chat_id, self._t("box_not_found"))
+            return self._send_message(chat_id, self._t("box_not_found", chat_id))
 
         # Get all orders for this box that are in READY_FOR_LABELING status
         orders = self.db.get_orders_by_box(box.box_id)
         ready_orders = [o for o in orders if o.status == OrderStatus.READY_FOR_LABELING.value]
 
         if not ready_orders:
-            return self._send_message(chat_id, self._t("no_labeling_orders", box_id=box.box_id[:8]))
+            return self._send_message(chat_id, self._t("no_labeling_orders", chat_id, box_id=box.box_id[:8]))
 
         # Update all ready orders to LABELING_COMPLETED
         updated_count = 0
@@ -150,7 +150,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
                     "inline_keyboard": [
                         [
                             {
-                                "text": self._t("back_to_boxes", user_id=None),
+                                "text": self._t("back_to_boxes", chat_id),
                                 "callback_data": f"lc_back:boxes:{offer_id}:{supplier_id_short}",
                             }
                         ]
@@ -162,7 +162,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
                     "inline_keyboard": [
                         [
                             {
-                                "text": self._t("back_to_offers", user_id=None),
+                                "text": self._t("back_to_offers", chat_id),
                                 "callback_data": f"lc_sup:{supplier_id_short}",
                             }
                         ]
@@ -171,29 +171,29 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
 
             return self._send_message(
                 chat_id,
-                self._t("labeling_completed_success", box_id=box.box_id[:8], updated_count=updated_count),
+                self._t("labeling_completed_success", chat_id, box_id=box.box_id[:8], updated_count=updated_count),
                 reply_markup=keyboard,
             )
         else:
-            return self._send_message(chat_id, self._t("delivery_processing_failed"))
+            return self._send_message(chat_id, self._t("delivery_processing_failed", chat_id))
 
     def handle_complete_labeling(self, chat_id: int, offer_id: int, supplier_id_short: str) -> dict[str, Any]:
         """Handle complete labeling for all boxes in an offer"""
         all_boxes = self.db.get_boxes_by_offer_with_ready_orders(offer_id)
 
         if not all_boxes:
-            return self._send_message(chat_id, self._t("no_ready_for_labeling_offers"))
+            return self._send_message(chat_id, self._t("no_ready_for_labeling_offers", chat_id))
 
         keyboard = [
             [
                 {
-                    "text": self._t("confirm", user_id=None),
+                    "text": self._t("confirm", chat_id),
                     "callback_data": f"lc_confirm_complete:{offer_id}:{supplier_id_short}",
                 }
             ],
             [
                 {
-                    "text": self._t("cancel", user_id=None),
+                    "text": self._t("cancel", chat_id),
                     "callback_data": f"lc_back:boxes:{offer_id}:{supplier_id_short}",
                 }
             ],
@@ -201,7 +201,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
 
         return self._send_message(
             chat_id,
-            self._t("complete_labeling_confirmation", box_count=len(all_boxes)),
+            self._t("complete_labeling_confirmation", chat_id, box_count=len(all_boxes)),
             reply_markup={"inline_keyboard": keyboard},
         )
 
@@ -210,7 +210,7 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         all_boxes = self.db.get_boxes_by_offer_with_ready_orders(offer_id)
 
         if not all_boxes:
-            return self._send_message(chat_id, self._t("no_ready_for_labeling_offers"))
+            return self._send_message(chat_id, self._t("no_ready_for_labeling_offers", chat_id))
 
         processed_count = 0
         for box in all_boxes:
@@ -229,10 +229,10 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         if processed_count > 0:
             self._check_and_update_offer_status(offer_id)
 
-            self._send_message(chat_id, self._t("complete_labeling_success", box_count=len(all_boxes)))
+            self._send_message(chat_id, self._t("complete_labeling_success", chat_id, box_count=len(all_boxes)))
             return self.handle_process_labeling(chat_id, self.admin_user_id, [])
         else:
-            return self._send_message(chat_id, self._t("delivery_processing_failed"))
+            return self._send_message(chat_id, self._t("delivery_processing_failed", chat_id))
 
     def _check_and_update_offer_status(self, offer_id: int):
         """Check if offer should be completed: must be SOLD_OUT and all boxes DELIVERED"""

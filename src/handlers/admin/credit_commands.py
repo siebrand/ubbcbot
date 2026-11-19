@@ -100,19 +100,14 @@ class CreditCommands(BaseHandler):
             # Get new balance
             new_balance = self.credit_service.get_customer_credit_balance(customer.customer_id)
 
-            # Notify customer
-            if customer.telegram_user_id > 0:
-                customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
-                self._send_message(
-                    customer.telegram_user_id,
-                    self._t(
-                        "credit_notification",
-                        customer.telegram_user_id,
-                        amount=amount,
-                        reason=reason or "No reason provided",
-                        balance=new_balance,
-                    ),
-                )
+            # Notify customer (in their language; guests get nothing)
+            self._notify_customer(
+                customer,
+                "credit_notification",
+                amount=amount,
+                reason=reason or self._t("credit_no_reason", customer.telegram_user_id),
+                balance=new_balance,
+            )
 
             # Confirm to admin
             customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()

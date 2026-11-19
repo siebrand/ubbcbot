@@ -192,4 +192,6 @@ class TestSending:
         result = handler.handle_test_user_message(CHAT_ID, ["siebrand", "hello"])
 
         assert result == {"status": "error"}
-        assert "no such function" in _sent(handler)
+        # The type only: the text of a Lambda or SSM error can name a resource (audit 4, B7)
+        assert "RuntimeError" in _sent(handler)
+        assert "no such function" not in _sent(handler)

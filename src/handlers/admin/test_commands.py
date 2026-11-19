@@ -24,7 +24,7 @@ class TestCommands(BaseHandler):
         """Handle /setup_test_data command - creates test suppliers and offers (test environment only)"""
         # Only allow in test environment
         if self.environment != "test":
-            self._send_message(chat_id, self._t("test_env_only"))
+            self._send_message(chat_id, self._t("test_env_only", chat_id))
             return {"status": "environment_restricted"}
 
         try:
@@ -86,13 +86,13 @@ class TestCommands(BaseHandler):
                         self.box_status_manager.update_box_after_order_placement(box.box_id, 1)
 
             self._send_message(
-                chat_id, self._t("test_data_success", suppliers=created_suppliers, offers=created_offers)
+                chat_id, self._t("test_data_success", chat_id, suppliers=created_suppliers, offers=created_offers)
             )
             return {"status": "success"}
 
         except Exception as e:
             logger.error(f"Error setting up test data: {e}")
-            self._send_message(chat_id, self._t("test_data_failed"))
+            self._send_message(chat_id, self._t("test_data_failed", chat_id))
             return {"status": "error"}
 
     def handle_test_user_message(self, chat_id: int, args: list) -> dict[str, Any]:
@@ -104,7 +104,7 @@ class TestCommands(BaseHandler):
         command with a more specific name.
         """
         if len(args) < 2:
-            self._send_message(chat_id, self._t("usage_test_user_message"))
+            self._send_message(chat_id, self._t("usage_test_user_message", chat_id))
             return {"status": "invalid_args"}
 
         identifier = args[0]
@@ -115,6 +115,7 @@ class TestCommands(BaseHandler):
                 chat_id,
                 self._t(
                     "test_user_message_ambiguous",
+                    chat_id,
                     identifier=identifier,
                     count=len(matches),
                     matches=self._format_customer_candidates(matches),
@@ -126,7 +127,7 @@ class TestCommands(BaseHandler):
         elif identifier.isdigit() and int(identifier) > 0:
             user_id = int(identifier)
         else:
-            self._send_message(chat_id, self._t("user_not_found", identifier=identifier))
+            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=identifier))
             return {"status": "user_not_found"}
 
         message = " ".join(args[1:])
@@ -141,14 +142,15 @@ class TestCommands(BaseHandler):
             body = json.loads(result.get("body", "{}"))
 
             if body.get("success_count", 0) > 0:
-                self._send_message(chat_id, f"✓ Test message sent to user {user_id}")
+                self._send_message(chat_id, self._t("test_user_message_sent", chat_id, telegram_id=user_id))
                 return {"status": "success"}
             else:
-                error = body.get("results", [{}])[0].get("error", "Unknown error")
-                self._send_message(chat_id, f"✗ Failed to send message: {error}")
+                error = body.get("results", [{}])[0].get("error") or self._t("unknown_error", chat_id)
+                self._send_message(chat_id, self._t("test_user_message_failed", chat_id, error=error))
                 return {"status": "error"}
 
         except Exception as e:
-            logger.error(f"Error sending test user message: {e}")
-            self._send_message(chat_id, f"✗ Error: {str(e)}")
+            # The type only: the message of a Lambda or SSM error can name a resource
+            logger.error(f"Error sending test user message: {type(e).__name__}")
+            self._send_message(chat_id, self._t("test_user_message_failed", chat_id, error=type(e).__name__))
             return {"status": "error"}
