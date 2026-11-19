@@ -47,9 +47,11 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   wholesale order and cancelling an offer (`management.py`, 33%), the box audit (`boxes.py`, 21%), approving users
   (`user_commands.py`, 38%) and processing deliveries (`wholesale_delivery_handler.py`, 41%). Characterization tests
   come first, before any change to these files.
-- [ ] **H7. The sold-out list says "last 7 days" but shows every sold-out offer** (`sold_out_offers_title`). Decision
+- [x] **H7. The sold-out list says "last 7 days" but shows every sold-out offer** (`sold_out_offers_title`). Decision
   (owner): the list shows everything. Task: update the messaging (title in `nl.json` and `en.json`, and any help text
-  or README line that says otherwise), and remove `list_sold_out_offers_recent` if nothing uses it.
+  or README line that says otherwise), and remove `list_sold_out_offers_recent` if nothing uses it. **Done**: the title
+  is "🚫 UITVERKOCHT:" / "🚫 SOLD OUT:", the customer help mentions `/list_offers sold_out` ("Alle uitverkochte
+  aanbiedingen"), and the unused `list_sold_out_offers_recent` is gone.
 
 ## Medium priority
 

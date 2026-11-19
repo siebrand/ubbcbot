@@ -1,5 +1,4 @@
 import logging
-from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from models.entities import Offer
@@ -69,21 +68,6 @@ class OfferRepository(BaseRepository):
             return offers
         except Exception as e:
             logger.error(f"Error listing offers: {e}")
-            return []
-
-    def list_sold_out_offers_recent(self, days: int = 7) -> list[Offer]:
-        """Get sold out offers from last N days"""
-        try:
-            cutoff_date = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-
-            items = self._scan_items(
-                FilterExpression="#status = :status AND created_at >= :cutoff",
-                ExpressionAttributeNames={"#status": "status"},
-                ExpressionAttributeValues={":status": "sold_out", ":cutoff": cutoff_date},
-            )
-            return [Offer(**item) for item in items]
-        except Exception as e:
-            logger.error(f"Error listing recent sold out offers: {e}")
             return []
 
     def update_offer(self, offer_id: int, updates: dict[str, Any]) -> bool:

@@ -5,6 +5,7 @@ pin down the current output, so the offer list can be restructured without chang
 """
 
 import re
+from datetime import UTC, datetime
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -204,6 +205,22 @@ class TestListOffersForCustomers:
         env.handler.handle_list_offers(CHAT, CUSTOMER_ID, ["soldout"])
 
         assert offer_ids(sent(env)) == [5]
+
+    def test_the_sold_out_list_shows_every_sold_out_offer_whatever_its_age(self, env):
+        old = Offer(offer_id=9, name="Oud", status="sold_out", created_at=datetime(2020, 1, 1, tzinfo=UTC))
+        env.db.list_offers.side_effect = lambda: [*OFFERS, old]
+
+        env.handler.handle_list_offers(CHAT, CUSTOMER_ID, ["sold_out"])
+
+        text = sent(env)
+        assert text.startswith("🚫 UITVERKOCHT:\n")
+        assert "7 dagen" not in text
+        assert offer_ids(text) == [5, 9]
+
+    def test_customers_are_told_about_the_sold_out_list(self, env):
+        env.handler.handle_list_offers(CHAT, CUSTOMER_ID, ["help"])
+
+        assert "/list_offers sold_out" in sent(env)
 
     def test_help_without_the_admin_filters(self, env):
         env.handler.handle_list_offers(CHAT, CUSTOMER_ID, ["help"])

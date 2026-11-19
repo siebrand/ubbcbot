@@ -240,7 +240,7 @@ has every admin command.
 - `/create_order <offer_id> [quantity]` - Place order (alias: /order)
 - `/confirm_order <offer_id> <quantity>` - Confirm duplicate order
 - `/list_my_orders [id]` - View personal orders (alias: /my_orders)
-- `/list_offers` - View available offers
+- `/list_offers` - View available offers; `/list_offers sold_out` lists every sold-out offer
 - `/view_offer <offer_id>` - View detailed offer information
 - `/payment_info` - View payment details for pending orders
 - `/subscribe` - Subscribe to new offer notifications

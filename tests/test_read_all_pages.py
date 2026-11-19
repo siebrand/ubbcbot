@@ -69,10 +69,6 @@ class TestOffers:
         with one_item_per_call(repo.table):
             assert len(repo._list_offers_uncached()) == N
 
-    def test_recent_sold_out(self, repo):
-        with one_item_per_call(repo.table):
-            assert len(repo.list_sold_out_offers_recent()) == N
-
 
 class TestSuppliers:
     @pytest.fixture

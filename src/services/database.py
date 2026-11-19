@@ -73,10 +73,6 @@ class DynamoDBService:
         """Get all offers with caching"""
         return self.offer_repo.list_offers()
 
-    def list_sold_out_offers_recent(self, days: int = 7) -> list[Offer]:
-        """Get sold out offers from last N days"""
-        return self.offer_repo.list_sold_out_offers_recent(days)
-
     def update_offer(self, offer_id: int, updates: dict[str, Any]) -> bool:
         return self.offer_repo.update_offer(offer_id, updates)
 
