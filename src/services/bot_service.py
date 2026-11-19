@@ -35,9 +35,9 @@ logger = logging.getLogger()
 
 
 class BotService:
-    _cached_token = None
-    _cached_environment = None
-    _instance = None
+    _cached_token: str | None = None
+    _cached_environment: str | None = None
+    _instance: BotService | None = None
 
     @classmethod
     def get_instance(cls) -> BotService:

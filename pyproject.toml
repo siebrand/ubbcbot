@@ -17,6 +17,9 @@ python_version = "3.14"
 ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+# Also check the bodies of functions without annotations: a call to a method that no longer existed survived for
+# seven months in one (audit 3, A0).
+check_untyped_defs = true
 # Retired code kept only for reference (same as ruff).
 exclude = ["^archive/", "^venv/", "^test_env/", "^setup_venv/"]
 

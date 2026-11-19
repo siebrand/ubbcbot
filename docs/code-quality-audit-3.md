@@ -97,9 +97,11 @@ priorities as before:
   because an order is always in a box of its own offer (`/edit_order` refuses a box of another offer). A test counts
   the queries against the moto table.
 
-- [ ] **B6. mypy does not look inside untyped functions** (`check_untyped_defs` is off), which is how A0 survived
+- [x] **B6. mypy does not look inside untyped functions** (`check_untyped_defs` is off), which is how A0 survived
   seven months: the call to a method that did not exist was in a function without annotations. Fix: turn it on and
-  fix what it finds, or annotate the handler methods that call other handlers.
+  fix what it finds, or annotate the handler methods that call other handlers. **Done**: on in `pyproject.toml`. It
+  found one error (the class attributes of `BotService` had the type `None`). `tests/test_mypy_config.py` checks that
+  the option stays on and that a call to a missing method in an untyped function is an error.
 
 ## To-do (owner)
 
