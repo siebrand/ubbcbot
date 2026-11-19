@@ -81,20 +81,23 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   `handle_partial_action`, `_continue_workflow_after_action`): it reads the boxes and orders of all offers to find a
   box whose id it already knows (or knows the start of). **Done**: one read of the box (`get_box`), or one scan of the
   boxes when only the start of the id is known.
-- [ ] **M5. Text that bypasses the translations**: "(Page x/y)", "◀️ Prev", "Next ▶️" (`management.py`);
+- [x] **M5. Text that bypasses the translations**: "(Page x/y)", "◀️ Prev", "Next ▶️" (`management.py`);
   "⏳ Delayed", "⏳ Remaining Delayed" and the English words passed into `partial_delivery_processed`
   (`wholesale_delivery_handler.py`); "(no username)", "User", "matching '…'", "First name", "Last name", "Status:"
   (`user_commands.py`); "units" in the audit proposal (`boxes.py`); the raw order status in the duplicate-order warning
-  (`customer/order_commands.py`).
+  (`customer/order_commands.py`). **Done**, per file, with the fixes above.
 - [ ] **M6. Handlers build other handlers to call their private methods**: the box audit builds `AdminOrderCommands`
   for `_execute_cancel` (`boxes.py`), `/payment_info` builds a `DeliveryOverviewHandler` (and with it a Lambda client)
   for `_build_delivery_message` (`customer/order_commands.py`), and the supplier prompt calls
-  `supplier_commands._create_supplier` (`bot_service.py`).
-- [ ] **M7. Duplicated code**: rejecting a user (two copies) and showing a user's status (two copies, one with a
+  `supplier_commands._create_supplier` (`bot_service.py`). Done for `boxes.py` (`_execute_cancel` in `BaseHandler`)
+  and `customer/order_commands.py` (`PaymentMessageMixin`); `bot_service.py` follows with M1.
+- [x] **M7. Duplicated code**: rejecting a user (two copies) and showing a user's status (two copies, one with a
   hard-coded "Status:") in `user_commands.py`; choosing which orders to cancel (proposal and execution) in `boxes.py`;
   deleting cancelled and deleting completed orders in `customer/order_commands.py`; storing the delivery context next
   to `EditContextManager` and two identical branches in `wholesale_delivery_handler.py`. Status literals (`"pending"`,
-  `"ordered"`) are used where `OrderStatus`/`BoxStatus` exist.
+  `"ordered"`) are used where `OrderStatus`/`BoxStatus` exist. **Done**: one copy each, and the last status literals
+  in these files (`database.py`) use the enums. (The `"active"` left in `callback_handler.py` and `boxes.py` is the
+  name of a list filter, not a status.)
 - [ ] **M8. Left over from the first audit, in these files**:
   - **a.** The admin offer views (overview, edit interface) live in the customer `InfoCommands`, and
     `view_offer_<id>_edit` is a customer route gated inside the handler.

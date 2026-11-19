@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from typing import Any
 
-from models.entities import Box, Customer, Offer, Order, Supplier
+from models.entities import Box, BoxStatus, Customer, Offer, Order, OrderStatus, Supplier
 from repositories.box_repository import BoxRepository
 from repositories.credit_repository import CreditRepository
 from repositories.customer_repository import CustomerRepository
@@ -335,11 +335,11 @@ class DynamoDBService:
 
     def get_suppliers_with_ordered_offers(self) -> list[Supplier]:
         """Get suppliers that have boxes with ORDERED status"""
-        return self.get_suppliers_with_boxes_by_status("ordered")
+        return self.get_suppliers_with_boxes_by_status(BoxStatus.ORDERED.value)
 
     def get_ordered_offers_by_supplier(self, supplier_name: str) -> list[Offer]:
         """Get offers for a supplier that have boxes with ORDERED status"""
-        return self.get_offers_by_supplier_and_box_status(supplier_name, "ordered")
+        return self.get_offers_by_supplier_and_box_status(supplier_name, BoxStatus.ORDERED.value)
 
     def get_boxes_by_offer_with_orders(self, offer_id: int) -> list[Box]:
         """Get boxes for an offer that have orders"""
@@ -347,15 +347,15 @@ class DynamoDBService:
 
     def get_suppliers_with_ready_for_labeling_offers(self) -> list[Supplier]:
         """Get suppliers that have orders with READY_FOR_LABELING status"""
-        return self.get_suppliers_with_orders_by_status("ready_for_labeling")
+        return self.get_suppliers_with_orders_by_status(OrderStatus.READY_FOR_LABELING.value)
 
     def get_ready_for_labeling_offers_by_supplier(self, supplier_name: str) -> list[Offer]:
         """Get offers for a supplier that have orders with READY_FOR_LABELING status"""
-        return self.get_offers_by_supplier_and_order_status(supplier_name, "ready_for_labeling")
+        return self.get_offers_by_supplier_and_order_status(supplier_name, OrderStatus.READY_FOR_LABELING.value)
 
     def get_boxes_by_offer_with_ready_orders(self, offer_id: int) -> list[Box]:
         """Get boxes for an offer that have orders with READY_FOR_LABELING status"""
-        return self.get_boxes_by_offer_with_order_status(offer_id, "ready_for_labeling")
+        return self.get_boxes_by_offer_with_order_status(offer_id, OrderStatus.READY_FOR_LABELING.value)
 
     def get_suppliers_with_orders_by_status(self, order_status: str) -> list[Supplier]:
         """Get suppliers that have orders with specified status"""
@@ -413,11 +413,11 @@ class DynamoDBService:
     # Transaction methods for sensitive order operations
     def cancel_order(self, order_id: str, admin_id: int, reason: str) -> bool:
         """Cancel an order (inventory correction handled by the status update). False when there is no such order."""
-        return self.update_order(order_id, {"status": "cancelled"}, admin_id, reason)
+        return self.update_order(order_id, {"status": OrderStatus.CANCELLED.value}, admin_id, reason)
 
     def mark_order_paid(self, order_id: str, admin_id: int) -> bool:
         """Mark an order as paid (records a PAYMENT_RECEIVED analytics event)."""
-        return self.update_order(order_id, {"status": "completed"}, admin_id, "Payment received")
+        return self.update_order(order_id, {"status": OrderStatus.COMPLETED.value}, admin_id, "Payment received")
 
     # Credit system operations
     def create_customer_credit(self, credit) -> bool:
