@@ -603,7 +603,7 @@
   "failed_update_offer_status": "❌ Kon aanbiedingsstatus niet bijwerken",
   "invalid_offer_status": "❌ Ongeldige status: {status}. Ondersteund: import, active, soldout, completed.",
   "import_offers": "📥 IMPORT:",
-  "import_orders_prompt": "📤 Reageer op dit bericht met je CSV bestand (UTF-8, max 300 regels)\n\nVereiste kolommen: offer_id, username\n\nusername: de gebruikersnaam, de volledige naam of het klant-ID van een goedgekeurde klant",
+  "import_orders_prompt": "📤 Reageer op dit bericht met je CSV bestand (UTF-8, max 300 regels)\n\nVereiste kolommen: offer_id, username",
   "import_already_pending": "⚠️ Import al bezig. Gebruik eerst /cancel.",
   "import_download_failed": "❌ Kon bestand niet downloaden",
   "import_error_encoding_error": "❌ Bestandscodering fout. Gebruik UTF-8.",

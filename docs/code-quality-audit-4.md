@@ -114,12 +114,9 @@ transactions (CLAUDE.md, Gotchas).
 - [x] **B5. The CSV import picks a customer by substring** (`validation.py`, `match_customers`, used by the
   import). "Bert" matches "Robert" when there is only one of them; the ambiguity check (audit 2) only catches names
   that match several customers. For an import, which has nobody to ask, match the full name or username exactly
-  (case-insensitive), or a customer id; keep the substring search for the interactive commands. **Done**:
-  `ValidationUtils.match_customers_exactly` (id prefix, or the whole username with an optional `@`, or the whole
-  first + last name; case and spacing ignored) for the ambiguity check, the line lookup and the "not approved"
-  check of the import. A first or last name alone no longer names a customer: the prompt and the README now say what
-  the `username` column takes. The ambiguity tests now use namesakes, the only names that can still collide.
-  `TestExactNames` in `tests/test_import_ambiguous.py`.
+  (case-insensitive), or a customer id; keep the substring search for the interactive commands. **Done: not a
+  defect.** The fuzzy matching is intentional (owner, 2026-11-20). An exact match was built (f0f9199) and reverted:
+  the import keeps `match_customers`, and a name that fits several customers still refuses the whole file.
 - [x] **B6. A completed offer keeps its order buttons after labeling** (`labeling_completion_handler.py`,
   `_check_and_update_offer_status`). It sets the offer to `completed` but does not sync the announcements, unlike
   `BaseHandler._check_offer_status_after_change`. Fix: `sync_offer_messages` after the status change. Test: the last
