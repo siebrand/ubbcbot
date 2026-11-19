@@ -98,6 +98,12 @@ class TestOneBoxForThreeOrders:
         }
         assert db.get_box("b1").status == "ordered"
 
+    def test_the_box_of_the_cancelled_order_is_emptied_and_removed(self, db, handler, three_orders):
+        handler.handle_confirm_process_wholesale(ADMIN_ID, ["7", "1"])
+
+        assert db.get_box("b2") is None
+        assert db.get_box("b1").current_quantity == 6
+
     def test_the_cancelled_customer_is_told(self, db, handler, three_orders):
         handler.handle_confirm_process_wholesale(ADMIN_ID, ["7", "1"])
 
@@ -133,6 +139,12 @@ class TestAnOrderThatOnlyPartlyFits:
         reduced = db.get_order("o2")
         assert (reduced.status, reduced.quantity, reduced.total_price) == ("ordered", 2, PRICE * 2)
         assert len(messages_to(handler, 102)) == 1  # Piet is told
+
+    def test_its_box_keeps_only_the_reduced_quantity(self, db, handler, orders):
+        handler.handle_confirm_process_wholesale(ADMIN_ID, ["7", "1"])
+
+        assert db.get_box("b2").current_quantity == 2
+        assert db.get_box("b2").status == "ordered"
 
 
 class TestInput:

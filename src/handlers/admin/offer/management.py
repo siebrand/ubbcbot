@@ -189,12 +189,14 @@ class OfferManagementHandler(OfferBaseHandler):
         # Update partially fulfilled orders and track boxes
         for order, old_qty, new_qty in updated_orders:
             new_total_price = new_qty * order.unit_price
-            self.db.update_order(
+            if self.db.update_order(
                 order.order_id,
                 {"quantity": new_qty, "total_price": new_total_price, "status": "ordered"},
                 admin_id=self.admin_user_id,
                 reason="Partial fulfillment - wholesale order",
-            )
+            ):
+                # The box keeps only what is still ordered
+                self.box_status_manager.update_box_after_order_cancellation(order.box_id, old_qty - new_qty)
             boxes_with_fulfilled_orders.add(order.box_id)
 
             # Notify customer of quantity reduction
@@ -228,9 +230,11 @@ class OfferManagementHandler(OfferBaseHandler):
                 logger.info(f"Deleting empty box {box.box_id}")
                 self.db.delete_box(box.box_id)
 
-        # Cancel remaining orders
+        # Cancel remaining orders, and give their units back to the box (as a normal cancellation does), so a box
+        # that only held cancelled orders is empty and cleaned up below
         for order in cancelled_orders:
-            self.db.cancel_order(order.order_id, self.admin_user_id, "Insufficient wholesale capacity")
+            if self.db.cancel_order(order.order_id, self.admin_user_id, "Insufficient wholesale capacity"):
+                self.box_status_manager.update_box_after_order_cancellation(order.box_id, order.quantity)
 
             # Notify customer of cancellation
             customer = self.db.get_customer(order.customer_id)

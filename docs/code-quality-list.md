@@ -26,7 +26,7 @@ Low priority items (naming, comments, small style issues) are left out on purpos
 
 ## High priority
 
-- [ ] **H1. Processing a wholesale order leaves cancelled units in their box** (`management.py`,
+- [x] **H1. Processing a wholesale order leaves cancelled units in their box** (**done**) (`management.py`,
   `handle_confirm_process_wholesale`). Pending orders that do not fit are cancelled with `db.cancel_order`, and the
   order that only partly fits is reduced, but neither gives its units back to the box (a normal cancellation calls
   `update_box_after_order_cancellation`). A box that held a cancelled order keeps counting its units: it is never
