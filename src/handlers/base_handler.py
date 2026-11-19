@@ -1,7 +1,6 @@
 import html
 import logging
 from typing import Any
-from urllib.parse import urlsplit
 
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
@@ -10,6 +9,7 @@ from services.offer_message_sync import start_subscriber_sync
 from services.telegram_client import TelegramClient
 from services.translator import Translator, load_translations
 from utils.pagination import PaginationUtils
+from utils.s3_url import _s3_host
 from utils.validation import ValidationUtils
 
 logger = logging.getLogger()
@@ -341,7 +341,7 @@ class BaseHandler:
 
         if self.environment == "test":
             # Not the URL itself: a presigned S3 URL carries a signature that grants access to the image
-            logger.info(f"Sending photo to chat {chat_id}: {urlsplit(photo_url).hostname}")
+            logger.info(f"Sending photo to chat {chat_id}: {_s3_host(photo_url)}")
         response = self.telegram.call("sendPhoto", data)
         if self.environment == "test":
             logger.info(f"Telegram API response: {response.status_code}")
