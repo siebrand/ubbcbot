@@ -213,3 +213,99 @@ class TestCancelOffer:
         assert handler.handle_cancel_offer(ADMIN_ID, ["7"]) == {"status": "confirmation_required"}
 
         assert db.get_offer(7).status == "active"
+
+
+class TestWholesaleSummary:
+    def test_the_pending_orders_are_listed_oldest_first_with_the_boxes_needed(self, db, handler, three_orders):
+        assert handler.handle_process_wholesale(ADMIN_ID, ["7"]) == {"status": "success"}
+
+        text = messages_to(handler, ADMIN_ID)[-1]
+        assert text.index("Jan") < text.index("Piet") < text.index("Kees")
+        keyboard = handler._send_message.call_args.kwargs["reply_markup"]["inline_keyboard"][0]
+        # 9 units in boxes of 6: two boxes
+        assert keyboard[0]["callback_data"] == "confirm_process_wholesale_7_2"
+        assert keyboard[1]["callback_data"] == "custom_wholesale_quantity_7"
+
+    def test_ordered_orders_are_not_listed_again(self, db, handler, three_orders):
+        db.order_repo.update_order("o1", {"status": "ordered"})
+
+        handler.handle_process_wholesale(ADMIN_ID, ["7"])
+
+        assert "Jan" not in messages_to(handler, ADMIN_ID)[-1]
+
+    def test_an_offer_without_pending_orders(self, db, handler):
+        assert handler.handle_process_wholesale(ADMIN_ID, ["7"]) == {"status": "no_pending_orders"}
+
+    @pytest.mark.parametrize("status", ["draft", "inactive", "completed"])
+    def test_only_active_and_sold_out_offers_are_ordered(self, db, handler, status):
+        db.update_offer(7, {"status": status})
+
+        assert handler.handle_process_wholesale(ADMIN_ID, ["7"]) == {"status": "offer_not_active"}
+
+
+class TestCustomWholesaleQuantityPrompt:
+    def test_the_admin_is_asked_for_the_number_of_boxes(self, db, handler):
+        assert handler.handle_custom_wholesale_quantity(ADMIN_ID, "7") == {"status": "awaiting_input"}
+
+        context = db.get_edit_context_by_chat_id(ADMIN_ID)
+        assert (context.edit_type, context.entity_id) == ("custom_wholesale_quantity", "7")
+
+    def test_an_unknown_offer(self, db, handler):
+        assert handler.handle_custom_wholesale_quantity(ADMIN_ID, "99") == {"status": "offer_not_found"}
+        assert db.get_edit_context_by_chat_id(ADMIN_ID) is None
+
+    def test_the_typed_box_count_processes_the_order(self, db, handler, three_orders):
+        assert handler.handle_custom_wholesale_quantity_answer(ADMIN_ID, "7", "2") == {"status": "success"}
+
+        assert {db.get_order(o).status for o in ("o1", "o2", "o3")} == {"ordered"}
+
+
+class TestNextOfferButton:
+    def buttons(self, handler) -> list[str]:
+        markup = handler._send_message.call_args.kwargs["reply_markup"]
+        return [button["callback_data"] for row in markup["inline_keyboard"] for button in row]
+
+    def test_offered_while_another_offer_has_pending_orders(self, db, handler, three_orders):
+        db.create_offer(Offer(offer_id=8, name="Abdij", wholesale_box_size=6, status=OfferStatus.ACTIVE.value))
+        order(db, "o9", three_orders.jan, "b9", 1, 4)
+        db.order_repo.update_order("o9", {"offer_id": 8})
+
+        handler.handle_confirm_process_wholesale(ADMIN_ID, ["7", "2"])
+
+        assert self.buttons(handler) == ["process_wholesale", "admin:main"]
+
+    def test_not_offered_when_nothing_is_left(self, db, handler, three_orders):
+        handler.handle_confirm_process_wholesale(ADMIN_ID, ["7", "2"])
+
+        assert self.buttons(handler) == ["admin:main"]
+
+
+class TestDeleteOffer:
+    @pytest.mark.parametrize("status", ["completed", "inactive"])
+    def test_a_finished_offer_is_deleted_with_its_boxes(self, db, handler, status):
+        db.update_offer(7, {"status": status})
+        box(db, "b1", 0)
+
+        handler.handle_delete_offer(ADMIN_ID, ["7"])
+
+        assert db.get_offer(7) is None
+        assert db.get_boxes_by_offer(7) == []
+
+    @pytest.mark.parametrize("status", ["active", "sold_out", "draft"])
+    def test_an_offer_that_is_not_finished_stays(self, db, handler, status):
+        db.update_offer(7, {"status": status})
+
+        handler.handle_delete_offer(ADMIN_ID, ["7"])
+
+        assert db.get_offer(7) is not None
+
+    def test_several_offers_at_once_and_unknown_ids_are_skipped(self, db, handler):
+        db.update_offer(7, {"status": "completed"})
+        db.create_offer(Offer(offer_id=8, name="Abdij", wholesale_box_size=6, status=OfferStatus.INACTIVE.value))
+
+        assert handler.handle_delete_offer(ADMIN_ID, ["7", "99", "8"]) == {"status": "success"}
+
+        assert db.get_offer(7) is None and db.get_offer(8) is None
+
+    def test_without_ids(self, db, handler):
+        assert handler.handle_delete_offer(ADMIN_ID, []) == {"status": "invalid_args"}

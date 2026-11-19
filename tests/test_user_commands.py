@@ -162,3 +162,68 @@ class TestCreateGuest:
         assert result == {"status": "name_too_long"}
         field = handler._t("field_first_name", CHAT_ID)
         assert _texts_to(handler, CHAT_ID) == [handler._t("name_too_long", CHAT_ID, field=field)]
+
+
+class TestApproveByName:
+    def test_the_admin_types_the_username(self, db, handler):
+        customer = _customer(db)
+
+        handler.handle_approve_user(CHAT_ID, ["jan_puk"])
+
+        assert _stored_status(db, customer) == AuthorizationStatus.APPROVED.value
+
+    def test_an_approved_user_is_not_found_among_the_pending(self, db, handler):
+        customer = _customer(db, AuthorizationStatus.APPROVED)
+
+        assert handler.handle_approve_user(CHAT_ID, ["jan_puk"])["status"] == "user_not_found"
+        assert _stored_status(db, customer) == AuthorizationStatus.APPROVED.value
+
+    @pytest.mark.parametrize("method", ["handle_approve_user", "handle_reject_user", "handle_user_status"])
+    def test_without_a_name_the_usage_is_shown(self, handler, method):
+        assert getattr(handler, method)(CHAT_ID, []) == {"status": "invalid_args"}
+
+    def test_the_choice_after_a_disambiguation_approves(self, db, handler):
+        customer = _customer(db)
+
+        handler.handle_approve_user_select(CHAT_ID, customer.customer_id)
+
+        assert _stored_status(db, customer) == AuthorizationStatus.APPROVED.value
+
+    @pytest.mark.parametrize(
+        "method",
+        [
+            "handle_approve_user_select",
+            "handle_reject_user_by_id",
+            "handle_user_status_select",
+            "handle_edit_user_select",
+        ],
+    )
+    def test_a_button_for_a_user_that_is_gone(self, handler, method):
+        assert getattr(handler, method)(CHAT_ID, "nope") == {"status": "user_not_found"}
+        assert _texts_to(handler, CHAT_ID) == [handler._t("user_not_found", CHAT_ID, identifier="nope")]
+
+
+class TestCreateGuestOrder:
+    def test_a_guest_is_approved_numbered_and_never_messaged(self, db, handler):
+        result = handler.handle_create_guest(CHAT_ID, ["Kees", "Bakker", "06", "1234"])
+
+        assert result["status"] == "success"
+        guest = next(c for c in db.get_all_customers() if c.username == result["guest_id"])
+        assert (guest.first_name, guest.last_name, guest.contact_info) == ("Kees", "Bakker", "06 1234")
+        assert guest.is_guest and guest.telegram_user_id < 0  # a negative id of its own, never a Telegram user
+        assert guest.authorization_status == AuthorizationStatus.APPROVED.value
+
+    def test_the_second_word_is_contact_info_when_it_is_an_address(self, db, handler):
+        result = handler.handle_create_guest(CHAT_ID, ["Kees", "kees@example.com"])
+
+        guest = next(c for c in db.get_all_customers() if c.username == result["guest_id"])
+        assert (guest.last_name, guest.contact_info) == (None, "kees@example.com")
+
+    def test_guest_numbers_count_up(self, handler):
+        first = handler.handle_create_guest(CHAT_ID, ["Kees"])["guest_id"]
+        second = handler.handle_create_guest(CHAT_ID, ["Klaas"])["guest_id"]
+
+        assert first != second and first.startswith("GUEST_") and second.startswith("GUEST_")
+
+    def test_without_a_name(self, handler):
+        assert handler.handle_create_guest(CHAT_ID, []) == {"status": "invalid_args"}

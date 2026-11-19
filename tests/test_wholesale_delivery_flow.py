@@ -197,3 +197,104 @@ class TestTriage:
         labels = [b["text"] for row in keyboard["inline_keyboard"] for b in row]
         assert handler._t("delayed_delivery_btn", None) in labels
         assert "⏳ Delayed" not in labels
+
+
+class TestDelayedAndCancelledDelivery:
+    @pytest.mark.parametrize(
+        "action, is_delayed, key",
+        [
+            (DeliveryAction.DELAYED.value, True, "delayed_delivery_processed"),
+            (DeliveryAction.CANCEL.value, False, "cancelled_delivery_processed"),
+        ],
+    )
+    def test_no_units_are_received(self, handler, supplier, action, is_delayed, key):
+        result = handler.handle_delivery_action(ADMIN_ID, action, BOX_ID[:8], 7, "sup")
+
+        handler.delivery_service.process_wholesaler_delivery.assert_called_once_with(BOX_ID, 0, is_delayed)
+        assert texts(handler) == [handler._t(key, ADMIN_ID, box_id=BOX_ID[:8])]
+        assert result == {"status": "boxes_shown"}
+
+    @pytest.mark.parametrize("action", [DeliveryAction.DELAYED.value, DeliveryAction.CANCEL.value])
+    def test_a_failed_delivery_says_so(self, handler, action):
+        handler.delivery_service.process_wholesaler_delivery.return_value = False
+
+        handler.handle_delivery_action(ADMIN_ID, action, BOX_ID[:8], 7, "sup")
+
+        assert texts(handler) == [handler._t("delivery_processing_failed", ADMIN_ID)]
+
+    def test_a_box_of_another_offer_is_not_found(self, handler):
+        handler.handle_delivery_action(ADMIN_ID, DeliveryAction.FULL.value, OTHER_BOX_ID[:8], 7, "sup")
+
+        assert texts(handler) == [handler._t("box_not_found", ADMIN_ID)]
+        handler.delivery_service.process_wholesaler_delivery.assert_not_called()
+
+    def test_an_unknown_action_does_nothing(self, handler):
+        assert handler.handle_delivery_action(ADMIN_ID, "teleport", BOX_ID[:8], 7, "sup") == {
+            "status": "unknown_action"
+        }
+        handler.delivery_service.process_wholesaler_delivery.assert_not_called()
+
+
+class TestCompleteDelivery:
+    def test_the_admin_confirms_the_number_of_boxes_first(self, handler):
+        handler.handle_complete_delivery(ADMIN_ID, 7, "sup")
+
+        assert texts(handler) == [handler._t("complete_delivery_confirmation", ADMIN_ID, box_count=1)]
+        assert [data for _, data in buttons(handler)] == ["wd_confirm_complete:7:sup", "wd_back:boxes:7:sup"]
+        handler.delivery_service.process_wholesaler_delivery.assert_not_called()
+
+    def test_every_ordered_box_is_delivered_in_full(self, db, handler):
+        handler.delivery_service.process_wholesaler_delivery.side_effect = deliver(db)
+
+        result = handler.handle_confirm_complete_delivery(ADMIN_ID, 7, "sup")
+
+        handler.delivery_service.process_wholesaler_delivery.assert_called_once_with(BOX_ID, 6, False)
+        assert texts(handler) == [handler._t("complete_delivery_success", ADMIN_ID, box_count=1)]
+        assert result == {"status": "suppliers_shown"}  # nothing left of this offer
+
+    def test_boxes_left_after_a_failure_are_shown_again(self, db, handler):
+        second = "fedcba98-0000-4000-8000-000000000000"
+        assert db.create_box(Box(box_id=second, offer_id=7, max_capacity=6, current_quantity=0, status="ordered"))
+        handler.delivery_service.process_wholesaler_delivery.side_effect = lambda box_id, units, delayed: (
+            box_id == BOX_ID and deliver(db)(box_id, units, delayed)
+        )
+
+        result = handler.handle_confirm_complete_delivery(ADMIN_ID, 7, "sup")
+
+        assert texts(handler) == [handler._t("complete_delivery_success", ADMIN_ID, box_count=1)]
+        assert result == {"status": "boxes_shown"}
+
+    def test_nothing_delivered(self, handler):
+        handler.delivery_service.process_wholesaler_delivery.return_value = False
+
+        handler.handle_confirm_complete_delivery(ADMIN_ID, 7, "sup")
+
+        assert texts(handler) == [handler._t("delivery_processing_failed", ADMIN_ID)]
+
+    @pytest.mark.parametrize("method", ["handle_complete_delivery", "handle_confirm_complete_delivery"])
+    def test_an_offer_without_ordered_boxes(self, db, handler, method):
+        db.update_box(BOX_ID, {"status": "delivered"})
+
+        getattr(handler, method)(ADMIN_ID, 7, "sup")
+
+        assert texts(handler) == [handler._t("no_ordered_offers", ADMIN_ID)]
+        handler.delivery_service.process_wholesaler_delivery.assert_not_called()
+
+
+class TestStart:
+    def test_only_the_admin_starts_a_delivery(self, db):
+        handler = WholesaleDeliveryHandler(db, ADMIN_ID, "prod", "token")
+        handler._send_message = Mock(return_value={"status": "sent"})
+
+        handler.handle_process_delivery(101, 101, [])
+
+        assert handler._send_message.call_args.args[1] == handler._t("admin_only", 101)
+
+    def test_the_suppliers_with_ordered_boxes_are_offered(self, db, supplier):
+        handler = WholesaleDeliveryHandler(db, ADMIN_ID, "prod", "token")
+        handler._send_message = Mock(return_value={"status": "sent"})
+
+        handler.handle_process_delivery(ADMIN_ID, ADMIN_ID, [])
+
+        markup = handler._send_message.call_args.kwargs["reply_markup"]
+        assert [b["text"] for row in markup["inline_keyboard"] for b in row][0].endswith("Brouwerij")

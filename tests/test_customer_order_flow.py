@@ -203,3 +203,88 @@ class TestPaymentInfo:
         order(db, jan, "awaiting_payment")
 
         assert handler.handle_payment_info(USER_ID, USER_ID) == {"status": "no_payment_link"}
+
+
+class TestWhichBoxAnOrderJoins:
+    def test_an_ordered_box_with_room_makes_the_order_ordered(self, db, handler, jan):
+        assert db.create_box(Box(box_id="ordr", offer_id=7, max_capacity=6, current_quantity=3, status="ordered"))
+
+        handler.handle_create_order(USER_ID, USER_ID, ["7", "2"])
+
+        [placed] = orders_of(db, jan)
+        assert (placed.box_id, placed.status) == ("ordr", "ordered")
+        assert (db.get_box("ordr").current_quantity, db.get_box("ordr").status) == (5, "ordered")
+
+    def test_no_new_box_once_the_wholesale_order_is_placed(self, db, handler, jan):
+        assert db.create_box(Box(box_id="ordr", offer_id=7, max_capacity=6, current_quantity=5, status="ordered"))
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "2"]) == {"status": "insufficient_space"}
+
+        assert texts_to(handler, USER_ID) == [handler._t("order_too_large_for_remaining_space", USER_ID)]
+        assert orders_of(db, jan) == []
+        assert len(db.get_boxes_by_offer(7)) == 1
+
+    def test_no_new_box_next_to_a_delivered_box(self, db, handler, jan):
+        assert db.create_box(Box(box_id="dlvr", offer_id=7, max_capacity=6, current_quantity=6, status="delivered"))
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "1"]) == {"status": "insufficient_space"}
+
+    def test_a_full_box_opens_a_second_one(self, db, handler, jan):
+        assert db.create_box(Box(box_id="b1", offer_id=7, max_capacity=6, current_quantity=6, status="full"))
+
+        handler.handle_create_order(USER_ID, USER_ID, ["7", "2"])
+
+        [placed] = orders_of(db, jan)
+        assert placed.box_id != "b1"
+        assert db.get_box(placed.box_id).current_quantity == 2
+
+
+class TestWhoIsTold:
+    def test_the_group_and_the_admin_see_the_order_without_the_last_name(self, db, handler, jan, monkeypatch):
+        monkeypatch.setenv("DEFAULT_GROUP_ID", "-100777")
+        db.update_customer(jan.customer_id, {"last_name": "Jansen"})
+        UserCache.invalidate_cache()
+
+        handler.handle_create_order(USER_ID, USER_ID, ["7", "2"])
+
+        [to_group] = texts_to(handler, -100777)
+        assert "Jan J" in to_group and "Jansen" not in to_group
+        assert texts_to(handler, ADMIN_ID) == [to_group]
+        assert [kw.get("force_group") for chat, _, kw in handler.sent if chat == -100777] == [True]
+
+    def test_an_order_placed_by_the_admin_is_not_announced(self, db, handler, jan, monkeypatch):
+        monkeypatch.setenv("DEFAULT_GROUP_ID", "-100777")
+        offer = db.get_offer(7)
+
+        assert handler.execute_order(ADMIN_ID, ADMIN_ID, 2, offer, jan, placed_by_admin=True) == {"status": "success"}
+
+        assert texts_to(handler, -100777) == []
+        assert len(texts_to(handler, ADMIN_ID)) == 1  # the confirmation only
+
+
+class TestOrderInput:
+    @pytest.mark.parametrize(
+        "args, status", [([], "invalid_args"), (["zeven"], "invalid_format"), (["7", "x"], "invalid_format")]
+    )
+    def test_bad_arguments(self, handler, jan, args, status):
+        assert handler.handle_create_order(USER_ID, USER_ID, args)["status"] == status
+
+    @pytest.mark.parametrize("status", ["draft", "inactive", "completed"])
+    def test_an_offer_that_cannot_be_ordered(self, db, handler, jan, status):
+        db.update_offer(7, {"status": status})
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7"]) == {"status": "validation_failed"}
+        assert texts_to(handler, USER_ID) == [handler._t("offer_not_found", USER_ID)]
+
+    def test_an_unknown_offer(self, handler, jan):
+        assert handler.handle_create_order(USER_ID, USER_ID, ["99"]) == {"status": "validation_failed"}
+
+    def test_someone_who_never_started_the_bot(self, handler):
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7"]) == {"status": "validation_failed"}
+        assert texts_to(handler, USER_ID) == [handler._t("customer_not_found", USER_ID)]
+
+    def test_a_failure_while_ordering_is_reported(self, db, handler, jan):
+        handler._find_or_create_box = Mock(side_effect=RuntimeError("boom"))
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7"]) == {"status": "error"}
+        assert texts_to(handler, USER_ID) == [handler._t("order_processing_failed", USER_ID)]
