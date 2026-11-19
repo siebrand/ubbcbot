@@ -246,7 +246,8 @@ class BotService:
 
         except Exception as e:
             logger.error(f"Error processing update: {e}")
-            return {"status": "error", "error": str(e)}
+            # The result goes back to the webhook: the type only, an exception message can hold data
+            return {"status": "error", "error": type(e).__name__}
 
     def _expire_exports_on_admin_update(self, update: dict[str, Any]) -> None:
         """Delete expired exports when the admin does something. Customer updates skip this check."""

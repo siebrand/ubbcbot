@@ -732,7 +732,7 @@ class TestUpdateEntryPoints:
 
         result = bot.process_update(message_update(ADMIN_ID, text="/admin"))
 
-        assert result == {"status": "error", "error": "boom"}
+        assert result == {"status": "error", "error": "RuntimeError"}
 
     # --- documents (CSV import) ---
 

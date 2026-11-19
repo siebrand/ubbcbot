@@ -41,8 +41,8 @@ Low priority items (naming, comments, small style issues) are left out on purpos
 - [ ] **H4. Names show up as `&amp;` and `&lt;` in the admin's user lists** (`user_commands.py`: `/list_pending`,
   `/list_users`, `/user_status`, `/list_guests`). The names are HTML-escaped, but the messages are sent as plain text,
   so the escaping is visible.
-- [ ] **H5. A failed update returns the exception text** (`bot_service.py`, `process_update`): `str(e)` can hold
-  customer data. Same fix as for callbacks.
+- [x] **H5. A failed update returns the exception text** (`bot_service.py`, `process_update`): `str(e)` can hold
+  customer data. Same fix as for callbacks. **Done.**
 - [ ] **H6. The core money paths are barely tested**: placing an order (`customer/order_commands.py`, 26%), processing a
   wholesale order and cancelling an offer (`management.py`, 33%), the box audit (`boxes.py`, 21%), approving users
   (`user_commands.py`, 38%) and processing deliveries (`wholesale_delivery_handler.py`, 41%). Characterization tests

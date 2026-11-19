@@ -130,6 +130,13 @@ class TestEditReplyAccess:
         bot_service._handle_edit_reply.assert_not_called()
         bot_service.db.get_edit_context_by_chat_id.assert_not_called()
 
+    def test_an_error_returns_only_the_exception_type(self, bot_service):
+        bot_service._register_customer_if_needed.side_effect = RuntimeError("customer Jan Jansen, 06-12345678")
+
+        result = bot_service.process_update(self._message(user_id=12345))
+
+        assert result == {"status": "error", "error": "RuntimeError"}
+
 
 class TestUpdateDeduplication:
     """A re-delivered update_id must be processed at most once (idempotency)"""
