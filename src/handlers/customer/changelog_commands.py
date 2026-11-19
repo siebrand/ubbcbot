@@ -8,6 +8,28 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2026-11-19",
+                "content": """<b>User-Facing Updates</b>
+• <b>Your Own Language</b> - <code>/start</code>, <code>/help</code>, <code>/list_offers</code>, <code>/view_offer</code> and the order buttons are now in the language you chose, as are the messages about an order that was cut or cancelled
+• <b>Offer Messages Show Correctly</b> - Offer names with "&amp;" or formatting look the same in the first message you get and after every update, and an offer without a description no longer shows "None"
+• <b>Unknown Filters</b> - <code>/list_offers</code> with a word it does not know now says so and points to <code>/list_offers help</code>
+• <b>Room in the Box</b> - Orders cut or cancelled by wholesale processing give their units back to the box, so the offer shows the room it really has
+
+<b>Admin-Facing Updates</b>
+• <b>Report Options</b> - <code>/report_top_customers</code> shows the top 10's share of the total and has an <code>anon</code> switch (made-up beer names instead of customers); a few customers are left out of the top-customer and sales reports
+• <b>Order For Works Again</b> - Placing an order for a customer no longer ends in an error: the order is announced in the group and you get your confirmation; guests are never messaged
+• <b>Box Audit Fixed</b> - Cancelling the excess orders from <code>/audit_offer</code> works again
+• <b>Missed Approvals</b> - You are told when a user could not be sent their approval
+• <b>Edit Screen</b> - The edit screen of an offer is admin-only; <code>/view_offer &lt;id&gt; edit</code> shows the offer with its edit button
+• <b>Translated Prompts and Buttons</b> - Delivery buttons, paging labels and the hints of the reason, payment link and quantity prompts are translated
+
+<b>Behind the Scenes</b>
+• <b>Complete Reads</b> - Every database scan and query now follows every page, so long lists are never cut off
+• <b>Fewer Reads</b> - Box lists, workflow lookups and wholesale processing read the database far less often
+• <b>Privacy and Secrets</b> - The bot token is masked in logs and failure reports, photo links are logged by host only, and errors no longer return their message text
+• <b>Cleaner Code</b> - Typed answers to prompts go through one table, Bot API calls through one client, and wholesale processing is a tested plan with small steps""",
+            },
+            {
                 "title": "Up to 2026-11-18",
                 "content": """<b>Admin-Facing Updates</b>
 • <b>New Purchase Reports</b> - <code>/report_top_customers</code> ranks customers by amount paid, <code>/report_sales_by_period</code> shows orders (or payments) per day, week or month with a bar per period, and <code>/report_customer</code> shows what one customer paid per month and the amount of their orders not paid yet. Each takes a year, a start date or two dates (default: this year), and the new Reports section of <code>/admin</code> has buttons for this year
