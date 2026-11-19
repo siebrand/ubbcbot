@@ -132,6 +132,13 @@ class BaseHandler:
             logger.error(f"Sending message failed: status {response.status_code}, response {response.body}")
         return {"success": False}
 
+    def _notify_customer(self, customer, key: str, parse_mode: str | None = None, **params) -> dict:
+        """A personal message to a customer, in their own language. Guests have no Telegram and get nothing."""
+        if not customer or customer.is_guest or not customer.telegram_user_id or customer.telegram_user_id < 0:
+            return {"success": False, "skipped_guest": True}
+        text = self._t(key, customer.telegram_user_id, **params)
+        return self._send_message(customer.telegram_user_id, text, parse_mode=parse_mode)
+
     def _delete_message(self, chat_id: int, message_id: int) -> bool:
         """Delete message from Telegram chat"""
         return self.telegram.call("deleteMessage", {"chat_id": chat_id, "message_id": message_id}).ok

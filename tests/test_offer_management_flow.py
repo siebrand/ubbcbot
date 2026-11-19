@@ -140,6 +140,12 @@ class TestAnOrderThatOnlyPartlyFits:
         assert (reduced.status, reduced.quantity, reduced.total_price) == ("ordered", 2, PRICE * 2)
         assert len(messages_to(handler, 102)) == 1  # Piet is told
 
+    def test_the_customer_is_told_in_their_own_language(self, db, handler, orders):
+        handler.handle_confirm_process_wholesale(ADMIN_ID, ["7", "1"])
+
+        english = handler._load_translations("en")["order_updated_limited"]
+        assert messages_to(handler, 102) == [english.format(name="Pils", old_qty=4, new_qty=2, total=5.0)]
+
     def test_its_box_keeps_only_the_reduced_quantity(self, db, handler, orders):
         handler.handle_confirm_process_wholesale(ADMIN_ID, ["7", "1"])
 
@@ -184,6 +190,19 @@ class TestCancelOffer:
         assert db.get_offer(7).status == "inactive"
         assert all(len(messages_to(handler, telegram_id)) == 1 for telegram_id in (101, 102, 103))
         handler.sync_offer_messages.assert_called_once_with(7, cancelled=True)
+
+    def test_each_customer_is_told_in_their_language_and_guests_not_at_all(self, db, handler, three_orders):
+        guest = customer(db, -1, "Gast", is_guest=True)
+        box(db, "b3", 1)
+        order(db, "o4", guest, "b3", 1, 4)
+
+        handler.handle_confirm_cancel_offer(ADMIN_ID, ["7"])
+
+        nl, en = handler._load_translations("nl"), handler._load_translations("en")
+        params = {"name": "Pils", "quantity": 2, "total": 5.0}
+        assert messages_to(handler, 102) == [en["order_cancelled_offer_cancelled"].format(**params)]
+        assert messages_to(handler, 101)[0].startswith(nl["order_cancelled_offer_cancelled"][:10])
+        assert messages_to(handler, -1) == []
 
     def test_an_offer_without_orders_is_cancelled_at_once(self, db, handler):
         assert handler.handle_cancel_offer(ADMIN_ID, ["7"]) == {"status": "success"}

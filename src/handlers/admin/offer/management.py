@@ -200,16 +200,14 @@ class OfferManagementHandler(OfferBaseHandler):
             boxes_with_fulfilled_orders.add(order.box_id)
 
             # Notify customer of quantity reduction
-            customer = self.db.get_customer(order.customer_id)
-            if customer:
-                msg = self._t(
-                    "order_updated_limited",
-                    name=offer.name,
-                    old_qty=old_qty,
-                    new_qty=new_qty,
-                    total=float(new_total_price),
-                )
-                self._send_message(customer.telegram_user_id, msg)
+            self._notify_customer(
+                self.db.get_customer(order.customer_id),
+                "order_updated_limited",
+                name=offer.name,
+                old_qty=old_qty,
+                new_qty=new_qty,
+                total=float(new_total_price),
+            )
 
         # Get current boxes and update state for boxes with fulfilled orders as ORDERED
         boxes = self.db.get_boxes_by_offer(offer.offer_id)
@@ -237,12 +235,13 @@ class OfferManagementHandler(OfferBaseHandler):
                 self.box_status_manager.update_box_after_order_cancellation(order.box_id, order.quantity)
 
             # Notify customer of cancellation
-            customer = self.db.get_customer(order.customer_id)
-            if customer:
-                msg = self._t(
-                    "order_cancelled_insufficient", name=offer.name, quantity=order.quantity, total=order.total_price
-                )
-                self._send_message(customer.telegram_user_id, msg)
+            self._notify_customer(
+                self.db.get_customer(order.customer_id),
+                "order_cancelled_insufficient",
+                name=offer.name,
+                quantity=order.quantity,
+                total=order.total_price,
+            )
 
         # Update offer status - keep active if there's remaining capacity or pending orders
         # Refresh the orders list to get current status after updates
@@ -523,15 +522,13 @@ class OfferManagementHandler(OfferBaseHandler):
 
     def _notify_customer_cancellation(self, order, offer):
         """Notify customer about order cancellation"""
-        customer = self.db.get_customer(order.customer_id)
-        if customer:
-            message = self._t(
-                "order_cancelled_offer_cancelled",
-                name=offer.name,
-                quantity=order.quantity,
-                total=float(order.total_price),
-            )
-            self._send_message(customer.telegram_user_id, message)
+        self._notify_customer(
+            self.db.get_customer(order.customer_id),
+            "order_cancelled_offer_cancelled",
+            name=offer.name,
+            quantity=order.quantity,
+            total=float(order.total_price),
+        )
 
     def handle_delete_offer(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /delete_offer command - accepts one or more offer IDs"""

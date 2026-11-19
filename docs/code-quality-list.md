@@ -31,7 +31,8 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   order that only partly fits is reduced, but neither gives its units back to the box (a normal cancellation calls
   `update_box_after_order_cancellation`). A box that held a cancelled order keeps counting its units: it is never
   "empty", so it is not cleaned up, and the offer shows less room than it has.
-- [ ] **H2. Customers are told about a cut or cancelled order in Dutch, whatever their language**
+- [x] **H2. Customers are told about a cut or cancelled order in Dutch, whatever their language** (**done**:
+  `BaseHandler._notify_customer` translates for the customer and skips guests)
   (`management.py`). `order_updated_limited`, `order_cancelled_insufficient` and `order_cancelled_offer_cancelled`
   are translated without the customer. Guests (no Telegram) are sent the message too.
 - [ ] **H3. The admin is never told that a user could not be notified** (`user_commands.py`, approve and reject,
