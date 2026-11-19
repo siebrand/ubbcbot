@@ -1,0 +1,75 @@
+# Code quality audit 3: what the bot sends
+
+Status: **in progress** (2026-11-19). Follows [code-quality-list.md](code-quality-list.md), which finished the ten
+largest files. Most of what remains wrong shows up in the messages people get: announcements, notifications from the
+Lambdas, the admin's order screens and the texts typed into the bot. This audit follows those messages through the
+code that the first two left alone, and adds two to-dos from the owner. Same priorities as before:
+
+- **High**: wrong behaviour, a security or privacy risk.
+- **Medium**: a structural problem with a clear payoff (duplication, repeated reads, text that bypasses the
+  translations).
+
+## Scope
+
+| Area                                  | Files                                                                                     |
+|---------------------------------------|-------------------------------------------------------------------------------------------|
+| Offer announcements to subscribers    | `src/notification_sender.py`, `src/services/offer_message_sync.py`                        |
+| Messages sent by the Lambda           | `src/message_sender.py`                                                                   |
+| Typed input that ends up in a message | `src/utils/telegram_entities.py`, `src/handlers/admin/offer/editing.py`                   |
+| Guests (customers without Telegram)   | `src/handlers/base_handler.py`, `src/repositories/customer_repository.py`                 |
+| The admin's order screens             | `src/handlers/admin/order/*.py`                                                           |
+| Lists and reports                     | `src/handlers/customer/info_commands.py`, `src/services/reporting.py`                     |
+| Workflow lookups                      | `src/services/database.py` (`get_boxes_by_offer_with_order_status`)                       |
+
+## High priority
+
+- [ ] **A1. The first subscriber DM of an offer is built by hand, without escaping the name**
+  (`notification_sender.py`, `_send_notification_to_customer`). The group post and every later re-edit of the same DM
+  come from `OfferMessageBuilder`, which escapes the name; the first DM builds its own HTML with `offer.name` as
+  stored. A name with an HTML tag (the name check allows Telegram's tags) or `&` shows differently in the first DM
+  than after any re-edit, or makes Telegram refuse the message for every subscriber. Fix: render the DM with
+  `OfferAnnouncements.render`, so the first message and its re-edits are the same.
+- [ ] **A2. The formatting of a typed description lands on the wrong characters** (`utils/telegram_entities.py`).
+  Telegram counts entity offsets in UTF-16 code units; `entities_to_html` cuts the Python string by code points. Every
+  emoji outside the basic plane (🍺, 🍻) before a bold or italic word shifts the tags one place, so they cut through a
+  word. The text around the entities also goes into the HTML without being escaped. Fix: convert in UTF-16 units and
+  escape the text between the tags.
+- [ ] **A3. Messages to guests are only skipped for the id -1, but guests get -2, -3, ...**
+  (`base_handler.py` `_send_message`, `_send_photo`, `_send_media_group`; `message_sender.py` `send_from_admin`). The
+  customer repository numbers guests with negative ids (`-next_id`). The guard is meant to keep guest messages away
+  from Telegram; it now lets every guest but the first through, and the failures reach the admin as delivery errors.
+  Fix: one check, "a guest or a negative id", where messages go out.
+
+## Medium priority
+
+- [ ] **B1. The message Lambda sends every bot message at once** (`message_sender.py`, `send_messages`). Bot messages
+  go out with one `asyncio.gather`, with no limit; a batch of 50 payment overviews runs into Telegram's rate limit
+  (about 30 messages a second) and the 429s come back as failures. The admin messages are already sent in batches of
+  five. Fix: the same batching for bot messages, and a retry after a 429 with its `retry_after`.
+- [ ] **B2. The failure report of the message Lambda is hard-coded English** (`message_sender.py`,
+  `notify_admin_of_failures`), and `notification_sender.py` hard-codes the admin's Telegram id (`15005473`) instead of
+  `ADMIN_USER_ID`. Fix: translated texts; the id from `config.py`.
+- [ ] **B3. The admin's order screens bypass the translations**: "❌ Cancel Order for …", "◀️ Previous", "Page x/y",
+  "Next ▶️" (`order/order_cancellation.py`); " - Page x/y" (`order/base_order_handler.py`). Status literals
+  (`"pending"`, `"ordered"`, `"cancelled"`, `"completed"`) are used throughout `order/*.py`, `import_handler.py` and
+  `offer/notifications.py` where `OrderStatus` exists, and the `/list_user_orders` status filter is a chain of
+  `and`/`or` (`order/order_viewing.py`).
+- [ ] **B4. Five copies of "read the customer of a button, or say it is gone"** (`user_commands.py`:
+  `handle_edit_user_select`, `handle_user_status_select`, `handle_approve_user_select`, `handle_approve_user_by_id`,
+  `handle_reject_user_by_id`). Fix: one helper. `InfoCommands.handle_list_my_orders` builds a `BaseOrderHandler` to
+  call one method (the pattern of M6 in the previous list).
+- [ ] **B5. The workflow box lists read the orders of every box** (`database.py`,
+  `get_boxes_by_offer_with_order_status`): one query per box, for each step of the wholesale delivery and labeling
+  workflows. Fix: one query of the offer's orders, grouped by box.
+
+## To-do (owner)
+
+- [ ] **T1. `/list_offers` with an unknown filter says nothing about it.** `/list_offers cancelled` shows the default
+  list as if no filter was given. Acknowledge the unknown word (and name the filters that exist) above the list.
+- [ ] **T2. Leave two more customers out of the reports**: `8a1bdd6b-c3c0-403d-9f49-b2f9acb738d4` and
+  `bc63908b-8f10-45a8-bb3e-cb89e5ea7e94` join `EXCLUDED_CUSTOMER_IDS` (`services/reporting.py`).
+
+## Order of work
+
+The to-dos first (small and asked for), then the bugs per file with a test that fails before the fix: A3, A1, A2,
+then B1, B2 (the Lambdas), B3, B4 and last B5.

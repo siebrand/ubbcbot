@@ -1,7 +1,8 @@
 # Code quality list: the ten largest files in `src/`
 
-Status: **in progress** (2026-11-19). Follows [code-quality-audit.md](code-quality-audit.md), which covered the four
-largest files. This list takes the ten largest files and keeps only the high and medium priority items:
+Status: **done** (2026-11-19); the follow-up is [code-quality-audit-3.md](code-quality-audit-3.md). Follows
+[code-quality-audit.md](code-quality-audit.md), which covered the four largest files. This list takes the ten largest
+files and keeps only the high and medium priority items:
 
 - **High**: wrong behaviour, a security or privacy risk, or a core money path without tests.
 - **Medium**: a structural problem with a clear payoff (complexity, repeated reads, duplication, text that bypasses
@@ -44,10 +45,11 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   so the escaping is visible. **Done**: plain text, not escaped.
 - [x] **H5. A failed update returns the exception text** (`bot_service.py`, `process_update`): `str(e)` can hold
   customer data. Same fix as for callbacks. **Done.**
-- [ ] **H6. The core money paths are barely tested**: placing an order (`customer/order_commands.py`, 26%), processing a
+- [x] **H6. The core money paths are barely tested**: placing an order (`customer/order_commands.py`, 26%), processing a
   wholesale order and cancelling an offer (`management.py`, 33%), the box audit (`boxes.py`, 21%), approving users
   (`user_commands.py`, 38%) and processing deliveries (`wholesale_delivery_handler.py`, 41%). Characterization tests
-  come first, before any change to these files.
+  come first, before any change to these files. **Done**: tests against the mocked database for each flow (they
+  found H8 and H9); now 90%, 88%, 82%, 86% and 95%. `fail_under` went from 62 to 72.
 - [x] **H7. The sold-out list says "last 7 days" but shows every sold-out offer** (`sold_out_offers_title`). Decision
   (owner): the list shows everything. Task: update the messaging (title in `nl.json` and `en.json`, and any help text
   or README line that says otherwise), and remove `list_sold_out_offers_recent` if nothing uses it. **Done**: the title
