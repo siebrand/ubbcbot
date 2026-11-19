@@ -178,11 +178,6 @@ class EditContextManager:
                 "prompt_key": "enter_username_for_order_for",
                 "placeholder": self._t("placeholder_username"),
             },
-            "edit_supplier_input": {
-                "context_type": "edit_supplier_input",
-                "prompt_key": "enter_supplier_name_to_edit",
-                "placeholder": self._t("placeholder_supplier_name"),
-            },
             "approve_user_input": {
                 "context_type": "approve_user_input",
                 "prompt_key": "enter_username_to_approve",
