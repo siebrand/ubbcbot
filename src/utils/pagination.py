@@ -53,16 +53,14 @@ class PaginationUtils:
                 if jump_buttons:
                     keyboard.append(jump_buttons)
         else:
-            # Standard pagination
+            # Standard pagination: icons and numbers only, like the enhanced buttons, so they need no translation
             if current_page > 1:
-                nav_buttons.append(
-                    {"text": "◀️ Previous", "callback_data": f"page_{callback_prefix}_{current_page - 1}"}
-                )
+                nav_buttons.append({"text": "◀️", "callback_data": f"page_{callback_prefix}_{current_page - 1}"})
 
-            nav_buttons.append({"text": f"Page {current_page}/{total_pages}", "callback_data": "page_info"})
+            nav_buttons.append({"text": f"{current_page}/{total_pages}", "callback_data": "page_info"})
 
             if current_page < total_pages:
-                nav_buttons.append({"text": "Next ▶️", "callback_data": f"page_{callback_prefix}_{current_page + 1}"})
+                nav_buttons.append({"text": "▶️", "callback_data": f"page_{callback_prefix}_{current_page + 1}"})
 
             keyboard.append(nav_buttons)
 

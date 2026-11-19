@@ -138,9 +138,11 @@ transactions (CLAUDE.md, Gotchas).
   `{telegram_id}`: `{user_id}` collides with the argument of `_t`. Many other handlers call `_t` without a reader
   (the import screens, `_validate_args`, `_send_error` without `user_id`): that is one item for audit 5, not a fix
   per screen here. `tests/test_admin_screens_language.py` (six of its seven tests fail on the old code).
-- [ ] **B8. The plain page buttons are English** (`utils/pagination.py`, `build_pagination_keyboard` without
+- [x] **B8. The plain page buttons are English** (`utils/pagination.py`, `build_pagination_keyboard` without
   `enhanced`: "◀️ Previous", "Page x/y", "Next ▶️"; found in audit 3, B3). Used by the supplier list and
   `/changelog`. Fix: let the caller pass the translated labels, or use the enhanced (icon-only) buttons everywhere.
+  **Done**: the plain buttons are icon-only too ("◀️", "2/3", "▶️"), without the first/last and jump buttons of the
+  enhanced ones; the callbacks are unchanged. `tests/test_pagination_labels.py`.
 - [x] **B9. The message Lambda returns the text of an exception** (`message_sender.py`, `lambda_handler`: the body
   holds `str(e)` and the log the full message). An SSM or Telethon error can name the parameter, the session or a
   user; the webhook and callback paths return only the exception type since audit 2. Fix: the type only, in both.
