@@ -91,9 +91,11 @@ priorities as before:
   all five. The order list is `OrderListMixin` (`handlers/order_list.py`, with `ORDER_STATUS_EMOJI` and
   `ACTIVE_ORDER_STATUSES`), used by `BaseOrderHandler` and `InfoCommands`. The second handler also sent the list
   with its own `_send_message`, so a test that mocked the one of `InfoCommands` sent a real request to Telegram.
-- [ ] **B5. The workflow box lists read the orders of every box** (`database.py`,
+- [x] **B5. The workflow box lists read the orders of every box** (`database.py`,
   `get_boxes_by_offer_with_order_status`): one query per box, for each step of the wholesale delivery and labeling
-  workflows. Fix: one query of the offer's orders, grouped by box.
+  workflows. Fix: one query of the offer's orders, grouped by box. **Done**: one `offer-index` query; this holds
+  because an order is always in a box of its own offer (`/edit_order` refuses a box of another offer). A test counts
+  the queries against the moto table.
 
 - [ ] **B6. mypy does not look inside untyped functions** (`check_untyped_defs` is off), which is how A0 survived
   seven months: the call to a method that did not exist was in a function without annotations. Fix: turn it on and

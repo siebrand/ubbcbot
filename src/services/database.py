@@ -366,13 +366,15 @@ class DynamoDBService:
             return []
 
     def get_boxes_by_offer_with_order_status(self, offer_id: int, order_status: str | None) -> list[Box]:
-        """Get boxes for an offer that have orders with specified status (None: any order)"""
+        """Get boxes for an offer that have orders with specified status (None: any order)
+
+        The orders of the offer are read once (offer-index), not per box: an order is always in a box of its own offer.
+        """
         try:
-            return [
-                box
-                for box in self.get_boxes_by_offer(offer_id)
-                if any(order_status is None or o.status == order_status for o in self.get_orders_by_box(box.box_id))
-            ]
+            box_ids = {
+                o.box_id for o in self.get_orders_by_offer(offer_id) if order_status is None or o.status == order_status
+            }
+            return [box for box in self.get_boxes_by_offer(offer_id) if box.box_id in box_ids]
         except Exception as e:
             logger.error(f"Error getting boxes with {order_status} orders: {e}")
             return []

@@ -195,7 +195,7 @@ class TestOrdersByBox:
 
 
 class TestBoxListsOfTheJobs:
-    """The labeling job asks for the orders of every box of an offer: one lookup per box, so it must be cheap"""
+    """The labeling job asks which boxes of an offer hold orders in a status: one query of the offer's orders"""
 
     @pytest.fixture
     def boxes(self, db, orders):
@@ -216,6 +216,13 @@ class TestBoxListsOfTheJobs:
                 db.get_orders_by_box(box_id)
 
         assert repo_scan.call_count == 0
+
+    def test_the_orders_of_the_offer_are_read_once_not_per_box(self, db, boxes):
+        table = db.order_repo.table
+        with patch.object(table, "query", wraps=table.query) as query:
+            db.get_boxes_by_offer_with_ready_orders(1)  # two boxes
+
+        assert query.call_count == 1
 
 
 class TestWhileTheIndexIsNotAvailable:
