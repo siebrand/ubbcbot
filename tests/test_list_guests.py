@@ -78,13 +78,14 @@ def test_guests_are_listed_and_regular_customers_are_not(db, handler):
     assert "Jantje" not in text
 
 
-def test_guest_names_are_html_escaped(db, handler):
-    _guest(db, 1, "<b>Piet</b>")
+def test_guest_names_are_shown_as_typed(db, handler):
+    """The list is plain text: escaping would show up as &lt; and &amp;"""
+    _guest(db, 1, "<b>Piet</b> & Co")
 
     handler.handle_list_guests(CHAT_ID)
 
-    assert "<b>Piet</b>" not in _sent_text(handler)
-    assert "&lt;b&gt;Piet&lt;/b&gt;" in _sent_text(handler)
+    assert "<b>Piet</b> & Co" in _sent_text(handler)
+    assert handler._send_message.call_args.kwargs.get("parse_mode") is None
 
 
 def test_a_long_list_is_paged(db, handler):

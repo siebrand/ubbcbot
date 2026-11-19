@@ -35,13 +35,13 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   `BaseHandler._notify_customer` translates for the customer and skips guests)
   (`management.py`). `order_updated_limited`, `order_cancelled_insufficient` and `order_cancelled_offer_cancelled`
   are translated without the customer. Guests (no Telegram) are sent the message too.
-- [ ] **H3. The admin is never told that a user could not be notified** (`user_commands.py`, approve and reject,
+- [x] **H3. The admin is never told that a user could not be notified** (`user_commands.py`, approve and reject,
   three copies). The fallback is in an `except` around `_send_message`, which never raises: it returns
   `{"success": False}`. The fallback text itself is hard-coded English, holds the user's contact details and the raw
-  exception text.
-- [ ] **H4. Names show up as `&amp;` and `&lt;` in the admin's user lists** (`user_commands.py`: `/list_pending`,
+  exception text. **Done**: one helper checks the send result and tells the admin, translated, only the name.
+- [x] **H4. Names show up as `&amp;` and `&lt;` in the admin's user lists** (`user_commands.py`: `/list_pending`,
   `/list_users`, `/user_status`, `/list_guests`). The names are HTML-escaped, but the messages are sent as plain text,
-  so the escaping is visible.
+  so the escaping is visible. **Done**: plain text, not escaped.
 - [x] **H5. A failed update returns the exception text** (`bot_service.py`, `process_update`): `str(e)` can hold
   customer data. Same fix as for callbacks. **Done.**
 - [ ] **H6. The core money paths are barely tested**: placing an order (`customer/order_commands.py`, 26%), processing a

@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from handlers.base_handler import BaseHandler
-from models.entities import AuthorizationStatus
+from models.entities import AuthorizationStatus, Customer
 from services.customer_deletion import CustomerDeletionService
 from utils.pagination import PaginationUtils
 from utils.update_utils import UpdateUtils
@@ -29,33 +29,52 @@ class UserCommands(BaseHandler):
     def _approve_user_by_customer(self, chat_id: int, customer) -> dict[str, Any]:
         """Shared approval logic for customer object"""
         if customer.authorization_status == AuthorizationStatus.APPROVED.value:
-            display_name = customer.first_name or self._t("unknown", user_id=None)
-            self._send_message(chat_id, self._t("user_already_approved", chat_id, name=display_name))
+            name = self._first_name(customer, chat_id)
+            self._send_message(chat_id, self._t("user_already_approved", chat_id, name=name))
             return {"status": "already_approved"}
 
         # Update user status
         if self.db.update_customer(customer.customer_id, {"authorization_status": AuthorizationStatus.APPROVED.value}):
-            # Try to notify user (may fail if they have blocked bot or restrictive privacy settings)
-            try:
-                self._send_message(customer.telegram_user_id, self._t("user_authorized", customer.telegram_user_id))
-            except Exception as e:
-                # Notify admin about failed message
-                admin_msg = (
-                    f"⚠️ Failed to notify user:\n\nName: {customer.first_name or 'N/A'} {customer.last_name or ''}\n"
-                    f"Username: @{customer.username or 'N/A'}\nTelegram ID: {customer.telegram_user_id}\n\n"
-                    f"Message: {self._t('user_authorized', customer.telegram_user_id)}\n\nError: {str(e)}"
-                )
-                self._send_message(self.admin_user_id, admin_msg)
-
-            # Confirm to admin
-            display_name = customer.first_name or self._t("unknown", user_id=None)
-            self._send_message(chat_id, self._t("user_approved", chat_id, name=display_name))
+            self._tell_user(chat_id, customer, "user_authorized")
+            self._send_message(chat_id, self._t("user_approved", chat_id, name=self._first_name(customer, chat_id)))
 
             # Enter update user dialog
             return self._show_user_edit_interface(customer, chat_id)
         else:
             self._send_message(chat_id, self._t("failed_approve_user", chat_id))
             return {"status": "error"}
+
+    def _first_name(self, customer, chat_id: int) -> str:
+        return customer.first_name or self._t("unknown", chat_id)
+
+    def _full_name(self, customer, chat_id: int) -> str:
+        """First and last name, as plain text"""
+        return " ".join(filter(None, [self._first_name(customer, chat_id), customer.last_name]))
+
+    def _tell_user(self, chat_id: int, customer, key: str) -> None:
+        """Tell a user the decision on their access, and tell the admin when the message did not arrive"""
+        result = self._notify_customer(customer, key)
+        if not result.get("success") and not result.get("skipped_guest"):
+            self._send_message(chat_id, self._t("user_not_notified", chat_id, name=self._full_name(customer, chat_id)))
+
+    def _reject_customer(self, chat_id: int, customer) -> dict[str, Any]:
+        if not self.db.update_customer(
+            customer.customer_id, {"authorization_status": AuthorizationStatus.REJECTED.value}
+        ):
+            self._send_message(chat_id, self._t("failed_reject_user", chat_id))
+            return {"status": "error"}
+
+        self._tell_user(chat_id, customer, "access_rejected")
+        self._send_message(chat_id, self._t("user_rejected", chat_id, name=self._first_name(customer, chat_id)))
+        return {"status": "success"}
+
+    def _send_user_status(self, chat_id: int, customer) -> dict[str, Any]:
+        username_part = f" (@{customer.username})" if customer.username else ""
+        status_emoji = self.STATUS_EMOJIS.get(customer.authorization_status, "❓")
+        message = f"{status_emoji} {self._full_name(customer, chat_id)}{username_part}\n"
+        message += self._t("user_status_label", chat_id, status=customer.authorization_status)
+        self._send_message(chat_id, message)
+        return {"status": "success"}
 
     def handle_list_pending(self, chat_id: int, page: int = 1) -> dict[str, Any]:
         """Handle /list_pending command with pagination"""
@@ -72,22 +91,18 @@ class UserCommands(BaseHandler):
         keyboard_buttons = []
 
         for customer in page_customers:
-            display_name = self._escape_html(customer.first_name or self._t("unknown", user_id=None))
-            if customer.last_name:
-                display_name += f" {self._escape_html(customer.last_name)}"
-
-            username_part = f" (@{self._escape_html(customer.username)})" if customer.username else " (no username)"
-            message += f"{display_name}{username_part}\n"
+            username_part = f"(@{customer.username})" if customer.username else self._t("no_username", chat_id)
+            message += f"{self._full_name(customer, chat_id)} {username_part}\n"
 
             # Add approve/reject buttons for each user
             keyboard_buttons.append(
                 [
                     {
-                        "text": self._t("approve_user", chat_id, name=customer.first_name or "User"),
+                        "text": self._t("approve_user", chat_id, name=self._first_name(customer, chat_id)),
                         "callback_data": f"approve_user_{customer.customer_id}",
                     },
                     {
-                        "text": self._t("reject_user", chat_id, name=customer.first_name or "User"),
+                        "text": self._t("reject_user", chat_id, name=self._first_name(customer, chat_id)),
                         "callback_data": f"reject_user_{customer.customer_id}",
                     },
                 ]
@@ -144,27 +159,7 @@ class UserCommands(BaseHandler):
         if error:
             return error
 
-        # Update user status
-        if self.db.update_customer(customer.customer_id, {"authorization_status": AuthorizationStatus.REJECTED.value}):
-            # Try to notify user (may fail if they have blocked bot or restrictive privacy settings)
-            try:
-                self._send_message(customer.telegram_user_id, self._t("access_rejected", customer.telegram_user_id))
-            except Exception as e:
-                # Notify admin about failed message
-                admin_msg = (
-                    f"⚠️ Failed to notify user:\n\nName: {customer.first_name or 'N/A'} {customer.last_name or ''}\n"
-                    f"Username: @{customer.username or 'N/A'}\nTelegram ID: {customer.telegram_user_id}\n\n"
-                    f"Message: {self._t('access_rejected', customer.telegram_user_id)}\n\nError: {str(e)}"
-                )
-                self._send_message(self.admin_user_id, admin_msg)
-
-            # Confirm to admin
-            display_name = customer.first_name or self._t("unknown", user_id=None)
-            self._send_message(chat_id, self._t("user_rejected", chat_id, name=display_name))
-            return {"status": "success"}
-        else:
-            self._send_message(chat_id, self._t("failed_reject_user", chat_id))
-            return {"status": "error"}
+        return self._reject_customer(chat_id, customer)
 
     def handle_user_status(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /user_status command"""
@@ -178,18 +173,7 @@ class UserCommands(BaseHandler):
         if error:
             return error
 
-        display_name = self._escape_html(customer.first_name or self._t("unknown", user_id=None))
-        if customer.last_name:
-            display_name += f" {self._escape_html(customer.last_name)}"
-
-        username_part = f" (@{self._escape_html(customer.username)})" if customer.username else ""
-        status_emoji = self.STATUS_EMOJIS.get(customer.authorization_status, "❓")
-
-        message = f"{status_emoji} {display_name}{username_part}\n"
-        message += self._t("user_status_label", status=customer.authorization_status)
-
-        self._send_message(chat_id, message)
-        return {"status": "success"}
+        return self._send_user_status(chat_id, customer)
 
     def _show_user_edit_interface(self, customer, chat_id: int) -> dict[str, Any]:
         """Show edit interface for a customer"""
@@ -392,7 +376,7 @@ class UserCommands(BaseHandler):
             customers = self.validator.match_customers(search_string, customers)
 
         if not customers:
-            search_text = f" matching '{search_string}'" if search_string else ""
+            search_text = f" {self._t('matching_search', chat_id, search=search_string)}" if search_string else ""
             self._send_message(
                 chat_id, self._t("no_customers_found", chat_id, status=status_filter, search=search_text)
             )
@@ -404,25 +388,26 @@ class UserCommands(BaseHandler):
         # Paginate results
         page_customers, total_pages = self._paginate_list(customers, page, 20)
 
-        search_text = f" {self._t('matching_search', search=search_string)}" if search_string else ""
-        message = (
-            self._t(
-                "customers_page_header", status=status_filter, search=search_text, page=page, total_pages=total_pages
-            )
-            + "\n\n"
+        search_text = f" {self._t('matching_search', chat_id, search=search_string)}" if search_string else ""
+        header = self._t(
+            "customers_page_header",
+            chat_id,
+            status=status_filter,
+            search=search_text,
+            page=page,
+            total_pages=total_pages,
         )
+        message = header + "\n\n"
 
         for customer in page_customers:
-            display_name = self._escape_html(customer.first_name or self._t("unknown", user_id=None))
-            if customer.last_name:
-                display_name += f" {self._escape_html(customer.last_name)}"
+            display_name = self._full_name(customer, chat_id)
 
             # Add subscriber indicator
             subscriber_indicator = "🔔" if customer.subscribed_to_offers else ""
             # Add guest indicator
             guest_indicator = "🎫" if customer.is_guest else ""
             username_part = (
-                f" (@{self._escape_html(customer.username)})"
+                f" (@{customer.username})"
                 if customer.username and not customer.is_guest
                 else (f" ({customer.username})" if customer.is_guest else "")
             )
@@ -463,19 +448,7 @@ class UserCommands(BaseHandler):
             self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
             return {"status": "user_not_found"}
 
-        # Show user status (same logic as handle_user_status but for specific customer)
-        display_name = self._escape_html(customer.first_name or self._t("unknown", user_id=None))
-        if customer.last_name:
-            display_name += f" {self._escape_html(customer.last_name)}"
-
-        username_part = f" (@{self._escape_html(customer.username)})" if customer.username else ""
-        status_emoji = self.STATUS_EMOJIS.get(customer.authorization_status, "❓")
-
-        message = f"{status_emoji} {display_name}{username_part}\n"
-        message += f"Status: {customer.authorization_status}"
-
-        self._send_message(chat_id, message)
-        return {"status": "success"}
+        return self._send_user_status(chat_id, customer)
 
     def handle_approve_user_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
         """Handle user selection from disambiguation for approve user"""
@@ -505,27 +478,7 @@ class UserCommands(BaseHandler):
             self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
             return {"status": "user_not_found"}
 
-        # Update user status
-        if self.db.update_customer(customer.customer_id, {"authorization_status": AuthorizationStatus.REJECTED.value}):
-            # Try to notify user (may fail if they have blocked bot or restrictive privacy settings)
-            try:
-                self._send_message(customer.telegram_user_id, self._t("access_rejected", customer.telegram_user_id))
-            except Exception as e:
-                # Notify admin about failed message
-                admin_msg = (
-                    f"⚠️ Failed to notify user:\n\nName: {customer.first_name or 'N/A'} {customer.last_name or ''}\n"
-                    f"Username: @{customer.username or 'N/A'}\nTelegram ID: {customer.telegram_user_id}\n\n"
-                    f"Message: {self._t('access_rejected', customer.telegram_user_id)}\n\nError: {str(e)}"
-                )
-                self._send_message(self.admin_user_id, admin_msg)
-
-            # Confirm to admin
-            display_name = customer.first_name or self._t("unknown", user_id=None)
-            self._send_message(chat_id, self._t("user_rejected", chat_id, name=display_name))
-            return {"status": "success"}
-        else:
-            self._send_message(chat_id, self._t("failed_reject_user", chat_id))
-            return {"status": "error"}
+        return self._reject_customer(chat_id, customer)
 
     def handle_create_guest(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /create_guest command"""
@@ -541,10 +494,10 @@ class UserCommands(BaseHandler):
 
         # Validate name length
         if len(first_name) > 100:
-            self._send_message(chat_id, self._t("name_too_long", chat_id, field="First name"))
+            self._send_message(chat_id, self._t("name_too_long", chat_id, field=self._t("field_first_name", chat_id)))
             return {"status": "name_too_long"}
         if last_name and len(last_name) > 100:
-            self._send_message(chat_id, self._t("name_too_long", chat_id, field="Last name"))
+            self._send_message(chat_id, self._t("name_too_long", chat_id, field=self._t("field_last_name", chat_id)))
             return {"status": "name_too_long"}
 
         # Get next guest number from counter
@@ -552,8 +505,6 @@ class UserCommands(BaseHandler):
         guest_id = f"GUEST_{next_number:03d}"
 
         # Create guest customer with dummy telegram_user_id
-        from models.entities import AuthorizationStatus, Customer
-
         guest = Customer(
             telegram_user_id=-1,  # Dummy ID for all guests
             first_name=first_name,
@@ -591,15 +542,11 @@ class UserCommands(BaseHandler):
         # Paginate results
         page_guests, total_pages = self._paginate_list(guests, page, 20)
 
-        message = self._t("guests_page_header", page=page, total_pages=total_pages) + "\n\n"
+        message = self._t("guests_page_header", chat_id, page=page, total_pages=total_pages) + "\n\n"
 
         for guest in page_guests:
-            display_name = self._escape_html(guest.first_name or self._t("unknown", user_id=None))
-            if guest.last_name:
-                display_name += f" {self._escape_html(guest.last_name)}"
-
-            contact_part = f" - {self._escape_html(guest.contact_info)}" if guest.contact_info else ""
-            message += f"🎫 {display_name} ({guest.username}){contact_part}\n"
+            contact_part = f" - {guest.contact_info}" if guest.contact_info else ""
+            message += f"🎫 {self._full_name(guest, chat_id)} ({guest.username}){contact_part}\n"
 
         # Add pagination keyboard if needed
         keyboard = None
