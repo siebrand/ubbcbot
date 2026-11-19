@@ -123,35 +123,9 @@ class NotificationSender(BaseHandler):
         return success_count, error_count
 
     def sync_subscriber_messages(self, offer, cancelled: bool = False):
-        """Edit the subscriber DM announcements for an offer in rate-limited batches.
-
-        Only ``kind == "subscriber"`` rows are touched here — the group message is
-        edited inline by the webhook handler. Returns (edited_count, pruned_count).
-        """
-        import time
-
-        text, reply_markup = self._build_offer_message(offer, cancelled)
-        rows = [
-            r
-            for r in self.db.get_notification_messages_by_offer(offer.offer_id)
-            if getattr(r, "kind", "group") == "subscriber"
-        ]
-
-        edited = 0
-        failed = 0
-        batch_size = 20
-        for i in range(0, len(rows), batch_size):
-            for row in rows[i : i + batch_size]:
-                # The NotificationSender Lambda has no DeleteItem on the notifications
-                # table; stale rows are cleaned up by the 168h TTL instead of pruning.
-                if self._edit_tracked_message(row, text, reply_markup, prune=False):
-                    edited += 1
-                else:
-                    failed += 1
-            if i + batch_size < len(rows):
-                time.sleep(0.5)
-
-        return edited, failed
+        """Edit the subscriber DM announcements for an offer. The group message is edited inline by the webhook
+        handler. Returns (edited_count, failed_count)."""
+        return self.announcements.sync_subscribers(offer, cancelled)
 
     def _send_notification_to_customer(self, customer, offer, presigned_images):
         """Send notification to a single customer using BaseHandler methods"""

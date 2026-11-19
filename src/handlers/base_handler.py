@@ -5,7 +5,7 @@ from typing import Any
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
 from services.export_expiry import ExportExpiryService
-from services.offer_message_sync import start_subscriber_sync
+from services.offer_message_sync import OfferAnnouncements
 from services.telegram_client import TelegramClient
 from services.translator import Translator, load_translations
 from utils.pagination import PaginationUtils
@@ -439,17 +439,22 @@ class BaseHandler:
         self._send_message(chat_id, admin_message)
         return {"status": "success"}
 
-    def sync_offer_messages(self, offer_id: int, cancelled: bool = False):
-        """Re-render all tracked announcement messages for an offer.
+    @property
+    def announcements(self) -> OfferAnnouncements:
+        """The tracked announcement messages of offers. Built on use, with this handler's Telegram and translations."""
+        return OfferAnnouncements(
+            self.db,
+            self._edit_message_text,
+            lambda key: self._t(key, force_group_lang=True),
+            self._get_bot_username,
+            self.environment,
+        )
 
-        Rebuilds the text + keyboard from the *current* offer (name/price/
-        description) and its *current* status (icon/buttons), then edits the group
-        announcement first (one cheap, high-priority call) and the subscriber DMs
-        afterwards. Subscriber edits trickle inline for small counts and are handed
-        off to the NotificationSender Lambda for large counts, mirroring the
-        announce path. Pass ``cancelled=True`` from the cancel path, where the
-        offer's stored status is INACTIVE but the message must show the cancelled
-        marker.
+    def sync_offer_messages(self, offer_id: int, cancelled: bool = False):
+        """Re-render all tracked announcement messages of an offer (see services/offer_message_sync.py).
+
+        Pass ``cancelled=True`` from the cancel path, where the offer's stored status is INACTIVE but the message must
+        show the cancelled marker.
         """
         offer = self.db.get_offer(offer_id)
         if not offer:
@@ -458,61 +463,4 @@ class BaseHandler:
 
         # Event-based export expiry: piggyback on this message update
         self.expire_exports()
-
-        rows = self.db.get_notification_messages_by_offer(offer_id)
-        group_rows = [r for r in rows if getattr(r, "kind", "group") == "group"]
-        subscriber_rows = [r for r in rows if getattr(r, "kind", "group") == "subscriber"]
-
-        # Group and subscriber messages render the same: order buttons when active,
-        # none when sold out or cancelled.
-        text, reply_markup = self._build_offer_message(offer, cancelled)
-
-        # Group first: single, most-important surface, always inline.
-        for row in group_rows:
-            self._edit_tracked_message(row, text, reply_markup)
-
-        if not subscriber_rows:
-            return
-
-        # Small batches inline; large batches off to the async Lambda.
-        if len(subscriber_rows) <= 10:
-            for row in subscriber_rows:
-                self._edit_tracked_message(row, text, reply_markup)
-        else:
-            self._sync_subscriber_messages_async(offer_id, cancelled)
-
-    def _build_offer_message(self, offer, cancelled: bool):
-        """Build the text and reply_markup with the shared builder.
-
-        Group messages use Dutch. The group message shows order buttons.
-        """
-        from services.offer_message_builder import OfferMessageBuilder
-
-        bot_username = self._get_bot_username()
-        builder = OfferMessageBuilder(bot_username, lambda key: self._t(key, force_group_lang=True))
-        return builder.build(offer, cancelled=cancelled)
-
-    def _edit_tracked_message(self, row, text, reply_markup, prune: bool = True) -> bool:
-        """Edit one tracked message; prune its row if Telegram says it's gone.
-
-        A ``None`` reply_markup means "no buttons" (sold_out/cancelled). Telegram
-        leaves the existing keyboard untouched when reply_markup is omitted, so an
-        explicit empty keyboard is sent to actually remove the order buttons.
-
-        ``prune`` controls whether a "message not found" result deletes the tracking
-        row. Callers without ``dynamodb:DeleteItem`` on the notifications table
-        (e.g. the NotificationSender Lambda) pass ``prune=False`` and leave cleanup
-        to the row's 168h TTL.
-        """
-        markup = reply_markup if reply_markup is not None else {"inline_keyboard": []}
-        result = self._edit_message_text(row.chat_id, row.message_id, text, parse_mode="HTML", reply_markup=markup)
-        if prune and result.get("not_found"):
-            try:
-                self.db.delete_notification_message(row.notification_id)
-            except Exception as e:
-                logger.error(f"Failed to prune notification row {row.notification_id}: {e}")
-        return result.get("success", False)
-
-    def _sync_subscriber_messages_async(self, offer_id: int, cancelled: bool = False):
-        """Hand off large subscriber-edit batches to the NotificationSender Lambda."""
-        start_subscriber_sync(offer_id, cancelled, self.environment)
+        self.announcements.sync(offer, cancelled)

@@ -152,9 +152,9 @@ class TestSyncOfferMessages:
         rows = [_row(f"s{i}", i, i + 1000, "subscriber") for i in range(11)]
         rows.append(_row("g1", -500, 200, "group"))
         sync_handler.db.get_notification_messages_by_offer.return_value = rows
-        with patch.object(sync_handler, "_sync_subscriber_messages_async") as async_mock:
+        with patch("services.offer_message_sync.start_subscriber_sync") as async_mock:
             sync_handler.sync_offer_messages(7)
-        async_mock.assert_called_once_with(7, False)
+        async_mock.assert_called_once_with(7, False, "test")
         # Only the single group row edited inline; subscribers handed off.
         assert sync_handler._edit_message_text.call_count == 1
 
@@ -162,7 +162,7 @@ class TestSyncOfferMessages:
         rows = [_row(f"s{i}", i, i + 1000, "subscriber") for i in range(3)]
         rows.append(_row("g1", -500, 200, "group"))
         sync_handler.db.get_notification_messages_by_offer.return_value = rows
-        with patch.object(sync_handler, "_sync_subscriber_messages_async") as async_mock:
+        with patch("services.offer_message_sync.start_subscriber_sync") as async_mock:
             sync_handler.sync_offer_messages(7)
         async_mock.assert_not_called()
         assert sync_handler._edit_message_text.call_count == 4

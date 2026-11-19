@@ -102,7 +102,7 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   `"ordered"`) are used where `OrderStatus`/`BoxStatus` exist. **Done**: one copy each, and the last status literals
   in these files (`database.py`) use the enums. (The `"active"` left in `callback_handler.py` and `boxes.py` is the
   name of a list filter, not a status.)
-- [ ] **M8. Left over from the first audit, in these files**:
+- [x] **M8. Left over from the first audit, in these files**:
   - [x] **a.** The admin offer views (overview, edit interface) live in the customer `InfoCommands`, and
     `view_offer_<id>_edit` is a customer route gated inside the handler. **Done**: the edit screen is
     `OfferCommands.handle_edit_offer_interface`, behind its own admin-only route; the customer route is
@@ -114,8 +114,10 @@ Low priority items (naming, comments, small style issues) are left out on purpos
     cycle. `update_order` reads an order back only for a payment (it did after every status change, so once per order
     in wholesale processing), and a batch records a payment per order that was awaiting payment, instead of taking
     the old status of the first order for all of them.
-  - **c.** The inline re-edit of offer announcements (`sync_offer_messages` and helpers) is domain logic in
-    `BaseHandler`.
+  - [x] **c.** The inline re-edit of offer announcements (`sync_offer_messages` and helpers) is domain logic in
+    `BaseHandler`. **Done**: `OfferAnnouncements` (`services/offer_message_sync.py`) renders and edits the tracked
+    messages, for the webhook (`sync`) and for the NotificationSender Lambda (`sync_subscribers`, which had its own
+    copy of the loop). `BaseHandler.sync_offer_messages` reads the offer, sweeps expired exports and hands over.
 
 ## Order of work
 
