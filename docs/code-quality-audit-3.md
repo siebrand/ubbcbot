@@ -23,6 +23,11 @@ code that the first two left alone, and adds two to-dos from the owner. Same pri
 
 ## High priority
 
+- [ ] **A0. Placing an order for a customer always ends in an error** (`order/order_placement.py`, found while fixing
+  A3). After the order is written and the customer is told, the handler calls
+  `CustomerOrderCommands._notify_channel_order`, which no longer exists (since the revert of the milestone
+  notifications, 2026-04-01). The `AttributeError` skips the group announcement and the admin's confirmation, and the
+  admin sees the order fail, although it was placed.
 - [ ] **A1. The first subscriber DM of an offer is built by hand, without escaping the name**
   (`notification_sender.py`, `_send_notification_to_customer`). The group post and every later re-edit of the same DM
   come from `OfferMessageBuilder`, which escapes the name; the first DM builds its own HTML with `offer.name` as
@@ -70,6 +75,10 @@ code that the first two left alone, and adds two to-dos from the owner. Same pri
   known words are per audience (`offer_listing.is_known_filter`): an admin filter typed by a customer is unknown.
 - [x] **T2. Leave two more customers out of the reports**: `8a1bdd6b-c3c0-403d-9f49-b2f9acb738d4` and
   `bc63908b-8f10-45a8-bb3e-cb89e5ea7e94` join `EXCLUDED_CUSTOMER_IDS` (`services/reporting.py`). **Done.**
+- [ ] **T3. Refill boxes after cancellations without editing the database by hand.** After orders are cancelled, an
+  offer (not completed, not inactive) can have gaps in its earlier boxes while later boxes hold orders that would fit
+  there. An admin-only tool moves orders from later boxes into the empty places of earlier ones, so fewer boxes are
+  needed. A bot command if that is as simple as a script in `scripts/`; otherwise the script.
 
 ## Order of work
 
