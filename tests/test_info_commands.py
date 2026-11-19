@@ -615,3 +615,38 @@ class TestFomoAndSubscriptions:
         env.db.update_customer.return_value = False
 
         assert env.handler.handle_subscribe(CHAT, CUSTOMER_ID) == {"status": "error"}
+
+
+class TestUnknownFilter:
+    def note(self, env, user_id, word):
+        return env.handler._t("list_offers_unknown_filter", user_id, word=word)
+
+    @pytest.mark.parametrize("user_id", [ADMIN_ID, CUSTOMER_ID])
+    def test_an_unknown_word_is_named_before_the_default_list(self, env, user_id):
+        env.handler.handle_list_offers(CHAT, user_id, ["cancelled"])
+
+        texts = [c.args[1] for c in env.handler._send_message.call_args_list]
+        assert texts[0] == self.note(env, user_id, "cancelled")
+        assert len(texts) == 2  # and then the list itself
+
+    @pytest.mark.parametrize("word", ["all", "draft", "import", "active", "archived", "completed", "inactive", "user"])
+    def test_the_admin_filters_are_known(self, env, word):
+        env.handler.handle_list_offers(CHAT, ADMIN_ID, [word])
+
+        assert self.note(env, ADMIN_ID, word) not in sent(env)
+
+    @pytest.mark.parametrize("word", ["active", "sold_out", "soldout", "SOLD_OUT"])
+    def test_the_customer_filters_are_known(self, env, word):
+        env.handler.handle_list_offers(CHAT, CUSTOMER_ID, [word])
+
+        assert "❓" not in sent(env)
+
+    def test_an_admin_filter_is_unknown_to_customers(self, env):
+        env.handler.handle_list_offers(CHAT, CUSTOMER_ID, ["draft"])
+
+        assert self.note(env, CUSTOMER_ID, "draft") in sent(env)
+
+    def test_the_next_pages_do_not_repeat_it(self, env):
+        env.handler.handle_list_offers(CHAT, ADMIN_ID, ["cancelled"], page=2)
+
+        assert "❓" not in sent(env)

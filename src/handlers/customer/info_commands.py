@@ -206,6 +206,10 @@ class InfoCommands(BaseHandler):
             self._send_message(chat_id, help_message)
             return {"status": "success"}
 
+        if word and page == 1 and not offer_listing.is_known_filter(word, is_admin):
+            # Shown before the list, on the first page only (the page buttons keep the word)
+            self._send_message(chat_id, self._t("list_offers_unknown_filter", user_id, word=args[0][:30]))
+
         # Loaded once for all lines: how much is ordered of each offer
         boxes = offer_listing.by_offer(self.db.get_all_boxes())
         orders = offer_listing.by_offer(self.db.get_all_orders(statuses=list(offer_listing.OPEN_ORDER_STATUSES)))

@@ -51,6 +51,15 @@ SHOWS_ORDERED = {IMPORT, ACTIVE, SOLD_OUT}
 ORDERED_BOX_ICON = "📦🍺"
 
 
+# The filter words /list_offers knows (without underscores). Customers see the active or the sold-out offers.
+CUSTOMER_FILTER_WORDS = frozenset({"active", "soldout", "help"})
+ADMIN_FILTER_WORDS = frozenset(ADMIN_VIEWS) | {"soldout", "user", "help"}
+
+
+def is_known_filter(filter_word: str, admin: bool) -> bool:
+    return filter_word in (ADMIN_FILTER_WORDS if admin else CUSTOMER_FILTER_WORDS)
+
+
 def admin_view(filter_word: str | None) -> AdminView:
     """The view of a filter word; no word or an unknown one is the default overview"""
     return ADMIN_VIEWS.get(filter_word or "", DEFAULT_VIEW)
