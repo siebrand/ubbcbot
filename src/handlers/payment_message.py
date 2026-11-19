@@ -1,7 +1,9 @@
 """The payment message a customer gets: when the order is ready, as a reminder, and on /payment_info."""
 
+from handlers.base_handler import BaseHandler
 
-class PaymentMessageMixin:
+
+class PaymentMessageMixin(BaseHandler):
     """For handlers (it uses `self.db`, `self._t` and `self._escape_html`). The text is sent as HTML."""
 
     def _aggregate_order_lines(self, orders: list) -> list[tuple]:
