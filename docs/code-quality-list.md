@@ -108,8 +108,12 @@ Low priority items (naming, comments, small style issues) are left out on purpos
     `OfferCommands.handle_edit_offer_interface`, behind its own admin-only route; the customer route is
     `view_offer_<id>` only. The admin's `/list_offers` overview stays in `InfoCommands`: it is the same command and
     builds the same lines as the customer list, so splitting it would only move the `_is_admin` check.
-  - **b.** Audit logging (purchase events) is triggered from the data layer (`database.py`), which therefore depends
-    on a service that depends on it.
+  - [x] **b.** Audit logging (purchase events) is triggered from the data layer (`database.py`), which therefore depends
+    on a service that depends on it. **Done**: `AuditService` is `PurchaseEvents` (`services/purchase_events.py`), built
+    on the order history and offer repositories, and the facade creates it once: no import inside the methods, no
+    cycle. `update_order` reads an order back only for a payment (it did after every status change, so once per order
+    in wholesale processing), and a batch records a payment per order that was awaiting payment, instead of taking
+    the old status of the first order for all of them.
   - **c.** The inline re-edit of offer announcements (`sync_offer_messages` and helpers) is domain logic in
     `BaseHandler`.
 

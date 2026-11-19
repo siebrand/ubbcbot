@@ -16,6 +16,7 @@ from repositories.processed_update_repository import ProcessedUpdateRepository
 from repositories.supplier_repository import SupplierRepository
 from repositories.system_repository import SystemRepository
 from services.image_store import ImageStore
+from services.purchase_events import PurchaseEvents
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class DynamoDBService:
         self.notification_repo = NotificationRepository()
         self.edit_context_repo = EditContextRepository()
         self.processed_update_repo = ProcessedUpdateRepository()
+        self.purchase_events = PurchaseEvents(self.order_history_repo, self.offer_repo)
 
     def _get_next_offer_id(self) -> int:
         """Get next auto-incrementing offer ID"""
@@ -107,14 +109,11 @@ class DynamoDBService:
 
     # Order operations
     def create_order(self, order: Order, admin_id: int = 0) -> Order | None:
-        """Create order with automatic audit logging"""
+        """Create order (records an ORDER_CREATED analytics event)"""
         try:
-            from services.audit_service import AuditService
-
             result = self.order_repo.create_order(order)
             if result:
-                audit = AuditService(self)
-                audit.log_order_created(order, admin_id)
+                self.purchase_events.order_created(order)
             return result
         except Exception as e:
             logger.error(f"Error creating order: {e}")
@@ -137,13 +136,11 @@ class DynamoDBService:
         if not self.order_repo.create_with_box_increment(order, box_id, quantity, max_capacity):
             return None
 
-        # Audit only after the atomic write has committed.
+        # The analytics event only after the atomic write has committed.
         try:
-            from services.audit_service import AuditService
-
-            AuditService(self).log_order_created(order, admin_id)
+            self.purchase_events.order_created(order)
         except Exception as e:
-            logger.error(f"Order created but audit logging failed for {order.order_id}: {e}")
+            logger.error(f"Order created but the analytics event failed for {order.order_id}: {e}")
 
         return order
 
@@ -196,10 +193,8 @@ class DynamoDBService:
         return self.order_repo.delete_order(order_id)
 
     def update_order(self, order_id: str, updates: dict[str, Any], admin_id: int = 0, reason: str = "") -> bool:
-        """Update order with automatic audit logging"""
+        """Update an order; a payment (awaiting_payment -> completed) records a PAYMENT_RECEIVED analytics event"""
         try:
-            from services.audit_service import AuditService
-
             old_order = self.get_order(order_id)
             if not old_order:
                 return False
@@ -207,11 +202,11 @@ class DynamoDBService:
             if not self.order_repo.update_order(order_id, updates):
                 return False
 
-            # Record a purchase analytics event only when an order is paid: read it back only if the status changed
-            if "status" in updates and updates["status"] != old_order.status:
-                new_order = self.get_order(order_id)
-                if new_order and old_order.status != new_order.status:
-                    AuditService(self).log_payment_if_completed(new_order, old_order.status, new_order.status, admin_id)
+            # Read the order back only for a payment: the event holds the amount as stored
+            if self.purchase_events.is_payment(old_order.status, updates.get("status", old_order.status)):
+                paid_order = self.get_order(order_id)
+                if paid_order:
+                    self.purchase_events.payment_received(paid_order)
 
             return True
         except Exception as e:
@@ -219,19 +214,15 @@ class DynamoDBService:
             return False
 
     def batch_update_order_status(self, order_ids: list[str], status: str, admin_id: int = 0) -> int:
-        """Batch update order status with audit logging. Returns count of successful updates."""
-        from services.audit_service import AuditService
-
-        # Batch fetch orders before update for audit trail
+        """Set the status of many orders. Returns count of successful updates."""
+        # Read before the update: the old status of each order decides whether it is a payment
         orders = self.order_repo.batch_get_orders(order_ids)
-
         updated_count = self.order_repo.batch_update_order_status(order_ids, status)
 
-        if updated_count > 0 and orders:
-            audit = AuditService(self)
-            # Record PAYMENT_RECEIVED only for an awaiting_payment -> completed batch.
-            audit.log_batch_payment_if_completed(orders[:updated_count], orders[0].status, status, admin_id)
-
+        if updated_count > 0:
+            self.purchase_events.payments_received(
+                [order for order in orders if self.purchase_events.is_payment(order.status, status)]
+            )
         return updated_count
 
     def get_customers_by_status(self, status: str) -> list[Customer]:
