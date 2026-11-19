@@ -83,8 +83,7 @@ class OfferEditingHandler(OfferBaseHandler):
                 self._send_message(chat_id, message)
 
                 # Return to edit interface
-                self.db.get_offer(offer_id)
-                return self.handlers["info"].handle_view_offer(chat_id, chat_id, [str(offer_id), "edit"])
+                return self.handle_edit_offer_interface(chat_id, offer_id)
             else:
                 self._send_message(chat_id, self._t("failed_update_offer_name"))
                 return {"status": "error"}
@@ -119,7 +118,7 @@ class OfferEditingHandler(OfferBaseHandler):
                 self._send_message(chat_id, message)
 
                 # Return to edit interface
-                return self.handlers["info"].handle_view_offer(chat_id, chat_id, [str(offer_id), "edit"])
+                return self.handle_edit_offer_interface(chat_id, offer_id)
             else:
                 self._send_message(chat_id, self._t("failed_update_offer_price"))
                 return {"status": "error"}
@@ -127,6 +126,39 @@ class OfferEditingHandler(OfferBaseHandler):
         except ValueError:
             self._send_message(chat_id, self._t("invalid_price_format"))
             return {"status": "invalid_format"}
+
+    def handle_edit_offer_interface(self, chat_id: int, offer_id) -> dict[str, Any]:
+        """The admin's edit screen of an offer: its details, and a button per thing to change"""
+        offer = self.db.get_offer(int(offer_id))
+        if not offer:
+            self._send_message(chat_id, self._t("offer_not_found", chat_id))
+            return {"status": "offer_not_found"}
+
+        message = self._t(
+            "edit_offer_details",
+            chat_id,
+            offer_id=offer.offer_id,
+            name=offer.name,
+            price=offer.price_per_unit,
+            box_size=offer.wholesale_box_size,
+            status=offer.status,
+            supplier=offer.supplier_name,
+            description=offer.description or self._t("not_set", chat_id),
+            image_count=len(offer.images),
+        )
+        offer_id = offer.offer_id
+        rows = [
+            [{"text": self._t("edit_name", chat_id), "callback_data": f"edit_offer_name_{offer_id}"}],
+            [{"text": self._t("edit_price", chat_id), "callback_data": f"edit_offer_price_{offer_id}"}],
+            [{"text": self._t("edit_description", chat_id), "callback_data": f"edit_offer_description_{offer_id}"}],
+            [{"text": self._t("upload_image", chat_id), "callback_data": f"upload_offer_image_{offer_id}"}],
+        ]
+        if offer.images:
+            rows.append([{"text": self._t("clear_images", chat_id), "callback_data": f"clear_offer_images_{offer_id}"}])
+        rows.append([{"text": self._t("exit_edit_mode", chat_id), "callback_data": f"view_offer_{offer_id}"}])
+
+        self._send_message(chat_id, message, reply_markup={"inline_keyboard": rows})
+        return {"status": "success"}
 
     def handle_offer_description_answer(self, chat_id: int, offer_id: str, text: str, entities: list) -> dict[str, Any]:
         """The description the admin typed after the prompt; its formatting (entities) is kept as HTML"""
@@ -148,7 +180,7 @@ class OfferEditingHandler(OfferBaseHandler):
             if len(new_description) > 1000:
                 self._send_message(chat_id, self._t("description_too_long"))
                 # Return to edit interface
-                return self.handlers["info"].handle_view_offer(chat_id, chat_id, [str(offer_id), "edit"])
+                return self.handle_edit_offer_interface(chat_id, offer_id)
 
             # Validate HTML in description
             is_valid, error_key = self._validate_html_content(new_description)
@@ -170,7 +202,7 @@ class OfferEditingHandler(OfferBaseHandler):
                 self._send_message(chat_id, message)
 
                 # Return to edit interface
-                return self.handlers["info"].handle_view_offer(chat_id, chat_id, [str(offer_id), "edit"])
+                return self.handle_edit_offer_interface(chat_id, offer_id)
             else:
                 self._send_message(chat_id, self._t("failed_update_offer_description"))
                 return {"status": "error"}

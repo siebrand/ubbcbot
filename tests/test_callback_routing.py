@@ -355,18 +355,17 @@ class TestCallbackRouting:
             mock_handlers["user"].handle_reject_user_by_id.assert_called_once()
 
     # Test 12: Offer Details Callbacks
-    @pytest.mark.parametrize(
-        "callback_data",
-        [
-            "view_offer_123",
-            "view_offer_456_edit",
-        ],
-    )
-    def test_view_offer_callbacks(self, callback_handler, mock_handlers, callback_data):
+    def test_view_offer_callback(self, callback_handler, mock_handlers):
         """Test offer details callbacks"""
-        query = self._create_callback_query(callback_data, user_id=15005473)
+        query = self._create_callback_query("view_offer_123", user_id=15005473)
         callback_handler.handle_callback_query(query)
         mock_handlers["info"].handle_view_offer.assert_called_once()
+
+    def test_the_edit_button_opens_the_admin_edit_screen(self, callback_handler, mock_handlers):
+        query = self._create_callback_query("view_offer_456_edit", user_id=15005473)
+        callback_handler.handle_callback_query(query)
+        mock_handlers["offer"].handle_edit_offer_interface.assert_called_once()
+        mock_handlers["info"].handle_view_offer.assert_not_called()
 
     # Test 14: Non-Admin Blocked from Admin Callbacks
     def test_non_admin_blocked_from_admin_callbacks(self, callback_handler, mock_handlers):

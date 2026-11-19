@@ -103,8 +103,11 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   in these files (`database.py`) use the enums. (The `"active"` left in `callback_handler.py` and `boxes.py` is the
   name of a list filter, not a status.)
 - [ ] **M8. Left over from the first audit, in these files**:
-  - **a.** The admin offer views (overview, edit interface) live in the customer `InfoCommands`, and
-    `view_offer_<id>_edit` is a customer route gated inside the handler.
+  - [x] **a.** The admin offer views (overview, edit interface) live in the customer `InfoCommands`, and
+    `view_offer_<id>_edit` is a customer route gated inside the handler. **Done**: the edit screen is
+    `OfferCommands.handle_edit_offer_interface`, behind its own admin-only route; the customer route is
+    `view_offer_<id>` only. The admin's `/list_offers` overview stays in `InfoCommands`: it is the same command and
+    builds the same lines as the customer list, so splitting it would only move the `_is_admin` check.
   - **b.** Audit logging (purchase events) is triggered from the data layer (`database.py`), which therefore depends
     on a service that depends on it.
   - **c.** The inline re-edit of offer announcements (`sync_offer_messages` and helpers) is domain logic in

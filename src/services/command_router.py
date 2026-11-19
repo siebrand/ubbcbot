@@ -167,7 +167,7 @@ class CommandRouter:
 
                 # If canceling image upload, return to edit interface
                 if edit_type == "offer_image_upload":
-                    return self.handlers["info"].handle_view_offer(chat_id, user_id, [entity_id, "edit"])
+                    return self.handlers["offer"].handle_edit_offer_interface(chat_id, entity_id)
 
                 # Use existing info handler instead of creating new BaseHandler
                 return self.handlers["info"]._send_success(chat_id, "operation_cancelled", "cancelled")

@@ -372,5 +372,5 @@ class BotService:
         logger.info(f"Image upload result: {result}")
         if result.get("return_to_edit"):
             self.db.delete_edit_context(context.context_id)
-            return self.info_commands.handle_view_offer(chat_id, user_id, [str(result["offer_id"]), "edit"])
+            return self.handlers["offer"].handle_edit_offer_interface(chat_id, result["offer_id"])
         return result

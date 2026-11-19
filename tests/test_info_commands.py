@@ -12,6 +12,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from handlers.admin.offer_commands import OfferCommands
 from handlers.customer.info_commands import InfoCommands
 from models.entities import Box, Customer, Offer, Order
 
@@ -373,23 +374,45 @@ class TestViewOffer:
         ]
         assert "Lekker fris" in sent(env)  # the offer itself is still shown
 
-    def test_edit_mode_for_the_admin(self, env, offer):
-        env.handler.handle_view_offer(CHAT, ADMIN_ID, ["3", "edit"])
+    def edit_screen(self, env):
+        handler = OfferCommands(env.db, ADMIN_ID, "prod", "token")
+        handler._send_message = Mock(return_value={"success": True})
+        return handler
 
-        assert self.buttons(env) == [
+    def test_the_edit_screen_for_the_admin(self, env, offer):
+        handler = self.edit_screen(env)
+
+        assert handler.handle_edit_offer_interface(ADMIN_ID, "3") == {"status": "success"}
+
+        markup = handler._send_message.call_args.kwargs["reply_markup"]
+        assert [b["callback_data"] for row in markup["inline_keyboard"] for b in row] == [
             "edit_offer_name_3",
             "edit_offer_price_3",
             "edit_offer_description_3",
             "upload_offer_image_3",
             "view_offer_3",
         ]
+        assert "Lekker fris" in handler._send_message.call_args.args[1]
 
-    def test_edit_mode_offers_clearing_images_when_there_are_some(self, env, offer):
+    def test_the_edit_screen_offers_clearing_images_when_there_are_some(self, env, offer):
         offer.images = ["https://example.com/a.jpg"]
+        handler = self.edit_screen(env)
 
+        handler.handle_edit_offer_interface(ADMIN_ID, 3)
+
+        markup = handler._send_message.call_args.kwargs["reply_markup"]
+        assert "clear_offer_images_3" in [b["callback_data"] for row in markup["inline_keyboard"] for b in row]
+
+    def test_the_edit_screen_of_a_missing_offer(self, env):
+        env.db.get_offer.return_value = None
+        handler = self.edit_screen(env)
+
+        assert handler.handle_edit_offer_interface(ADMIN_ID, "3") == {"status": "offer_not_found"}
+
+    def test_view_offer_never_opens_the_edit_screen(self, env, offer):
         env.handler.handle_view_offer(CHAT, ADMIN_ID, ["3", "edit"])
 
-        assert "clear_offer_images_3" in self.buttons(env)
+        assert self.buttons(env) == ["order_3_1", "order_3_2", "view_offer_3_edit"]
 
     def test_edit_mode_is_ignored_for_customers(self, env, offer):
         env.handler.handle_view_offer(CHAT, CUSTOMER_ID, ["3", "edit"])

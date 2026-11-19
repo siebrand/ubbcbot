@@ -305,16 +305,14 @@ class InfoCommands(BaseHandler):
         return base_handler.show_customer_orders(chat_id, customer, page, show_order_ids=show_ids, user_id=user_id)
 
     def handle_view_offer(self, chat_id: int, user_id: int, args: list | None = None) -> dict[str, Any]:
-        """Handle offer details display and editing from deep link or command"""
+        """The details of an offer, from a deep link, a button or /view_offer"""
         if not args:
             # Return same as list_offers without parameters
             return self.handle_list_offers(chat_id, user_id, [])
 
         try:
             offer_id = int(args[0])
-            # Check for "edit" parameter for admin edit mode
-            edit_mode = len(args) > 1 and args[1].lower() == "edit" and self._is_admin(user_id)
-            # Check for "user" parameter for admin user view
+            # "user": the admin sees the offer as customers do. Editing is the admin's edit screen (OfferCommands).
             show_as_user = len(args) > 1 and args[1].lower() == "user" and self._is_admin(user_id)
 
             offer = self.db.get_offer(offer_id)
@@ -337,51 +335,12 @@ class InfoCommands(BaseHandler):
                     self._send_message(chat_id, self._t("offer_not_available", user_id))
                     return {"status": "offer_not_available"}
 
-            # Handle edit mode for admins
-            if edit_mode:
-                return self._show_edit_interface(chat_id, offer, user_id)
-
             self._send_offer_view(chat_id, offer, user_id, as_customer=show_as_user)
             return {"status": "success"}
 
         except ValueError:
             self._send_message(chat_id, self._t("invalid_offer_id", user_id))
             return {"status": "invalid_format"}
-
-    def _show_edit_interface(self, chat_id: int, offer, user_id: int) -> dict[str, Any]:
-        """Show editing interface for offer"""
-        message = self._t(
-            "edit_offer_details",
-            user_id,
-            offer_id=offer.offer_id,
-            name=offer.name,
-            price=offer.price_per_unit,
-            box_size=offer.wholesale_box_size,
-            status=offer.status,
-            supplier=offer.supplier_name,
-            description=offer.description or self._t("not_set", user_id),
-            image_count=len(offer.images),
-        )
-
-        offer_id = offer.offer_id
-        keyboard = {
-            "inline_keyboard": [
-                [{"text": self._t("edit_name", user_id), "callback_data": f"edit_offer_name_{offer_id}"}],
-                [{"text": self._t("edit_price", user_id), "callback_data": f"edit_offer_price_{offer_id}"}],
-                [{"text": self._t("edit_description", user_id), "callback_data": f"edit_offer_description_{offer_id}"}],
-                [{"text": self._t("upload_image", user_id), "callback_data": f"upload_offer_image_{offer_id}"}],
-                [{"text": self._t("clear_images", user_id), "callback_data": f"clear_offer_images_{offer_id}"}]
-                if offer.images
-                else [],
-                [{"text": self._t("exit_edit_mode", user_id), "callback_data": f"view_offer_{offer_id}"}],
-            ]
-        }
-
-        # Remove empty rows
-        keyboard["inline_keyboard"] = [row for row in keyboard["inline_keyboard"] if row]
-
-        self._send_message(chat_id, message, reply_markup=keyboard)
-        return {"status": "success"}
 
     def _send_offer_view(self, chat_id: int, offer, user_id: int, as_customer: bool = False):
         """Send rich offer details with images and description. ``as_customer``: the admin sees what customers see."""

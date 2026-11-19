@@ -572,7 +572,7 @@ class TestCancelCommand:
 
         send(env, "/cancel")
 
-        env.handlers["info"].handle_view_offer.assert_called_once_with(ADMIN_ID, ADMIN_ID, ["7", "edit"])
+        env.handlers["offer"].handle_edit_offer_interface.assert_called_once_with(ADMIN_ID, "7")
 
     def test_a_customer_never_clears_a_prompt(self):
         env = make_router()
@@ -871,7 +871,6 @@ class TestEditReplyTypes:
                 if name.startswith("handle_") or name == "create_supplier":
                     getattr(handler, name).return_value = {"status": "success"}
         bot.media_handler = Mock()
-        bot.info_commands = Mock()
         return bot
 
     def _resolve(self, value):
@@ -954,7 +953,7 @@ class TestImagePrompt:
         bot = BotService.__new__(BotService)
         bot.db = Mock()
         bot.media_handler = Mock()
-        bot.info_commands = Mock()
+        bot.handlers = {"offer": create_autospec(OfferCommands, instance=True)}
         return bot
 
     def test_a_photo_of_an_album_keeps_the_prompt_open(self):
@@ -974,7 +973,7 @@ class TestImagePrompt:
 
         bot.media_handler.handle_offer_image_upload.assert_called_once_with(ADMIN_ID, "7", [{"file_id": "p"}])
         bot.db.delete_edit_context.assert_called_once_with("ctx")
-        bot.info_commands.handle_view_offer.assert_called_once_with(ADMIN_ID, ADMIN_ID, ["7", "edit"])
+        bot.handlers["offer"].handle_edit_offer_interface.assert_called_once_with(ADMIN_ID, 7)
 
     def test_a_failed_upload_keeps_the_prompt_open(self):
         bot = self._bot()

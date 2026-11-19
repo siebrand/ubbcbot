@@ -165,11 +165,15 @@ class CallbackHandler:
             ),
         )
         self.router.register(
-            r"^view_offer_(\d+)(?:_(edit))?$",
+            r"^view_offer_(\d+)_edit$",
+            lambda match, ctx: self.handlers["offer"].handle_edit_offer_interface(ctx["chat_id"], match.group(1)),
+        )
+        self.router.register(
+            r"^view_offer_(\d+)$",
             lambda match, ctx: self.handlers["info"].handle_view_offer(
-                ctx["chat_id"], ctx["user_id"], [match.group(1)] + ([match.group(2)] if match.group(2) else [])
+                ctx["chat_id"], ctx["user_id"], [match.group(1)]
             ),
-            customer=True,  # edit mode is gated by _is_admin in handle_view_offer
+            customer=True,
         )
         self.router.register(
             r"^wholesale_select_(\d+)$",
@@ -704,7 +708,7 @@ class CallbackHandler:
         """Wrapper for clear_offer_images"""
         result = self.media_handler.handle_clear_offer_images(chat_id, offer_id)
         if result.get("return_to_edit"):
-            return self.handlers["info"].handle_view_offer(chat_id, user_id, [str(result["offer_id"]), "edit"])
+            return self.handlers["offer"].handle_edit_offer_interface(chat_id, result["offer_id"])
         return result
 
     def handle_callback_query(self, callback_query: dict[str, Any]) -> dict[str, Any]:

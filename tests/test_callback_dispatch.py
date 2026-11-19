@@ -265,6 +265,7 @@ CMD = [
 ]
 
 EDIT = [
+    ("view_offer_7_edit", C("offer", call.handle_edit_offer_interface(CHAT, "7"))),
     ("edit_offer_name_7", EditCtx("handle_offer_edit", "name", "7")),
     ("edit_offer_price_7", EditCtx("handle_offer_edit", "price", "7")),
     ("edit_offer_description_7", EditCtx("handle_offer_edit", "description", "7")),
@@ -441,7 +442,7 @@ class TestAuthorization:
                 r"^page_changelog_(\d+)$",
                 r"^page_info$",
                 r"^page_list_offers(?:_(\w+))?_(\d+)$",
-                r"^view_offer_(\d+)(?:_(edit))?$",
+                r"^view_offer_(\d+)$",
             ]
         )
 
