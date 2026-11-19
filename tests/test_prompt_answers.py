@@ -81,3 +81,19 @@ class TestDescriptionFormatting:
 
     def test_other_entities_are_left_alone(self):
         assert entities_to_html("zie ubbc.nl", [{"type": "url", "offset": 4, "length": 7}]) == "zie ubbc.nl"
+
+    def test_offsets_are_counted_in_utf16_units(self):
+        # 🍺 is two UTF-16 code units, so "Pils" starts at 3, not 2
+        entities = [{"type": "bold", "offset": 3, "length": 4}, {"type": "italic", "offset": 8, "length": 3}]
+
+        assert entities_to_html("🍺 Pils met 🍻", entities) == "🍺 <b>Pils</b> <i>met</i> 🍻"
+
+    def test_the_text_around_the_tags_is_escaped(self):
+        entities = [{"type": "bold", "offset": 7, "length": 4}]
+
+        assert entities_to_html("Bier & kaas <3", entities) == "Bier &amp; <b>kaas</b> &lt;3"
+
+    def test_nested_entities_stay_nested(self):
+        entities = [{"type": "bold", "offset": 0, "length": 8}, {"type": "italic", "offset": 5, "length": 3}]
+
+        assert entities_to_html("Pils met", entities) == "<b>Pils <i>met</i></b>"

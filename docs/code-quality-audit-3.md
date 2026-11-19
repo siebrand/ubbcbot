@@ -39,11 +39,13 @@ priorities as before:
   `OfferAnnouncements.render`, so the first message and its re-edits are the same. **Done** with `OfferMessageBuilder`
   itself, translated for the subscriber, so the order buttons of the first DM stay in the subscriber's language (the
   re-edits use the group language, as before). An empty description no longer shows as "None".
-- [ ] **A2. The formatting of a typed description lands on the wrong characters** (`utils/telegram_entities.py`).
+- [x] **A2. The formatting of a typed description lands on the wrong characters** (`utils/telegram_entities.py`).
   Telegram counts entity offsets in UTF-16 code units; `entities_to_html` cuts the Python string by code points. Every
   emoji outside the basic plane (🍺, 🍻) before a bold or italic word shifts the tags one place, so they cut through a
   word. The text around the entities also goes into the HTML without being escaped. Fix: convert in UTF-16 units and
-  escape the text between the tags.
+  escape the text between the tags. **Done**: the tags are placed in one pass over the UTF-16 text, so nested
+  entities also stay nested (the old code dropped the outer tag's text). A description typed without formatting is
+  kept as typed, so tags typed by hand still work (the HTML check of the description guards them).
 - [x] **A3. Messages to guests are only skipped for the id -1, but guests get -2, -3, ...**
   (`base_handler.py` `_send_message`, `_send_photo`, `_send_media_group`; `message_sender.py` `send_from_admin`). The
   customer repository numbers guests with negative ids (`-next_id`). The guard is meant to keep guest messages away
