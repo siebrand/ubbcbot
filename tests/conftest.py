@@ -10,6 +10,10 @@ sys.path.append(
     os.path.abspath(os.path.dirname(__file__))
 )  # helper modules next to the tests (after src: tests/handlers must not shadow it)
 
+# Shaped like a real token (digits:30+ chars) so redaction tests work, but
+# does not match GitHub's Telegram secret pattern (which requires the AA prefix).
+FAKE_TOKEN = "1234567890:XXX-abcdefghijklmnopqrstuvwxyz_0123"
+
 
 @pytest.fixture(scope="function")
 def aws_credentials():

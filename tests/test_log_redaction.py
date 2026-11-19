@@ -3,6 +3,7 @@
 import logging
 
 import pytest
+from conftest import FAKE_TOKEN
 
 from utils.log_redaction import REDACTED, PiiRedactionFilter, configure_logging, install_pii_redaction, redact
 
@@ -36,7 +37,7 @@ class TestRedact:
         assert redact("contactless=yes") == "contactless=yes"
 
     def test_masks_a_bot_token_in_a_request_url(self):
-        token = "1234567890:XXX-abcdefghijklmnopqrstuvwxyz_0123"
+        token = FAKE_TOKEN
         error = (
             "HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: "
             f"/bot{token}/sendMessage (Caused by NewConnectionError)"

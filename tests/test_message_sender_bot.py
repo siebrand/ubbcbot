@@ -5,10 +5,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
+from conftest import FAKE_TOKEN
 
 import message_sender
 
-TOKEN = "1234567890:AAH-abcdefghijklmnopqrstuvwxyz_0123"
+TOKEN = FAKE_TOKEN
 
 
 def answer(status=200, text=""):

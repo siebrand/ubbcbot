@@ -5,10 +5,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
+from conftest import FAKE_TOKEN
 
 from services.telegram_client import TIMEOUT_SECONDS, TelegramClient, TelegramResponse
 
-TOKEN = "1234567890:AAH-abcdefghijklmnopqrstuvwxyz_0123"
+TOKEN = FAKE_TOKEN
 
 
 def answer(status=200, json=None, text=""):
