@@ -3,7 +3,9 @@ from decimal import Decimal
 import pytest
 
 from models.entities import CreditTransaction, CustomerCredit
-from repositories.credit_repository import CreditRepository
+from repositories.credit_repository import CreditBalanceChanged, CreditRepository
+
+NOW = "2026-01-01T00:00:00+00:00"
 
 
 @pytest.fixture
@@ -44,38 +46,48 @@ class TestCreditRepository:
         updated = credit_repo.get_customer_credit("cust-3")
         assert updated.current_balance == Decimal("75.0")
 
-    def test_increment_balance_creates_record_on_first_use(self, credit_repo):
-        """ADD upserts: incrementing a non-existent credit record creates it from 0"""
-        now = "2026-01-01T00:00:00+00:00"
-        assert (
-            credit_repo.increment_balance("cust-inc-1", Decimal("30.0"), Decimal("30.0"), Decimal("0.0"), now, now)
-            is True
+    @staticmethod
+    def _change(customer_id: str, before: str, after: str) -> CreditTransaction:
+        return CreditTransaction(
+            customer_id=customer_id,
+            amount=Decimal(after) - Decimal(before),
+            balance_before=Decimal(before),
+            balance_after=Decimal(after),
         )
+
+    def test_record_change_creates_the_record_on_first_use(self, credit_repo):
+        """ADD upserts: the first change creates the record from 0, with its transaction"""
+        change = self._change("cust-inc-1", "0", "30.0")
+        assert credit_repo.record_change(change, Decimal("30.0"), Decimal("0.0"), NOW) is True
 
         saved = credit_repo.get_customer_credit("cust-inc-1")
         assert saved.current_balance == Decimal("30.0")
         assert saved.total_credits_issued == Decimal("30.0")
         assert saved.total_credits_used == Decimal("0.0")
+        assert [t.transaction_id for t in credit_repo.get_credit_transactions_by_customer("cust-inc-1")] == [
+            change.transaction_id
+        ]
 
-    def test_increment_balance_accumulates(self, credit_repo):
-        """Two sequential increments accumulate rather than overwrite (lost-update guard)"""
-        now = "2026-01-01T00:00:00+00:00"
-        credit_repo.increment_balance("cust-inc-2", Decimal("30.0"), Decimal("30.0"), Decimal("0.0"), now, now)
-        credit_repo.increment_balance("cust-inc-2", Decimal("20.0"), Decimal("20.0"), Decimal("0.0"), now, now)
+    def test_record_change_accumulates(self, credit_repo):
+        credit_repo.record_change(self._change("cust-inc-2", "0", "30.0"), Decimal("30.0"), Decimal("0.0"), NOW)
+        credit_repo.record_change(self._change("cust-inc-2", "30.0", "10.0"), Decimal("0.0"), Decimal("20.0"), NOW)
 
         saved = credit_repo.get_customer_credit("cust-inc-2")
-        assert saved.current_balance == Decimal("50.0")
-        assert saved.total_credits_issued == Decimal("50.0")
-
-    def test_increment_balance_negative_delta_records_usage(self, credit_repo):
-        """A negative balance delta plus a used_delta tracks credit consumption"""
-        now = "2026-01-01T00:00:00+00:00"
-        credit_repo.increment_balance("cust-inc-3", Decimal("50.0"), Decimal("50.0"), Decimal("0.0"), now, now)
-        credit_repo.increment_balance("cust-inc-3", Decimal("-20.0"), Decimal("0.0"), Decimal("20.0"), now, now)
-
-        saved = credit_repo.get_customer_credit("cust-inc-3")
-        assert saved.current_balance == Decimal("30.0")
+        assert saved.current_balance == Decimal("10.0")
+        assert saved.total_credits_issued == Decimal("30.0")
         assert saved.total_credits_used == Decimal("20.0")
+
+    @pytest.mark.parametrize("read_before", ["0", "20.0"])
+    def test_record_change_refuses_a_balance_that_changed(self, credit_repo, read_before):
+        credit_repo.record_change(self._change("cust-inc-3", "0", "30.0"), Decimal("30.0"), Decimal("0.0"), NOW)
+
+        with pytest.raises(CreditBalanceChanged):
+            credit_repo.record_change(
+                self._change("cust-inc-3", read_before, "50.0"), Decimal("0.0"), Decimal("0.0"), NOW
+            )
+
+        assert credit_repo.get_customer_credit("cust-inc-3").current_balance == Decimal("30.0")
+        assert len(credit_repo.get_credit_transactions_by_customer("cust-inc-3")) == 1
 
     def test_create_credit_transaction(self, credit_repo):
         transaction = CreditTransaction(

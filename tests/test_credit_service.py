@@ -1,12 +1,13 @@
 """
-Tests for credit service core logic
+Tests for credit service core logic (the database is a mock; tests/test_credit_atomic.py runs against moto)
 """
 
 from decimal import Decimal
 
 import pytest
 
-from models.entities import CreditTransaction, CustomerCredit
+from models.entities import CustomerCredit
+from repositories.credit_repository import CreditBalanceChanged
 from services.credit_service import CreditService
 
 
@@ -14,7 +15,21 @@ from services.credit_service import CreditService
 def credit_service(mocker):
     """Create credit service with mocked database"""
     mock_db = mocker.Mock()
+    mock_db.record_credit_change.return_value = True
     return CreditService(mock_db)
+
+
+def with_balance(credit_service, *balances: str) -> None:
+    """The balance the service reads, one per read"""
+    credit_service.db.get_customer_credit.side_effect = [
+        CustomerCredit(customer_id="customer-123", current_balance=Decimal(b)) for b in balances
+    ]
+
+
+def written(credit_service):
+    """(transaction, issued_delta, used_delta) of the last write"""
+    args = credit_service.db.record_credit_change.call_args.args
+    return args[0], args[1], args[2]
 
 
 class TestGetCustomerCreditBalance:
@@ -44,201 +59,51 @@ class TestGetCustomerCreditBalance:
         credit_service.db.get_customer_credit.assert_called_once_with(customer_id)
 
 
-class TestCreateCreditTransaction:
-    """Test creating credit transactions"""
-
-    def test_create_transaction_success(self, credit_service, mocker):
-        """Test successfully creating a credit transaction"""
-        transaction = CreditTransaction(
-            customer_id="test-customer-123",
-            transaction_type="CREDIT_ISSUED",
-            amount=Decimal("20.00"),
-            balance_before=Decimal("30.00"),
-            balance_after=Decimal("50.00"),
-            reason="Test credit",
-            created_by=123456789,
-        )
-
-        credit_service.db.create_credit_transaction = mocker.Mock(return_value=True)
-
-        result = credit_service.create_credit_transaction(transaction)
-
-        assert result is True
-        credit_service.db.create_credit_transaction.assert_called_once_with(transaction)
-
-    def test_create_transaction_failure(self, credit_service, mocker):
-        """Test handling transaction creation failure"""
-        transaction = CreditTransaction(
-            customer_id="test-customer-123", transaction_type="CREDIT_ISSUED", amount=Decimal("20.00")
-        )
-
-        credit_service.db.create_credit_transaction = mocker.Mock(return_value=False)
-
-        result = credit_service.create_credit_transaction(transaction)
-
-        assert result is False
-
-
-class TestUpdateCustomerCreditBalance:
-    """Test updating customer credit balance"""
-
-    def test_update_balance_existing_customer(self, credit_service, mocker):
-        """Test updating balance for existing customer applies the balance delta"""
-        customer_id = "test-customer-123"
-        new_balance = Decimal("75.00")
-
-        existing_credit = CustomerCredit(
-            customer_id=customer_id,
-            current_balance=Decimal("50.00"),
-            total_credits_issued=Decimal("100.00"),
-            total_credits_used=Decimal("50.00"),
-        )
-
-        credit_service.db.get_customer_credit = mocker.Mock(return_value=existing_credit)
-        credit_service.db.increment_customer_credit = mocker.Mock(return_value=True)
-
-        result = credit_service._update_customer_credit_balance(customer_id, new_balance)
-
-        assert result is True
-        credit_service.db.increment_customer_credit.assert_called_once()
-
-        # Verify the delta (75 - 50 = +25) and timestamp are passed, not an absolute value
-        args, kwargs = credit_service.db.increment_customer_credit.call_args
-        assert args[0] == customer_id
-        assert args[1] == Decimal("25.00")  # balance_delta
-        assert kwargs["last_updated"]
-
-    def test_update_balance_new_customer_creates_record(self, credit_service, mocker):
-        """Test updating balance for a new customer upserts via the atomic increment"""
-        customer_id = "test-customer-new"
-        new_balance = Decimal("25.00")
-
-        credit_service.db.get_customer_credit = mocker.Mock(return_value=None)
-        credit_service.db.increment_customer_credit = mocker.Mock(return_value=True)
-
-        result = credit_service._update_customer_credit_balance(customer_id, new_balance)
-
-        assert result is True
-        credit_service.db.increment_customer_credit.assert_called_once()
-
-        # No prior record -> delta equals the full new balance (ADD upserts from 0)
-        args, _ = credit_service.db.increment_customer_credit.call_args
-        assert args[0] == customer_id
-        assert args[1] == Decimal("25.00")  # balance_delta
-        assert args[2] == Decimal("25.00")  # issued_delta (is_credit default True)
-
-    def test_update_balance_updates_totals_on_credit(self, credit_service, mocker):
-        """Adding credit records the increase as issued_delta"""
-        customer_id = "test-customer-123"
-        old_balance = Decimal("50.00")
-        new_balance = Decimal("70.00")  # Adding 20
-
-        existing_credit = CustomerCredit(
-            customer_id=customer_id,
-            current_balance=old_balance,
-            total_credits_issued=Decimal("100.00"),
-            total_credits_used=Decimal("50.00"),
-        )
-
-        credit_service.db.get_customer_credit = mocker.Mock(return_value=existing_credit)
-        credit_service.db.increment_customer_credit = mocker.Mock(return_value=True)
-
-        credit_service._update_customer_credit_balance(customer_id, new_balance, is_credit=True)
-
-        args, _ = credit_service.db.increment_customer_credit.call_args
-        # balance_delta, issued_delta, used_delta
-        assert args[1] == Decimal("20.00")
-        assert args[2] == Decimal("20.00")
-        assert args[3] == Decimal("0.0")
-
-    def test_update_balance_updates_totals_on_usage(self, credit_service, mocker):
-        """Using credit records the decrease as used_delta"""
-        customer_id = "test-customer-123"
-        old_balance = Decimal("50.00")
-        new_balance = Decimal("30.00")  # Using 20
-
-        existing_credit = CustomerCredit(
-            customer_id=customer_id,
-            current_balance=old_balance,
-            total_credits_issued=Decimal("100.00"),
-            total_credits_used=Decimal("50.00"),
-        )
-
-        credit_service.db.get_customer_credit = mocker.Mock(return_value=existing_credit)
-        credit_service.db.increment_customer_credit = mocker.Mock(return_value=True)
-
-        credit_service._update_customer_credit_balance(customer_id, new_balance, is_credit=False)
-
-        args, _ = credit_service.db.increment_customer_credit.call_args
-        # balance_delta negative, used_delta is its absolute value
-        assert args[1] == Decimal("-20.00")
-        assert args[3] == Decimal("20.00")
-
-
 class TestIssueCredit:
     """Test issuing credit to customers"""
 
-    def test_issue_credit_valid_amount(self, credit_service, mocker):
-        """Test issuing credit with valid amount"""
-        customer_id = "test-customer-123"
-        amount = Decimal("20.00")
-        reason = "Defective product"
-        admin_id = 123456789
+    def test_issue_credit_valid_amount(self, credit_service):
+        """The transaction and the issued total are written together, from the balance that was read"""
+        with_balance(credit_service, "30.00")
 
-        # Mock existing balance
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=Decimal("30.00"))
-        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
-        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
-
-        result = credit_service.issue_credit(customer_id, amount, reason, admin_id)
+        result = credit_service.issue_credit("customer-123", Decimal("20.00"), "Defective product", 123456789)
 
         assert result is True
-
-        # Verify balance was updated
-        credit_service._update_customer_credit_balance.assert_called_once_with(
-            customer_id, Decimal("50.00"), is_credit=True
-        )
-
-        # Verify transaction was created
-        credit_service.create_credit_transaction.assert_called_once()
-        transaction = credit_service.create_credit_transaction.call_args[0][0]
-        assert transaction.customer_id == customer_id
+        transaction, issued, used = written(credit_service)
+        assert transaction.customer_id == "customer-123"
         assert transaction.transaction_type == "CREDIT_ISSUED"
-        assert transaction.amount == amount
+        assert transaction.amount == Decimal("20.00")
         assert transaction.balance_before == Decimal("30.00")
         assert transaction.balance_after == Decimal("50.00")
-        assert transaction.reason == reason
-        assert transaction.created_by == admin_id
+        assert transaction.reason == "Defective product"
+        assert transaction.created_by == 123456789
+        assert (issued, used) == (Decimal("20.00"), Decimal("0.0"))
 
     def test_issue_credit_invalid_amount_zero(self, credit_service):
         """Test issuing credit with zero amount fails"""
         result = credit_service.issue_credit("customer-123", Decimal("0.00"), "Test", 123)
         assert result is False
+        credit_service.db.record_credit_change.assert_not_called()
 
-    def test_issue_credit_negative_amount_with_reason_succeeds(self, credit_service, mocker):
-        """Test issuing negative credit (debt) with reason succeeds"""
-        customer_id = "customer-123"
-        amount = Decimal("-10.00")
-        reason = "Damaged product charge"
-        admin_id = 123
+    def test_issue_credit_negative_amount_with_reason_succeeds(self, credit_service):
+        """A debt with a reason is written; it counts as credit used"""
+        with_balance(credit_service, "0.00")
 
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=Decimal("0.00"))
-        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
-        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
+        result = credit_service.issue_credit("customer-123", Decimal("-10.00"), "Damaged product charge", 123)
 
-        result = credit_service.issue_credit(customer_id, amount, reason, admin_id)
         assert result is True
+        transaction, issued, used = written(credit_service)
+        assert transaction.balance_after == Decimal("-10.00")
+        assert (issued, used) == (Decimal("0.0"), Decimal("10.00"))
 
-    def test_issue_credit_empty_reason(self, credit_service, mocker):
+    def test_issue_credit_empty_reason(self, credit_service):
         """A credit may go without a reason (the usage says [reason]); it is booked as "Credit issued" """
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=Decimal("0.00"))
-        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
-        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
+        with_balance(credit_service, "0.00")
 
         result = credit_service.issue_credit("customer-123", Decimal("10.00"), "", 123)
 
         assert result is True
-        assert credit_service.create_credit_transaction.call_args[0][0].reason == "Credit issued"
+        assert written(credit_service)[0].reason == "Credit issued"
 
     def test_issue_debt_empty_reason(self, credit_service):
         """A debt needs a reason"""
@@ -250,145 +115,116 @@ class TestIssueCredit:
         result = credit_service.issue_credit("customer-123", amount, "Test", 123)
         assert result is False
 
-    def test_issue_credit_transaction_failure_rollback(self, credit_service, mocker):
-        """Test that balance update is not committed if transaction creation fails"""
-        customer_id = "test-customer-123"
-        amount = Decimal("20.00")
+    def test_issue_credit_write_failure(self, credit_service):
+        """When the write fails, the credit is not issued"""
+        with_balance(credit_service, "30.00")
+        credit_service.db.record_credit_change.return_value = False
 
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=Decimal("30.00"))
-        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
-        credit_service.create_credit_transaction = mocker.Mock(return_value=False)
+        assert credit_service.issue_credit("customer-123", Decimal("20.00"), "Test", 123) is False
 
-        result = credit_service.issue_credit(customer_id, amount, "Test", 123)
+    def test_a_changed_balance_is_read_again(self, credit_service):
+        """Another write came in between: the change is computed again from the new balance"""
+        with_balance(credit_service, "30.00", "35.00")
+        credit_service.db.record_credit_change.side_effect = [CreditBalanceChanged("customer-123"), True]
 
-        # Should fail if transaction creation fails
-        assert result is False
+        assert credit_service.issue_credit("customer-123", Decimal("20.00"), "Test", 123) is True
+
+        transaction, _, _ = written(credit_service)
+        assert (transaction.balance_before, transaction.balance_after) == (Decimal("35.00"), Decimal("55.00"))
+
+    def test_a_balance_that_keeps_changing_is_given_up(self, credit_service):
+        with_balance(credit_service, *["30.00"] * CreditService.MAX_ATTEMPTS)
+        credit_service.db.record_credit_change.side_effect = CreditBalanceChanged("customer-123")
+
+        assert credit_service.issue_credit("customer-123", Decimal("20.00"), "Test", 123) is False
+        assert credit_service.db.record_credit_change.call_count == CreditService.MAX_ATTEMPTS
 
 
 class TestApplyCreditToDelivery:
     """Test applying credit to delivery"""
 
-    def test_apply_credit_less_than_total(self, credit_service, mocker):
+    def test_apply_credit_less_than_total(self, credit_service):
         """Test applying credit when credit < delivery total"""
-        customer_id = "test-customer-123"
-        delivery_total = Decimal("50.00")
-        credit_balance = Decimal("20.00")
+        with_balance(credit_service, "20.00")
 
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=credit_balance)
-        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
-        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
+        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
 
-        result = credit_service.apply_credit_to_delivery(customer_id, delivery_total)
-
-        assert result["original_total"] == delivery_total
+        assert result["original_total"] == Decimal("50.00")
         assert result["credit_applied"] == Decimal("20.00")
         assert result["payment_required"] == Decimal("30.00")
         assert result["remaining_credit"] == Decimal("0.0")
 
-    def test_apply_credit_greater_than_total(self, credit_service, mocker):
+    def test_apply_credit_greater_than_total(self, credit_service):
         """Test applying credit when credit > delivery total"""
-        customer_id = "test-customer-123"
-        delivery_total = Decimal("30.00")
-        credit_balance = Decimal("50.00")
+        with_balance(credit_service, "50.00")
 
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=credit_balance)
-        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
-        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
+        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("30.00"))
 
-        result = credit_service.apply_credit_to_delivery(customer_id, delivery_total)
-
-        assert result["original_total"] == delivery_total
+        assert result["original_total"] == Decimal("30.00")
         assert result["credit_applied"] == Decimal("30.00")
         assert result["payment_required"] == Decimal("0.0")
         assert result["remaining_credit"] == Decimal("20.00")
 
-    def test_apply_credit_equal_to_total(self, credit_service, mocker):
+    def test_apply_credit_equal_to_total(self, credit_service):
         """Test applying credit when credit = delivery total"""
-        customer_id = "test-customer-123"
-        delivery_total = Decimal("50.00")
-        credit_balance = Decimal("50.00")
+        with_balance(credit_service, "50.00")
 
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=credit_balance)
-        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
-        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
+        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
 
-        result = credit_service.apply_credit_to_delivery(customer_id, delivery_total)
-
-        assert result["original_total"] == delivery_total
+        assert result["original_total"] == Decimal("50.00")
         assert result["credit_applied"] == Decimal("50.00")
         assert result["payment_required"] == Decimal("0.0")
         assert result["remaining_credit"] == Decimal("0.0")
 
-    def test_apply_credit_zero_balance(self, credit_service, mocker):
-        """Test applying credit when customer has no credit"""
-        customer_id = "test-customer-123"
-        delivery_total = Decimal("50.00")
+    def test_apply_credit_zero_balance(self, credit_service):
+        """Test applying credit when customer has no credit: nothing is written"""
+        credit_service.db.get_customer_credit.return_value = None
 
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=Decimal("0.0"))
+        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
 
-        result = credit_service.apply_credit_to_delivery(customer_id, delivery_total)
-
-        assert result["original_total"] == delivery_total
+        assert result["original_total"] == Decimal("50.00")
         assert result["credit_applied"] == Decimal("0.0")
-        assert result["payment_required"] == delivery_total
+        assert result["payment_required"] == Decimal("50.00")
         assert result["remaining_credit"] == Decimal("0.0")
+        credit_service.db.record_credit_change.assert_not_called()
 
-    def test_apply_credit_creates_transaction(self, credit_service, mocker):
-        """Test that applying credit creates APPLIED transaction"""
-        customer_id = "test-customer-123"
-        delivery_total = Decimal("50.00")
-        credit_balance = Decimal("30.00")
+    def test_apply_credit_writes_the_applied_transaction_and_the_usage(self, credit_service):
+        """Test that applying credit creates APPLIED transaction, with the usage in the same write"""
+        with_balance(credit_service, "30.00")
 
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=credit_balance)
-        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
-        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
+        credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
 
-        credit_service.apply_credit_to_delivery(customer_id, delivery_total)
-
-        # Verify transaction was created
-        credit_service.create_credit_transaction.assert_called_once()
-        transaction = credit_service.create_credit_transaction.call_args[0][0]
+        transaction, issued, used = written(credit_service)
         assert transaction.transaction_type == "APPLIED"
         assert transaction.amount == Decimal("-30.00")  # Negative for usage
-        assert transaction.balance_before == credit_balance
+        assert transaction.balance_before == Decimal("30.00")
         assert transaction.balance_after == Decimal("0.0")
+        assert (issued, used) == (Decimal("0.0"), Decimal("30.00"))
 
-    def test_apply_credit_updates_balance(self, credit_service, mocker):
-        """Test that applying credit updates customer balance"""
-        customer_id = "test-customer-123"
-        delivery_total = Decimal("50.00")
-        credit_balance = Decimal("30.00")
-
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=credit_balance)
-        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
-        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
-
-        credit_service.apply_credit_to_delivery(customer_id, delivery_total)
-
-        # Verify balance was updated
-        credit_service._update_customer_credit_balance.assert_called_once_with(
-            customer_id, Decimal("0.0"), is_credit=False
-        )
-
-    def test_apply_credit_negative_balance_adds_charge(self, credit_service, mocker):
+    def test_apply_credit_negative_balance_adds_charge(self, credit_service):
         """Test applying negative balance adds charge to delivery total"""
-        customer_id = "test-customer-123"
-        delivery_total = Decimal("50.00")
-        negative_balance = Decimal("-20.00")
+        with_balance(credit_service, "-20.00")
 
-        credit_service.get_customer_credit_balance = mocker.Mock(return_value=negative_balance)
-        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
-        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
+        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
 
-        result = credit_service.apply_credit_to_delivery(customer_id, delivery_total)
-
-        assert result["original_total"] == delivery_total
+        assert result["original_total"] == Decimal("50.00")
         assert result["credit_applied"] == Decimal("-20.00")  # Negative
         assert result["payment_required"] == Decimal("70.00")  # 50 + 20
         assert result["remaining_credit"] == Decimal("0.0")
 
-        # Verify transaction created with negative amount
-        transaction = credit_service.create_credit_transaction.call_args[0][0]
+        transaction, issued, used = written(credit_service)
         assert transaction.amount == Decimal("-20.00")
         assert transaction.balance_before == Decimal("-20.00")
         assert transaction.balance_after == Decimal("0.0")
+        assert (issued, used) == (Decimal("0.0"), Decimal("0.0"))
+
+    def test_when_the_write_fails_nothing_is_applied(self, credit_service):
+        """The customer pays the full total and keeps the credit: the balance was not changed"""
+        with_balance(credit_service, "30.00", "30.00")
+        credit_service.db.record_credit_change.return_value = False
+
+        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
+
+        assert result["credit_applied"] == Decimal("0.0")
+        assert result["payment_required"] == Decimal("50.00")
+        assert result["remaining_credit"] == Decimal("30.00")

@@ -3,13 +3,20 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
+import boto3
 from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.types import TypeSerializer
+from botocore.exceptions import ClientError
 
 from models.entities import CreditTransaction, CustomerCredit
 from repositories.base_repository import BaseRepository
 from utils.dynamodb import read_all_pages
 
 logger = logging.getLogger(__name__)
+
+
+class CreditBalanceChanged(Exception):
+    """The balance was changed by another write after it was read: read it again"""
 
 
 class CreditRepository(BaseRepository):
@@ -77,40 +84,64 @@ class CreditRepository(BaseRepository):
             logger.error(f"Error updating customer credit: {e}")
             return False
 
-    def increment_balance(
-        self,
-        customer_id: str,
-        balance_delta: Decimal,
-        issued_delta: Decimal,
-        used_delta: Decimal,
-        last_updated: str,
-        created_at: str,
+    def record_change(
+        self, transaction: CreditTransaction, issued_delta: Decimal, used_delta: Decimal, now: str
     ) -> bool:
-        """Atomically adjust a customer's credit balance and running totals.
+        """Write the transaction and move the balance from its balance_before to its balance_after, in one
+        transaction: both or neither.
 
-        Uses a single upsert UpdateItem with ADD on the numeric fields, so two
-        concurrent credit operations accumulate instead of overwriting each other
-        (the previous read-modify-write could lose an update). ADD on a missing
-        attribute starts from 0, so this also creates the record on first use.
+        The balance must still be the balance_before that was read (no record counts as 0); when another write
+        changed it in the meantime, CreditBalanceChanged is raised and nothing is written, so the caller can read
+        again. Returns False when the write failed for another reason.
         """
+        serializer = TypeSerializer()
+        transaction_item = {k: serializer.serialize(v) for k, v in self._prepare_item(transaction.__dict__).items()}
+        balance_condition = "current_balance = :before"
+        if transaction.balance_before == 0:
+            balance_condition = f"attribute_not_exists(current_balance) OR {balance_condition}"
+
+        # A plain low-level client, as in OrderRepository.create_with_box_increment
+        client = boto3.client("dynamodb")
         try:
-            self.table.update_item(
-                Key={"customer_id": customer_id},
-                UpdateExpression=(
-                    "ADD current_balance :bd, total_credits_issued :id, total_credits_used :ud "
-                    "SET last_updated = :lu, created_at = if_not_exists(created_at, :ca)"
-                ),
-                ExpressionAttributeValues={
-                    ":bd": balance_delta,
-                    ":id": issued_delta,
-                    ":ud": used_delta,
-                    ":lu": last_updated,
-                    ":ca": created_at,
-                },
+            client.transact_write_items(
+                TransactItems=[
+                    {
+                        "Put": {
+                            "TableName": self.transactions_table.name,
+                            "Item": transaction_item,
+                            "ConditionExpression": "attribute_not_exists(transaction_id)",
+                        }
+                    },
+                    {
+                        "Update": {
+                            "TableName": self.table_name,
+                            "Key": {"customer_id": {"S": transaction.customer_id}},
+                            "UpdateExpression": (
+                                "ADD current_balance :bd, total_credits_issued :id, total_credits_used :ud "
+                                "SET last_updated = :now, created_at = if_not_exists(created_at, :now)"
+                            ),
+                            "ConditionExpression": balance_condition,
+                            "ExpressionAttributeValues": {
+                                ":bd": {"N": str(transaction.balance_after - transaction.balance_before)},
+                                ":id": {"N": str(issued_delta)},
+                                ":ud": {"N": str(used_delta)},
+                                ":now": {"S": now},
+                                ":before": {"N": str(transaction.balance_before)},
+                            },
+                        }
+                    },
+                ]
             )
             return True
+        except ClientError as e:
+            reasons = [r.get("Code") for r in e.response.get("CancellationReasons", [])]
+            if "ConditionalCheckFailed" in reasons:
+                logger.warning(f"Credit balance of {transaction.customer_id} changed while it was being changed")
+                raise CreditBalanceChanged(transaction.customer_id) from e
+            logger.error(f"Credit change failed for {transaction.customer_id}: {e.response['Error']['Code']}")
+            return False
         except Exception as e:
-            logger.error(f"Error incrementing credit balance for {customer_id}: {e}")
+            logger.error(f"Credit change failed for {transaction.customer_id}: {type(e).__name__}")
             return False
 
     def create_credit_transaction(self, transaction: CreditTransaction) -> bool:

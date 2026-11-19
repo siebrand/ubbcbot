@@ -78,13 +78,21 @@ transactions (CLAUDE.md, Gotchas).
 
 ## Medium priority
 
-- [ ] **B1. The credit balance and its transaction are two writes, and the applied credit can wipe a concurrent
+- [x] **B1. The credit balance and its transaction are two writes, and the applied credit can wipe a concurrent
   one** (`credit_service.py`). `issue_credit` writes the transaction and then the balance; if the second write fails,
   the history shows a credit the balance does not have. `_update_customer_credit_balance` turns the intended new
   balance into a delta against a second read of the balance: when an admin issues credit between the two reads in
   `apply_credit_to_delivery`, the delta also removes that new credit. Fix: compute the delta once from the balance
   that was used, and write the transaction and the `ADD` in one `TransactWriteItems` (with a condition on the balance
-  that was read). Test: a credit issued between the read and the write survives.
+  that was read). Test: a credit issued between the read and the write survives. **Done**:
+  `CreditRepository.record_change` writes the transaction and the `ADD` (delta = balance after − balance before of
+  the transaction) in one `TransactWriteItems`, on condition that the balance is still the one read (a missing
+  record counts as 0); a changed balance raises `CreditBalanceChanged` and `CreditService._change_balance` computes
+  the change again from the new balance (three attempts). When applying credit cannot be written, nothing is applied
+  and the full total is due. `increment_balance` and the two-write helpers are gone. The race was worse than
+  described: `issue_credit` lost money too (10 issued next to a concurrent 5 left 10, not 15).
+  `tests/test_credit_atomic.py` (moto). Found along the way: **nothing calls `apply_credit_to_delivery`**, so credit
+  is never applied to a payment; the payment message does not mention it either. Moved to audit 5.
 - [ ] **B2. The customers are never told about a delayed or cancelled wholesale delivery**
   (`wholesaler_delivery.py`, `notify_customer_of_delay` and `notify_customer_of_cancellation` only log "STUB").
   Fix: tell them through `_notify_customer` (translated, guests skipped), or remove the stubs and say in the delivery
