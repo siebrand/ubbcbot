@@ -62,10 +62,12 @@ Low priority items (naming, comments, small style issues) are left out on purpos
   inline document and media-group handling along the way.
 - [ ] **M2. `/list_boxes` reads per offer and per box** (`boxes.py`, `handle_list_boxes`, complexity 23): the boxes of
   every offer one by one, then the orders of every listed box. The status filter is a chain of `and`/`or`.
-- [ ] **M3. Processing a wholesale order is one 230-line function** (`management.py`, complexity 27): planning (which
+- [x] **M3. Processing a wholesale order is one 230-line function** (`management.py`, complexity 27): planning (which
   order fits), writing, box clean-up and the summary are mixed. The "more offers to process?" check and the offer
   selection read the orders of every offer one by one, and the offer selections (`management.py`, `boxes.py`) scan
-  the suppliers once per offer.
+  the suppliers once per offer. **Done** for `management.py`: the plan is a pure function
+  (`services/wholesale_plan.py`), the handler applies it in small steps, and the pending orders of all offers are read
+  once through the status index. The `boxes.py` selection follows with M2.
 - [ ] **M4. The delivery workflow searches every offer for one box** (`wholesale_delivery_handler.py`,
   `handle_partial_action`, `_continue_workflow_after_action`): it reads the boxes and orders of all offers to find a
   box whose id it already knows (or knows the start of).
