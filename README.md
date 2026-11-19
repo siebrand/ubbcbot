@@ -193,6 +193,8 @@ has every admin command.
 - `/list_boxes [<offer_id>|active|ordered|full|delivered|all|help]` - View box status and capacity (paginated with
   enhanced navigation)
 - `/audit_offer <offer_id>` - Audit offer capacity vs orders
+- `/refill_boxes <offer_id>` - After cancellations, move pending orders from later boxes into the room of earlier
+  ones (boxes not yet ordered) and remove the boxes that end up empty; shows the moves first (button confirmation)
 - `/process_wholesale <offer_id>` - Start wholesale ordering process (button confirmation)
 - `/create_order_for <username> <offer_id> [quantity]` - Place order for another user (10-unit admin limit, alias:
   /order_for)

@@ -111,10 +111,25 @@ priorities as before:
   known words are per audience (`offer_listing.is_known_filter`): an admin filter typed by a customer is unknown.
 - [x] **T2. Leave two more customers out of the reports**: `8a1bdd6b-c3c0-403d-9f49-b2f9acb738d4` and
   `bc63908b-8f10-45a8-bb3e-cb89e5ea7e94` join `EXCLUDED_CUSTOMER_IDS` (`services/reporting.py`). **Done.**
-- [ ] **T3. Refill boxes after cancellations without editing the database by hand.** After orders are cancelled, an
+- [x] **T3. Refill boxes after cancellations without editing the database by hand.** After orders are cancelled, an
   offer (not completed, not inactive) can have gaps in its earlier boxes while later boxes hold orders that would fit
   there. An admin-only tool moves orders from later boxes into the empty places of earlier ones, so fewer boxes are
-  needed. A bot command if that is as simple as a script in `scripts/`; otherwise the script.
+  needed. A bot command if that is as simple as a script in `scripts/`; otherwise the script. **Done as a bot
+  command**, `/refill_boxes <offer_id>`. Why not a script: the parts were already in the bot and a script would need
+  them too (the box/order reads of the repositories, a confirm-button flow like `/audit_offer`, the routing and
+  dispatch tests, and the announcement sync, which a script would skip or have to import). A script would also need
+  AWS credentials for production on the admin's laptop and would run outside the tests and the access control of
+  the bot. As a command it is one plan function, one transaction and two handler methods, and the admin runs it
+  where the boxes are managed anyway.
+  How it works: `services/box_refill.py` plans the moves (pure): the earliest box with room is filled first, from
+  the latest box first, with the largest pending order that fits; orders are never split. Only boxes that are not
+  yet ordered at the wholesaler (open, full) take part: an ordered or delivered box holds beer that is already
+  bought. The admin sees the moves (who, how many, from which box to which) and confirms with a button; the plan is
+  made again at the confirmation. Each move is one transaction (`OrderRepository.move_to_box`): the order must still
+  be pending in its box, the new box must have room and neither box may have been ordered meanwhile. Boxes that end
+  up empty are deleted only while still empty (`delete_box_if_empty`), and the announcements are synced. Customers
+  are not told: their order does not change. Tests: `test_box_refill_plan.py` (the plan) and
+  `test_box_refill_flow.py` (against the moto tables). After deploying, run `setup-commands.sh` for the menu.
 
 ## Order of work
 

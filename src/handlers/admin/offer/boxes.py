@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from models.entities import Box, BoxStatus, OfferStatus, OrderStatus
+from services import box_refill
 from services.box_status_manager import BoxStatusManager
 from services.wholesale_plan import boxes_needed
 
@@ -545,3 +546,117 @@ class BoxManagementHandler(OfferBaseHandler):
             ),
         )
         return {"status": "orders_cancelled", "cancelled": cancelled_count}
+
+    # ------------------------------------------------------------------ /refill_boxes
+    def _refill_plan(self, chat_id: int, offer_id: int) -> tuple[Any, list, list[box_refill.Move]] | dict[str, Any]:
+        """(offer, boxes, moves), or the answer when the offer cannot be refilled"""
+        offer = self.db.get_offer(offer_id)
+        if not offer:
+            self._send_message(chat_id, self._t("offer_not_found", chat_id))
+            return {"status": "offer_not_found"}
+        if offer.status in box_refill.CLOSED_OFFER_STATUSES:
+            status = self._t(f"status_{offer.status}", chat_id)
+            self._send_message(chat_id, self._t("refill_boxes_offer_closed", chat_id, offer_id=offer_id, status=status))
+            return {"status": "offer_closed"}
+        boxes = self.db.get_boxes_by_offer(offer_id)
+        moves = box_refill.plan_refill(boxes, self.db.get_orders_by_offer(offer_id))
+        if not moves:
+            self._send_message(chat_id, self._t("refill_boxes_nothing", chat_id, offer_id=offer_id))
+            return {"status": "nothing_to_move"}
+        return offer, boxes, moves
+
+    def handle_refill_boxes(self, chat_id: int, args: list) -> dict[str, Any]:
+        """/refill_boxes <offer_id>: propose moving orders from later boxes into the room of earlier ones"""
+        error = self._validate_args(args, 1, "usage_refill_boxes", chat_id)
+        if error:
+            return error
+        try:
+            offer_id = int(args[0])
+        except ValueError:
+            self._send_message(chat_id, self._t("invalid_offer_id", chat_id))
+            return {"status": "invalid_format"}
+
+        planned = self._refill_plan(chat_id, offer_id)
+        if isinstance(planned, dict):
+            return planned
+        offer, boxes, moves = planned
+
+        lines = []
+        for move in moves:
+            customer = self.db.get_customer(move.customer_id)
+            lines.append(
+                self._t(
+                    "refill_boxes_move",
+                    chat_id,
+                    quantity=move.quantity,
+                    customer=self._get_public_name(customer) if customer else self._t("unknown", chat_id),
+                    from_box=move.from_box_id[:8],
+                    to_box=move.to_box_id[:8],
+                )
+            )
+        emptied = box_refill.boxes_emptied(boxes, moves)
+        in_use = len([b for b in boxes if b.current_quantity > 0])
+        message = self._t(
+            "refill_boxes_proposal",
+            chat_id,
+            offer_id=offer_id,
+            name=self._escape_html(offer.name),
+            moves="\n".join(lines),
+            emptied=len(emptied),
+            before=in_use,
+            after=in_use - len(emptied),
+        )
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": self._t("refill_boxes_confirm", chat_id, count=len(moves)),
+                        "callback_data": f"refill_boxes_confirm_{offer_id}",
+                    }
+                ],
+                [{"text": self._t("cancel", chat_id), "callback_data": "cancel_action"}],
+            ]
+        }
+        self._send_message(chat_id, message, reply_markup=keyboard, parse_mode="HTML")
+        return {"status": "confirmation_required", "moves": len(moves)}
+
+    def handle_confirm_refill_boxes(self, chat_id: int, offer_id: int) -> dict[str, Any]:
+        """Carry out the refill. The plan is made again: the boxes may have changed since the proposal."""
+        planned = self._refill_plan(chat_id, offer_id)
+        if isinstance(planned, dict):
+            return planned
+        _offer, boxes, moves = planned
+
+        capacity = {box.box_id: box.max_capacity for box in boxes}
+        moved = [
+            move
+            for move in moves
+            if self.db.move_order_to_box(
+                move.order_id, move.quantity, move.from_box_id, move.to_box_id, capacity[move.to_box_id]
+            )
+        ]
+
+        deleted = 0
+        for box_id in {move.from_box_id for move in moved} | {move.to_box_id for move in moved}:
+            box = self.db.get_box(box_id)
+            if not box:
+                continue
+            if box.current_quantity <= 0:
+                # Only while still empty: an order may have joined the box since it was read
+                deleted += 1 if self.db.delete_box_if_empty(box_id) else 0
+                continue
+            status = BoxStatus.FULL.value if box.current_quantity >= box.max_capacity else BoxStatus.OPEN.value
+            if box.status != status:
+                self.db.update_box(box_id, {"status": status})
+
+        if moved:
+            # Fewer boxes: the announcement shows the room that is left
+            self.box_status_manager.update_offer_status_after_change(offer_id)
+            self.sync_offer_messages(offer_id)
+
+        key = "refill_boxes_done" if len(moved) == len(moves) else "refill_boxes_partly"
+        self._send_message(
+            chat_id,
+            self._t(key, chat_id, offer_id=offer_id, moved=len(moved), planned=len(moves), deleted=deleted),
+        )
+        return {"status": "refilled", "moved": len(moved), "planned": len(moves), "deleted": deleted}

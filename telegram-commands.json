@@ -72,6 +72,7 @@
     {"command": "process_payment", "description": "Mark customers as paid"},
     {"command": "process_wholesale", "description": "Start the wholesale ordering process"},
     {"command": "publish_offer", "description": "Publish a draft offer: <offer_id>"},
+    {"command": "refill_boxes", "description": "Move orders into the room of earlier boxes: <offer_id>"},
     {"command": "reject_user", "description": "Reject a user: <name or username>"},
     {"command": "report_customer", "description": "Paid per month and open amount of a customer: <customer> [period]"},
     {"command": "report_sales_by_period", "description": "Sales per period: [period] [day|week|month] [paid]"},

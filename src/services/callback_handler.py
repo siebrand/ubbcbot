@@ -277,6 +277,10 @@ class CallbackHandler:
             ),
         )
         self.router.register(
+            r"^refill_boxes_confirm_(\d+)$",
+            lambda match, ctx: self.handlers["offer"].handle_confirm_refill_boxes(ctx["chat_id"], int(match.group(1))),
+        )
+        self.router.register(
             r"^audit_offers_page_(\d+)$",
             lambda match, ctx: self.handlers["offer"].show_audit_offer_selection(ctx["chat_id"], int(match.group(1))),
         )

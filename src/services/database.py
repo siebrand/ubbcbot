@@ -15,6 +15,7 @@ from repositories.order_repository import OrderRepository
 from repositories.processed_update_repository import ProcessedUpdateRepository
 from repositories.supplier_repository import SupplierRepository
 from repositories.system_repository import SystemRepository
+from services.box_refill import REFILLABLE_BOX_STATUSES
 from services.image_store import ImageStore
 from services.purchase_events import PurchaseEvents
 
@@ -85,6 +86,10 @@ class DynamoDBService:
     def delete_box(self, box_id: str) -> bool:
         return self.box_repo.delete_box(box_id)
 
+    def delete_box_if_empty(self, box_id: str) -> bool:
+        """Delete a box that is not yet ordered, only while it holds nothing"""
+        return self.box_repo.delete_box_if_empty(box_id, REFILLABLE_BOX_STATUSES)
+
     # Customer operations
     def create_customer(self, customer: Customer) -> Customer | None:
         """Create customer and invalidate cache"""
@@ -143,6 +148,14 @@ class DynamoDBService:
             logger.error(f"Order created but the analytics event failed for {order.order_id}: {e}")
 
         return order
+
+    def move_order_to_box(
+        self, order_id: str, quantity: int, from_box_id: str, to_box_id: str, to_max_capacity: int
+    ) -> bool:
+        """Move a pending order between two boxes that are not yet ordered, in one transaction (see box_refill)"""
+        return self.order_repo.move_to_box(
+            order_id, quantity, from_box_id, to_box_id, to_max_capacity, REFILLABLE_BOX_STATUSES
+        )
 
     def get_orders_by_customer(self, customer_id: str, strict: bool = False) -> list[Order]:
         return self.order_repo.get_orders_by_customer(customer_id, strict=strict)

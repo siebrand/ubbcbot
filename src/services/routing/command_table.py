@@ -150,6 +150,7 @@ COMMAND_ROUTES: dict[str, Route] = {
     "/create_box": admin_command("offer", "handle_create_box", private_rest),
     "/list_boxes": admin_command("offer", "handle_list_boxes", private_rest),
     "/audit_offer": admin_command("offer", "handle_audit_offer", private_rest),
+    "/refill_boxes": admin_command("offer", "handle_refill_boxes", private_rest),
     "/process_wholesale": admin_command("offer", "handle_process_wholesale", private_rest),
     "/confirm_process_wholesale": admin_command("offer", "handle_confirm_process_wholesale", private_rest),
     "/update_offer_name": admin_command("offer", "handle_update_offer_name", private_rest),

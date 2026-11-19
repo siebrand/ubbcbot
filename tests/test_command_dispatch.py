@@ -190,6 +190,7 @@ ADMIN_COMMANDS = [
     admin_row("/create_box 7", "offer", "handle_create_box", AD, ARGS),
     admin_row("/list_boxes active 2", "offer", "handle_list_boxes", AD, ARGS),
     admin_row("/audit_offer 7", "offer", "handle_audit_offer", AD, ARGS),
+    admin_row("/refill_boxes 7", "offer", "handle_refill_boxes", AD, ARGS),
     admin_row("/process_wholesale 7", "offer", "handle_process_wholesale", AD, ARGS),
     admin_row("/confirm_process_wholesale 7 2", "offer", "handle_confirm_process_wholesale", AD, ARGS),
     admin_row("/update_offer_name 7 New", "offer", "handle_update_offer_name", AD, ARGS),

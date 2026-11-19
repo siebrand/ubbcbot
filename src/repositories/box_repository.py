@@ -140,6 +140,30 @@ class BoxRepository(BaseRepository):
             logger.error(f"Error updating box: {e}")
             return False
 
+    def delete_box_if_empty(self, box_id: str, statuses: tuple[str, ...]) -> bool:
+        """Delete the box only while it holds nothing and is in one of ``statuses``; False when it was not deleted"""
+        from botocore.exceptions import ClientError
+
+        values: dict[str, Any] = {":zero": 0, **{f":status_{i}": s for i, s in enumerate(statuses)}}
+        in_statuses = ", ".join(f":status_{i}" for i in range(len(statuses)))
+        try:
+            self.table.delete_item(
+                Key={"box_id": box_id},
+                ConditionExpression=f"current_quantity = :zero AND #status IN ({in_statuses})",
+                ExpressionAttributeNames={"#status": "status"},
+                ExpressionAttributeValues=values,
+            )
+            return True
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+                logger.warning(f"Box {box_id} was not deleted: it is no longer empty")
+                return False
+            logger.error(f"Error deleting box {box_id}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Error deleting box {box_id}: {type(e).__name__}")
+            return False
+
     def delete_box(self, box_id: str) -> bool:
         try:
             self.table.delete_item(Key={"box_id": box_id})

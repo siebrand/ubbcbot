@@ -262,6 +262,7 @@ CMD = [
     ("cmd_list_guests", C("user", call.handle_list_guests(CHAT))),  # old format
     ("cmd:nonsense", Says("unknown_callback")),
     ("cmd", Says("unknown_callback")),
+    ("refill_boxes_confirm_7", C("offer", call.handle_confirm_refill_boxes(CHAT, 7))),
 ]
 
 EDIT = [
