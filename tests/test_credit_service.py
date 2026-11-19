@@ -229,9 +229,25 @@ class TestIssueCredit:
         result = credit_service.issue_credit(customer_id, amount, reason, admin_id)
         assert result is True
 
-    def test_issue_credit_empty_reason(self, credit_service):
-        """Test issuing credit with empty reason fails"""
+    def test_issue_credit_empty_reason(self, credit_service, mocker):
+        """A credit may go without a reason (the usage says [reason]); it is booked as "Credit issued" """
+        credit_service.get_customer_credit_balance = mocker.Mock(return_value=Decimal("0.00"))
+        credit_service._update_customer_credit_balance = mocker.Mock(return_value=True)
+        credit_service.create_credit_transaction = mocker.Mock(return_value=True)
+
         result = credit_service.issue_credit("customer-123", Decimal("10.00"), "", 123)
+
+        assert result is True
+        assert credit_service.create_credit_transaction.call_args[0][0].reason == "Credit issued"
+
+    def test_issue_debt_empty_reason(self, credit_service):
+        """A debt needs a reason"""
+        result = credit_service.issue_credit("customer-123", Decimal("-10.00"), " ", 123)
+        assert result is False
+
+    @pytest.mark.parametrize("amount", [Decimal("NaN"), Decimal("sNaN"), Decimal("Infinity")])
+    def test_issue_credit_not_finite(self, credit_service, amount):
+        result = credit_service.issue_credit("customer-123", amount, "Test", 123)
         assert result is False
 
     def test_issue_credit_transaction_failure_rollback(self, credit_service, mocker):

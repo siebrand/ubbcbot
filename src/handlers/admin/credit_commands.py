@@ -1,10 +1,27 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from handlers.base_handler import BaseHandler
 from models.entities import EditContext
 from services.credit_service import CreditService
 from utils.validation import ValidationUtils
+
+# The largest credit or debt one /credit can issue, in euros: a typo of a few zeros is refused, not booked
+MAX_CREDIT_AMOUNT = Decimal("1000")
+
+
+def parse_credit_amount(text: str) -> Decimal | None:
+    """The amount in euros ("2.50" or "2,50"), or None when it is not a finite, non-zero amount of whole cents
+    up to MAX_CREDIT_AMOUNT"""
+    try:
+        amount = Decimal(text.replace(",", "."))
+    except InvalidOperation:
+        return None
+    if not amount.is_finite() or amount == 0 or abs(amount) > MAX_CREDIT_AMOUNT:
+        return None
+    if amount != amount.quantize(Decimal("0.01")):
+        return None
+    return amount
 
 
 class CreditCommands(BaseHandler):
@@ -22,9 +39,8 @@ class CreditCommands(BaseHandler):
 
         username = args[0].lstrip("@")
 
-        try:
-            amount = Decimal(args[1])
-        except ValueError, TypeError:
+        amount = parse_credit_amount(args[1])
+        if amount is None:
             return self._send_error(chat_id, "invalid_amount", "invalid_format", user_id=chat_id)
 
         reason = " ".join(args[2:]) if len(args) > 2 else ""

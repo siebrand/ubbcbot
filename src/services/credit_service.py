@@ -73,11 +73,11 @@ class CreditService:
             True if successful, False otherwise
         """
         # Validate amount
-        if amount == 0:
+        if not amount.is_finite() or amount == 0:
             return False
 
-        # Validate reason is required
-        if not reason or not reason.strip():
+        # A debt needs a reason; a credit may go without
+        if amount < 0 and not (reason and reason.strip()):
             return False
 
         # Get current balance

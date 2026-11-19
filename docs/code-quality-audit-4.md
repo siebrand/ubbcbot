@@ -44,13 +44,16 @@ transactions (CLAUDE.md, Gotchas).
   in a delivery overview (that only reads approved customers). Fix: load only approved customers; a line whose name
   only fits a customer who is not approved is an error line ("not approved"). Test: a file with a rejected customer's
   name imports nothing for that line.
-- [ ] **A3. `/credit` without a reason always fails, and a malformed amount raises** (`credit_commands.py`,
+- [x] **A3. `/credit` without a reason always fails, and a malformed amount raises** (`credit_commands.py`,
   `credit_service.py`). The usage says `/credit <username> <amount> [reason]`, but `issue_credit` refuses an empty
   reason, so `/credit jan 5` answers "Failed to issue credit". `Decimal("abc")` raises `decimal.InvalidOperation`,
   which is not the `ValueError` the handler catches, so `/credit jan abc` ends in the generic error. `NaN` gets past
   the parse and raises on `amount < 0`; `Infinity` and `1e9` are accepted. Fix: make the reason optional for a
   positive amount (as the usage says) or required for every amount (and say so); parse the amount as a finite
-  number with at most two decimals and a sane upper bound. Tests for each input.
+  number with at most two decimals and a sane upper bound. Tests for each input. **Done**: the reason is optional
+  for a credit (as the usage says) and required for a debt, in `issue_credit` too. `parse_credit_amount` takes
+  "2.50" or "2,50" and refuses anything that is not a finite, non-zero amount of whole cents up to €1000
+  (`MAX_CREDIT_AMOUNT`); `issue_credit` refuses a non-finite amount as well. `tests/test_credit_command.py`.
 - [ ] **A4. The payment-received message puts the pickup location into HTML unescaped**
   (`delivery_overview_handler.py`, `handle_process_customer_paid`: `payment_received_notification` is sent with
   `parse_mode="HTML"` and `location=customer.location`). The location is typed by the admin; a "<" in it makes
