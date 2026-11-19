@@ -23,11 +23,13 @@ code that the first two left alone, and adds two to-dos from the owner. Same pri
 
 ## High priority
 
-- [ ] **A0. Placing an order for a customer always ends in an error** (`order/order_placement.py`, found while fixing
+- [x] **A0. Placing an order for a customer always ends in an error** (`order/order_placement.py`, found while fixing
   A3). After the order is written and the customer is told, the handler calls
   `CustomerOrderCommands._notify_channel_order`, which no longer exists (since the revert of the milestone
   notifications, 2026-04-01). The `AttributeError` skips the group announcement and the admin's confirmation, and the
-  admin sees the order fail, although it was placed.
+  admin sees the order fail, although it was placed. **Done**: `CustomerOrderCommands.announce_order_for` announces
+  the order in the group (not for guests, as the comment of the group sender says); `tests/test_order_for_flow.py`
+  runs the whole flow and fails on the old call.
 - [ ] **A1. The first subscriber DM of an offer is built by hand, without escaping the name**
   (`notification_sender.py`, `_send_notification_to_customer`). The group post and every later re-edit of the same DM
   come from `OfferMessageBuilder`, which escapes the name; the first DM builds its own HTML with `offer.name` as
@@ -39,11 +41,14 @@ code that the first two left alone, and adds two to-dos from the owner. Same pri
   emoji outside the basic plane (🍺, 🍻) before a bold or italic word shifts the tags one place, so they cut through a
   word. The text around the entities also goes into the HTML without being escaped. Fix: convert in UTF-16 units and
   escape the text between the tags.
-- [ ] **A3. Messages to guests are only skipped for the id -1, but guests get -2, -3, ...**
+- [x] **A3. Messages to guests are only skipped for the id -1, but guests get -2, -3, ...**
   (`base_handler.py` `_send_message`, `_send_photo`, `_send_media_group`; `message_sender.py` `send_from_admin`). The
   customer repository numbers guests with negative ids (`-next_id`). The guard is meant to keep guest messages away
   from Telegram; it now lets every guest but the first through, and the failures reach the admin as delivery errors.
-  Fix: one check, "a guest or a negative id", where messages go out.
+  Fix: one check, "a guest or a negative id", where messages go out. **Done**, but not in `_send_message`: groups
+  have negative ids too, so it cannot tell a guest from a group. The one sender that wrote to a customer's id without
+  looking (the confirmation of "order for") uses `_notify_customer`, which skips guests; the message Lambda, which
+  only writes to users, skips every id that is not positive.
 
 ## Medium priority
 
@@ -66,6 +71,10 @@ code that the first two left alone, and adds two to-dos from the owner. Same pri
 - [ ] **B5. The workflow box lists read the orders of every box** (`database.py`,
   `get_boxes_by_offer_with_order_status`): one query per box, for each step of the wholesale delivery and labeling
   workflows. Fix: one query of the offer's orders, grouped by box.
+
+- [ ] **B6. mypy does not look inside untyped functions** (`check_untyped_defs` is off), which is how A0 survived
+  seven months: the call to a method that did not exist was in a function without annotations. Fix: turn it on and
+  fix what it finds, or annotate the handler methods that call other handlers.
 
 ## To-do (owner)
 

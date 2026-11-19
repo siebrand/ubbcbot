@@ -1,0 +1,101 @@
+"""The admin places an order for a customer ("order for"), against the (mocked) database and a fake Telegram."""
+
+from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import pytest
+
+from handlers.admin.order.order_placement import OrderPlacement
+from models.entities import AuthorizationStatus, Customer, Offer, OfferStatus
+from services.database import DynamoDBService
+from services.user_cache import UserCache
+
+ADMIN_ID = 15005473
+GROUP_ID = -100777
+
+
+class FakeTelegram:
+    """Every handler talks to Telegram through TelegramClient: this one records what is sent"""
+
+    sent: list = []
+
+    def __init__(self, token):
+        pass
+
+    def call(self, method, data=None, get=False):
+        if method == "sendMessage":
+            FakeTelegram.sent.append((data["chat_id"], data["text"]))
+        return SimpleNamespace(ok=True, message_id=1, result={"username": "ubbc_bot"}, status_code=200, body="")
+
+
+@pytest.fixture
+def telegram(monkeypatch):
+    monkeypatch.setenv("DEFAULT_GROUP_ID", str(GROUP_ID))
+    FakeTelegram.sent = []
+    with patch("handlers.base_handler.TelegramClient", FakeTelegram):
+        yield FakeTelegram
+
+
+@pytest.fixture
+def db(dynamodb):
+    UserCache.invalidate_cache()
+    service = DynamoDBService()
+    service.create_offer(
+        Offer(
+            offer_id=7,
+            name="Pils",
+            price_per_unit=Decimal("2.50"),
+            wholesale_box_size=6,
+            status=OfferStatus.ACTIVE.value,
+        )
+    )
+    yield service
+    UserCache.invalidate_cache()
+
+
+def add_customer(db, telegram_id, name, is_guest=False):
+    return db.create_customer(
+        Customer(
+            telegram_user_id=telegram_id,
+            first_name=name,
+            is_guest=is_guest,
+            authorization_status=AuthorizationStatus.APPROVED.value,
+        )
+    )
+
+
+def sent_to(telegram, chat_id) -> list[str]:
+    return [text for chat, text in telegram.sent if chat == chat_id]
+
+
+@pytest.fixture
+def placement(db, telegram):
+    handler = OrderPlacement(db, ADMIN_ID, "prod", "token")
+    handler.sync_offer_messages = lambda *a, **k: None
+    return handler
+
+
+class TestOrderFor:
+    def test_the_order_is_placed_announced_and_confirmed(self, db, placement, telegram):
+        jan = add_customer(db, 101, "Jan")
+
+        result = placement.handle_create_order_for_quantity_select(ADMIN_ID, jan.customer_id, "7", "2")
+
+        assert result == {"status": "success"}
+        assert [o.quantity for o in db.get_orders_by_customer(jan.customer_id)] == [2]
+        assert len(sent_to(telegram, 101)) == 1  # the customer is told
+        assert len(sent_to(telegram, GROUP_ID)) == 1  # the group sees the order
+        assert placement._t("order_placed_for_user", name="Jan") in sent_to(telegram, ADMIN_ID)
+
+    def test_a_guest_is_never_messaged_and_its_order_not_announced(self, db, placement, telegram):
+        add_customer(db, -1, "Gast", is_guest=True)
+        guest = add_customer(db, -1, "Kees", is_guest=True)  # the second guest gets -2
+
+        result = placement.handle_create_order_for_quantity_select(ADMIN_ID, guest.customer_id, "7", "1")
+
+        assert result == {"status": "success"}
+        assert [chat for chat, _ in telegram.sent if chat != ADMIN_ID] == []
+        admin_texts = sent_to(telegram, ADMIN_ID)
+        assert placement._t("order_placed_for_user", name="Kees") in admin_texts
+        assert not any(placement._t("pm_notification_failed", name="Kees") in text for text in admin_texts)

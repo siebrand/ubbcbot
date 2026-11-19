@@ -311,6 +311,14 @@ class CustomerOrderCommands(PaymentMessageMixin, BaseHandler):
             logger.error(f"Error building order notification message: {e}")
             return None
 
+    def announce_order_for(self, customer, offer, quantity: int) -> None:
+        """Announce in the group an order that the admin placed for a customer (guests' orders are not announced)"""
+        if customer.is_guest:
+            return
+        message = self._build_order_notification_message(customer, offer, quantity)
+        if message:
+            self._send_order_notification_to_group(message)
+
     def _send_order_notification_to_group(self, message):
         """Send order notification message to default group"""
         import os

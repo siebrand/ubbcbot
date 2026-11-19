@@ -182,20 +182,19 @@ class OrderPlacement(BaseOrderHandler):
             latest_order = max(orders, key=lambda o: o.created_at) if orders else None
             order_status = latest_order.status if latest_order else "pending"
 
-            # Try to notify target customer
-            customer_message = self._t(
+            # Tell the customer, in their language (a guest has no Telegram and gets nothing)
+            pm_result = self._notify_customer(
+                customer,
                 "admin_order_placed",
-                customer.telegram_user_id,
                 product=offer.name,
                 quantity=quantity,
                 total=offer.price_per_unit * quantity,
                 order_id=latest_order.order_id[:8] if latest_order else "",
                 status=self._t(f"status_{order_status}", customer.telegram_user_id),
             )
-            pm_result = self._send_message(customer.telegram_user_id, customer_message)
 
-            # Send notification to default group (admin orders don't trigger this automatically)
-            order_handler._notify_channel_order(customer, offer, quantity)
+            # Announce in the group (execute_order does not for orders the admin places)
+            order_handler.announce_order_for(customer, offer, quantity)
 
             # Confirm to admin with PM status
             display_name = customer.first_name or self._t("unknown", user_id=None)

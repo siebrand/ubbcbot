@@ -127,8 +127,8 @@ async def send_from_admin(msg, environment):
     try:
         user_id = msg["user_id"]
 
-        # Skip invalid user IDs (e.g., guest users with -1)
-        if user_id == -1:
+        # A Telegram user id is positive: guests have negative ids of their own (-1, -2, ...)
+        if user_id <= 0:
             return {
                 "success": False,
                 "user_id": user_id,
