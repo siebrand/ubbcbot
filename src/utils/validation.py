@@ -77,6 +77,25 @@ class ValidationUtils:
                 matches.append(customer)
         return matches
 
+    def match_customers_exactly(self, identifier: str, customers: list) -> list:
+        """Match customers by customer ID prefix, or by their full name or username as a whole (case-insensitive,
+        a leading @ allowed). For the CSV import, which has nobody to ask: "Bert" must not be taken for "Robert"
+        (the interactive commands use the substring search of match_customers and show the candidates)."""
+        id_matches = self.match_customers_by_partial_id(identifier, customers)
+        if id_matches:
+            return id_matches
+
+        search = " ".join(identifier.split()).lower()
+        username = search.removeprefix("@")
+        if not username:
+            return []
+        return [
+            c
+            for c in customers
+            if (c.username and c.username.lower() == username)
+            or " ".join(f"{c.first_name or ''} {c.last_name or ''}".split()).lower() == search
+        ]
+
     def load_customers(self, status_filter: str | None = None) -> list:
         """All customers with the given authorization status, or of every status when no filter is given"""
         if status_filter:

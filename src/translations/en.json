@@ -603,7 +603,7 @@
   "failed_update_offer_status": "❌ Failed to update offer status",
   "invalid_offer_status": "❌ Invalid status: {status}. Supported: import, active, soldout, completed.",
   "import_offers": "📥 IMPORT OFFERS:",
-  "import_orders_prompt": "📤 Reply to this message with your CSV file (UTF-8, max 300 lines)\n\nRequired columns: offer_id, username",
+  "import_orders_prompt": "📤 Reply to this message with your CSV file (UTF-8, max 300 lines)\n\nRequired columns: offer_id, username\n\nusername: the username, the full name or the customer ID of an approved customer",
   "import_already_pending": "⚠️ Import already in progress. Use /cancel first.",
   "import_download_failed": "❌ Failed to download file",
   "import_error_encoding_error": "❌ File encoding error. Please use UTF-8.",

@@ -162,9 +162,9 @@ class ImportHandler(NotificationHandler):
 
         No messages and no buttons: the CSV import has nobody to ask which customer was meant.
         """
-        matches = self.validator.match_customers(username, customers)
+        matches = self.validator.match_customers_exactly(username, customers)
         if not matches:
-            if self.validator.match_customers(username, not_approved or []):
+            if self.validator.match_customers_exactly(username, not_approved or []):
                 return None, self._t("not_approved")
             return None, self._t("not_found")
         if len(matches) > 1:
@@ -176,7 +176,7 @@ class ImportHandler(NotificationHandler):
         collisions = []
         for idx, row in enumerate(rows, start=2):  # Line numbers start at 2 (header is 1)
             username = row["username"].strip()
-            matches = self.validator.match_customers(username, customers)
+            matches = self.validator.match_customers_exactly(username, customers)
             if len(matches) > 1:
                 collisions.append((idx, username, matches))
         return collisions
