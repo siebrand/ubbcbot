@@ -133,9 +133,12 @@ transactions (CLAUDE.md, Gotchas).
 - [ ] **B8. The plain page buttons are English** (`utils/pagination.py`, `build_pagination_keyboard` without
   `enhanced`: "◀️ Previous", "Page x/y", "Next ▶️"; found in audit 3, B3). Used by the supplier list and
   `/changelog`. Fix: let the caller pass the translated labels, or use the enhanced (icon-only) buttons everywhere.
-- [ ] **B9. The message Lambda returns the text of an exception** (`message_sender.py`, `lambda_handler`: the body
+- [x] **B9. The message Lambda returns the text of an exception** (`message_sender.py`, `lambda_handler`: the body
   holds `str(e)` and the log the full message). An SSM or Telethon error can name the parameter, the session or a
   user; the webhook and callback paths return only the exception type since audit 2. Fix: the type only, in both.
+  **Done**: `tests/test_message_sender_errors.py`. Left as it is: `send_from_admin` still logs and reports the text
+  of a Telethon error per message, because the admin's failure report needs it ("Could not find the input entity",
+  a flood wait); it names the user id, which the report shows anyway. Listed in audit 5.
 - [x] **B10. A test can reach the real Telegram API** (`tests/conftest.py`). In audit 3 (B4) a test sent a real
   request because a second handler's `_send_message` was not mocked; nothing stops that. Fix: an autouse fixture that
   makes `requests` (and `boto3` outside moto) fail loudly in tests, so a missed mock is a failure, not a request.

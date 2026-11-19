@@ -93,8 +93,9 @@ def lambda_handler(event, context):
         }
 
     except Exception as e:
-        logger.error(f"Error in message sender: {e}")
-        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
+        # The type only, as on the webhook: the message of an SSM or Telethon error can name a parameter or a user
+        logger.error(f"Error in message sender: {type(e).__name__}")
+        return {"statusCode": 500, "body": json.dumps({"error": type(e).__name__})}
 
 
 async def send_messages(messages, environment, bot_token, admin_language=DEFAULT_LANGUAGE):
