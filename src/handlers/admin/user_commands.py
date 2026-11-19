@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from handlers.base_handler import BaseHandler
@@ -430,55 +431,35 @@ class UserCommands(BaseHandler):
         """Build enhanced pagination keyboard for user lists"""
         return PaginationUtils.build_pagination_keyboard(current_page, total_pages, entity_type, enhanced=True)
 
-    def handle_edit_user_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
-        """Handle user selection from ambiguity resolution buttons"""
+    def _with_button_customer(
+        self, chat_id: int, customer_id: str, action: Callable[[Any], dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Hand the customer of a button to ``action``, or tell the admin the customer is gone"""
         customer = self.db.get_customer(customer_id)
-
         if not customer:
             self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
             return {"status": "user_not_found"}
+        return action(customer)
 
-        return self._show_user_edit_interface(customer, chat_id)
+    def handle_edit_user_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
+        """Handle user selection from ambiguity resolution buttons"""
+        return self._with_button_customer(chat_id, customer_id, lambda c: self._show_user_edit_interface(c, chat_id))
 
     def handle_user_status_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
         """Handle user selection from disambiguation for user status"""
-        customer = self.db.get_customer(customer_id)
-
-        if not customer:
-            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
-            return {"status": "user_not_found"}
-
-        return self._send_user_status(chat_id, customer)
+        return self._with_button_customer(chat_id, customer_id, lambda c: self._send_user_status(chat_id, c))
 
     def handle_approve_user_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
         """Handle user selection from disambiguation for approve user"""
-        customer = self.db.get_customer(customer_id)
-
-        if not customer:
-            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
-            return {"status": "user_not_found"}
-
-        return self._approve_user_by_customer(chat_id, customer)
+        return self._with_button_customer(chat_id, customer_id, lambda c: self._approve_user_by_customer(chat_id, c))
 
     def handle_approve_user_by_id(self, chat_id: int, customer_id: str) -> dict[str, Any]:
         """Handle user approval by customer ID (called from button callback)"""
-        customer = self.db.get_customer(customer_id)
-
-        if not customer:
-            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
-            return {"status": "user_not_found"}
-
-        return self._approve_user_by_customer(chat_id, customer)
+        return self.handle_approve_user_select(chat_id, customer_id)
 
     def handle_reject_user_by_id(self, chat_id: int, customer_id: str) -> dict[str, Any]:
         """Handle user rejection by customer ID (called from button callback)"""
-        customer = self.db.get_customer(customer_id)
-
-        if not customer:
-            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
-            return {"status": "user_not_found"}
-
-        return self._reject_customer(chat_id, customer)
+        return self._with_button_customer(chat_id, customer_id, lambda c: self._reject_customer(chat_id, c))
 
     def handle_create_guest(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /create_guest command"""
