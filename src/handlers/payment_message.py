@@ -52,7 +52,7 @@ class PaymentMessageMixin(BaseHandler):
                 self._t(
                     "pay_via_payment_request",
                     user_id=customer.telegram_user_id,
-                    link=payment_link,
+                    link=self._escape_html(payment_link),
                     total=delivered_total,
                 )
                 + "\n"

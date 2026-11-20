@@ -76,6 +76,27 @@ def start_and_reply(handler, db, between=lambda: None, link: str = LINK) -> list
     return json.loads(handler.lambda_client.invoke.call_args.kwargs["Payload"])["messages"]
 
 
+class TestThePaymentLink:
+    def test_the_link_is_escaped_in_the_html_message(self, handler, db, jan):
+        labeled(db, jan, 4)
+
+        (message,) = start_and_reply(handler, db, link="https://pay.example/r?a=1&b=<2>")
+
+        assert "https://pay.example/r?a=1&amp;b=&lt;2&gt;" in message["message"]
+        assert "&b=<2>" not in message["message"]
+
+    @pytest.mark.parametrize("link", ["not a link", "http://pay.example/abc", "https://pay.example/a b", ""])
+    def test_what_is_not_an_https_link_is_refused_and_asked_again(self, handler, db, jan, link):
+        order = labeled(db, jan, 4)
+
+        assert start_and_reply(handler, db, link=link) == []
+
+        assert db.get_order(order.order_id).status == OrderStatus.LABELING_COMPLETED.value
+        texts = [c.args[1] for c in handler._send_message.call_args_list]
+        assert handler._t("invalid_payment_link", ADMIN_ID) in texts
+        assert db.get_edit_context_by_chat_id(ADMIN_ID).edit_type == "payment_link_input"
+
+
 class TestOnlyReadyOrdersMove:
     def test_an_order_cancelled_in_between_is_not_charged_or_listed(self, handler, db, jan):
         kept, cancelled = labeled(db, jan, 4), labeled(db, jan, 2)

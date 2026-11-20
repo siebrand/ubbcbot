@@ -40,11 +40,14 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   balance once, when the overview moves the orders to `awaiting_payment`, show it in the payment message ("credit
   used", "still to pay"), and keep what was applied with the orders, so a reminder shows the same amount and does not
   apply it again. Test: 5 credit, an overview of 12 asks for 7 and the balance is 0; the reminder asks for 7 too.
-- [ ] **A3. The payment link goes into the HTML message unescaped, and anything is accepted as a link**
+- [x] **A3. The payment link goes into the HTML message unescaped, and anything is accepted as a link**
   (`payment_message.py`, `pay_via_payment_request` with `link=payment_link`; `handle_payment_link_input`). The link is
   typed by the admin; a `&` or `<` in it breaks the message (Telegram refuses it, so no customer of the batch gets an
   overview while their orders still move on, see A4). Fix: accept only an `https://` URL without spaces, escape it
-  in the message. Tests for both.
+  in the message. Tests for both. **Done**: `PAYMENT_LINK_PATTERN` (https, no spaces, at most 2000 characters);
+  anything else gets `invalid_payment_link` and the same batch is asked for again, before anything is stored, moved or
+  sent. The link is escaped in the payment message, so also in reminders (same builder).
+  `TestThePaymentLink` in `tests/test_overview_payment_link.py`.
 - [x] **A4. Orders move to `awaiting_payment` whatever happens to them in between** (`handle_payment_link_input`,
   `batch_update_order_status`). The order ids are collected when the overview starts and stored in the edit context;
   when the admin replies with the link, every one of them is set to `awaiting_payment` without a condition. An order

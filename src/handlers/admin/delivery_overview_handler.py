@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 from typing import Any
 
 import boto3
@@ -10,6 +11,9 @@ from handlers.payment_message import PaymentMessageMixin
 from models.entities import AuthorizationStatus, OrderStatus
 
 logger = logging.getLogger(__name__)
+
+# A payment link as the admin pastes it: https, no spaces, not absurdly long
+PAYMENT_LINK_PATTERN = re.compile(r"https://\S{1,2000}")
 
 
 class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
@@ -83,19 +87,19 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
     def handle_payment_link_input(self, chat_id: int, payment_link: str, batch_str: str) -> dict[str, Any]:
         """Handle payment link input and invoke async message sender"""
         try:
+            context_data = json.loads(batch_str)
+            customers_data = context_data["customers_data"]
+            batch_index = context_data["current_batch"]
+
+            # The link goes into every message of the batch: only a plain https URL, or the admin is asked again
+            payment_link = payment_link.strip()
+            if not PAYMENT_LINK_PATTERN.fullmatch(payment_link):
+                self._send_message(chat_id, self._t("invalid_payment_link", chat_id))
+                return self._request_payment_link(chat_id, customers_data, batch_index)
+
             # Store payment link for later use
             self._store_payment_link(payment_link)
 
-            # Get stored customers data from context
-            import json
-            import logging
-
-            logger = logging.getLogger()
-
-            context_data = json.loads(batch_str)
-            customers_data = context_data["customers_data"]
-
-            batch_index = context_data["current_batch"]
             start_idx = batch_index * 50
             end_idx = min(start_idx + 50, len(customers_data))
 
