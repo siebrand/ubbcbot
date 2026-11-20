@@ -149,6 +149,88 @@ class TelegramText:
         return handler._t(key, telegram_id, units=units, product="[7] Pils")
 
 
+class TestRestDelayed:
+    """The received units are labeled and charged; the late ones stay ordered until they arrive (audit 5, A1)"""
+
+    def test_the_received_units_go_to_labeling_and_the_rest_stays_ordered(self, db):
+        jan = customer(db, 101, "Jan")
+        filled = order(db, jan, 6)
+
+        deliver(db, 4, is_delayed=True)
+
+        orders = {o.order_id: o for o in db.get_orders_by_box(BOX_ID)}
+        kept = orders[filled.order_id]
+        assert (kept.status, kept.quantity, kept.received_quantity, kept.total_price) == (
+            OrderStatus.READY_FOR_LABELING.value,
+            4,
+            4,
+            Decimal("10"),
+        )
+        (rest,) = [o for o in orders.values() if o.order_id != filled.order_id]
+        assert (rest.status, rest.quantity, rest.received_quantity, rest.total_price) == (
+            OrderStatus.ORDERED.value,
+            2,
+            0,
+            Decimal("5"),
+        )
+        assert db.get_box(BOX_ID).status == "ordered"
+
+    def test_the_received_units_are_charged_now_and_the_late_ones_when_they_come(self, db):
+        jan = customer(db, 101, "Jan")
+        order(db, jan, 6)
+
+        deliver(db, 4, is_delayed=True)
+        label(db)
+        handler, customers_data = overview(db)
+        first = handler._build_delivery_message_payload(customers_data[0], "https://pay.example")["message"]
+        assert "4x [7] Pils — €10.00" in first
+
+        handler.lambda_client = Mock()
+        handler.handle_payment_link_input(
+            ADMIN_ID, "https://pay.example", db.get_edit_context_by_chat_id(ADMIN_ID).entity_id
+        )
+        deliver(db, 2, is_delayed=False)
+        label(db)
+        handler, customers_data = overview(db)
+        later = handler._build_delivery_message_payload(customers_data[0], "https://pay.example")["message"]
+
+        assert "2x [7] Pils — €5.00" in later
+        assert db.get_box(BOX_ID).status == "delivered"
+
+    def test_an_order_that_changed_since_it_was_read_is_not_split(self, db):
+        jan = customer(db, 101, "Jan")
+        stale = order(db, jan, 6)
+        assert db.update_order(stale.order_id, {"status": OrderStatus.CANCELLED.value})
+        rest = Order(customer_id=jan.customer_id, box_id=BOX_ID, offer_id=7, quantity=2, status="ordered")
+
+        assert not db.split_order(stale, 4, OrderStatus.READY_FOR_LABELING.value, rest)
+
+        (only,) = db.get_orders_by_box(BOX_ID)
+        assert (only.order_id, only.status, only.quantity) == (stale.order_id, OrderStatus.CANCELLED.value, 6)
+
+    def test_a_split_that_is_refused_leaves_the_order_and_tells_nobody(self, db):
+        jan = customer(db, 101, "Jan")
+        order(db, jan, 6)
+        db.split_order = Mock(return_value=False)
+
+        messages = TestTheCustomersAreTold.process(db, 4, is_delayed=True)
+
+        assert messages == []
+        (only,) = db.get_orders_by_box(BOX_ID)
+        assert (only.status, only.quantity) == (OrderStatus.ORDERED.value, 6)
+        assert db.get_box(BOX_ID).status == "ordered"
+
+    def test_orders_beyond_the_received_units_stay_ordered_whole(self, db):
+        jan, piet = customer(db, 101, "Jan"), customer(db, 102, "Piet")
+        order(db, jan, 3), order(db, piet, 3)
+
+        deliver(db, 3, is_delayed=True)
+
+        statuses = sorted(o.status for o in db.get_orders_by_box(BOX_ID))
+        assert statuses == [OrderStatus.ORDERED.value, OrderStatus.READY_FOR_LABELING.value]
+        assert len(db.get_orders_by_box(BOX_ID)) == 2
+
+
 class TestRestCancelled:
     def test_the_received_units_are_charged_and_nothing_is_said_to_be_delayed(self, db):
         jan = customer(db, 101, "Jan")

@@ -92,18 +92,16 @@ class WholesalerDeliveryService:
     def _process_partial_delayed(
         self, orders: list[Order], units_received: int, missing_units: int, box_id: str, shortages: dict
     ):
-        """Process partial delivery where missing units are delayed"""
+        """Process partial delivery where missing units are delayed.
+
+        The received units go to labeling (and are charged); the delayed ones stay ``ordered``, and so does the box,
+        so the next /process_delivery finds them when they arrive.
+        """
         remaining_to_allocate = units_received
 
         for order in orders:
             if remaining_to_allocate <= 0:
-                # No more units to allocate - mark as delayed
-                self.db.update_order(
-                    order.order_id,
-                    {"received_quantity": 0, "status": OrderStatus.RECEIVED_PARTIAL_DELAYED.value},
-                    admin_id=self.admin_user_id,
-                    reason="Partial delivery - units delayed",
-                )
+                # No more units to allocate: the whole order is delayed and stays ordered
                 shortages[(order.customer_id, order.offer_id)] += order.quantity
             elif remaining_to_allocate >= order.quantity:
                 # Full order can be fulfilled
@@ -115,18 +113,34 @@ class WholesalerDeliveryService:
                 )
                 remaining_to_allocate -= order.quantity
             else:
-                # Partial fulfillment of this order
-                self.db.update_order(
-                    order.order_id,
-                    {"received_quantity": remaining_to_allocate, "status": OrderStatus.RECEIVED_PARTIAL_DELAYED.value},
-                    admin_id=self.admin_user_id,
-                    reason="Partial delivery - remaining delayed",
-                )
-                shortages[(order.customer_id, order.offer_id)] += order.quantity - remaining_to_allocate
+                # Partial fulfillment: the received units go to labeling, the rest is an ordered order of its own
+                if self._split(order, remaining_to_allocate, OrderStatus.ORDERED.value):
+                    shortages[(order.customer_id, order.offer_id)] += order.quantity - remaining_to_allocate
                 remaining_to_allocate = 0
 
-        # Update box status to DELIVERED via service
-        self.box_status_manager.mark_box_as_delivered(box_id)
+        # The box is delivered once nothing in it is still on its way
+        if not any(o.status == OrderStatus.ORDERED.value for o in self._get_orders_by_box(box_id)):
+            self.box_status_manager.mark_box_as_delivered(box_id)
+
+    def _split(self, order: Order, received: int, rest_status: str) -> bool:
+        """The order keeps its ``received`` units, ready for labeling; the other units become an order of their own
+        with ``rest_status``. One transaction, so units are neither lost nor counted twice."""
+        rest = Order(
+            customer_id=order.customer_id,
+            box_id=order.box_id,
+            offer_id=order.offer_id,
+            quantity=order.quantity - received,
+            received_quantity=0,
+            unit_price=order.unit_price,
+            total_price=order.unit_price * (order.quantity - received),
+            status=rest_status,
+            placed_by_admin=order.placed_by_admin,
+            created_at=order.created_at,
+        )
+        if self.db.split_order(order, received, OrderStatus.READY_FOR_LABELING.value, rest):
+            return True
+        logger.error(f"Order {order.order_id} could not be split after a partial delivery")
+        return False
 
     def _process_partial_cancelled(
         self, orders: list[Order], units_received: int, missing_units: int, box_id: str, shortages: dict
@@ -151,32 +165,8 @@ class WholesalerDeliveryService:
             else:
                 # Partial fulfillment - the order shrinks to the received units (so they are delivered and charged),
                 # and the rest becomes a cancelled order of its own
-                self.db.update_order(
-                    order.order_id,
-                    {
-                        "quantity": remaining_to_allocate,
-                        "received_quantity": remaining_to_allocate,
-                        "total_price": order.unit_price * remaining_to_allocate,
-                        "status": OrderStatus.READY_FOR_LABELING.value,
-                    },
-                    admin_id=self.admin_user_id,
-                    reason="Partial delivery - remaining cancelled",
-                )
-
-                # Create new order record for cancelled portion
-                cancelled_order = Order(
-                    customer_id=order.customer_id,
-                    box_id=order.box_id,
-                    offer_id=order.offer_id,
-                    quantity=order.quantity - remaining_to_allocate,
-                    received_quantity=0,
-                    unit_price=order.unit_price,
-                    total_price=order.unit_price * (order.quantity - remaining_to_allocate),
-                    status=OrderStatus.CANCELLED.value,
-                    placed_by_admin=order.placed_by_admin,
-                )
-                self.db.create_order(cancelled_order, admin_id=self.admin_user_id)
-                shortages[(order.customer_id, order.offer_id)] += cancelled_order.quantity
+                if self._split(order, remaining_to_allocate, OrderStatus.CANCELLED.value):
+                    shortages[(order.customer_id, order.offer_id)] += order.quantity - remaining_to_allocate
                 remaining_to_allocate = 0
 
         # Update box status to DELIVERED via service

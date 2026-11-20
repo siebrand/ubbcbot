@@ -182,6 +182,55 @@ class OrderRepository(BaseRepository):
             logger.error(f"Moving order {order_id} to box {to_box_id} failed: {type(e).__name__}")
             return False
 
+    def split(self, order: Order, kept_quantity: int, kept_status: str, rest: Order) -> bool:
+        """Split an order in one transaction: it keeps ``kept_quantity`` units (all received, at its unit price,
+        with ``kept_status``), and ``rest`` is written as an order of its own with the other units.
+
+        Only while the order still has the status and quantity it was read with, so a second delivery cannot split
+        it again. The box keeps its quantity: the units stay in it. Returns False when rejected or failed.
+        """
+        serializer = TypeSerializer()
+        rest_item = {k: serializer.serialize(v) for k, v in self._prepare_item(rest.__dict__).items()}
+        client = boto3.client("dynamodb")  # plain low-level client, as in create_with_box_increment
+        try:
+            client.transact_write_items(
+                TransactItems=[
+                    {
+                        "Update": {
+                            "TableName": self.table_name,
+                            "Key": {"order_id": {"S": order.order_id}},
+                            "UpdateExpression": (
+                                "SET quantity = :kept, received_quantity = :kept, total_price = :total, "
+                                "#status = :kept_status"
+                            ),
+                            "ConditionExpression": "#status = :status AND quantity = :quantity",
+                            "ExpressionAttributeNames": {"#status": "status"},
+                            "ExpressionAttributeValues": {
+                                ":kept": {"N": str(kept_quantity)},
+                                ":total": {"N": str(order.unit_price * kept_quantity)},
+                                ":kept_status": {"S": kept_status},
+                                ":status": {"S": order.status},
+                                ":quantity": {"N": str(order.quantity)},
+                            },
+                        }
+                    },
+                    {
+                        "Put": {
+                            "TableName": self.table_name,
+                            "Item": rest_item,
+                            "ConditionExpression": "attribute_not_exists(order_id)",
+                        }
+                    },
+                ]
+            )
+            return True
+        except ClientError as e:
+            logger.error(f"Splitting order {order.order_id} failed: {e.response['Error']['Code']}")
+            return False
+        except Exception as e:
+            logger.error(f"Splitting order {order.order_id} failed: {type(e).__name__}")
+            return False
+
     def create_order(self, order: Order) -> Order | None:
         try:
             item = self._prepare_item(order.__dict__)

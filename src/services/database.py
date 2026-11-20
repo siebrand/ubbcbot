@@ -124,6 +124,11 @@ class DynamoDBService:
             logger.error(f"Error creating order: {e}")
             return None
 
+    def split_order(self, order: Order, kept_quantity: int, kept_status: str, rest: Order) -> bool:
+        """Split an order in two in one transaction (see OrderRepository.split). No purchase event: the units were
+        counted when the order was placed, and they stay ordered."""
+        return self.order_repo.split(order, kept_quantity, kept_status, rest)
+
     def create_order_with_box_increment(
         self, order: Order, box_id: str, quantity: int, max_capacity: int, admin_id: int = 0
     ) -> Order | None:

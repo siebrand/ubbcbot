@@ -26,7 +26,7 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
 
 ## High priority
 
-- [ ] **A1. Orders whose units are delayed are stranded** (`wholesaler_delivery.py`, `_process_partial_delayed`).
+- [x] **A1. Orders whose units are delayed are stranded** (`wholesaler_delivery.py`, `_process_partial_delayed`).
   When fewer units arrive and the rest is delayed, the orders that are not (fully) filled get the status
   `received_partial_delayed` and the box is marked `delivered`. Nothing reads that status again (only an emoji in
   the order list): the units that did arrive are never labeled or charged, and the delivery flow only offers
@@ -34,6 +34,14 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   received units of a partly filled order into an order of their own that goes to labeling; the delayed units stay an
   `ordered` order, and the box stays `ordered` while it has them, so the next `/process_delivery` finds it. Test: 6
   ordered, 4 arrive, the rest delayed → 4 are labeled and charged; delivering the other 2 later charges them too.
+  **Done**: an order the delivery does not reach stays `ordered`; a partly filled one is split by the new
+  `OrderRepository.split` (`DynamoDBService.split_order`): one transaction that shrinks the order to the received
+  units (ready for labeling) and writes the rest as an order of its own, on condition that the order still has the
+  status and quantity it was read with. The box is only marked delivered when none of its orders is `ordered`. The
+  cancelled rest of audit 4, A1 now goes through the same split (it was two writes). Nothing sets
+  `received_partial_delayed` any more. Not done here: orders that already have that status in the table stay
+  stranded; check prod for them (a one-off script can split them the same way). When a split is refused, the order
+  stays `ordered` whole and nobody is told (logged). `TestRestDelayed` in `tests/test_wholesale_partial_delivery.py`.
 - [ ] **A2. Credit is never applied to a payment** (`credit_service.py`, found in audit 4, B1).
   `apply_credit_to_delivery` has no caller: a customer with credit pays the full amount, and a debt (a negative
   balance from `/credit`) is never charged. The payment message does not mention credit either. Fix: apply the
