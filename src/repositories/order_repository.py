@@ -182,6 +182,65 @@ class OrderRepository(BaseRepository):
             logger.error(f"Moving order {order_id} to box {to_box_id} failed: {type(e).__name__}")
             return False
 
+    def cancel_items(self, order: Order) -> list[dict[str, Any]]:
+        """The transaction items that cancel ``order`` and take its units off its box.
+
+        The order is only cancelled while it still has the status, box and quantity it was read with, so a
+        second cancel (an old confirmation tapped again, a retried webhook) changes nothing; the box only while it
+        holds the units.
+        """
+        from datetime import UTC, datetime
+
+        return [
+            {
+                "Update": {
+                    "TableName": self.table_name,
+                    "Key": {"order_id": {"S": order.order_id}},
+                    "UpdateExpression": "SET #status = :cancelled, update_date = :now",
+                    "ConditionExpression": (
+                        "#status = :status AND #status <> :cancelled AND box_id = :box AND quantity = :quantity"
+                    ),
+                    "ExpressionAttributeNames": {"#status": "status"},
+                    "ExpressionAttributeValues": {
+                        ":cancelled": {"S": OrderStatus.CANCELLED.value},
+                        ":now": {"S": datetime.now(UTC).isoformat()},
+                        ":status": {"S": order.status},
+                        ":box": {"S": order.box_id},
+                        ":quantity": {"N": str(order.quantity)},
+                    },
+                }
+            },
+            {
+                "Update": {
+                    "TableName": f"{self.table_prefix}-boxes",
+                    "Key": {"box_id": {"S": order.box_id}},
+                    "UpdateExpression": "ADD current_quantity :minus",
+                    "ConditionExpression": "current_quantity >= :quantity",
+                    "ExpressionAttributeValues": {
+                        ":minus": {"N": str(-order.quantity)},
+                        ":quantity": {"N": str(order.quantity)},
+                    },
+                }
+            },
+        ]
+
+    def cancel_with_box(self, order: Order) -> bool:
+        """Cancel the order and take its units off its box in one transaction (see cancel_items). False when the
+        order changed since it was read (already cancelled), the box does not hold the units, or the write failed."""
+        try:
+            boto3.client("dynamodb").transact_write_items(TransactItems=self.cancel_items(order))
+            return True
+        except ClientError as e:
+            code = e.response["Error"]["Code"]
+            if code in ("TransactionCanceledException", "ConditionalCheckFailedException"):
+                logger.warning(f"Cancelling order {order.order_id} was rejected: it changed since it was read")
+            else:
+                logger.error(f"Cancelling order {order.order_id} failed: {code}")
+            return False
+        except Exception as e:
+            logger.error(f"Cancelling order {order.order_id} failed: {type(e).__name__}")
+            return False
+
     def split(self, order: Order, kept_quantity: int, kept_status: str, rest: Order) -> bool:
         """Split an order in one transaction: it keeps ``kept_quantity`` units (all received, at its unit price,
         with ``kept_status``), and ``rest`` is written as an order of its own with the other units.

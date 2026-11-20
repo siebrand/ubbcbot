@@ -450,6 +450,11 @@ class DynamoDBService:
         """Cancel an order (inventory correction handled by the status update). False when there is no such order."""
         return self.update_order(order_id, {"status": OrderStatus.CANCELLED.value}, admin_id, reason)
 
+    def cancel_order_with_box(self, order: Order) -> bool:
+        """Cancel an order and take its units off its box in one write, only while the order is as it was read (see
+        OrderRepository.cancel_with_box). False when it was already cancelled or changed in the meantime."""
+        return self.order_repo.cancel_with_box(order)
+
     def mark_order_paid(self, order_id: str, admin_id: int) -> bool:
         """Mark an order as paid (records a PAYMENT_RECEIVED analytics event)."""
         return self.update_order(order_id, {"status": OrderStatus.COMPLETED.value}, admin_id, "Payment received")

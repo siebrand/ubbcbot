@@ -80,6 +80,7 @@ class TestOrderCancellation(unittest.TestCase):
         mock_order.offer_id = 1
         mock_order.customer_id = "cust123"
         mock_order.total_price = 20.0
+        mock_order.status = "ordered"
 
         # Mock box with proper attributes
         mock_box = Mock()
@@ -93,8 +94,8 @@ class TestOrderCancellation(unittest.TestCase):
         refreshed_box.current_quantity = 8
         refreshed_box.max_capacity = 24
 
-        # Mock database operations - now uses cancel_order
-        self.mock_db.cancel_order.return_value = True
+        # The order and its box change in one write
+        self.mock_db.cancel_order_with_box.return_value = True
         self.mock_db.get_box.return_value = refreshed_box
 
         # Mock customer and offer
@@ -111,8 +112,7 @@ class TestOrderCancellation(unittest.TestCase):
         # Verify success
         self.assertEqual(result["status"], "success")
 
-        # Verify cancel_order was called
-        self.mock_db.cancel_order.assert_called_once_with("test123", self.admin_user_id, "Test reason")
+        self.mock_db.cancel_order_with_box.assert_called_once_with(mock_order)
 
     @patch.object(OrderCancellation, "_send_message")
     def test_execute_cancel_database_error(self, mock_send):
@@ -120,13 +120,14 @@ class TestOrderCancellation(unittest.TestCase):
         mock_order = Mock()
         mock_order.order_id = "test123"
         mock_order.quantity = 2
+        mock_order.status = "ordered"
         mock_box = Mock()
         mock_box.box_id = "box123"
         mock_box.current_quantity = 10
         mock_box.max_capacity = 24
 
         # Mock database failure
-        self.mock_db.cancel_order.return_value = False
+        self.mock_db.cancel_order_with_box.return_value = False
 
         result = self.handler._execute_cancel(mock_order, mock_box, 123)
 
@@ -141,6 +142,7 @@ class TestOrderCancellation(unittest.TestCase):
         mock_order.offer_id = 1
         mock_order.customer_id = "cust123"
         mock_order.total_price = 25.0
+        mock_order.status = "ordered"
 
         # Test case: quantity becomes 0
         mock_box = Mock()
@@ -154,7 +156,7 @@ class TestOrderCancellation(unittest.TestCase):
         refreshed_box.current_quantity = 0
         refreshed_box.max_capacity = 24
 
-        self.mock_db.cancel_order.return_value = True
+        self.mock_db.cancel_order_with_box.return_value = True
         self.mock_db.get_box.return_value = refreshed_box
         self.mock_db.get_customer.return_value = Mock()
         self.mock_db.get_offer.return_value = Mock()
@@ -162,8 +164,7 @@ class TestOrderCancellation(unittest.TestCase):
         with patch.object(self.handler, "_send_message"):
             self.handler._execute_cancel(mock_order, mock_box, 123)
 
-        # Verify cancel_order was called
-        self.mock_db.cancel_order.assert_called()
+        self.mock_db.cancel_order_with_box.assert_called_once_with(mock_order)
 
 
 if __name__ == "__main__":

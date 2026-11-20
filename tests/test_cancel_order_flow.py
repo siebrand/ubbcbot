@@ -161,6 +161,41 @@ class TestCancelOrderFlow:
         assert f"cancel_orders_page_{order.customer_id}_1" in second_page.buttons  # and back
 
 
+class TestAnOrderIsCancelledOnce:
+    """An old confirmation tapped again, two taps or a retried webhook: the box gets the units back once (audit 6,
+    A1)"""
+
+    def test_cancelling_twice_gives_the_units_back_once(self, flow, db, order):
+        other = Order(customer_id=order.customer_id, box_id=order.box_id, offer_id=7, quantity=3, status="ordered")
+        assert db.order_repo.create_order(other)
+        db.update_box(order.box_id, {"current_quantity": 5})
+
+        first = flow.admin_order.handle_confirm_cancel_with_reason(ADMIN_ID, order.order_id, "Customer asked")
+        second = flow.admin_order.handle_confirm_cancel_with_reason(ADMIN_ID, order.order_id, "Customer asked")
+
+        assert first == {"status": "success"}
+        assert second == {"status": "already_cancelled"}
+        assert db.get_box(order.box_id).current_quantity == 3  # the other order's units are still counted
+        assert "al geannuleerd" in flow.sent[-1].text
+
+    def test_an_order_cancelled_after_it_was_read_does_not_give_its_units_back_again(self, flow, db, order):
+        stale = db.get_order(order.order_id)
+        assert flow.admin_order.handle_confirm_cancel_with_reason(ADMIN_ID, order.order_id, "First tap")
+        box = db.get_box(order.box_id)
+
+        result = flow.admin_order._execute_cancel(stale, box, ADMIN_ID, "Second tap")
+
+        assert result["status"] != "success"
+        assert db.get_box(order.box_id).current_quantity == 0
+
+    def test_the_customer_is_told_once(self, flow, db, order):
+        with patch.object(BaseHandler, "_notify_customer") as notify:
+            flow.admin_order.handle_confirm_cancel_with_reason(ADMIN_ID, order.order_id, "Customer asked")
+            flow.admin_order.handle_confirm_cancel_with_reason(ADMIN_ID, order.order_id, "Customer asked")
+
+        assert notify.call_count == 1
+
+
 def _order_placed_at(order, placed_at, quantity=1):
     return Order(
         customer_id=order.customer_id,

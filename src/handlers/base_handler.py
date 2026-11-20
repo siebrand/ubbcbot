@@ -2,6 +2,7 @@ import html
 import logging
 from typing import Any
 
+from models.entities import OrderStatus
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
 from services.export_expiry import ExportExpiryService
@@ -425,13 +426,20 @@ class BaseHandler:
             self.sync_offer_messages(offer_id)
 
     def _execute_cancel(self, order, box, chat_id: int, reason: str = "Manual cancellation") -> dict[str, Any]:
-        """Cancel an order as the admin: the box gets the units back, the customer is told, the admin sees the box"""
-        if not self.db.cancel_order(order.order_id, self.admin_user_id, reason):
+        """Cancel an order as the admin: the box gets the units back, the customer is told, the admin sees the box.
+
+        The order and its box change in one write, only while the order is as it was read: an order that was
+        cancelled in the meantime (an old confirmation tapped again) gives its units back once.
+        """
+        if order.status == OrderStatus.CANCELLED.value or not self.db.cancel_order_with_box(order):
+            current = self.db.get_order(order.order_id)
+            if current and current.status == OrderStatus.CANCELLED.value:
+                self._send_message(chat_id, self._t("order_already_cancelled", chat_id))
+                return {"status": "already_cancelled"}
             self._send_message(chat_id, self._t("failed_cancel_order", chat_id))
             return {"status": "error"}
 
-        if not self.box_status_manager.update_box_after_order_cancellation(box.box_id, order.quantity):
-            logger.error(f"Failed to update box {box.box_id} after cancellation")
+        self.box_status_manager.update_box_status_after_cancellation(box.box_id)
         self._check_offer_status_after_change(order.offer_id)
 
         offer = self.db.get_offer(order.offer_id)

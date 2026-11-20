@@ -25,7 +25,7 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
 
 ## High priority
 
-- [ ] **A1. An order can be cancelled twice, and gives its units back twice** (`handle_confirm_cancel_with_reason`
+- [x] **A1. An order can be cancelled twice, and gives its units back twice** (`handle_confirm_cancel_with_reason`
   → `_execute_cancel` → `cancel_order`). `cancel_order` sets the status without a condition and returns True for an
   order that was already cancelled; `_execute_cancel` then takes the quantity off the box again. Only the
   `/cancel_order <full id>` path checks the status first; the confirmation button and the reason reply do not, so an
@@ -34,6 +34,14 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   cancelled, and change the box only when the cancel happened; better, the status and the box count in one
   transaction. Test: cancel the same order twice → the box loses its quantity once, the second answer says it is
   already cancelled.
+  Done: `_execute_cancel` now uses `DynamoDBService.cancel_order_with_box` (`OrderRepository.cancel_with_box`): the
+  order's status and the box count in one transaction, the order on condition of the status, box and quantity it was
+  read with (and not cancelled), the box on condition that it holds the units. A rejected cancel reads the order
+  again and says "already cancelled" (`already_cancelled`) or "failed". The customer is told once. The status
+  follow-up is `BoxStatusManager.update_box_status_after_cancellation`. Found: `DynamoDBService.update_order`
+  ignores its `admin_id` and `reason` arguments, so the reason given for a cancel is only in the customer's message;
+  `/cancel_offer`, the wholesale plan and the wholesaler delivery still use the unconditional `cancel_order` (A5, B3).
+  Tests: `tests/test_cancel_order_flow.py::TestAnOrderIsCancelledOnce`.
 - [ ] **A2. Cancelling a delivered order reopens a delivered box** (`_execute_cancel`,
   `update_box_after_order_cancellation`). `/cancel_order <id>` accepts an order in any status but `cancelled`: also
   `ready_for_labeling` … `awaiting_payment` and `completed`. The units go back to the box and the box is set to
