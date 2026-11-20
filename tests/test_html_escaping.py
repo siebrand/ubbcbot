@@ -187,7 +187,7 @@ class TestPaymentReminderToGuest:
         guest = _customer(is_guest=True)
         db = Mock()
         db.get_customer.return_value = guest
-        db.get_orders_by_customer.return_value = [SimpleNamespace(status="awaiting_payment")]
+        db.get_orders_by_customer.return_value = [SimpleNamespace(status="awaiting_payment", payment_link=None)]
         db.get_payment_link.return_value = "https://pay.example"
         handler = OrderStatusManagement(db, ADMIN_ID, "test", "token")
         handler._send_message = Mock(return_value={"success": True})

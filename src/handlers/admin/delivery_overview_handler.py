@@ -114,6 +114,7 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
                         OrderStatus.AWAITING_PAYMENT.value,
                         admin_id=self.admin_user_id,
                         from_status=OrderStatus.LABELING_COMPLETED.value,
+                        also={"payment_link": payment_link},  # a reminder uses the link of this batch
                     )
                 )
                 logger.info(f"Successfully updated {len(moved)}/{len(all_order_ids)} orders")

@@ -92,10 +92,16 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   overview has already moved its orders to `awaiting_payment` (the send is asynchronous), so it is never listed. The
   message sender does tell the admin which messages failed. Fix: rename and reword it as "not yet sent", or keep the
   failures (the sender knows them) and list those. Decide which; the text says "need to be contacted manually".
-- [ ] **B2. The reminder uses the last payment link, whatever batch the customer was in**
+- [x] **B2. The reminder uses the last payment link, whatever batch the customer was in**
   (`handle_send_payment_reminder_to_customer`, `system_repository.py`: one `payment_link` item). The overview asks for
   a link per batch of 50; a reminder to a customer of the first batch carries the link of the last. Fix: keep the link
   with the orders (or per batch) and remind with the customer's own; or, if one link fits everyone, ask for it once.
+  **Done**, with the link kept with the orders: a link per batch is presumably there because a payment request takes
+  a limited number of payers, so asking once could break that. The overview sets `payment_link` on each order in the
+  same conditional write that moves it to `awaiting_payment` (`batch_update_order_status` takes `also`); the
+  reminder and the customer's `/payment_info` (which had the same problem) use the link of the customer's newest
+  order awaiting payment, and fall back to the stored last link for orders moved before this change.
+  `TestTheLinkOfTheCustomersBatch` in `tests/test_overview_payment_link.py` (51 customers, two batches).
 - [x] **B3. Four copies of "approved customers with orders in status X", each with a query per customer**
   (`order_status.py` three times, `start_send_overviews`). Every screen reads all approved customers and then the
   orders of each, one query per customer. Fix: one helper that reads the orders by status (`status-index` exists) and

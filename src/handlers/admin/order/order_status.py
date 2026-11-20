@@ -207,8 +207,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
             )
             return {"status": "no_orders"}
 
-        # Get stored payment link
-        payment_link = self.db.get_payment_link()
+        payment_link = self._payment_link_for(awaiting_payment_orders)
         if not payment_link:
             self._send_message(chat_id, self._t("no_payment_link_stored", user_id=None))
             return {"status": "no_payment_link"}

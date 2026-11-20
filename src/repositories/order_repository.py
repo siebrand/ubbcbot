@@ -363,11 +363,14 @@ class OrderRepository(BaseRepository):
             logger.error(f"Error batch getting orders: {e}")
             return []
 
-    def batch_update_order_status(self, order_ids: list[str], status: str, from_status: str | None = None) -> list[str]:
+    def batch_update_order_status(
+        self, order_ids: list[str], status: str, from_status: str | None = None, also: dict[str, Any] | None = None
+    ) -> list[str]:
         """Set the status of many orders. Returns the ids of the orders that were updated.
 
         With ``from_status`` an order is only updated while it still has that status: one that was cancelled, paid
-        or moved since its id was collected keeps its status and is left out of the result.
+        or moved since its id was collected keeps its status and is left out of the result. ``also`` are other
+        attributes set in the same write.
         """
         try:
             from datetime import UTC, datetime
@@ -376,6 +379,12 @@ class OrderRepository(BaseRepository):
             update_date = datetime.now(UTC).isoformat()
             condition: dict[str, Any] = {}
             values: dict[str, Any] = {":status": status, ":update_date": update_date}
+            names = {"#status": "status", "#update_date": "update_date"}
+            expression = "SET #status = :status, #update_date = :update_date"
+            for n, (attribute, value) in enumerate((also or {}).items()):
+                names[f"#also{n}"] = attribute
+                values[f":also{n}"] = value
+                expression += f", #also{n} = :also{n}"
             if from_status:
                 condition = {"ConditionExpression": "#status = :from_status"}
                 values[":from_status"] = from_status
@@ -388,8 +397,8 @@ class OrderRepository(BaseRepository):
                     try:
                         self.table.update_item(
                             Key={"order_id": order_id},
-                            UpdateExpression="SET #status = :status, #update_date = :update_date",
-                            ExpressionAttributeNames={"#status": "status", "#update_date": "update_date"},
+                            UpdateExpression=expression,
+                            ExpressionAttributeNames=names,
                             ExpressionAttributeValues=values,
                             **condition,
                         )

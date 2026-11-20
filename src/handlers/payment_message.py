@@ -8,6 +8,14 @@ from handlers.base_handler import BaseHandler
 class PaymentMessageMixin(BaseHandler):
     """For handlers (it uses `self.db`, `self._t` and `self._escape_html`). The text is sent as HTML."""
 
+    def _payment_link_for(self, orders: list) -> str | None:
+        """The link the customer was asked to pay with: that of the batch of their newest order awaiting payment.
+        Orders moved before the link was kept with them fall back to the last link that was stored."""
+        with_link = [o for o in orders if o.payment_link]
+        if with_link:
+            return max(with_link, key=lambda o: str(o.update_date or "")).payment_link
+        return self.db.get_payment_link()
+
     def _aggregate_order_lines(self, orders: list) -> list[tuple]:
         """Aggregate orders by offer and sort alphabetically by offer name.
 

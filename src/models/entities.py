@@ -120,6 +120,8 @@ class Order:
     # Credit used for this order when the delivery overview asked for the payment (negative: a debt charged with it).
     # What the customer pays is total_price - credit_applied.
     credit_applied: Decimal = Decimal("0")
+    # The payment link of the overview batch that asked for the payment: reminders use it, not the last one
+    payment_link: str | None = None
     status: str = OrderStatus.PENDING.value
     placed_by_admin: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

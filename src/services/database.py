@@ -232,13 +232,18 @@ class DynamoDBService:
             return False
 
     def batch_update_order_status(
-        self, order_ids: list[str], status: str, admin_id: int = 0, from_status: str | None = None
+        self,
+        order_ids: list[str],
+        status: str,
+        admin_id: int = 0,
+        from_status: str | None = None,
+        also: dict[str, Any] | None = None,
     ) -> list[str]:
-        """Set the status of many orders; with ``from_status`` only of those that still have it. Returns the ids
-        of the orders that were updated."""
+        """Set the status of many orders (and the attributes in ``also``); with ``from_status`` only of those that
+        still have it. Returns the ids of the orders that were updated."""
         # Read before the update: the old status of each order decides whether it is a payment
         orders = self.order_repo.batch_get_orders(order_ids)
-        updated = set(self.order_repo.batch_update_order_status(order_ids, status, from_status))
+        updated = set(self.order_repo.batch_update_order_status(order_ids, status, from_status, also))
 
         if updated:
             self.purchase_events.payments_received(

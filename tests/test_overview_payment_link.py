@@ -7,6 +7,8 @@ from unittest.mock import Mock
 import pytest
 
 from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
+from handlers.admin.order.order_status import OrderStatusManagement
+from handlers.customer.order_commands import CustomerOrderCommands
 from models.entities import AuthorizationStatus, Box, Customer, Offer, Order, OrderStatus
 from services.database import DynamoDBService
 from services.user_cache import UserCache
@@ -127,3 +129,59 @@ class TestOnlyReadyOrdersMove:
 
         assert message["user_id"] == 101
         assert db.get_order(order.order_id).status == OrderStatus.AWAITING_PAYMENT.value
+
+
+class TestTheLinkOfTheCustomersBatch:
+    """Each batch of 50 gets a link of its own (audit 5, B2): a reminder and /payment_info use the customer's"""
+
+    FIRST, SECOND = "https://pay.example/first", "https://pay.example/second"
+
+    @pytest.fixture
+    def batches(self, handler, db):
+        """51 customers with labeled orders, the two batches answered with their own link; (first, second) customer"""
+        for n in range(51):
+            customer = db.create_customer(
+                Customer(
+                    telegram_user_id=1000 + n,
+                    first_name=f"Klant{n}",
+                    authorization_status=AuthorizationStatus.APPROVED.value,
+                )
+            )
+            labeled(db, customer, 1)
+        handler.start_send_overviews(ADMIN_ID)
+        stored = json.loads(db.get_edit_context_by_chat_id(ADMIN_ID).entity_id)["customers_data"]
+        handler.handle_payment_link_input(ADMIN_ID, self.FIRST, db.get_edit_context_by_chat_id(ADMIN_ID).entity_id)
+        handler.handle_payment_link_input(ADMIN_ID, self.SECOND, db.get_edit_context_by_chat_id(ADMIN_ID).entity_id)
+        return db.get_customer(stored[0]["customer_id"]), db.get_customer(stored[50]["customer_id"])
+
+    def test_a_reminder_carries_the_link_of_the_customers_batch(self, db, batches):
+        reminders = OrderStatusManagement(db, ADMIN_ID, "prod", "token")
+        reminders._send_message = Mock(return_value={"success": True})
+        reminders._send_user_message = Mock(return_value={"success": True})
+        reminders.handle_send_payment_reminder = Mock()
+
+        for customer, link, other in ((batches[0], self.FIRST, self.SECOND), (batches[1], self.SECOND, self.FIRST)):
+            reminders.handle_send_payment_reminder_to_customer(ADMIN_ID, customer.customer_id)
+            message = reminders._send_user_message.call_args.args[1]
+            assert link in message and other not in message
+
+    def test_payment_info_shows_the_link_of_the_customers_batch(self, db, batches):
+        info = CustomerOrderCommands(db, ADMIN_ID, "prod", "token")
+        info._send_message = Mock(return_value={"success": True})
+
+        first = batches[0]
+        info.handle_payment_info(first.telegram_user_id, first.telegram_user_id)
+
+        message = info._send_message.call_args.args[1]
+        assert self.FIRST in message and self.SECOND not in message
+
+    def test_an_order_moved_before_the_link_was_kept_uses_the_stored_link(self, db, jan):
+        order = labeled(db, jan, 4)
+        assert db.update_order(order.order_id, {"status": OrderStatus.AWAITING_PAYMENT.value})
+        db.store_payment_link(self.SECOND)
+        info = CustomerOrderCommands(db, ADMIN_ID, "prod", "token")
+        info._send_message = Mock(return_value={"success": True})
+
+        assert info.handle_payment_info(101, 101) == {"status": "success"}
+
+        assert self.SECOND in info._send_message.call_args.args[1]
