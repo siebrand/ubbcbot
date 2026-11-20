@@ -34,6 +34,11 @@ class OrderStatus(Enum):
     CANCELLED = "cancelled"
 
 
+# An order that still takes room in a box and can be cancelled. Past these the units were delivered (and maybe
+# labeled, charged or paid): such an order is not cancelled, its box and credit stay as they are (audit 6, A2).
+ACTIVE_ORDER_STATUSES = (OrderStatus.PENDING.value, OrderStatus.ORDERED.value)
+
+
 class DeliveryAction(Enum):
     FULL = "full"
     DELAYED = "delayed"

@@ -1,7 +1,7 @@
 from typing import Any
 
-from handlers.order_list import ACTIVE_ORDER_STATUSES, ORDER_STATUS_EMOJI
-from models.entities import AuthorizationStatus, OfferStatus, OrderStatus
+from handlers.order_list import ORDER_STATUS_EMOJI
+from models.entities import ACTIVE_ORDER_STATUSES, AuthorizationStatus, OfferStatus, OrderStatus
 from services.export_expiry import EXPORT_LIFETIME_SECONDS
 
 from .base_order_handler import BaseOrderHandler

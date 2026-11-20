@@ -196,6 +196,54 @@ class TestAnOrderIsCancelledOnce:
         assert notify.call_count == 1
 
 
+class TestADeliveredOrderIsNotCancelled:
+    """Only a pending or ordered order may be cancelled: a delivered one keeps its box, its credit and its payment
+    (audit 6, A2)"""
+
+    @pytest.fixture
+    def delivered(self, db, order):
+        db.update_box(order.box_id, {"status": BoxStatus.DELIVERED.value})
+        db.update_order(order.order_id, {"status": "awaiting_payment", "credit_applied": Decimal("3.00")})
+        return db.get_order(order.order_id)
+
+    def test_the_reason_reply_refuses_an_order_awaiting_payment(self, flow, db, delivered):
+        result = flow.admin_order.handle_confirm_cancel_with_reason(ADMIN_ID, delivered.order_id, "Not picked up")
+
+        assert result == {"status": "cannot_cancel"}
+        kept = db.get_order(delivered.order_id)
+        assert (kept.status, kept.credit_applied) == ("awaiting_payment", Decimal("3.00"))
+        box = db.get_box(delivered.box_id)
+        assert (box.status, box.current_quantity) == (BoxStatus.DELIVERED.value, 2)
+        assert "wacht op betaling" in flow.sent[-1].text
+
+    @pytest.mark.parametrize(
+        "status",
+        ["received_partial_delayed", "ready_for_labeling", "labeling_completed", "awaiting_payment", "completed"],
+    )
+    def test_the_full_id_shows_no_confirmation_for_an_order_past_ordering(self, flow, db, delivered, status):
+        db.update_order(delivered.order_id, {"status": status})
+
+        result = flow.admin_order.handle_cancel_order_by_id(ADMIN_ID, delivered.order_id)
+
+        assert result == {"status": "cannot_cancel"}
+        assert not any(b.startswith("request_cancel_reason_") for b in flow.sent[-1].buttons)
+
+    def test_the_partial_id_shows_no_confirmation_either(self, flow, db, delivered):
+        result = flow.admin_order.handle_cancel_order(ADMIN_ID, [delivered.order_id[:8]])
+
+        assert result == {"status": "cannot_cancel"}
+        assert not any(b.startswith("request_cancel_reason_") for b in flow.sent[-1].buttons)
+
+    def test_a_delivered_box_is_never_reopened(self, db, order):
+        from services.box_status_manager import BoxStatusManager
+
+        db.update_box(order.box_id, {"status": BoxStatus.DELIVERED.value, "current_quantity": 0})
+
+        BoxStatusManager(db).update_box_status_after_cancellation(order.box_id)
+
+        assert db.get_box(order.box_id).status == BoxStatus.DELIVERED.value
+
+
 def _order_placed_at(order, placed_at, quantity=1):
     return Order(
         customer_id=order.customer_id,

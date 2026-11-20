@@ -66,17 +66,18 @@ class BoxStatusManager:
         if not self.db.increment_box_quantity(box_id, -quantity_removed, box.max_capacity):
             return False
 
-        # Status follow-up: reopen the box once it drops below capacity (unless ORDERED).
-        if box.status != BoxStatus.ORDERED.value and box.current_quantity - quantity_removed < box.max_capacity:
+        # Status follow-up: a FULL box reopens once it drops below capacity; ORDERED and DELIVERED boxes stay
+        if box.status == BoxStatus.FULL.value and box.current_quantity - quantity_removed < box.max_capacity:
             self.db.update_box(box_id, {"status": BoxStatus.OPEN.value})
 
         return True
 
     def update_box_status_after_cancellation(self, box_id: str) -> None:
         """The status follow-up of a cancellation whose units already left the box (see
-        DynamoDBService.cancel_order_with_box): reopen the box once it is below capacity (unless ORDERED)."""
+        DynamoDBService.cancel_order_with_box): a FULL box reopens once it is below capacity. An ORDERED or DELIVERED
+        box keeps its status: it is never reopened for new orders."""
         box = self.db.get_box(box_id)
-        if box and box.status != BoxStatus.ORDERED.value and box.current_quantity < box.max_capacity:
+        if box and box.status == BoxStatus.FULL.value and box.current_quantity < box.max_capacity:
             self.db.update_box(box_id, {"status": BoxStatus.OPEN.value})
 
     def mark_boxes_as_ordered(self, box_ids: list) -> list:

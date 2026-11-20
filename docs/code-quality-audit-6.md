@@ -15,13 +15,13 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
 
 ## Scope
 
-| Area                     | Files                                                                                                  |
-|--------------------------|--------------------------------------------------------------------------------------------------------|
-| Cancelling an order      | `src/handlers/admin/order/order_cancellation.py`, `src/handlers/base_handler.py` (`_execute_cancel`), `src/services/database.py` (`cancel_order`) |
-| Editing an order         | `src/handlers/admin/order/order_editing.py` (`/edit_order`: box, unit price, status)                   |
-| Box occupancy            | `src/services/box_status_manager.py` (`update_box_after_order_placement`/`_cancellation`), `src/repositories/box_repository.py` (`increment_box_quantity`) |
-| The wholesale plan       | `src/handlers/admin/offer/management.py` (`_apply_wholesale_plan`, `/cancel_offer`)                     |
-| Texts                    | the order handlers above (`user_id=None`, `_t` without a reader)                                      |
+| Area                | Files                                                                                                                                                      |
+|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Cancelling an order | `src/handlers/admin/order/order_cancellation.py`, `src/handlers/base_handler.py` (`_execute_cancel`), `src/services/database.py` (`cancel_order`)          |
+| Editing an order    | `src/handlers/admin/order/order_editing.py` (`/edit_order`: box, unit price, status)                                                                       |
+| Box occupancy       | `src/services/box_status_manager.py` (`update_box_after_order_placement`/`_cancellation`), `src/repositories/box_repository.py` (`increment_box_quantity`) |
+| The wholesale plan  | `src/handlers/admin/offer/management.py` (`_apply_wholesale_plan`, `/cancel_offer`)                                                                        |
+| Texts               | the order handlers above (`user_id=None`, `_t` without a reader)                                                                                           |
 
 ## High priority
 
@@ -42,7 +42,7 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   ignores its `admin_id` and `reason` arguments, so the reason given for a cancel is only in the customer's message;
   `/cancel_offer`, the wholesale plan and the wholesaler delivery still use the unconditional `cancel_order` (A5, B3).
   Tests: `tests/test_cancel_order_flow.py::TestAnOrderIsCancelledOnce`.
-- [ ] **A2. Cancelling a delivered order reopens a delivered box** (`_execute_cancel`,
+- [x] **A2. Cancelling a delivered order reopens a delivered box** (`_execute_cancel`,
   `update_box_after_order_cancellation`). `/cancel_order <id>` accepts an order in any status but `cancelled`: also
   `ready_for_labeling` … `awaiting_payment` and `completed`. The units go back to the box and the box is set to
   `open` whenever it is not `ordered`, so a `delivered` box becomes `open` and takes new orders for units that were
@@ -51,6 +51,16 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   order means (refuse it, or cancel without touching the box and give the applied credit back), and never reopen a
   `delivered` box. Test: cancel an order awaiting payment with credit applied → the box stays `delivered`, the credit
   is not lost.
+  Done: decision: refuse it. Only a `pending` or `ordered` order is cancelled. `ACTIVE_ORDER_STATUSES` already said
+  so ("an order that still takes room in a box and can be cancelled"), and the per-customer cancel list followed
+  it; only the id paths and the reason reply ignored it. A delivered order has been labeled for, charged or paid, so
+  the money (credit, payment link) would need undoing as well. For a customer who does not pick up, the admin can
+  still give credit. `BaseHandler._refuse_cancel` is the one check, in `_execute_cancel` (every path ends there) and
+  before the confirmation of the full and the partial id (`order_cannot_be_cancelled`, with the translated status).
+  `ACTIVE_ORDER_STATUSES` moved to `models/entities.py` so that `base_handler` can use it. After units leave a box,
+  its status only goes from `full` to `open` (`update_box_status_after_cancellation` and
+  `update_box_after_order_cancellation`): `ordered` and `delivered` boxes are never reopened. Tests:
+  `tests/test_cancel_order_flow.py::TestADeliveredOrderIsNotCancelled`.
 - [ ] **A3. `/edit_order` status has no guards, and the box does not follow** (`_apply_status_change`). Any status
   can be set on any order ("no guards" in the docstring). Setting `cancelled` keeps the units in the box (the box is
   full of nothing); setting a cancelled order back to `pending` or `ordered` puts units in a box that no longer has

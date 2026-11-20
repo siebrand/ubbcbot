@@ -2,7 +2,7 @@ import html
 import logging
 from typing import Any
 
-from models.entities import OrderStatus
+from models.entities import ACTIVE_ORDER_STATUSES, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
 from services.export_expiry import ExportExpiryService
@@ -425,13 +425,33 @@ class BaseHandler:
         if new_status is not None:
             self.sync_offer_messages(offer_id)
 
+    def _refuse_cancel(self, order, chat_id: int) -> dict[str, Any] | None:
+        """None when the order may be cancelled; otherwise tell the admin why not and return the result.
+
+        A delivered order (ready for labeling up to paid) is not cancelled: its units are in a delivered box, and
+        credit can have been used for it.
+        """
+        if order.status in ACTIVE_ORDER_STATUSES:
+            return None
+        if order.status == OrderStatus.CANCELLED.value:
+            self._send_message(chat_id, self._t("order_already_cancelled", chat_id))
+            return {"status": "already_cancelled"}
+        status = self._t(f"status_{order.status}", chat_id)
+        message = self._t("order_cannot_be_cancelled", chat_id, order_id=order.order_id[:8], status=status)
+        self._send_message(chat_id, message)
+        return {"status": "cannot_cancel"}
+
     def _execute_cancel(self, order, box, chat_id: int, reason: str = "Manual cancellation") -> dict[str, Any]:
         """Cancel an order as the admin: the box gets the units back, the customer is told, the admin sees the box.
 
         The order and its box change in one write, only while the order is as it was read: an order that was
-        cancelled in the meantime (an old confirmation tapped again) gives its units back once.
+        cancelled in the meantime (an old confirmation tapped again) gives its units back once. Only a pending or
+        ordered order is cancelled (see ACTIVE_ORDER_STATUSES).
         """
-        if order.status == OrderStatus.CANCELLED.value or not self.db.cancel_order_with_box(order):
+        refused = self._refuse_cancel(order, chat_id)
+        if refused:
+            return refused
+        if not self.db.cancel_order_with_box(order):
             current = self.db.get_order(order.order_id)
             if current and current.status == OrderStatus.CANCELLED.value:
                 self._send_message(chat_id, self._t("order_already_cancelled", chat_id))

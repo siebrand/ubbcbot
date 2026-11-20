@@ -1,8 +1,7 @@
 import logging
 from typing import Any
 
-from handlers.order_list import ACTIVE_ORDER_STATUSES
-from models.entities import BoxStatus, OrderStatus
+from models.entities import ACTIVE_ORDER_STATUSES, BoxStatus, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from utils.timezone import to_utc_datetime
 
@@ -91,6 +90,9 @@ class OrderCancellation(BaseOrderHandler):
 
         # Single match - show enhanced confirmation with full details
         order, customer = matching_orders[0]
+        refused = self._refuse_cancel(order, chat_id)
+        if refused:
+            return refused
         return self._show_enhanced_cancel_confirmation(chat_id, order, customer, f"partial ID '{partial_order_id}'")
 
     def handle_cancel_order_by_id(self, chat_id: int, order_id: str) -> dict[str, Any]:
@@ -104,6 +106,9 @@ class OrderCancellation(BaseOrderHandler):
         if order.status == OrderStatus.CANCELLED.value:
             self._send_message(chat_id, self._t("order_already_cancelled_full_id", chat_id, order_id=order_id))
             return {"status": "already_cancelled"}
+        refused = self._refuse_cancel(order, chat_id)
+        if refused:
+            return refused
 
         # Get customer info
         customer = self.db.get_customer(order.customer_id)

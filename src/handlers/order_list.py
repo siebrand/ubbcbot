@@ -19,9 +19,6 @@ ORDER_STATUS_EMOJI = {
     OrderStatus.CANCELLED.value: "❌",
 }
 
-# An order that still takes room in a box and can be cancelled
-ACTIVE_ORDER_STATUSES = (OrderStatus.PENDING.value, OrderStatus.ORDERED.value)
-
 
 class OrderListMixin(BaseHandler):
     """For handlers (it uses `self.db`, `self._t` and `self._send_message`). The list is sent as HTML."""

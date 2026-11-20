@@ -236,6 +236,7 @@
   "usage_cancel_order": "Usage: /cancel_order <order_id>",
   "order_not_found": "❌ Order not found",
   "order_already_cancelled": "❌ Order already cancelled",
+  "order_cannot_be_cancelled": "⚠️ Order {order_id} cannot be cancelled: its status is {status}. Only a pending or ordered order can be cancelled.",
   "box_not_found": "❌ Box not found",
   "usage_order_for": "Usage: /order_for <username> <offer_id> [quantity]",
   "quantity_must_positive": "❌ Quantity must be positive",
