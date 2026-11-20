@@ -20,7 +20,7 @@ class TestBatchOrderUpdate(unittest.TestCase):
 
         # Should call update_item, not put_item
         self.assertEqual(self.repo.table.update_item.call_count, 3)
-        self.assertEqual(result, 3)
+        self.assertEqual(result, order_ids)
 
         # Verify UpdateExpression used
         call_args = self.repo.table.update_item.call_args_list[0][1]
@@ -44,10 +44,20 @@ class TestBatchOrderUpdate(unittest.TestCase):
         order_ids = ["order1", "order2", "order3"]
         self.repo.table.update_item.side_effect = [None, Exception("DB error"), None]
 
-        self.repo.batch_update_order_status(order_ids, OrderStatus.AWAITING_PAYMENT.value)
+        result = self.repo.batch_update_order_status(order_ids, OrderStatus.AWAITING_PAYMENT.value)
 
-        # Should continue despite error
+        # Should continue despite error, and leave the failed order out of the result
         self.assertEqual(self.repo.table.update_item.call_count, 3)
+        self.assertEqual(result, ["order1", "order3"])
+
+    def test_with_a_from_status_the_update_is_conditional(self):
+        self.repo.batch_update_order_status(
+            ["order1"], OrderStatus.AWAITING_PAYMENT.value, from_status=OrderStatus.LABELING_COMPLETED.value
+        )
+
+        call_args = self.repo.table.update_item.call_args[1]
+        self.assertEqual(call_args["ConditionExpression"], "#status = :from_status")
+        self.assertEqual(call_args["ExpressionAttributeValues"][":from_status"], OrderStatus.LABELING_COMPLETED.value)
 
     def test_batch_processes_in_chunks(self):
         """Verify large batches are chunked"""

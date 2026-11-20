@@ -101,34 +101,42 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
 
             batch_customers = customers_data[start_idx:end_idx]
 
-            # Build messages for async sending
+            # Move the orders to AWAITING_PAYMENT first, and only those still LABELING_COMPLETED: one that was
+            # cancelled, paid or moved since the overview started keeps its status and is not charged
+            all_order_ids = [order_id for data in batch_customers for order_id in data["delivered_order_ids"]]
+            moved: set[str] = set()
+            if all_order_ids:
+                logger.info(f"Batch updating {len(all_order_ids)} orders to AWAITING_PAYMENT")
+                moved = set(
+                    self.db.batch_update_order_status(
+                        all_order_ids,
+                        OrderStatus.AWAITING_PAYMENT.value,
+                        admin_id=self.admin_user_id,
+                        from_status=OrderStatus.LABELING_COMPLETED.value,
+                    )
+                )
+                logger.info(f"Successfully updated {len(moved)}/{len(all_order_ids)} orders")
+
+            # Build messages for async sending, with the orders that moved
             messages = []
             for customer_data in batch_customers:
+                customer_data = {
+                    **customer_data,
+                    "delivered_order_ids": [i for i in customer_data["delivered_order_ids"] if i in moved],
+                }
+                if not customer_data["delivered_order_ids"] and not customer_data["delayed_order_ids"]:
+                    continue
                 msg = self._build_delivery_message_payload(customer_data, payment_link)
                 if msg:
                     messages.append(msg)
 
             # Invoke message sender Lambda
-            payload = self._message_sender_event(messages)
-
-            self.lambda_client.invoke(
-                FunctionName=self.message_sender_lambda,
-                InvocationType="Event",  # Async invocation
-                Payload=json.dumps(payload),
-            )
-
-            # Collect all order IDs for batch update
-            all_order_ids = []
-            for customer_data in batch_customers:
-                all_order_ids.extend(customer_data["delivered_order_ids"])
-
-            # Batch update orders to AWAITING_PAYMENT
-            if all_order_ids:
-                logger.info(f"Batch updating {len(all_order_ids)} orders to AWAITING_PAYMENT")
-                updated_count = self.db.batch_update_order_status(
-                    all_order_ids, OrderStatus.AWAITING_PAYMENT.value, admin_id=self.admin_user_id
+            if messages:
+                self.lambda_client.invoke(
+                    FunctionName=self.message_sender_lambda,
+                    InvocationType="Event",  # Async invocation
+                    Payload=json.dumps(self._message_sender_event(messages)),
                 )
-                logger.info(f"Successfully updated {updated_count}/{len(all_order_ids)} orders")
 
             # Update batch counter
             current_batch = batch_index + 1

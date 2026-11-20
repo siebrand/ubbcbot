@@ -45,12 +45,16 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   typed by the admin; a `&` or `<` in it breaks the message (Telegram refuses it, so no customer of the batch gets an
   overview while their orders still move on, see A4). Fix: accept only an `https://` URL without spaces, escape it
   in the message. Tests for both.
-- [ ] **A4. Orders move to `awaiting_payment` whatever happens to them in between** (`handle_payment_link_input`,
+- [x] **A4. Orders move to `awaiting_payment` whatever happens to them in between** (`handle_payment_link_input`,
   `batch_update_order_status`). The order ids are collected when the overview starts and stored in the edit context;
   when the admin replies with the link, every one of them is set to `awaiting_payment` without a condition. An order
   cancelled (or paid, or moved) in between is set back to `awaiting_payment` and charged. Fix: the update only from
   `labeling_completed` (`ConditionExpression`), and the message only lists the orders that moved. Test: an order
-  cancelled between the start and the link is neither charged nor listed.
+  cancelled between the start and the link is neither charged nor listed. **Done**: `batch_update_order_status`
+  takes a `from_status` (a condition per order) and returns the ids it moved, not a count; a payment event is only
+  recorded for an order that moved. The overview now moves the orders first and builds each message from the ones
+  that moved; a customer left with nothing gets no message (and the sender is not invoked for an empty batch). Found
+  along the way: a paid order was set back to `awaiting_payment` the same way. `tests/test_overview_payment_link.py`.
 - [ ] **A5. "Payment received" names an amount that was not all marked paid** (`delivery_overview_handler.py`,
   `handle_process_customer_paid`). `total_amount` adds up every order awaiting payment, also the ones
   `mark_order_paid` failed for, and the customer is told that amount was received. Fix: the total of the orders that

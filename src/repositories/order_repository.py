@@ -314,13 +314,22 @@ class OrderRepository(BaseRepository):
             logger.error(f"Error batch getting orders: {e}")
             return []
 
-    def batch_update_order_status(self, order_ids: list[str], status: str) -> int:
-        """Batch update order status using UpdateExpression. Returns count of successful updates."""
+    def batch_update_order_status(self, order_ids: list[str], status: str, from_status: str | None = None) -> list[str]:
+        """Set the status of many orders. Returns the ids of the orders that were updated.
+
+        With ``from_status`` an order is only updated while it still has that status: one that was cancelled, paid
+        or moved since its id was collected keeps its status and is left out of the result.
+        """
         try:
             from datetime import UTC, datetime
 
-            updated_count = 0
+            updated: list[str] = []
             update_date = datetime.now(UTC).isoformat()
+            condition: dict[str, Any] = {}
+            values: dict[str, Any] = {":status": status, ":update_date": update_date}
+            if from_status:
+                condition = {"ConditionExpression": "#status = :from_status"}
+                values[":from_status"] = from_status
 
             # Process in smaller batches to avoid throttling
             for i in range(0, len(order_ids), 10):
@@ -332,13 +341,19 @@ class OrderRepository(BaseRepository):
                             Key={"order_id": order_id},
                             UpdateExpression="SET #status = :status, #update_date = :update_date",
                             ExpressionAttributeNames={"#status": "status", "#update_date": "update_date"},
-                            ExpressionAttributeValues={":status": status, ":update_date": update_date},
+                            ExpressionAttributeValues=values,
+                            **condition,
                         )
-                        updated_count += 1
+                        updated.append(order_id)
+                    except ClientError as batch_error:
+                        if batch_error.response["Error"]["Code"] == "ConditionalCheckFailedException":
+                            logger.info(f"Order {order_id} is no longer {from_status}: left as it is")
+                        else:
+                            logger.error(f"Batch update error for {order_id}: {batch_error.response['Error']['Code']}")
                     except Exception as batch_error:
-                        logger.error(f"Batch update error for {order_id}: {batch_error}")
+                        logger.error(f"Batch update error for {order_id}: {type(batch_error).__name__}")
 
-            return updated_count
+            return updated
         except Exception as e:
-            logger.error(f"Error in batch update: {e}")
-            return 0
+            logger.error(f"Error in batch update: {type(e).__name__}")
+            return []

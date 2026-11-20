@@ -226,17 +226,24 @@ class DynamoDBService:
             logger.error(f"Error updating order: {e}")
             return False
 
-    def batch_update_order_status(self, order_ids: list[str], status: str, admin_id: int = 0) -> int:
-        """Set the status of many orders. Returns count of successful updates."""
+    def batch_update_order_status(
+        self, order_ids: list[str], status: str, admin_id: int = 0, from_status: str | None = None
+    ) -> list[str]:
+        """Set the status of many orders; with ``from_status`` only of those that still have it. Returns the ids
+        of the orders that were updated."""
         # Read before the update: the old status of each order decides whether it is a payment
         orders = self.order_repo.batch_get_orders(order_ids)
-        updated_count = self.order_repo.batch_update_order_status(order_ids, status)
+        updated = set(self.order_repo.batch_update_order_status(order_ids, status, from_status))
 
-        if updated_count > 0:
+        if updated:
             self.purchase_events.payments_received(
-                [order for order in orders if self.purchase_events.is_payment(order.status, status)]
+                [
+                    order
+                    for order in orders
+                    if order.order_id in updated and self.purchase_events.is_payment(order.status, status)
+                ]
             )
-        return updated_count
+        return [order_id for order_id in order_ids if order_id in updated]
 
     def get_customers_by_status(self, status: str) -> list[Customer]:
         """Get customers by status with caching"""

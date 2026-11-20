@@ -85,16 +85,26 @@ class TestUpdateOrder:
 class TestBatchUpdate:
     def test_only_the_orders_that_were_awaiting_payment_are_paid(self, db):
         db.order_repo.batch_get_orders.return_value = [awaiting("o1"), Order(order_id="o2", status="ordered")]
-        db.order_repo.batch_update_order_status.return_value = 2
+        db.order_repo.batch_update_order_status.return_value = ["o1", "o2"]
 
-        assert db.batch_update_order_status(["o1", "o2"], "completed") == 2
+        assert db.batch_update_order_status(["o1", "o2"], "completed") == ["o1", "o2"]
 
         events = db.order_history_repo.batch_create_order_history.call_args.args[0]
         assert [e.amount for e in events] == [Decimal("7.00")]
 
+    def test_an_order_that_was_not_updated_is_no_payment(self, db):
+        o2 = Order(order_id="o2", offer_id=3, status="awaiting_payment", total_price=Decimal("3.00"))
+        db.order_repo.batch_get_orders.return_value = [awaiting("o1"), o2]
+        db.order_repo.batch_update_order_status.return_value = ["o2"]
+
+        assert db.batch_update_order_status(["o1", "o2"], "completed", from_status="awaiting_payment") == ["o2"]
+
+        events = db.order_history_repo.batch_create_order_history.call_args.args[0]
+        assert [e.amount for e in events] == [Decimal("3.00")]
+
     def test_moving_orders_to_awaiting_payment_records_nothing(self, db):
         db.order_repo.batch_get_orders.return_value = [Order(order_id="o1", status="ready_for_labeling")]
-        db.order_repo.batch_update_order_status.return_value = 1
+        db.order_repo.batch_update_order_status.return_value = ["o1"]
 
         db.batch_update_order_status(["o1"], "awaiting_payment")
 
