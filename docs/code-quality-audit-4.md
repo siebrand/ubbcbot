@@ -1,7 +1,8 @@
 # Code quality audit 4: where stock and money change
 
-Status: **done** (opened 2026-11-19, closed 2026-11-20; follow-ups in audit 5). Follows audit 3 (what the bot sends), which is done. The first three audits went
-through the largest files and the messages; this one follows the code that changes what a customer owes or gets:
+Status: **done** (opened 2026-11-19, closed 2026-11-20; the follow-ups are in audit 5). Follows audit 3 (what the
+bot sends), which is done. The first three audits went through the largest files and the messages; this one follows
+the code that changes what a customer owes or gets:
 credits, the wholesale delivery and labeling workflows, the CSV import, and the per-container caches and test
 safeguards around them. Same priorities as before:
 
