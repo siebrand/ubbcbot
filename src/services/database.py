@@ -155,11 +155,19 @@ class DynamoDBService:
         return order
 
     def move_order_to_box(
-        self, order_id: str, quantity: int, from_box_id: str, to_box_id: str, to_max_capacity: int
+        self,
+        order_id: str,
+        quantity: int,
+        from_box_id: str,
+        to_box_id: str,
+        to_max_capacity: int,
+        order_status: str = OrderStatus.PENDING.value,
+        box_statuses: tuple[str, ...] = REFILLABLE_BOX_STATUSES,
     ) -> bool:
-        """Move a pending order between two boxes that are not yet ordered, in one transaction (see box_refill)"""
+        """Move an order between two boxes in one transaction: by default a pending order between boxes that are not
+        yet ordered (see box_refill); /edit_order also moves an ordered order between ordered boxes"""
         return self.order_repo.move_to_box(
-            order_id, quantity, from_box_id, to_box_id, to_max_capacity, REFILLABLE_BOX_STATUSES
+            order_id, quantity, from_box_id, to_box_id, to_max_capacity, box_statuses, order_status
         )
 
     def get_orders_by_customer(self, customer_id: str, strict: bool = False) -> list[Order]:

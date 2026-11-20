@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Any
 
 from models.entities import ACTIVE_ORDER_STATUSES, BoxStatus, OrderStatus
+from services.box_refill import REFILLABLE_BOX_STATUSES
 from services.box_status_manager import BoxStatusManager
 
 from .base_order_handler import BaseOrderHandler
@@ -17,6 +18,13 @@ CORRECTABLE_STATUSES = (
     OrderStatus.READY_FOR_LABELING.value,
     OrderStatus.LABELING_COMPLETED.value,
 )
+
+# The boxes an order may be moved between: a pending order between boxes not yet ordered at the wholesaler, an
+# ordered one between boxes that were (which box it is in is corrected). A delivered order stays in its box.
+MOVABLE_BETWEEN = {
+    OrderStatus.PENDING.value: REFILLABLE_BOX_STATUSES,
+    OrderStatus.ORDERED.value: (BoxStatus.ORDERED.value,),
+}
 
 
 class OrderEditing(BaseOrderHandler):
@@ -33,25 +41,25 @@ class OrderEditing(BaseOrderHandler):
 
     # ------------------------------------------------------------------ boxes
     def _boxes_with_space(self, order) -> list:
-        """Boxes of the order's offer that have room for the order's quantity,
+        """Boxes of the order's offer it may move to (see MOVABLE_BETWEEN) that have room for the order's quantity,
         excluding the order's current box, sorted by creation order."""
+        statuses = MOVABLE_BETWEEN.get(order.status, ())
         boxes = self.db.get_boxes_by_offer(order.offer_id) or []
         candidates = [
             b
             for b in boxes
             if b.box_id != order.box_id
-            and b.status != BoxStatus.DELIVERED.value
+            and b.status in statuses
             and (b.max_capacity - b.current_quantity) >= order.quantity
         ]
         candidates.sort(key=lambda b: getattr(b, "created_at", None) or 0)
         return candidates
 
     def _apply_box_change(self, order, new_box_id: str) -> tuple[bool, str]:
-        """Move the order to new_box_id, correcting occupancy atomically.
-
-        Increments the new box first (capacity-guarded); only if that succeeds
-        does it decrement the old box. Rolls back the new-box increment if the
-        old-box decrement fails. Returns (success, message_key)."""
+        """Move the order to new_box_id: the order and both box counts in one transaction (audit 6, A4), on
+        condition that the order still has the status, box and quantity it was read with, the new box has room and
+        both boxes are still in a status the order may move between (MOVABLE_BETWEEN). Returns (success,
+        message_key)."""
         if new_box_id == order.box_id:
             return False, "edit_order_same_box"
 
@@ -60,19 +68,19 @@ class OrderEditing(BaseOrderHandler):
             return False, "edit_order_box_not_found"
         if new_box.offer_id != order.offer_id:
             return False, "edit_order_box_wrong_offer"
-
-        # Increment the destination first; the capacity guard rejects overfill.
-        if not self.box_status_manager.update_box_after_order_placement(new_box_id, order.quantity):
+        statuses = MOVABLE_BETWEEN.get(order.status, ())
+        if new_box.status not in statuses:
+            return False, "edit_order_box_not_allowed"
+        if new_box.max_capacity - new_box.current_quantity < order.quantity:
             return False, "edit_order_box_full"
 
-        # Then free the old box; roll back the increment if this fails.
-        if not self.box_status_manager.update_box_after_order_cancellation(order.box_id, order.quantity):
-            self.box_status_manager.update_box_after_order_cancellation(new_box_id, order.quantity)
+        if not self.db.move_order_to_box(
+            order.order_id, order.quantity, order.box_id, new_box_id, new_box.max_capacity, order.status, statuses
+        ):
             return False, "edit_order_move_failed"
 
-        if not self.db.update_order(order.order_id, {"box_id": new_box_id}, self.admin_user_id, "Order box edited"):
-            return False, "edit_order_update_failed"
-
+        for box_id in (order.box_id, new_box_id):
+            self.box_status_manager.update_box_status_after_change(box_id)
         self._check_offer_status_after_change(order.offer_id)
         return True, "edit_order_box_success"
 
@@ -126,7 +134,7 @@ class OrderEditing(BaseOrderHandler):
         if new_status == OrderStatus.CANCELLED.value:
             if not self.db.cancel_order_with_box(order):
                 return False, "edit_order_update_failed"
-            self.box_status_manager.update_box_status_after_cancellation(order.box_id)
+            self.box_status_manager.update_box_status_after_change(order.box_id)
             self._check_offer_status_after_change(order.offer_id)
             return True, "edit_order_status_success"
         if not self.db.batch_update_order_status([order.order_id], new_status, self.admin_user_id, order.status):

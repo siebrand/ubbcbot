@@ -75,6 +75,7 @@
   "edit_order_box_not_found": "❌ Die doos kon niet worden gevonden.",
   "edit_order_box_wrong_offer": "❌ Die doos hoort bij een andere aanbieding.",
   "edit_order_box_full": "❌ Die doos heeft onvoldoende ruimte voor deze order.",
+  "edit_order_box_not_allowed": "❌ Deze order kan niet naar die doos. Een open order gaat alleen naar een doos die nog niet besteld is, een bestelde order naar een bestelde doos, en een afgeleverde order blijft in haar doos.",
   "edit_order_move_failed": "❌ Kon de order niet verplaatsen; er is niets gewijzigd.",
   "edit_order_update_failed": "❌ Kon de order niet bijwerken.",
   "edit_order_bad_price": "❌ Ongeldige prijs.",

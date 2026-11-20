@@ -111,11 +111,14 @@ class OrderRepository(BaseRepository):
         to_box_id: str,
         to_max_capacity: int,
         box_statuses: tuple[str, ...],
+        order_status: str = OrderStatus.PENDING.value,
     ) -> bool:
-        """Move a pending order to another box, with the quantities of both boxes, in one transaction.
+        """Move an order (pending, unless ``order_status`` says otherwise) to another box, with the quantities of
+        both boxes, in one transaction.
 
-        Rejected as a whole when the order is no longer pending in ``from_box_id``, the new box would overfill, or
-        either box is no longer in one of ``box_statuses`` (ordered at the wholesaler in the meantime).
+        Rejected as a whole when the order no longer has ``order_status`` and ``quantity`` in ``from_box_id``, the
+        new box would overfill, or either box is no longer in one of ``box_statuses`` (ordered at the wholesaler in
+        the meantime).
         """
         from datetime import UTC, datetime
 
@@ -130,12 +133,13 @@ class OrderRepository(BaseRepository):
                             "TableName": self.table_name,
                             "Key": {"order_id": {"S": order_id}},
                             "UpdateExpression": "SET box_id = :to, update_date = :now",
-                            "ConditionExpression": "box_id = :from AND #status = :pending",
+                            "ConditionExpression": "box_id = :from AND #status = :order_status AND quantity = :qty",
                             "ExpressionAttributeNames": {"#status": "status"},
                             "ExpressionAttributeValues": {
                                 ":to": {"S": to_box_id},
                                 ":from": {"S": from_box_id},
-                                ":pending": {"S": OrderStatus.PENDING.value},
+                                ":order_status": {"S": order_status},
+                                ":qty": {"N": str(quantity)},
                                 ":now": {"S": datetime.now(UTC).isoformat()},
                             },
                         }

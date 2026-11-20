@@ -38,7 +38,7 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   order's status and the box count in one transaction, the order on condition of the status, box and quantity it was
   read with (and not cancelled), the box on condition that it holds the units. A rejected cancel reads the order
   again and says "already cancelled" (`already_cancelled`) or "failed". The customer is told once. The status
-  follow-up is `BoxStatusManager.update_box_status_after_cancellation`. Found: `DynamoDBService.update_order`
+  follow-up is `BoxStatusManager.update_box_status_after_change` (named so since A4). Found: `DynamoDBService.update_order`
   ignores its `admin_id` and `reason` arguments, so the reason given for a cancel is only in the customer's message;
   `/cancel_offer`, the wholesale plan and the wholesaler delivery still use the unconditional `cancel_order` (A5, B3).
   Tests: `tests/test_cancel_order_flow.py::TestAnOrderIsCancelledOnce`.
@@ -58,7 +58,7 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   still give credit. `BaseHandler._refuse_cancel` is the one check, in `_execute_cancel` (every path ends there) and
   before the confirmation of the full and the partial id (`order_cannot_be_cancelled`, with the translated status).
   `ACTIVE_ORDER_STATUSES` moved to `models/entities.py` so that `base_handler` can use it. After units leave a box,
-  its status only goes from `full` to `open` (`update_box_status_after_cancellation` and
+  its status only goes from `full` to `open` (`update_box_status_after_change` and
   `update_box_after_order_cancellation`): `ordered` and `delivered` boxes are never reopened. Tests:
   `tests/test_cancel_order_flow.py::TestADeliveredOrderIsNotCancelled`.
 - [x] **A3. `/edit_order` status has no guards, and the box does not follow** (`_apply_status_change`). Any status
@@ -81,7 +81,7 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   not overwritten, and a payment still records its event. When nothing may be set, the screen says why
   (`edit_order_status_not_allowed`). Found: a cancel through `/edit_order` does not tell the customer (as before);
   `/cancel_order` does. Tests: `tests/test_edit_order_changes.py::TestTheStatusEditKeepsTheBoxRight`.
-- [ ] **A4. Moving an order to another box is three writes, and the last has no rollback**
+- [x] **A4. Moving an order to another box is three writes, and the last has no rollback**
   (`_apply_box_change`). The new box is incremented, the old one decremented, then the order is updated; when the
   order update fails, both boxes have changed and the order is still in the old one. The move also takes no notice of
   the order's status (an order already delivered can be moved into an open box) or of the box's (`ordered` boxes are
@@ -89,6 +89,18 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   transaction (the order's `box_id` on condition of its old box and status, the two box counts with their capacity
   conditions); only orders and boxes for which the move makes sense. Test: a failing order update leaves both boxes
   as they were.
+  Done: `_apply_box_change` is one transaction, the one the box refill already used
+  (`DynamoDBService.move_order_to_box` → `OrderRepository.move_to_box`), which now takes the order's status as a
+  parameter and also checks its quantity. The order's `box_id` changes on condition of its old box, status and
+  quantity; the new box's count on condition of its capacity, the old one's on condition that it holds the units;
+  both boxes on condition of their status. Decision on which moves make sense (`MOVABLE_BETWEEN`): a pending order
+  between boxes not yet ordered (`open`/`full`), an ordered order between `ordered` boxes (a correction of which box
+  it is in), and a delivered order not at all. The box list and the move both follow it
+  (`edit_order_box_not_allowed`). Afterwards both boxes get their `open`/`full` status from their count
+  (`BoxStatusManager.update_box_status_after_change`, which replaces `update_box_status_after_cancellation`; it never
+  touches an `ordered` or `delivered` box). The rollback path is gone: there is nothing to roll back. Tests:
+  `tests/test_edit_order_changes.py::TestMovingAnOrderToAnotherBox`; the mock tests in
+  `tests/handlers/admin/order/test_order_editing_box.py` now pin the single transaction.
 - [ ] **A5. The wholesale plan moves orders without a condition** (`_apply_wholesale_plan`). The plan is read, then
   every order in it is set to `ordered` (or reduced) unconditionally: an order cancelled by the admin while the plan
   runs (or between the plan screen and the confirmation) is set back to `ordered` and charged later; the reduced

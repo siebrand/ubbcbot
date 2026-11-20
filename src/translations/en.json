@@ -75,6 +75,7 @@
   "edit_order_box_not_found": "❌ That box could not be found.",
   "edit_order_box_wrong_offer": "❌ That box belongs to a different offer.",
   "edit_order_box_full": "❌ That box does not have enough room for this order.",
+  "edit_order_box_not_allowed": "❌ This order cannot be moved to that box. A pending order moves between boxes not yet ordered, an ordered one between ordered boxes, and a delivered one stays in its box.",
   "edit_order_move_failed": "❌ Could not move the order; no changes were made.",
   "edit_order_update_failed": "❌ Could not update the order.",
   "edit_order_bad_price": "❌ Invalid price.",

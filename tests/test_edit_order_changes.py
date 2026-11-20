@@ -79,6 +79,82 @@ def status_buttons(sent):
     return [b.split("_", 4)[4] for b in sent[-1][1] if b.startswith("edit_order_setstatus_")]
 
 
+def box_buttons(sent):
+    """The boxes offered: edit_order_setbox_<short order id>_<short box id>"""
+    return [b.rsplit("_", 1)[1] for b in sent[-1][1] if b.startswith("edit_order_setbox_")]
+
+
+class TestMovingAnOrderToAnotherBox:
+    """Audit 6, A4: the order and both boxes in one write, only where the move makes sense"""
+
+    def test_a_pending_order_moves_with_its_units(self, db, editing, customer):
+        old = make_box(db, 6, status=BoxStatus.FULL.value)
+        new = make_box(db, 4)
+        order = make_order(db, customer, old)
+
+        result = editing.apply_box(ADMIN_ID, order.order_id, new.box_id[:8])
+
+        assert result == {"status": "edit_order_box_success"}
+        assert db.get_order(order.order_id).box_id == new.box_id
+        assert (db.get_box(old.box_id).current_quantity, db.get_box(old.box_id).status) == (4, "open")
+        assert (db.get_box(new.box_id).current_quantity, db.get_box(new.box_id).status) == (6, "full")
+
+    def test_an_order_that_changed_since_it_was_read_leaves_both_boxes_as_they_were(self, db, editing, customer):
+        old = make_box(db, 2)
+        new = make_box(db, 0)
+        order = make_order(db, customer, old)
+        stale = db.get_order(order.order_id)
+        db.update_order(order.order_id, {"status": "cancelled"})  # cancelled in between
+
+        ok, _key = editing._apply_box_change(stale, new.box_id)
+
+        assert not ok
+        assert db.get_box(old.box_id).current_quantity == 2
+        assert db.get_box(new.box_id).current_quantity == 0
+        assert db.get_order(order.order_id).box_id == old.box_id
+
+    def test_a_pending_order_is_not_moved_into_a_box_ordered_at_the_wholesaler(self, db, editing, customer, sent):
+        old = make_box(db, 2)
+        ordered = make_box(db, 0, status=BoxStatus.ORDERED.value)
+        order = make_order(db, customer, old)
+
+        editing.show_box_options(ADMIN_ID, order.order_id)
+        offered = box_buttons(sent)
+        result = editing.apply_box(ADMIN_ID, order.order_id, ordered.box_id[:8])
+
+        assert ordered.box_id[:8] not in offered
+        assert result == {"status": "edit_failed"}
+        assert db.get_box(ordered.box_id).current_quantity == 0
+        assert db.get_order(order.order_id).box_id == old.box_id
+
+    def test_an_ordered_order_moves_between_ordered_boxes_only(self, db, editing, customer, sent):
+        old = make_box(db, 2, status=BoxStatus.ORDERED.value)
+        other_ordered = make_box(db, 0, status=BoxStatus.ORDERED.value)
+        open_box = make_box(db, 0)
+        order = make_order(db, customer, old, status="ordered")
+
+        editing.show_box_options(ADMIN_ID, order.order_id)
+
+        assert box_buttons(sent) == [other_ordered.box_id[:8]]
+        assert editing.apply_box(ADMIN_ID, order.order_id, open_box.box_id[:8]) == {"status": "edit_failed"}
+        assert editing.apply_box(ADMIN_ID, order.order_id, other_ordered.box_id[:8]) == {
+            "status": "edit_order_box_success"
+        }
+        assert db.get_box(other_ordered.box_id).current_quantity == 2
+        assert db.get_box(old.box_id).current_quantity == 0
+
+    def test_a_delivered_order_is_not_moved(self, db, editing, customer, sent):
+        old = make_box(db, 2, status=BoxStatus.DELIVERED.value)
+        new = make_box(db, 0)
+        order = make_order(db, customer, old, status="ready_for_labeling")
+
+        result = editing.apply_box(ADMIN_ID, order.order_id, new.box_id[:8])
+
+        assert result == {"status": "edit_failed"}
+        assert db.get_box(new.box_id).current_quantity == 0
+        assert db.get_box(old.box_id).current_quantity == 2
+
+
 class TestTheStatusEditKeepsTheBoxRight:
     """Audit 6, A3: crossing `cancelled` is a cancel, the money statuses are left to the payment flow"""
 

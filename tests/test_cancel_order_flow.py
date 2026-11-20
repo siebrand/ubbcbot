@@ -239,7 +239,7 @@ class TestADeliveredOrderIsNotCancelled:
 
         db.update_box(order.box_id, {"status": BoxStatus.DELIVERED.value, "current_quantity": 0})
 
-        BoxStatusManager(db).update_box_status_after_cancellation(order.box_id)
+        BoxStatusManager(db).update_box_status_after_change(order.box_id)
 
         assert db.get_box(order.box_id).status == BoxStatus.DELIVERED.value
 

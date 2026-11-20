@@ -67,19 +67,16 @@ class TestOrderEditingBox(unittest.TestCase):
         new_box = self._box("box-new", 0, cap=12, offer_id=724)
         self.mock_db.get_order.return_value = order
         self.mock_db.get_box.return_value = new_box
-        self.handler.box_status_manager.update_box_after_order_placement.return_value = True
-        self.handler.box_status_manager.update_box_after_order_cancellation.return_value = True
-        self.mock_db.update_order.return_value = True
+        self.mock_db.move_order_to_box.return_value = True
 
         ok, _msg = self.handler._apply_box_change(order, "box-new")
         self.assertTrue(ok)
-        # increment new box first, then decrement old
-        self.handler.box_status_manager.update_box_after_order_placement.assert_called_once_with("box-new", 2)
-        self.handler.box_status_manager.update_box_after_order_cancellation.assert_called_once_with("box-old", 2)
-        self.mock_db.update_order.assert_called_once()
-        args = self.mock_db.update_order.call_args[0]
-        self.assertEqual(args[0], order.order_id)
-        self.assertEqual(args[1], {"box_id": "box-new"})
+        # the order and both boxes in one transaction: a pending order between boxes not yet ordered
+        self.mock_db.move_order_to_box.assert_called_once_with(
+            order.order_id, 2, "box-old", "box-new", 12, "pending", ("open", "full")
+        )
+        self.mock_db.update_order.assert_not_called()
+        self.handler.box_status_manager.update_box_after_order_placement.assert_not_called()
 
     def test_apply_box_change_rejects_overfill_without_touching_old_box(self):
         order = self._order(box_id="box-old", quantity=5, offer_id=724)
@@ -109,17 +106,17 @@ class TestOrderEditingBox(unittest.TestCase):
         ok, _msg = self.handler._apply_box_change(order, "box-old")
         self.assertFalse(ok)
 
-    def test_apply_box_change_rolls_back_when_old_decrement_fails(self):
+    def test_apply_box_change_changes_nothing_when_the_transaction_is_rejected(self):
         order = self._order(box_id="box-old", quantity=2, offer_id=724)
         new_box = self._box("box-new", 0, cap=12, offer_id=724)
         self.mock_db.get_box.return_value = new_box
-        self.handler.box_status_manager.update_box_after_order_placement.return_value = True
-        self.handler.box_status_manager.update_box_after_order_cancellation.return_value = False  # old decrement fails
+        self.mock_db.move_order_to_box.return_value = False  # the order or a box changed in between
 
-        ok, _msg = self.handler._apply_box_change(order, "box-new")
+        ok, msg = self.handler._apply_box_change(order, "box-new")
         self.assertFalse(ok)
-        # rollback: the new-box increment is undone
-        self.handler.box_status_manager.update_box_after_order_cancellation.assert_any_call("box-new", 2)
+        self.assertEqual(msg, "edit_order_move_failed")
+        # nothing to roll back: no other write was made
+        self.handler.box_status_manager.update_box_status_after_change.assert_not_called()
         self.mock_db.update_order.assert_not_called()
 
 

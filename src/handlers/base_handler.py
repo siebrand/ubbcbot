@@ -459,7 +459,7 @@ class BaseHandler:
             self._send_message(chat_id, self._t("failed_cancel_order", chat_id))
             return {"status": "error"}
 
-        self.box_status_manager.update_box_status_after_cancellation(box.box_id)
+        self.box_status_manager.update_box_status_after_change(box.box_id)
         self._check_offer_status_after_change(order.offer_id)
 
         offer = self.db.get_offer(order.offer_id)
