@@ -629,6 +629,8 @@
   "not_approved": "niet goedgekeurd",
   "import_offer_line": "🍺 {offer_id}. {name} ({count} bestellingen)",
   "credit_no_reason": "Geen reden opgegeven",
+  "wholesale_units_delayed": "⏳ {units}x {product} van je bestelling komt later: de groothandel heeft niet alles tegelijk geleverd.",
+  "wholesale_units_cancelled": "❌ {units}x {product} van je bestelling kan niet geleverd worden: de groothandel heeft ze geannuleerd. Je betaalt er niets voor.",
   "test_user_message_sent": "✓ Testbericht verstuurd naar gebruiker {telegram_id}",
   "test_user_message_failed": "✗ Bericht versturen mislukt: {error}",
   "grand_total": "totaal",

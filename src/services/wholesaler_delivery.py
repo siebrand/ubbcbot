@@ -1,4 +1,6 @@
 import logging
+from collections import defaultdict
+from collections.abc import Callable
 
 from config import ADMIN_USER_ID
 from models.entities import Order, OrderStatus
@@ -7,14 +9,23 @@ from services.database import DynamoDBService
 
 logger = logging.getLogger(__name__)
 
+# Told to a customer whose units come later ("delayed") or not at all ("cancelled"):
+# (customer_id, offer_id, kind, units)
+ShortageNotifier = Callable[[str, int, str, int], None]
+
 
 class WholesalerDeliveryService:
     def __init__(
-        self, db_service: DynamoDBService, box_status_manager: BoxStatusManager, admin_user_id: int = ADMIN_USER_ID
+        self,
+        db_service: DynamoDBService,
+        box_status_manager: BoxStatusManager,
+        admin_user_id: int = ADMIN_USER_ID,
+        notify_shortage: ShortageNotifier | None = None,
     ):
         self.db = db_service
         self.box_status_manager = box_status_manager
         self.admin_user_id = admin_user_id
+        self.notify_shortage = notify_shortage
 
     def process_wholesaler_delivery(self, box_id: str, units_received: int, is_delayed: bool) -> bool:
         """
@@ -48,10 +59,12 @@ class WholesalerDeliveryService:
             elif units_received < total_expected:
                 # Partial delivery
                 missing_units = total_expected - units_received
+                shortages: dict[tuple[str, int], int] = defaultdict(int)
                 if is_delayed:
-                    self._process_partial_delayed(orders, units_received, missing_units, box_id)
+                    self._process_partial_delayed(orders, units_received, missing_units, box_id, shortages)
                 else:
-                    self._process_partial_cancelled(orders, units_received, missing_units, box_id)
+                    self._process_partial_cancelled(orders, units_received, missing_units, box_id, shortages)
+                self._tell_customers(shortages, "delayed" if is_delayed else "cancelled")
 
             return True
 
@@ -76,7 +89,9 @@ class WholesalerDeliveryService:
         # Update box status to DELIVERED via service
         self.box_status_manager.mark_box_as_delivered(box_id)
 
-    def _process_partial_delayed(self, orders: list[Order], units_received: int, missing_units: int, box_id: str):
+    def _process_partial_delayed(
+        self, orders: list[Order], units_received: int, missing_units: int, box_id: str, shortages: dict
+    ):
         """Process partial delivery where missing units are delayed"""
         remaining_to_allocate = units_received
 
@@ -89,7 +104,7 @@ class WholesalerDeliveryService:
                     admin_id=self.admin_user_id,
                     reason="Partial delivery - units delayed",
                 )
-                self.notify_customer_of_delay(order.order_id)
+                shortages[(order.customer_id, order.offer_id)] += order.quantity
             elif remaining_to_allocate >= order.quantity:
                 # Full order can be fulfilled
                 self.db.update_order(
@@ -107,13 +122,15 @@ class WholesalerDeliveryService:
                     admin_id=self.admin_user_id,
                     reason="Partial delivery - remaining delayed",
                 )
-                self.notify_customer_of_delay(order.order_id)
+                shortages[(order.customer_id, order.offer_id)] += order.quantity - remaining_to_allocate
                 remaining_to_allocate = 0
 
         # Update box status to DELIVERED via service
         self.box_status_manager.mark_box_as_delivered(box_id)
 
-    def _process_partial_cancelled(self, orders: list[Order], units_received: int, missing_units: int, box_id: str):
+    def _process_partial_cancelled(
+        self, orders: list[Order], units_received: int, missing_units: int, box_id: str, shortages: dict
+    ):
         """Process partial delivery where missing units are cancelled"""
         remaining_to_allocate = units_received
 
@@ -121,7 +138,7 @@ class WholesalerDeliveryService:
             if remaining_to_allocate <= 0:
                 # No more units to allocate - cancel entire order
                 self.db.cancel_order(order.order_id, self.admin_user_id, "Wholesale delivery - units unavailable")
-                self.notify_customer_of_cancellation(order.order_id)
+                shortages[(order.customer_id, order.offer_id)] += order.quantity
             elif remaining_to_allocate >= order.quantity:
                 # Full order can be fulfilled
                 self.db.update_order(
@@ -159,16 +176,19 @@ class WholesalerDeliveryService:
                     placed_by_admin=order.placed_by_admin,
                 )
                 self.db.create_order(cancelled_order, admin_id=self.admin_user_id)
-                self.notify_customer_of_cancellation(cancelled_order.order_id)
+                shortages[(order.customer_id, order.offer_id)] += cancelled_order.quantity
                 remaining_to_allocate = 0
 
         # Update box status to DELIVERED via service
         self.box_status_manager.mark_box_as_delivered(box_id)
 
-    def notify_customer_of_delay(self, order_id: str):
-        """Stub method for notifying customer of delay"""
-        logger.info(f"STUB: Notifying customer of delay for order {order_id}")
-
-    def notify_customer_of_cancellation(self, order_id: str):
-        """Stub method for notifying customer of cancellation"""
-        logger.info(f"STUB: Notifying customer of cancellation for order {order_id}")
+    def _tell_customers(self, shortages: dict[tuple[str, int], int], kind: str) -> None:
+        """One message per customer and offer, with all their units that come later or not at all"""
+        if not self.notify_shortage:
+            return
+        for (customer_id, offer_id), units in shortages.items():
+            try:
+                self.notify_shortage(customer_id, offer_id, kind, units)
+            except Exception as e:
+                # The delivery is processed: a message that fails must not undo or stop it
+                logger.error(f"Telling customer {customer_id} about {kind} units failed: {type(e).__name__}")

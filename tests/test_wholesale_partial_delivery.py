@@ -10,6 +10,7 @@ from unittest.mock import Mock
 import pytest
 
 from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
+from handlers.admin.wholesale_delivery_handler import WholesaleDeliveryHandler
 from models.entities import AuthorizationStatus, Box, Customer, Offer, OfferStatus, Order, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
@@ -83,6 +84,69 @@ def overview(db) -> tuple[DeliveryOverviewHandler, list[dict]]:
     handler.start_send_overviews(ADMIN_ID)
     context = db.get_edit_context_by_chat_id(ADMIN_ID)
     return handler, json.loads(context.entity_id)["customers_data"]
+
+
+class TestTheCustomersAreTold:
+    """A customer whose units come later, or not at all, hears it when the delivery is processed (audit 4, B2)"""
+
+    @staticmethod
+    def process(db, units: int, is_delayed: bool) -> list[tuple[int, str]]:
+        handler = WholesaleDeliveryHandler(db, ADMIN_ID, "prod", "token")
+        handler._send_message = Mock(return_value={"success": True})
+        handler._check_offer_status_after_change = Mock()
+        assert handler._process_box_delivery(BOX_ID, units, is_delayed)
+        return [(c.args[0], c.args[1]) for c in handler._send_message.call_args_list]
+
+    @staticmethod
+    def two_customers(db) -> tuple[Order, Order]:
+        jan, piet = customer(db, 101, "Jan"), customer(db, 102, "Piet")
+        return order(db, jan, 3), order(db, piet, 3)
+
+    @pytest.mark.parametrize(
+        ("is_delayed", "key"), [(True, "wholesale_units_delayed"), (False, "wholesale_units_cancelled")]
+    )
+    def test_each_customer_short_of_units_gets_one_message_with_their_missing_units(self, db, is_delayed, key):
+        first, second = self.two_customers(db)
+
+        messages = self.process(db, 4, is_delayed)
+
+        # Who is filled first is the order of the orders read: one customer misses 2 units, the other 3 or none
+        missing = {
+            o.customer_id: o.quantity - (db.get_order(o.order_id).received_quantity or 0) for o in (first, second)
+        }
+        if not is_delayed:
+            missing = {o.customer_id: 0 for o in (first, second)}
+            for o in db.get_orders_by_box(BOX_ID):
+                if o.status == OrderStatus.CANCELLED.value:
+                    missing[o.customer_id] += o.quantity
+        telegram_ids = {first.customer_id: 101, second.customer_id: 102}
+        expected = sorted(
+            (telegram_ids[cid], TelegramText.of(db, key, telegram_ids[cid], units=units))
+            for cid, units in missing.items()
+            if units
+        )
+        assert sorted(messages) == expected
+        assert sum(missing.values()) == 2
+
+    def test_a_full_delivery_tells_nobody(self, db):
+        self.two_customers(db)
+
+        assert self.process(db, 6, is_delayed=False) == []
+
+    def test_a_guest_is_not_messaged(self, db):
+        guest = db.create_customer(
+            Customer(telegram_user_id=-2, first_name="Gast", is_guest=True, authorization_status="approved")
+        )
+        order(db, guest, 6)
+
+        assert self.process(db, 4, is_delayed=False) == []
+
+
+class TelegramText:
+    @staticmethod
+    def of(db, key: str, telegram_id: int, units: int) -> str:
+        handler = WholesaleDeliveryHandler(db, ADMIN_ID, "prod", "token")
+        return handler._t(key, telegram_id, units=units, product="[7] Pils")
 
 
 class TestRestCancelled:

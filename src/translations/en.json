@@ -629,6 +629,8 @@
   "not_approved": "not approved",
   "import_offer_line": "🍺 {offer_id}. {name} ({count} orders)",
   "credit_no_reason": "No reason provided",
+  "wholesale_units_delayed": "⏳ {units}x {product} of your order will arrive later: the wholesaler did not deliver everything at once.",
+  "wholesale_units_cancelled": "❌ {units}x {product} of your order cannot be delivered: the wholesaler cancelled them. You do not pay for them.",
   "test_user_message_sent": "✓ Test message sent to user {telegram_id}",
   "test_user_message_failed": "✗ Failed to send message: {error}",
   "grand_total": "total",

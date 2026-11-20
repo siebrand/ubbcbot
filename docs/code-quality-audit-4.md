@@ -1,6 +1,6 @@
 # Code quality audit 4: where stock and money change
 
-Status: **open** (2026-11-19). Follows audit 3 (what the bot sends), which is done. The first three audits went
+Status: **done** (opened 2026-11-19, closed 2026-11-20; follow-ups in audit 5). Follows audit 3 (what the bot sends), which is done. The first three audits went
 through the largest files and the messages; this one follows the code that changes what a customer owes or gets:
 credits, the wholesale delivery and labeling workflows, the CSV import, and the per-container caches and test
 safeguards around them. Same priorities as before:
@@ -93,10 +93,16 @@ transactions (CLAUDE.md, Gotchas).
   described: `issue_credit` lost money too (10 issued next to a concurrent 5 left 10, not 15).
   `tests/test_credit_atomic.py` (moto). Found along the way: **nothing calls `apply_credit_to_delivery`**, so credit
   is never applied to a payment; the payment message does not mention it either. Moved to audit 5.
-- [ ] **B2. The customers are never told about a delayed or cancelled wholesale delivery**
+- [x] **B2. The customers are never told about a delayed or cancelled wholesale delivery**
   (`wholesaler_delivery.py`, `notify_customer_of_delay` and `notify_customer_of_cancellation` only log "STUB").
   Fix: tell them through `_notify_customer` (translated, guests skipped), or remove the stubs and say in the delivery
   messages what happened. Decide with the owner which; the delivery overview already mentions delayed units.
+  **Done** (decided without the owner, as asked): they are told. The overview mentions delayed units only at payment
+  time, and cancelled units never: a customer whose whole order was cancelled heard nothing at all. The service
+  sums the missing units per customer and offer and hands them to a notifier (`notify_shortage`) that
+  `WholesaleDeliveryHandler` passes in; that sends `wholesale_units_delayed` or `wholesale_units_cancelled` through
+  `_notify_customer`, one message per customer. A failed message is logged and does not stop the delivery. The stubs
+  are gone. `TestTheCustomersAreTold` in `tests/test_wholesale_partial_delivery.py`.
 - [x] **B3. An imported order and its box are two writes** (`import_handler.py`, `_create_import_order`): the order
   is written with `create_order` and the box incremented afterwards, so an import that runs while customers order
   can overfill a box or leave an order without its unit in the box. Fix: `create_order_with_box_increment` (the

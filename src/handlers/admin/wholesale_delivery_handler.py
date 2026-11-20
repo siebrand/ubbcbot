@@ -14,7 +14,17 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
         box_status_manager = BoxStatusManager(db)
-        self.delivery_service = WholesalerDeliveryService(db, box_status_manager, admin_user_id)
+        self.delivery_service = WholesalerDeliveryService(
+            db, box_status_manager, admin_user_id, notify_shortage=self._tell_customer_of_shortage
+        )
+
+    def _tell_customer_of_shortage(self, customer_id: str, offer_id: int, kind: str, units: int) -> None:
+        """Tell a customer that units of their order come later ("delayed") or not at all ("cancelled")"""
+        offer = self.db.get_offer(offer_id)
+        product = f"[{offer_id}] {offer.name}" if offer else f"[{offer_id}]"
+        self._notify_customer(
+            self.db.get_customer(customer_id), f"wholesale_units_{kind}", units=units, product=product
+        )
 
     def _ordered_boxes(self, offer_id: int) -> list[Box]:
         """The boxes of an offer that are ordered and not yet delivered"""
