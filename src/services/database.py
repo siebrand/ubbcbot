@@ -447,9 +447,10 @@ class DynamoDBService:
     def update_customer_credit(self, customer_id: str, updates: dict[str, Any]) -> bool:
         return self.credit_repo.update_customer_credit(customer_id, updates)
 
-    def record_credit_change(self, transaction, issued_delta, used_delta, now: str) -> bool:
-        """The transaction and its balance change in one write (see CreditRepository.record_change)"""
-        return self.credit_repo.record_change(transaction, issued_delta, used_delta, now)
+    def record_credit_change(self, transaction, issued_delta, used_delta, now: str, order_credits=None) -> bool:
+        """The transaction, its balance change and the credit of the orders it is used for, in one write (see
+        CreditRepository.record_change)"""
+        return self.credit_repo.record_change(transaction, issued_delta, used_delta, now, order_credits)
 
     def create_credit_transaction(self, transaction) -> bool:
         return self.credit_repo.create_credit_transaction(transaction)

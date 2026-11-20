@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 
-from models.entities import CustomerCredit
+from models.entities import CustomerCredit, Order, OrderStatus
 from services.credit_service import CreditService
 from services.database import DynamoDBService
 
@@ -51,11 +51,16 @@ class TestConcurrentCredit:
         assert service.issue_credit(CUSTOMER_ID, Decimal("20"), "Start", ADMIN_ID)
         credit_issued_after_the_next_read(db, Decimal("5"))
 
-        result = service.apply_credit_to_delivery(CUSTOMER_ID, Decimal("50"))
+        awaiting = db.order_repo.create_order(
+            Order(customer_id=CUSTOMER_ID, total_price=Decimal("50"), status=OrderStatus.AWAITING_PAYMENT.value)
+        )
+
+        result = service.apply_credit_to_orders(CUSTOMER_ID, [awaiting])
 
         assert result["credit_applied"] + result["remaining_credit"] == Decimal("25")
         assert balance(db) == result["remaining_credit"]
         assert balance(db) == balance_after_history(db)
+        assert db.get_order(awaiting.order_id).credit_applied == result["credit_applied"]
 
     def test_a_credit_issued_while_credit_is_issued_is_not_lost(self, db):
         service = CreditService(db)

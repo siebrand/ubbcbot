@@ -1,5 +1,7 @@
 """The payment message a customer gets: when the order is ready, as a reminder, and on /payment_info."""
 
+from decimal import Decimal
+
 from handlers.base_handler import BaseHandler
 
 
@@ -46,17 +48,30 @@ class PaymentMessageMixin(BaseHandler):
                 message += f"- {quantity}x [{offer_id}] {offer_name} — €{line_total:.2f}\n"
 
             message += (
-                "\n" + self._t("total_amount_bold", user_id=customer.telegram_user_id, total=delivered_total) + "\n\n"
+                "\n" + self._t("total_amount_bold", user_id=customer.telegram_user_id, total=delivered_total) + "\n"
             )
-            message += (
-                self._t(
-                    "pay_via_payment_request",
-                    user_id=customer.telegram_user_id,
-                    link=self._escape_html(payment_link),
-                    total=delivered_total,
+            # Credit used when the overview asked for the payment (audit 5, A2): the same amounts in every reminder
+            credit = sum((order.credit_applied or 0 for order in delivered_orders), Decimal("0"))
+            to_pay = delivered_total - credit
+            if credit > 0:
+                message += self._t("credit_used_line", user_id=customer.telegram_user_id, amount=credit) + "\n"
+            elif credit < 0:
+                message += self._t("debt_added_line", user_id=customer.telegram_user_id, amount=-credit) + "\n"
+            if credit:
+                message += self._t("amount_to_pay_bold", user_id=customer.telegram_user_id, total=to_pay) + "\n"
+            message += "\n"
+            if to_pay > 0:
+                message += (
+                    self._t(
+                        "pay_via_payment_request",
+                        user_id=customer.telegram_user_id,
+                        link=self._escape_html(payment_link),
+                        total=to_pay,
+                    )
+                    + "\n"
                 )
-                + "\n"
-            )
+            else:
+                message += self._t("nothing_to_pay", user_id=customer.telegram_user_id) + "\n"
             message += "━━━━━━━━━━━━━━━━━━━━\n"
             message += (
                 self._t(

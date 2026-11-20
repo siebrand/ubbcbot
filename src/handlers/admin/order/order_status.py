@@ -87,7 +87,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
         keyboard_rows = []
 
         for customer, orders in page_customers:
-            total_amount = sum(order.total_price for order in orders)
+            total_amount = sum(order.amount_due for order in orders)
 
             # Button text: ✓ Last, First €amount (N)
             last_name = customer.last_name or ""
@@ -136,7 +136,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
             customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(
                 "unknown", user_id=None
             )
-            total_amount = sum(order.total_price for order in orders)
+            total_amount = sum(order.amount_due for order in orders)
             message += f"👤 {customer_name} (@{customer.username or 'no_username'}):\n"
             message += f"   💰 €{total_amount:.2f} ({len(orders)} orders)\n"
             for order in orders:
@@ -186,7 +186,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
             customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(
                 "unknown", chat_id
             )
-            total_amount = sum(order.total_price for order in orders)
+            total_amount = sum(order.amount_due for order in orders)
             message += (
                 self._t(
                     "payment_reminder_customer_line",

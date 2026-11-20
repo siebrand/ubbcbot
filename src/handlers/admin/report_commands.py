@@ -223,7 +223,8 @@ class ReportCommands(BaseHandler):
         unpaid = reporting.open_orders(orders)
         footer.append("")
         if unpaid:
-            amount = sum((order.total_price or Decimal("0") for order in unpaid), Decimal("0"))
+            # What is left to pay: credit used for an order awaiting payment is not owed
+            amount = sum((order.amount_due for order in unpaid), Decimal("0"))
             footer.append(self._t("report_open_amount", chat_id, amount=amount, count=len(unpaid)))
         else:
             footer.append(self._t("report_open_amount_none", chat_id))

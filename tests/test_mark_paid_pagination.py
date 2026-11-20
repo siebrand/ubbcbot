@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest.mock import Mock
 
 import pytest
@@ -64,7 +65,7 @@ class TestMarkPaidPagination:
                     customer_id=customer_id,
                     offer_id="offer_1",
                     quantity=2,
-                    total_price=20.0,
+                    total_price=Decimal("20.0"),
                     status=OrderStatus.AWAITING_PAYMENT.value,
                 )
             ]
@@ -118,7 +119,7 @@ class TestMarkPaidPagination:
                     customer_id=customer_id,
                     offer_id="offer_1",
                     quantity=2,
-                    total_price=20.0,
+                    total_price=Decimal("20.0"),
                     status=OrderStatus.AWAITING_PAYMENT.value,
                 )
             ]
@@ -169,7 +170,7 @@ class TestMarkPaidPagination:
                     customer_id=customer_id,
                     offer_id="offer_1",
                     quantity=2,
-                    total_price=20.0,
+                    total_price=Decimal("20.0"),
                     status=OrderStatus.AWAITING_PAYMENT.value,
                 )
             ]
@@ -211,7 +212,7 @@ class TestMarkPaidPagination:
                 customer_id="cust_1",
                 offer_id="offer_1",
                 quantity=2,
-                total_price=20.0,
+                total_price=Decimal("20.0"),
                 status=OrderStatus.AWAITING_PAYMENT.value,
             ),
             Order(
@@ -219,7 +220,7 @@ class TestMarkPaidPagination:
                 customer_id="cust_1",
                 offer_id="offer_2",
                 quantity=3,
-                total_price=30.0,
+                total_price=Decimal("30.0"),
                 status=OrderStatus.AWAITING_PAYMENT.value,
             ),
         ]

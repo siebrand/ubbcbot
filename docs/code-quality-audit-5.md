@@ -42,12 +42,23 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   `received_partial_delayed` any more. Not done here: orders that already have that status in the table stay
   stranded; check prod for them (a one-off script can split them the same way). When a split is refused, the order
   stays `ordered` whole and nobody is told (logged). `TestRestDelayed` in `tests/test_wholesale_partial_delivery.py`.
-- [ ] **A2. Credit is never applied to a payment** (`credit_service.py`, found in audit 4, B1).
+- [x] **A2. Credit is never applied to a payment** (`credit_service.py`, found in audit 4, B1).
   `apply_credit_to_delivery` has no caller: a customer with credit pays the full amount, and a debt (a negative
   balance from `/credit`) is never charged. The payment message does not mention credit either. Fix: apply the
   balance once, when the overview moves the orders to `awaiting_payment`, show it in the payment message ("credit
   used", "still to pay"), and keep what was applied with the orders, so a reminder shows the same amount and does not
   apply it again. Test: 5 credit, an overview of 12 asks for 7 and the balance is 0; the reminder asks for 7 too.
+  **Done**: `apply_credit_to_delivery` became `apply_credit_to_orders`, called by the overview for the orders that
+  moved to `awaiting_payment`. An order keeps `credit_applied` (a credit fills the orders one by one up to their
+  price, a debt goes on the first) and `Order.amount_due` is what is left to pay. The balance, the APPLIED
+  transaction and the `credit_applied` of each order are one transaction, each order on condition that it awaits
+  payment and has no credit yet: credit is never used twice, and a reminder only reads it. The payment message shows
+  "credit used" or "outstanding amount added" and "to pay", and no payment link when nothing is left to pay; the
+  `/process_payment` and reminder lists, "payment received" and the open amount of `/report_customer` use
+  `amount_due`. The PAYMENT_RECEIVED event keeps the price of the order (spend, not cash). When applying fails, the
+  customer is asked for the full amount (logged). Found along the way: an order awaiting payment can be cancelled
+  by its id (`_execute_cancel`), and the credit used for it is then lost; and it gives units back to a delivered
+  box (next audit). `tests/test_credit_at_payment.py`.
 - [x] **A3. The payment link goes into the HTML message unescaped, and anything is accepted as a link**
   (`payment_message.py`, `pay_via_payment_request` with `link=payment_link`; `handle_payment_link_input`). The link is
   typed by the admin; a `&` or `<` in it breaks the message (Telegram refuses it, so no customer of the batch gets an

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from models.entities import CreditTransaction
+from models.entities import CreditTransaction, Order
 from repositories.credit_repository import CreditBalanceChanged
 
 logger = logging.getLogger(__name__)
@@ -32,11 +32,16 @@ class CreditService:
         return credit.current_balance if credit else Decimal("0.0")
 
     def _change_balance(
-        self, customer_id: str, make_transaction: Callable[[Decimal], CreditTransaction | None], is_credit: bool
+        self,
+        customer_id: str,
+        make_transaction: Callable[[Decimal], CreditTransaction | None],
+        is_credit: bool,
+        order_credits: Callable[[CreditTransaction], dict[str, Decimal]] | None = None,
     ) -> CreditTransaction | None:
         """Read the balance, let make_transaction say what changes, and write the transaction and the new balance
         in one write that only succeeds when the balance is still the one that was read. When another write came
-        in between, read again (MAX_ATTEMPTS times).
+        in between, read again (MAX_ATTEMPTS times). ``order_credits`` says which orders the change is used for;
+        they are written in the same transaction.
 
         Returns the written transaction; None when make_transaction wants no change or the write failed.
         """
@@ -50,7 +55,11 @@ class CreditService:
             used_delta = -delta if not is_credit and delta < 0 else Decimal("0.0")
             try:
                 written = self.db.record_credit_change(
-                    transaction, issued_delta, used_delta, datetime.now(UTC).isoformat()
+                    transaction,
+                    issued_delta,
+                    used_delta,
+                    datetime.now(UTC).isoformat(),
+                    order_credits(transaction) if order_credits else None,
                 )
             except CreditBalanceChanged:
                 continue
@@ -92,17 +101,18 @@ class CreditService:
 
         return self._change_balance(customer_id, credit_issued, is_credit=amount > 0) is not None
 
-    def apply_credit_to_delivery(self, customer_id: str, delivery_total: Decimal) -> dict:
-        """Apply credit when orders transition LABELING_COMPLETED → AWAITING_PAYMENT
+    def apply_credit_to_orders(self, customer_id: str, orders: list[Order]) -> dict:
+        """Use the balance for orders that now await payment (the delivery overview), once.
 
-        Args:
-            customer_id: Customer ID
-            delivery_total: Total delivery amount
+        A positive balance pays for the orders, up to their total; a negative one (a debt) is charged with them. The
+        balance, its transaction and the ``credit_applied`` of each order are one write, which is refused when an
+        order no longer awaits payment or already has credit applied: credit is never used twice for an order.
 
         Returns:
             Dict with original_total, credit_applied, payment_required, remaining_credit. When the credit could
             not be written, nothing is applied: the full total is to be paid and the balance stays.
         """
+        delivery_total = sum((o.total_price for o in orders), Decimal("0"))
 
         def credit_applied(balance: Decimal) -> CreditTransaction | None:
             if balance == 0:
@@ -129,7 +139,21 @@ class CreditService:
                 created_by=0,  # System operation
             )
 
-        transaction = self._change_balance(customer_id, credit_applied, is_credit=False)
+        def spread(transaction: CreditTransaction) -> dict[str, Decimal]:
+            """The credit of each order: a credit fills the orders one by one up to their price, a debt goes on
+            the first order"""
+            applied = self._applied(transaction)
+            if applied < 0:
+                return {orders[0].order_id: applied}
+            per_order, left = {}, applied
+            for order in orders:
+                per_order[order.order_id] = min(left, order.total_price)
+                left -= per_order[order.order_id]
+            return per_order
+
+        transaction = (
+            self._change_balance(customer_id, credit_applied, is_credit=False, order_credits=spread) if orders else None
+        )
         if transaction is None:
             return {
                 "original_total": delivery_total,
@@ -138,11 +162,15 @@ class CreditService:
                 "remaining_credit": self.get_customer_credit_balance(customer_id),
             }
 
-        # credit_applied is positive for credit used, negative for a debt charged
-        applied = -transaction.amount if transaction.balance_before > 0 else transaction.amount
+        applied = self._applied(transaction)
         return {
             "original_total": delivery_total,
             "credit_applied": applied,
             "payment_required": delivery_total - applied,
             "remaining_credit": transaction.balance_after,
         }
+
+    @staticmethod
+    def _applied(transaction: CreditTransaction) -> Decimal:
+        """What an APPLIED transaction takes off the payment: positive for credit used, negative for a debt"""
+        return -transaction.amount if transaction.balance_before > 0 else transaction.amount

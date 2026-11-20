@@ -117,10 +117,18 @@ class Order:
     received_quantity: int = 0
     unit_price: Decimal = Decimal("0.0")
     total_price: Decimal = Decimal("0.0")
+    # Credit used for this order when the delivery overview asked for the payment (negative: a debt charged with it).
+    # What the customer pays is total_price - credit_applied.
+    credit_applied: Decimal = Decimal("0")
     status: str = OrderStatus.PENDING.value
     placed_by_admin: bool = False
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     update_date: datetime | None = field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def amount_due(self) -> Decimal:
+        """What the customer pays for this order: its price minus the credit used for it (plus a debt)"""
+        return (self.total_price or Decimal("0")) - (self.credit_applied or Decimal("0"))
 
 
 @dataclass

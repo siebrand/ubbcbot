@@ -8,7 +8,7 @@ from boto3.dynamodb.conditions import Key
 from boto3.dynamodb.types import TypeSerializer
 from botocore.exceptions import ClientError
 
-from models.entities import CreditTransaction, CustomerCredit
+from models.entities import CreditTransaction, CustomerCredit, OrderStatus
 from repositories.base_repository import BaseRepository
 from utils.dynamodb import read_all_pages
 
@@ -85,7 +85,12 @@ class CreditRepository(BaseRepository):
             return False
 
     def record_change(
-        self, transaction: CreditTransaction, issued_delta: Decimal, used_delta: Decimal, now: str
+        self,
+        transaction: CreditTransaction,
+        issued_delta: Decimal,
+        used_delta: Decimal,
+        now: str,
+        order_credits: dict[str, Decimal] | None = None,
     ) -> bool:
         """Write the transaction and move the balance from its balance_before to its balance_after, in one
         transaction: both or neither.
@@ -93,7 +98,30 @@ class CreditRepository(BaseRepository):
         The balance must still be the balance_before that was read (no record counts as 0); when another write
         changed it in the meantime, CreditBalanceChanged is raised and nothing is written, so the caller can read
         again. Returns False when the write failed for another reason.
+
+        ``order_credits`` (order id → credit used for it) are written in the same transaction, each only while the
+        order awaits payment and has no credit applied yet: credit is never used twice for one order. When one of
+        them no longer qualifies, nothing is written and False is returned.
         """
+        order_items = [
+            {
+                "Update": {
+                    "TableName": f"{self.table_prefix}-orders",
+                    "Key": {"order_id": {"S": order_id}},
+                    "UpdateExpression": "SET credit_applied = :credit",
+                    "ConditionExpression": (
+                        "#status = :awaiting AND (attribute_not_exists(credit_applied) OR credit_applied = :zero)"
+                    ),
+                    "ExpressionAttributeNames": {"#status": "status"},
+                    "ExpressionAttributeValues": {
+                        ":credit": {"N": str(credit)},
+                        ":awaiting": {"S": OrderStatus.AWAITING_PAYMENT.value},
+                        ":zero": {"N": "0"},
+                    },
+                }
+            }
+            for order_id, credit in (order_credits or {}).items()
+        ]
         serializer = TypeSerializer()
         transaction_item = {k: serializer.serialize(v) for k, v in self._prepare_item(transaction.__dict__).items()}
         balance_condition = "current_balance = :before"
@@ -130,12 +158,14 @@ class CreditRepository(BaseRepository):
                             },
                         }
                     },
+                    *order_items,
                 ]
             )
             return True
         except ClientError as e:
             reasons = [r.get("Code") for r in e.response.get("CancellationReasons", [])]
-            if "ConditionalCheckFailed" in reasons:
+            # The items are the transaction, the balance, then the orders: only the balance is worth a new read
+            if len(reasons) > 1 and reasons[1] == "ConditionalCheckFailed":
                 logger.warning(f"Credit balance of {transaction.customer_id} changed while it was being changed")
                 raise CreditBalanceChanged(transaction.customer_id) from e
             logger.error(f"Credit change failed for {transaction.customer_id}: {e.response['Error']['Code']}")

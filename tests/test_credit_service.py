@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from models.entities import CustomerCredit
+from models.entities import CustomerCredit, Order
 from repositories.credit_repository import CreditBalanceChanged
 from services.credit_service import CreditService
 
@@ -24,6 +24,11 @@ def with_balance(credit_service, *balances: str) -> None:
     credit_service.db.get_customer_credit.side_effect = [
         CustomerCredit(customer_id="customer-123", current_balance=Decimal(b)) for b in balances
     ]
+
+
+def delivery(total: str) -> list[Order]:
+    """The orders that now await payment: one, of ``total``"""
+    return [Order(order_id="o1", customer_id="customer-123", total_price=Decimal(total), status="awaiting_payment")]
 
 
 def written(credit_service):
@@ -147,7 +152,7 @@ class TestApplyCreditToDelivery:
         """Test applying credit when credit < delivery total"""
         with_balance(credit_service, "20.00")
 
-        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
+        result = credit_service.apply_credit_to_orders("customer-123", delivery("50.00"))
 
         assert result["original_total"] == Decimal("50.00")
         assert result["credit_applied"] == Decimal("20.00")
@@ -158,7 +163,7 @@ class TestApplyCreditToDelivery:
         """Test applying credit when credit > delivery total"""
         with_balance(credit_service, "50.00")
 
-        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("30.00"))
+        result = credit_service.apply_credit_to_orders("customer-123", delivery("30.00"))
 
         assert result["original_total"] == Decimal("30.00")
         assert result["credit_applied"] == Decimal("30.00")
@@ -169,7 +174,7 @@ class TestApplyCreditToDelivery:
         """Test applying credit when credit = delivery total"""
         with_balance(credit_service, "50.00")
 
-        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
+        result = credit_service.apply_credit_to_orders("customer-123", delivery("50.00"))
 
         assert result["original_total"] == Decimal("50.00")
         assert result["credit_applied"] == Decimal("50.00")
@@ -180,7 +185,7 @@ class TestApplyCreditToDelivery:
         """Test applying credit when customer has no credit: nothing is written"""
         credit_service.db.get_customer_credit.return_value = None
 
-        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
+        result = credit_service.apply_credit_to_orders("customer-123", delivery("50.00"))
 
         assert result["original_total"] == Decimal("50.00")
         assert result["credit_applied"] == Decimal("0.0")
@@ -192,7 +197,7 @@ class TestApplyCreditToDelivery:
         """Test that applying credit creates APPLIED transaction, with the usage in the same write"""
         with_balance(credit_service, "30.00")
 
-        credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
+        credit_service.apply_credit_to_orders("customer-123", delivery("50.00"))
 
         transaction, issued, used = written(credit_service)
         assert transaction.transaction_type == "APPLIED"
@@ -205,7 +210,7 @@ class TestApplyCreditToDelivery:
         """Test applying negative balance adds charge to delivery total"""
         with_balance(credit_service, "-20.00")
 
-        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
+        result = credit_service.apply_credit_to_orders("customer-123", delivery("50.00"))
 
         assert result["original_total"] == Decimal("50.00")
         assert result["credit_applied"] == Decimal("-20.00")  # Negative
@@ -223,7 +228,7 @@ class TestApplyCreditToDelivery:
         with_balance(credit_service, "30.00", "30.00")
         credit_service.db.record_credit_change.return_value = False
 
-        result = credit_service.apply_credit_to_delivery("customer-123", Decimal("50.00"))
+        result = credit_service.apply_credit_to_orders("customer-123", delivery("50.00"))
 
         assert result["credit_applied"] == Decimal("0.0")
         assert result["payment_required"] == Decimal("50.00")

@@ -346,6 +346,22 @@ class TestCustomerReport:
         assert customer_id == jan.customer_id and start.year == end.year == 2025
         env.db.get_orders_by_customer.assert_called_once_with(jan.customer_id, strict=True)
 
+    def test_the_open_amount_is_what_is_left_to_pay_after_credit(self, env):
+        """Credit used for an order awaiting payment (audit 5, A2) is not owed any more"""
+        jan = self._jan(env)
+        env.db.get_orders_by_customer.return_value = [
+            Order(
+                customer_id=jan.customer_id,
+                status="awaiting_payment",
+                total_price=Decimal("12"),
+                credit_applied=Decimal("5"),
+            )
+        ]
+
+        env.handler.handle_report_customer(ADMIN_ID, ["jantje"])
+
+        assert "Openstaand bedrag (nu): <b>€7.00</b> (1 " in text(env)
+
     def test_an_excluded_customer_still_has_a_customer_report(self, env):
         known_customers(env, customer(EXCLUDED, "Piet", "Puk", "pietje"))
         env.db.get_order_history_by_customer.return_value = [payment(EXCLUDED, "500", datetime(2025, 2, 3, tzinfo=UTC))]

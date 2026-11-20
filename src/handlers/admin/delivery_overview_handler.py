@@ -9,6 +9,7 @@ import boto3
 from handlers.base_handler import BaseHandler
 from handlers.payment_message import PaymentMessageMixin
 from models.entities import AuthorizationStatus, OrderStatus
+from services.credit_service import CreditService
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,7 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
                 }
                 if not customer_data["delivered_order_ids"] and not customer_data["delayed_order_ids"]:
                     continue
+                self._apply_credit(customer_data["customer_id"], customer_data["delivered_order_ids"])
                 msg = self._build_delivery_message_payload(customer_data, payment_link)
                 if msg:
                     messages.append(msg)
@@ -167,6 +169,18 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
         except Exception as e:
             self._send_message(chat_id, self._t("error_processing_payment_link", user_id=None, error=str(e)))
             return {"status": "error"}
+
+    def _apply_credit(self, customer_id: str, order_ids: list[str]) -> None:
+        """Use the customer's credit (or charge their debt) for the orders that now await payment. Once: the orders
+        keep what was used, and the reminders show the same amounts."""
+        orders = [o for o in (self.db.get_order(order_id) for order_id in order_ids) if o]
+        if not orders:
+            return
+        try:
+            CreditService(self.db).apply_credit_to_orders(customer_id, orders)
+        except Exception as e:
+            # Without credit the customer is asked for the full amount, which they can be refunded
+            logger.error(f"Applying credit for {customer_id} failed: {type(e).__name__}")
 
     def _build_delivery_message_payload(self, customer_data: dict, payment_link: str) -> dict | None:
         """Build message payload for async sending"""
@@ -292,7 +306,7 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
             "unknown", user_id=None
         )
         # The amount of the orders that were marked paid: the customer must not hear of more
-        total_amount = sum(order.total_price for order in paid_orders)
+        total_amount = sum(order.amount_due for order in paid_orders)
 
         if 0 < updated_count < len(awaiting_payment_orders):
             self._send_message(
