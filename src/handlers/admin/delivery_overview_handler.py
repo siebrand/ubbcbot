@@ -164,7 +164,9 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
                 return {"status": "completed"}
 
         except Exception as e:
-            self._send_message(chat_id, self._t("error_processing_payment_link", user_id=None, error=str(e)))
+            # The type only: the text of an exception can name customers, tables or parameters
+            logger.error(f"Processing the payment link failed: {type(e).__name__}")
+            self._send_message(chat_id, self._t("error_processing_payment_link", user_id=None, error=type(e).__name__))
             return {"status": "error"}
 
     def _apply_credit(self, customer_id: str, order_ids: list[str]) -> None:

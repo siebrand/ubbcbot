@@ -272,4 +272,5 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
                 error = body.get("results", [{}])[0].get("error", "Unknown error")
                 return {"success": False, "error": error}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            # Shown to the admin: the type only, the text of a Lambda or boto error can name resources
+            return {"success": False, "error": type(e).__name__}

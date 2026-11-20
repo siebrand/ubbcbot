@@ -198,3 +198,27 @@ class TestTheLinkOfTheCustomersBatch:
         assert info.handle_payment_info(101, 101) == {"status": "success"}
 
         assert self.SECOND in info._send_message.call_args.args[1]
+
+
+class TestTheAdminSeesTheTypeOfAnErrorOnly:
+    """The text of an exception can hold names, ids or parameters (audit 5, B5)"""
+
+    SECRET = "order of Jan Jansen in ubbc-bot-prod-orders"
+
+    def test_a_failing_link_reply(self, handler, db, jan):
+        labeled(db, jan, 4)
+        db.batch_update_order_status = Mock(side_effect=RuntimeError(self.SECRET))
+
+        assert start_and_reply(handler, db) == []
+
+        last = handler._send_message.call_args.args[1]
+        assert "RuntimeError" in last and self.SECRET not in last
+
+    def test_a_failing_reminder(self, db, jan):
+        reminders = OrderStatusManagement(db, ADMIN_ID, "prod", "token")
+        reminders.lambda_client = Mock()
+        reminders.lambda_client.invoke.side_effect = RuntimeError(self.SECRET)
+
+        result = reminders._send_user_message(101, "Hoi")
+
+        assert result == {"success": False, "error": "RuntimeError"}

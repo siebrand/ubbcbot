@@ -8,6 +8,7 @@ import json
 import logging
 
 import boto3
+from telethon.errors import FloodWaitError
 
 from config import ADMIN_USER_ID
 from services.telegram_client import TelegramClient
@@ -193,24 +194,25 @@ async def send_from_admin(msg, environment):
 
         return {"success": True, "user_id": user_id}
     except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Error sending from admin to {msg.get('user_id')}: {error_msg}")
-
-        # If entity not found, return error (don't fallback - admin needs to interact with user first)
-        if "Could not find the input entity" in error_msg:
-            return {
-                "success": False,
-                "user_id": msg.get("user_id"),
-                "error": "User not in admin contacts",
-                "customer_name": msg.get("customer_name"),
-            }
-
+        error = _admin_send_error(e)
+        logger.error(f"Error sending from admin to {msg.get('user_id')}: {error}")
         return {
             "success": False,
             "user_id": msg.get("user_id"),
-            "error": error_msg,
+            "error": error,
             "customer_name": msg.get("customer_name"),
         }
+
+
+def _admin_send_error(e: Exception) -> str:
+    """What the failure report and the log say about a Telethon error: its type, never its text (it names users
+    and requests), except for the two the admin can act on"""
+    if isinstance(e, ValueError) and "Could not find the input entity" in str(e):
+        # Not retried from the bot: the admin needs to have talked with the user first
+        return "User not in admin contacts"
+    if isinstance(e, FloodWaitError):
+        return f"Flood wait: try again in {e.seconds} s"
+    return type(e).__name__
 
 
 async def send_from_bot(msg, environment, bot_token):

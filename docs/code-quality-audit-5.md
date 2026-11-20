@@ -125,10 +125,16 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   reader, so the admin always gets Dutch: the import screens, `_validate_args`, `_send_error`/`_send_success` without
   `user_id`, most of `delivery_overview_handler.py` and `order_status.py` (`user_id=None`). Fix: translate with the
   reader (admin screens: the admin); a test that walks the admin screens in English.
-- [ ] **B5. The admin sees the text of an exception** (`error_processing_payment_link` with `error=str(e)`,
+- [x] **B5. The admin sees the text of an exception** (`error_processing_payment_link` with `error=str(e)`,
   `_send_user_message` returns `str(e)`, `send_from_admin` in `message_sender.py` reports and logs the text of a
   Telethon error; audit 4, B9). Fix: the type only, except the Telethon messages the failure report needs ("Could not
   find the input entity" is already mapped; map a flood wait the same way).
+  **Done**: `send_from_admin` reports and logs `_admin_send_error(e)`: "User not in admin contacts", "Flood wait: try
+  again in N s" (Telethon's `FloodWaitError`), otherwise the type of the exception (the type names the useful
+  Telethon cases too, such as `UserIsBlockedError`). The log line had the text as well (it held the user's peer):
+  now the same short form. `error_processing_payment_link` and `_send_user_message` give the type (and the first is
+  logged now; it was not logged at all). Tests in `tests/test_message_sender_errors.py` and
+  `TestTheAdminSeesTheTypeOfAnErrorOnly` in `tests/test_overview_payment_link.py`.
 
 ## Order of work
 
