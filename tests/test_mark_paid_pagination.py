@@ -15,6 +15,16 @@ class TestMarkPaidPagination:
         db = Mock()
         db.get_customers_by_status = Mock()
         db.get_orders_by_customer = Mock()
+
+        def with_orders(status):
+            """The real helper's answer, from the customers and orders the tests give"""
+            found = [
+                (c, [o for o in db.get_orders_by_customer(c.customer_id) if o.status == status])
+                for c in db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+            ]
+            return [(c, orders) for c, orders in found if orders]
+
+        db.get_approved_customers_with_orders = Mock(side_effect=with_orders)
         return db
 
     @pytest.fixture

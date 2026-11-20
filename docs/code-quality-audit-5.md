@@ -96,10 +96,14 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   (`handle_send_payment_reminder_to_customer`, `system_repository.py`: one `payment_link` item). The overview asks for
   a link per batch of 50; a reminder to a customer of the first batch carries the link of the last. Fix: keep the link
   with the orders (or per batch) and remind with the customer's own; or, if one link fits everyone, ask for it once.
-- [ ] **B3. Four copies of "approved customers with orders in status X", each with a query per customer**
+- [x] **B3. Four copies of "approved customers with orders in status X", each with a query per customer**
   (`order_status.py` three times, `start_send_overviews`). Every screen reads all approved customers and then the
   orders of each, one query per customer. Fix: one helper that reads the orders by status (`status-index` exists) and
-  groups them by customer; pin the four screens first.
+  groups them by customer; pin the four screens first. **Done**: `DynamoDBService.get_approved_customers_with_orders`
+  (one status-index query, grouped by customer, in the order of the cached approved customers); the screens were
+  pinned first against moto in `tests/test_customers_with_orders_in_status.py` (also: an unapproved customer with
+  orders is left out, guests come last in the overviews), which now also asserts no per-customer read. It was five
+  copies: `handle_send_delivery_overviews` had one too.
 - [ ] **B4. Text that bypasses the translations or the reader's language** (found in audit 4, B7). English in the
   code: the `/send_delivery_overviews` summary, `/failed_notifications` ("orders", "no_username", the closing hint),
   "📧 Ready for next batch...", "Total:" in the admin copy of an overview. And many handlers call `_t` without a

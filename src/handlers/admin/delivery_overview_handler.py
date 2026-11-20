@@ -8,7 +8,7 @@ import boto3
 
 from handlers.base_handler import BaseHandler
 from handlers.payment_message import PaymentMessageMixin
-from models.entities import AuthorizationStatus, OrderStatus
+from models.entities import OrderStatus
 from services.credit_service import CreditService
 
 logger = logging.getLogger(__name__)
@@ -25,26 +25,22 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
 
     def start_send_overviews(self, chat_id: int) -> dict[str, Any]:
         """Start the delivery overview sending process"""
-        # Get customers with LABELING_COMPLETED orders
-        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
         customers_data = []
+        for customer, labeling_completed_orders in self.db.get_approved_customers_with_orders(
+            OrderStatus.LABELING_COMPLETED.value
+        ):
+            # Separate delivered and delayed items
+            delivered_orders = [o for o in labeling_completed_orders if (o.received_quantity or 0) >= o.quantity]
+            delayed_orders = [o for o in labeling_completed_orders if (o.received_quantity or 0) < o.quantity]
 
-        for customer in customers:
-            orders = self.db.get_orders_by_customer(customer.customer_id)
-            labeling_completed_orders = [o for o in orders if o.status == OrderStatus.LABELING_COMPLETED.value]
-            if labeling_completed_orders:
-                # Separate delivered and delayed items
-                delivered_orders = [o for o in labeling_completed_orders if (o.received_quantity or 0) >= o.quantity]
-                delayed_orders = [o for o in labeling_completed_orders if (o.received_quantity or 0) < o.quantity]
-
-                customers_data.append(
-                    {
-                        "customer_id": customer.customer_id,
-                        "delivered_order_ids": [o.order_id for o in delivered_orders],
-                        "delayed_order_ids": [o.order_id for o in delayed_orders],
-                        "is_guest": customer.is_guest,
-                    }
-                )
+            customers_data.append(
+                {
+                    "customer_id": customer.customer_id,
+                    "delivered_order_ids": [o.order_id for o in delivered_orders],
+                    "delayed_order_ids": [o.order_id for o in delayed_orders],
+                    "is_guest": customer.is_guest,
+                }
+            )
 
         if not customers_data:
             return self._send_message(chat_id, self._t("no_customers_ready_overview", user_id=None))

@@ -5,7 +5,7 @@ from typing import Any
 import boto3
 
 from handlers.payment_message import PaymentMessageMixin
-from models.entities import AuthorizationStatus, OrderStatus
+from models.entities import OrderStatus
 from utils.pagination import PaginationUtils
 
 from .base_order_handler import BaseOrderHandler
@@ -21,15 +21,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
 
     def handle_send_delivery_overviews(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /send_delivery_overviews command"""
-        # Get customers with LABELING_COMPLETED orders
-        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-        customers_with_ready_orders = []
-
-        for customer in customers:
-            orders = self.db.get_orders_by_customer(customer.customer_id)
-            labeling_completed_orders = [o for o in orders if o.status == OrderStatus.LABELING_COMPLETED.value]
-            if labeling_completed_orders:
-                customers_with_ready_orders.append((customer, labeling_completed_orders))
+        customers_with_ready_orders = self.db.get_approved_customers_with_orders(OrderStatus.LABELING_COMPLETED.value)
 
         if not customers_with_ready_orders:
             self._send_message(chat_id, self._t("no_customers_ready_overview", user_id=None))
@@ -58,15 +50,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
 
     def handle_process_payment(self, chat_id: int, args: list, page: int = 1) -> dict[str, Any]:
         """Handle /process_payment command with pagination"""
-        # Get customers with AWAITING_PAYMENT orders
-        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-        customers_awaiting_payment = []
-
-        for customer in customers:
-            orders = self.db.get_orders_by_customer(customer.customer_id)
-            awaiting_payment_orders = [o for o in orders if o.status == OrderStatus.AWAITING_PAYMENT.value]
-            if awaiting_payment_orders:
-                customers_awaiting_payment.append((customer, awaiting_payment_orders))
+        customers_awaiting_payment = self.db.get_approved_customers_with_orders(OrderStatus.AWAITING_PAYMENT.value)
 
         if not customers_awaiting_payment:
             self._send_message(
@@ -113,16 +97,8 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
 
     def handle_failed_notifications(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /failed_notifications command - show orders that couldn't be notified"""
-        # Get customers with LABELING_COMPLETED orders (these should have been notified)
-        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-        failed_notifications = []
-
-        for customer in customers:
-            orders = self.db.get_orders_by_customer(customer.customer_id)
-            labeling_completed_orders = [o for o in orders if o.status == OrderStatus.LABELING_COMPLETED.value]
-            if labeling_completed_orders:
-                # These are orders that should have been notified but are still in LABELING_COMPLETED
-                failed_notifications.append((customer, labeling_completed_orders))
+        # Orders that should have been notified but are still in LABELING_COMPLETED
+        failed_notifications = self.db.get_approved_customers_with_orders(OrderStatus.LABELING_COMPLETED.value)
 
         if not failed_notifications:
             keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin"), "callback_data": "admin:main"}]]}
@@ -153,15 +129,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
 
     def handle_send_payment_reminder(self, chat_id: int, args: list, page: int = 1) -> dict[str, Any]:
         """Handle /send_payment_reminder command with pagination"""
-        # Get customers with AWAITING_PAYMENT orders
-        customers = self.db.get_customers_by_status(AuthorizationStatus.APPROVED.value)
-        customers_awaiting_payment = []
-
-        for customer in customers:
-            orders = self.db.get_orders_by_customer(customer.customer_id)
-            awaiting_payment_orders = [o for o in orders if o.status == OrderStatus.AWAITING_PAYMENT.value]
-            if awaiting_payment_orders:
-                customers_awaiting_payment.append((customer, awaiting_payment_orders))
+        customers_awaiting_payment = self.db.get_approved_customers_with_orders(OrderStatus.AWAITING_PAYMENT.value)
 
         if not customers_awaiting_payment:
             self._send_message(

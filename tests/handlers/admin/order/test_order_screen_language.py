@@ -97,8 +97,9 @@ class TestPaymentReminders:
     )
     def test_the_admin_reads_the_list_in_their_language(self, language, title, count):
         handler = _handler(OrderStatusManagement, language)
-        handler.db.get_customers_by_status.return_value = [CUSTOMER]
-        handler.db.get_orders_by_customer.return_value = _orders(2, OrderStatus.AWAITING_PAYMENT.value)
+        handler.db.get_approved_customers_with_orders.return_value = [
+            (CUSTOMER, _orders(2, OrderStatus.AWAITING_PAYMENT.value))
+        ]
 
         handler.handle_send_payment_reminder(ADMIN_ID, [])
 

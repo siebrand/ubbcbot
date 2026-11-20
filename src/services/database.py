@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from typing import Any
 
-from models.entities import Box, BoxStatus, Customer, Offer, Order, OrderStatus, Supplier
+from models.entities import AuthorizationStatus, Box, BoxStatus, Customer, Offer, Order, OrderStatus, Supplier
 from repositories.box_repository import BoxRepository
 from repositories.credit_repository import CreditRepository
 from repositories.customer_repository import CustomerRepository
@@ -253,6 +253,18 @@ class DynamoDBService:
     def get_customers_by_status(self, status: str) -> list[Customer]:
         """Get customers by status with caching"""
         return self.customer_repo.get_customers_by_status(status)
+
+    def get_approved_customers_with_orders(self, order_status: str) -> list[tuple[Customer, list[Order]]]:
+        """The approved customers that have orders with this status, each with those orders, in the order of the
+        approved customers. One query for the orders (status-index), not one per customer."""
+        orders_by_customer: dict[str, list[Order]] = {}
+        for order in self.order_repo.get_orders_by_status(order_status):
+            orders_by_customer.setdefault(order.customer_id, []).append(order)
+        return [
+            (customer, orders_by_customer[customer.customer_id])
+            for customer in self.get_customers_by_status(AuthorizationStatus.APPROVED.value)
+            if customer.customer_id in orders_by_customer
+        ]
 
     def get_all_customers(self) -> list[Customer]:
         """Every customer, whatever their approval status (cached)"""
