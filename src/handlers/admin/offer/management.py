@@ -166,27 +166,29 @@ class OfferManagementHandler(OfferBaseHandler):
         return offer, boxes_ordered, None
 
     def _apply_wholesale_plan(self, offer, plan: WholesalePlan) -> set:
-        """Write the plan: orders ordered, reduced or cancelled, customers told. Returns the boxes with orders left."""
+        """Write the plan: orders ordered, reduced or cancelled, customers told. Returns the boxes with orders left.
+
+        Each write is on condition that the order is still as the plan read it (audit 6, A5): an order that was
+        cancelled, moved or changed in between keeps what it has, and moves from its list to ``plan.changed``.
+        """
         boxes_with_orders = set()
-        for order in plan.fulfilled:
-            self.db.update_order(
-                order.order_id,
-                {"status": OrderStatus.ORDERED.value},
-                admin_id=self.admin_user_id,
-                reason="Wholesale order processed",
-            )
+        ordered = {"status": OrderStatus.ORDERED.value}
+        for order in list(plan.fulfilled):
+            if not self.db.update_order_as_read(order, ordered):
+                plan.fulfilled.remove(order)
+                plan.changed.append(order)
+                continue
             boxes_with_orders.add(order.box_id)
 
-        for order, old_qty, new_qty in plan.reduced:
+        for reduction in list(plan.reduced):
+            order, old_qty, new_qty = reduction
             new_total_price = new_qty * order.unit_price
-            if self.db.update_order(
-                order.order_id,
-                {"quantity": new_qty, "total_price": new_total_price, "status": OrderStatus.ORDERED.value},
-                admin_id=self.admin_user_id,
-                reason="Partial fulfillment - wholesale order",
-            ):
-                # The box keeps only what is still ordered
-                self.box_status_manager.update_box_after_order_cancellation(order.box_id, old_qty - new_qty)
+            # The box keeps only what is still ordered, in the same write
+            updates = {"quantity": new_qty, "total_price": new_total_price, **ordered}
+            if not self.db.update_order_as_read(order, updates, box_delta=new_qty - old_qty):
+                plan.reduced.remove(reduction)
+                plan.changed.append(order)
+                continue
             boxes_with_orders.add(order.box_id)
             self._notify_customer(
                 self.db.get_customer(order.customer_id),
@@ -207,9 +209,12 @@ class OfferManagementHandler(OfferBaseHandler):
 
         # Cancelled orders give their units back to the box (as a normal cancellation does), so a box that only held
         # cancelled orders is empty and cleaned up afterwards
-        for order in plan.cancelled:
-            if self.db.cancel_order(order.order_id, self.admin_user_id, "Insufficient wholesale capacity"):
-                self.box_status_manager.update_box_after_order_cancellation(order.box_id, order.quantity)
+        for order in list(plan.cancelled):
+            if not self.db.cancel_order_with_box(order):
+                plan.cancelled.remove(order)
+                plan.changed.append(order)
+                continue
+            self.box_status_manager.update_box_status_after_change(order.box_id)
             self._notify_customer(
                 self.db.get_customer(order.customer_id),
                 "order_cancelled_insufficient",
@@ -280,6 +285,12 @@ class OfferManagementHandler(OfferBaseHandler):
                 cancelled_units=sum(order.quantity for order in plan.cancelled),
                 details=details,
             )
+        if plan.changed:
+            details = ", ".join(
+                f"{self._first_name(o.customer_id, chat_id)} ({o.quantity} {self._units(o.quantity, chat_id)})"
+                for o in plan.changed
+            )
+            summary += "\n" + self._t("orders_changed_meanwhile", chat_id, details=details)
         summary += "\n\n" + self._t(
             "total_allocated", chat_id, allocated=plan.units_allocated, available=plan.units_available
         )

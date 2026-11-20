@@ -170,6 +170,11 @@ class DynamoDBService:
             order_id, quantity, from_box_id, to_box_id, to_max_capacity, box_statuses, order_status
         )
 
+    def update_order_as_read(self, order: Order, updates: dict[str, Any], box_delta: int = 0) -> bool:
+        """Update an order only while it is as it was read, with ``box_delta`` added to its box in the same write
+        (see OrderRepository.update_as_read). No purchase event: not for payments."""
+        return self.order_repo.update_as_read(order, updates, box_delta)
+
     def get_orders_by_customer(self, customer_id: str, strict: bool = False) -> list[Order]:
         return self.order_repo.get_orders_by_customer(customer_id, strict=strict)
 

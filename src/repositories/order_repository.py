@@ -245,6 +245,62 @@ class OrderRepository(BaseRepository):
             logger.error(f"Cancelling order {order.order_id} failed: {type(e).__name__}")
             return False
 
+    def update_as_read(self, order: Order, updates: dict[str, Any], box_delta: int = 0) -> bool:
+        """Set ``updates`` on the order only while it still has the status, box and quantity it was read with, and
+        add ``box_delta`` to its box's count in the same transaction (a negative delta only while the box holds
+        those units). False when the order changed in the meantime or the write failed."""
+        from datetime import UTC, datetime
+
+        serializer = TypeSerializer()
+        updates = {**updates, "update_date": datetime.now(UTC).isoformat()}
+        names = {"#status": "status", **{f"#u{n}": attribute for n, attribute in enumerate(updates)}}
+        values = {f":u{n}": serializer.serialize(value) for n, value in enumerate(updates.values())}
+        items: list[dict[str, Any]] = [
+            {
+                "Update": {
+                    "TableName": self.table_name,
+                    "Key": {"order_id": {"S": order.order_id}},
+                    "UpdateExpression": "SET " + ", ".join(f"#u{n} = :u{n}" for n in range(len(updates))),
+                    "ConditionExpression": "#status = :read_status AND box_id = :read_box AND quantity = :read_qty",
+                    "ExpressionAttributeNames": names,
+                    "ExpressionAttributeValues": {
+                        **values,
+                        ":read_status": {"S": order.status},
+                        ":read_box": {"S": order.box_id},
+                        ":read_qty": {"N": str(order.quantity)},
+                    },
+                }
+            }
+        ]
+        if box_delta:
+            items.append(
+                {
+                    "Update": {
+                        "TableName": f"{self.table_prefix}-boxes",
+                        "Key": {"box_id": {"S": order.box_id}},
+                        "UpdateExpression": "ADD current_quantity :delta",
+                        "ConditionExpression": "current_quantity >= :least",
+                        "ExpressionAttributeValues": {
+                            ":delta": {"N": str(box_delta)},
+                            ":least": {"N": str(max(-box_delta, 0))},
+                        },
+                    }
+                }
+            )
+        try:
+            boto3.client("dynamodb").transact_write_items(TransactItems=items)
+            return True
+        except ClientError as e:
+            code = e.response["Error"]["Code"]
+            if code in ("TransactionCanceledException", "ConditionalCheckFailedException"):
+                logger.warning(f"Order {order.order_id} was not updated: it changed since it was read")
+            else:
+                logger.error(f"Updating order {order.order_id} failed: {code}")
+            return False
+        except Exception as e:
+            logger.error(f"Updating order {order.order_id} failed: {type(e).__name__}")
+            return False
+
     def split(self, order: Order, kept_quantity: int, kept_status: str, rest: Order) -> bool:
         """Split an order in one transaction: it keeps ``kept_quantity`` units (all received, at its unit price,
         with ``kept_status``), and ``rest`` is written as an order of its own with the other units.

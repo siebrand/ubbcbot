@@ -12,6 +12,8 @@ class WholesalePlan:
     fulfilled: list = field(default_factory=list)  # orders that fit as they are
     reduced: list = field(default_factory=list)  # (order, old quantity, new quantity)
     cancelled: list = field(default_factory=list)  # orders that do not fit at all
+    # orders that changed between the plan and its write (cancelled, moved): left as they are, out of the lists above
+    changed: list = field(default_factory=list)
 
     @property
     def units_allocated(self) -> int:

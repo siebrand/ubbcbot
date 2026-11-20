@@ -101,12 +101,22 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   touches an `ordered` or `delivered` box). The rollback path is gone: there is nothing to roll back. Tests:
   `tests/test_edit_order_changes.py::TestMovingAnOrderToAnotherBox`; the mock tests in
   `tests/handlers/admin/order/test_order_editing_box.py` now pin the single transaction.
-- [ ] **A5. The wholesale plan moves orders without a condition** (`_apply_wholesale_plan`). The plan is read, then
+- [x] **A5. The wholesale plan moves orders without a condition** (`_apply_wholesale_plan`). The plan is read, then
   every order in it is set to `ordered` (or reduced) unconditionally: an order cancelled by the admin while the plan
   runs (or between the plan screen and the confirmation) is set back to `ordered` and charged later; the reduced
   quantity is written over whatever is there. Same pattern as audit 5, A4. Fix: each write on condition of the
   status (and quantity) the plan read; an order that changed is left out and named. Test: an order cancelled after the
   plan was read stays cancelled and its units are not counted twice.
+  Done: every write of the plan is now on condition that the order still has the status, box and quantity the plan
+  read (`DynamoDBService.update_order_as_read` → `OrderRepository.update_as_read`). A reduction takes the units off
+  its box in the same transaction (capacity), and a cancellation is `cancel_order_with_box` (A1). An order that
+  changed keeps what it has and moves to the new `WholesalePlan.changed`. It is not counted in the summary's numbers
+  or in the offer's units left, its customer gets no message, and the summary names it (`orders_changed_meanwhile`).
+  Found: the plan's own reads are fresh (it reads the pending orders when the confirmation is tapped), so the window
+  is the plan's own run plus anything concurrent; the confirmation button itself carries only the number of boxes.
+  The wholesaler delivery (`services/wholesaler_delivery.py::_process_partial_cancelled`) still cancels with the
+  unconditional `cancel_order`, and keeps the cancelled units in the delivered box: left for a later audit (outside
+  this scope). Tests: `tests/test_offer_management_flow.py::TestAnOrderThatChangesWhileThePlanIsWritten`.
 
 ## Medium priority
 

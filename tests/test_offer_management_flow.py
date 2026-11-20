@@ -6,10 +6,11 @@ fits is reduced, the rest is cancelled. Boxes with fulfilled orders become "orde
 
 from decimal import Decimal
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
+from handlers.admin.offer import management
 from handlers.admin.offer.management import OfferManagementHandler
 from models.entities import AuthorizationStatus, Box, Customer, Offer, OfferStatus, Order
 from services.database import DynamoDBService
@@ -151,6 +152,59 @@ class TestAnOrderThatOnlyPartlyFits:
 
         assert db.get_box("b2").current_quantity == 2
         assert db.get_box("b2").status == "ordered"
+
+
+class TestAnOrderThatChangesWhileThePlanIsWritten:
+    """Audit 6, A5: the plan is written on condition of what it read; an order that changed is left out and named"""
+
+    @staticmethod
+    def run_with(handler, change):
+        """Process one box; ``change`` runs after the plan was made and before it is written"""
+        real_plan = management.plan_wholesale
+
+        def plan_then_change(*args):
+            plan = real_plan(*args)
+            change()
+            return plan
+
+        with patch.object(management, "plan_wholesale", plan_then_change):
+            return handler.handle_confirm_process_wholesale(ADMIN_ID, ["7", "1"])
+
+    def test_a_fulfilled_order_cancelled_in_between_stays_cancelled(self, db, handler, three_orders):
+        self.run_with(handler, lambda: db.cancel_order_with_box(db.get_order("o2")))
+
+        assert db.get_order("o2").status == "cancelled"
+        assert db.get_order("o1").status == "ordered"
+        assert db.get_box("b1").current_quantity == 4  # Jan's units; Piet's are not counted again
+        assert "Piet" in messages_to(handler, ADMIN_ID)[-1]  # named as left out
+
+    def test_a_reduced_order_cancelled_in_between_stays_cancelled_and_its_box_is_not_emptied_twice(self, db, handler):
+        jan, piet = customer(db, 101, "Jan"), customer(db, 102, "Piet", "en")
+        box(db, "b1", 4)
+        box(db, "b2", 4)
+        order(db, "o1", jan, "b1", 4, 1)
+        order(db, "o2", piet, "b2", 4, 2)
+
+        self.run_with(handler, lambda: db.cancel_order_with_box(db.get_order("o2")))
+
+        reduced = db.get_order("o2")
+        assert (reduced.status, reduced.quantity) == ("cancelled", 4)
+        assert db.get_box("b2") is None or db.get_box("b2").current_quantity == 0  # empty boxes are removed
+        assert messages_to(handler, 102) == []  # not told about a reduction that did not happen
+
+    def test_an_order_to_cancel_that_was_cancelled_in_between_gives_its_units_back_once(
+        self, db, handler, three_orders
+    ):
+        box(db, "b3", 2)
+        order(db, "o4", three_orders.jan, "b2", 1, 4)  # b2 now holds Kees (3) and Jan's second order (1)
+        db.update_box("b2", {"current_quantity": 4})
+
+        self.run_with(handler, lambda: db.cancel_order_with_box(db.get_order("o3")))
+
+        assert db.get_order("o3").status == "cancelled"
+        assert db.get_order("o4").status == "cancelled"  # the plan cancels this one
+        assert db.get_box("b2") is None or db.get_box("b2").current_quantity == 0
+        assert messages_to(handler, 103) == []  # Kees is not told a second time by the plan
 
 
 class TestInput:
