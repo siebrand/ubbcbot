@@ -96,34 +96,36 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
         return {"status": "customers_shown"}
 
     def handle_failed_notifications(self, chat_id: int, args: list) -> dict[str, Any]:
-        """Handle /failed_notifications command - show orders that couldn't be notified"""
-        # Orders that should have been notified but are still in LABELING_COMPLETED
-        failed_notifications = self.db.get_approved_customers_with_orders(OrderStatus.LABELING_COMPLETED.value)
+        """Handle /failed_notifications: the labeled orders that have no delivery overview yet.
 
-        if not failed_notifications:
-            keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin"), "callback_data": "admin:main"}]]}
-            self._send_message(chat_id, self._t("no_failed_notifications", user_id=None), reply_markup=keyboard)
+        An overview moves its orders to AWAITING_PAYMENT before it is sent (asynchronously), so a send that failed
+        is not listed here: the message sender reports those to the admin. What stays LABELING_COMPLETED is what was
+        never sent, e.g. a batch whose payment link was never given."""
+        unsent = self.db.get_approved_customers_with_orders(OrderStatus.LABELING_COMPLETED.value)
+        keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}]]}
+
+        if not unsent:
+            self._send_message(chat_id, self._t("no_failed_notifications", chat_id), reply_markup=keyboard)
             return {"status": "no_failed"}
 
-        # Show failed notifications
-        message = self._t("failed_delivery_notifications_title", user_id=None) + "\n\n"
+        message = self._t("failed_delivery_notifications_title", chat_id) + "\n\n"
 
-        for customer, orders in failed_notifications:
+        for customer, orders in unsent:
             customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(
-                "unknown", user_id=None
+                "unknown", chat_id
             )
+            username = f" (@{customer.username})" if customer.username else ""
             total_amount = sum(order.amount_due for order in orders)
-            message += f"👤 {customer_name} (@{customer.username or 'no_username'}):\n"
-            message += f"   💰 €{total_amount:.2f} ({len(orders)} orders)\n"
+            message += f"👤 {customer_name}{username}\n"
+            message += self._t("unsent_overview_total", chat_id, amount=total_amount, count=len(orders)) + "\n"
             for order in orders:
                 offer = self.db.get_offer(order.offer_id)
-                offer_name = offer.name if offer else self._t("unknown", user_id=None)
+                offer_name = offer.name if offer else self._t("unknown", chat_id)
                 message += f"   • {order.quantity}x {offer_name} - €{order.total_price:.2f}\n"
             message += "\n"
 
-        message += "\n💡 These customers need to be contacted manually or retry delivery overview sending."
+        message += self._t("unsent_overviews_hint", chat_id)
 
-        keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin"), "callback_data": "admin:main"}]]}
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {"status": "failed_shown"}
 

@@ -220,7 +220,8 @@ has every admin command.
 - `/send_delivery_overviews` - Send delivery overviews to customers
 - `/process_payment` - Mark customers as paid
 - `/send_payment_reminder` - Send payment reminder to customers awaiting payment
-- `/failed_notifications` - View orders with failed delivery notifications
+- `/failed_notifications` - Labeled orders without a delivery overview yet (an overview that could not be delivered
+  is reported when it is sent)
 - `/offer_status <offer_id> import` - Change offer status to import (for import workflow)
 - `/import_orders` - Import orders from CSV file. If a name on any line matches more than one customer, the whole file is refused and the colliding lines are listed (use the full username or the customer ID, 8+ characters)
 - `/finalize_import <offer_id>` - Finalize imported offer

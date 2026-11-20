@@ -48,7 +48,7 @@
     {"command": "edit_order", "description": "Edit an order: box, price or status"},
     {"command": "export_orders", "description": "Download a CSV of orders: [status|all|full]"},
     {"command": "export_user_data", "description": "Build the personal data export of a customer"},
-    {"command": "failed_notifications", "description": "View orders with failed notifications"},
+    {"command": "failed_notifications", "description": "Labeled orders without a delivery overview yet"},
     {"command": "finalize_import", "description": "Finalize an imported offer: <offer_id>"},
     {"command": "fomo", "description": "View active offers you have not ordered yet"},
     {"command": "help", "description": "Show help for specific section"},

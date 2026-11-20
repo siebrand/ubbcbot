@@ -87,11 +87,20 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
 
 ## Medium priority
 
-- [ ] **B1. `/failed_notifications` lists overviews that were never sent, not ones that failed**
+- [x] **B1. `/failed_notifications` lists overviews that were never sent, not ones that failed**
   (`order_status.py`, `handle_failed_notifications`). It shows customers with `labeling_completed` orders; a failed
   overview has already moved its orders to `awaiting_payment` (the send is asynchronous), so it is never listed. The
   message sender does tell the admin which messages failed. Fix: rename and reword it as "not yet sent", or keep the
   failures (the sender knows them) and list those. Decide which; the text says "need to be contacted manually".
+  **Done**, reworded as "not yet sent": the failures are already reported, one by one, when the sender runs, and
+  keeping them would need a store of their own; while what stays `labeling_completed` is worth seeing (a batch whose
+  link prompt was never answered, an order still waiting for units). The command keeps its name (the menus and the
+  owner's habit); its title, empty text, button, help, menu description and README say "labeled, no overview sent
+  yet", and the closing hint (now translated, with the admin's language, like the rest of the screen) points to
+  `/send_delivery_overviews` and, for failed sends, `/send_payment_reminder`. The "(@no_username)" placeholder is
+  gone. `TestOverviewsNotSentYet` in `tests/test_customers_with_orders_in_status.py`. Also covered on the way: the
+  units still to come in a payment message (`test_units_still_to_come_are_listed_but_not_charged`).
+  `setup-commands.sh` was not run (it changes the live menus; the owner runs it).
 - [x] **B2. The reminder uses the last payment link, whatever batch the customer was in**
   (`handle_send_payment_reminder_to_customer`, `system_repository.py`: one `payment_link` item). The overview asks for
   a link per batch of 50; a reminder to a customer of the first batch carries the link of the last. Fix: keep the link

@@ -123,8 +123,8 @@ class TestTheScreens:
         assert handler.handle_failed_notifications(ADMIN_ID, []) == {"status": "failed_shown"}
 
         text = texts(handler)
-        assert "Zoe Aalders (@zoe):\n   💰 €7.00 (2 orders)" in text
-        assert "Gast Gastmans (@gast):\n   💰 €2.00 (1 orders)" in text
+        assert "Zoe Aalders (@zoe)\n   💰 €7.00 (2 bestellingen)" in text
+        assert "Gast Gastmans (@gast)\n   💰 €2.00 (1 bestellingen)" in text
         assert "Bram" not in text and "Piet" not in text
 
     def test_send_payment_reminder_lists_the_approved_customers_awaiting_payment(self, db, people):
@@ -177,3 +177,34 @@ class TestTheScreens:
         assert handler.handle_process_payment(ADMIN_ID, []) == {"status": "no_customers"}
         assert handler.handle_failed_notifications(ADMIN_ID, []) == {"status": "no_failed"}
         assert handler.handle_send_payment_reminder(ADMIN_ID, []) == {"status": "no_customers"}
+
+
+class TestOverviewsNotSentYet:
+    """/failed_notifications lists labeled orders without an overview, not failed sends (audit 5, B1)"""
+
+    @pytest.mark.parametrize(
+        "language,title,line,hint",
+        [
+            ("en", "no delivery overview sent yet", "💰 €7.00 (2 orders)", "/send_delivery_overviews"),
+            ("nl", "nog geen leveringsoverzicht verstuurd", "💰 €7.00 (2 bestellingen)", "/send_delivery_overviews"),
+        ],
+    )
+    def test_the_admin_reads_what_is_not_sent_in_their_language(self, db, people, language, title, line, hint):
+        db.create_customer(Customer(telegram_user_id=ADMIN_ID, first_name="Admin", language=language))
+        handler = status_screen(db)
+
+        handler.handle_failed_notifications(ADMIN_ID, [])
+
+        text = texts(handler)
+        assert title in text and line in text and hint in text
+        assert "Failed" not in text and "mislukt" not in text.lower()
+        assert "no_username" not in text and "(@zoe)" in text
+
+    def test_a_customer_without_username_has_no_placeholder(self, db):
+        nameless = db.create_customer(Customer(telegram_user_id=201, first_name="Nina", authorization_status=APPROVED))
+        order(db, nameless, 1, OrderStatus.LABELING_COMPLETED)
+        handler = status_screen(db)
+
+        handler.handle_failed_notifications(ADMIN_ID, [])
+
+        assert "👤 Nina\n" in texts(handler)

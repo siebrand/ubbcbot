@@ -130,6 +130,19 @@ class TestOnlyReadyOrdersMove:
         assert message["user_id"] == 101
         assert db.get_order(order.order_id).status == OrderStatus.AWAITING_PAYMENT.value
 
+    def test_units_still_to_come_are_listed_but_not_charged(self, handler, db, jan):
+        """A labeled order that did not get all its units (from before audit 5, A1 split them) is told, not moved"""
+        full, partial = labeled(db, jan, 4), labeled(db, jan, 3)
+        assert db.update_order(partial.order_id, {"received_quantity": 1})
+
+        (message,) = start_and_reply(handler, db)
+
+        later = handler._t("will_arrive_later", 101)
+        assert f"• 2x [7] Pils - {later}" in message["message"]
+        assert "€10.00" in message["message"] and "€17.50" not in message["message"]
+        assert db.get_order(partial.order_id).status == OrderStatus.LABELING_COMPLETED.value
+        assert db.get_order(full.order_id).status == OrderStatus.AWAITING_PAYMENT.value
+
 
 class TestTheLinkOfTheCustomersBatch:
     """Each batch of 50 gets a link of its own (audit 5, B2): a reminder and /payment_info use the customer's"""
