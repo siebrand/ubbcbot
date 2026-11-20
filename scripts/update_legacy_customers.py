@@ -45,7 +45,7 @@ def update_legacy_customers(environment):
 
         # Check if location field exists in DynamoDB (not just empty)
         if "location" not in item:
-            updates["location"] = "Venster, Berlijnplein 520, Utrecht"
+            updates["location"] = "Weerschijnvlinder 16, Utrecht. Ophalen i.o. @siebrand"
 
         # Check if is_guest field exists in DynamoDB
         if "is_guest" not in item:

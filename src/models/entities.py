@@ -84,7 +84,7 @@ class Customer:
     first_name: str | None = None
     last_name: str | None = None
     language: str = "nl"  # Default to Dutch
-    location: str = "Venster, Berlijnplein 520, Utrecht"
+    location: str = "Weerschijnvlinder 16, Utrecht. Ophalen i.o. @siebrand"
     authorization_status: str = AuthorizationStatus.UNAUTHORIZED.value
     subscribed_to_offers: bool = False
     is_guest: bool = False
