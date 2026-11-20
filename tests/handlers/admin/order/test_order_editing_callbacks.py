@@ -46,7 +46,8 @@ class TestOrderEditingCallbacks(unittest.TestCase):
         keyboard = mock_send.call_args[1]["reply_markup"]["inline_keyboard"]
         callbacks = [btn["callback_data"] for row in keyboard for btn in row if "setstatus" in btn["callback_data"]]
         oid = self.order.order_id[:8]
-        self.assertEqual(callbacks[0], f"edit_order_setstatus_{oid}_pending")
+        # the order is pending: the next status first, cancelling last
+        self.assertEqual(callbacks[0], f"edit_order_setstatus_{oid}_ordered")
         self.assertEqual(callbacks[-1], f"edit_order_setstatus_{oid}_cancelled")
         # every status callback must stay within Telegram's 64-byte limit
         self.assertTrue(all(len(c.encode()) <= 64 for c in callbacks))
@@ -91,8 +92,8 @@ class TestOrderEditingCallbacks(unittest.TestCase):
 
     @patch.object(OrderEditing, "_send_message")
     def test_apply_status_sends_confirmation(self, mock_send):
-        self.mock_db.update_order.return_value = True
-        result = self.handler.apply_status(123, self.order.order_id, "completed")
+        self.mock_db.batch_update_order_status.return_value = [self.order.order_id]
+        result = self.handler.apply_status(123, self.order.order_id, "ordered")
         self.assertEqual(result["status"], "edit_order_status_success")
 
     @patch.object(OrderEditing, "_send_message")
@@ -118,6 +119,7 @@ class TestOrderEditingCallbacks(unittest.TestCase):
     @patch.object(OrderEditing, "_send_message")
     def test_status_buttons_use_localized_labels(self, mock_send):
         # Buttons show the localized status label (not the raw status key/value).
+        self.order.status = "ordered"  # so that pending is offered
         self.handler.show_status_options(123, self.order.order_id)
         keyboard = mock_send.call_args[1]["reply_markup"]["inline_keyboard"]
         labels = [btn["text"] for row in keyboard for btn in row if "setstatus" in btn.get("callback_data", "")]
@@ -130,7 +132,7 @@ class TestOrderEditingCallbacks(unittest.TestCase):
 
     @patch.object(OrderEditing, "_send_message")
     def test_apply_status_returns_to_aspect_menu(self, mock_send):
-        self.mock_db.update_order.return_value = True
+        self.mock_db.batch_update_order_status.return_value = [self.order.order_id]
         # make the re-shown menu's detail lookups return plain values
         offer = Mock()
         offer.name = "Beer"
@@ -140,7 +142,7 @@ class TestOrderEditingCallbacks(unittest.TestCase):
         cust.last_name = "B"
         self.mock_db.get_customer.return_value = cust
 
-        self.handler.apply_status(123, self.order.order_id, "completed")
+        self.handler.apply_status(123, self.order.order_id, "ordered")
         # _return_to_menu re-fetches the order and re-shows the aspect menu.
         self.assertGreaterEqual(self.mock_db.get_order.call_count, 2)
         # the aspect menu is re-sent (its message carries the three aspect buttons)

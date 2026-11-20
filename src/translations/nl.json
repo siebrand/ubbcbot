@@ -79,6 +79,7 @@
   "edit_order_update_failed": "❌ Kon de order niet bijwerken.",
   "edit_order_bad_price": "❌ Ongeldige prijs.",
   "edit_order_bad_status": "❌ Ongeldige status.",
+  "edit_order_status_not_allowed": "❌ Die status kan hier niet worden gezet. Een geannuleerde of betaalde bestelling houdt haar status, alleen het afleveroverzicht vraagt om betaling, en een bestelling die op betaling wacht kan alleen als betaald worden gemarkeerd.",
   "edit_order_box_success": "✅ Order {order_id} verplaatst naar doos {box_id}.",
   "edit_order_price_success": "✅ Stukprijs van order {order_id} bijgewerkt; totaal herberekend.",
   "edit_order_status_success": "✅ Status van order {order_id} gewijzigd naar {status}.",

@@ -63,33 +63,39 @@ class TestOrderEditingPriceStatus(unittest.TestCase):
     # --- status ---
     def test_status_options_in_workflow_order(self):
         self.assertEqual(
-            self.handler._status_options(),
-            [
-                "pending",
-                "ordered",
-                "received_partial_delayed",
-                "ready_for_labeling",
-                "labeling_completed",
-                "awaiting_payment",
-                "completed",
-                "cancelled",
-            ],
+            self.handler._status_options(self._order(status="ordered")),
+            ["pending", "received_partial_delayed", "ready_for_labeling", "labeling_completed", "cancelled"],
         )
 
+    def test_a_delivered_order_is_not_offered_cancelled(self):
+        options = self.handler._status_options(self._order(status="ready_for_labeling"))
+        self.assertNotIn("cancelled", options)
+        self.assertNotIn("awaiting_payment", options)
+
     def test_apply_status_change_valid(self):
-        order = self._order()
-        self.mock_db.update_order.return_value = True
-        ok, key = self.handler._apply_status_change(order, "completed")
+        order = self._order(status="ordered")
+        self.mock_db.batch_update_order_status.return_value = [order.order_id]
+        ok, key = self.handler._apply_status_change(order, "ready_for_labeling")
         self.assertTrue(ok)
         self.assertEqual(key, "edit_order_status_success")
-        self.assertEqual(self.mock_db.update_order.call_args[0][1], {"status": "completed"})
+        # only while the order still has the status it was read with
+        self.mock_db.batch_update_order_status.assert_called_once_with(
+            [order.order_id], "ready_for_labeling", 15005473, "ordered"
+        )
+
+    def test_apply_status_change_rejects_a_status_not_offered(self):
+        order = self._order(status="pending")
+        ok, key = self.handler._apply_status_change(order, "completed")
+        self.assertFalse(ok)
+        self.assertEqual(key, "edit_order_status_not_allowed")
+        self.mock_db.batch_update_order_status.assert_not_called()
 
     def test_apply_status_change_rejects_unknown(self):
         order = self._order()
         ok, key = self.handler._apply_status_change(order, "bogus")
         self.assertFalse(ok)
         self.assertEqual(key, "edit_order_bad_status")
-        self.mock_db.update_order.assert_not_called()
+        self.mock_db.batch_update_order_status.assert_not_called()
 
 
 if __name__ == "__main__":

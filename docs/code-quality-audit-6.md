@@ -61,7 +61,7 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   its status only goes from `full` to `open` (`update_box_status_after_cancellation` and
   `update_box_after_order_cancellation`): `ordered` and `delivered` boxes are never reopened. Tests:
   `tests/test_cancel_order_flow.py::TestADeliveredOrderIsNotCancelled`.
-- [ ] **A3. `/edit_order` status has no guards, and the box does not follow** (`_apply_status_change`). Any status
+- [x] **A3. `/edit_order` status has no guards, and the box does not follow** (`_apply_status_change`). Any status
   can be set on any order ("no guards" in the docstring). Setting `cancelled` keeps the units in the box (the box is
   full of nothing); setting a cancelled order back to `pending` or `ordered` puts units in a box that no longer has
   room for them (overbooked); setting `awaiting_payment` skips the credit and the payment link (audit 5), setting it
@@ -69,6 +69,18 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   placement (capacity-guarded, one transaction with the status), or offer only the transitions that are safe; and
   keep the money consistent. Test: edit a pending order to cancelled and back → the box count follows; back into a
   full box is refused.
+  Done: decision: offer only the safe transitions (`OrderEditing._status_options(order)`, also checked again when
+  the status is applied). The statuses from `pending` to `labeling_completed` (`CORRECTABLE_STATUSES`: the units are
+  in the box, no money involved yet) may be corrected into one another. A pending or ordered order may be set to
+  `cancelled`, which is a cancel (`cancel_order_with_box`, one transaction with the box, as A1/A2). A cancelled order
+  is not brought back: its room may have gone to other orders, and placing a new order (`/order_for`) checks the
+  capacity and the approval. `awaiting_payment` is not set by hand: only the delivery overview asks for a payment,
+  with the credit and the payment link. An order awaiting payment may only be marked paid (`completed`, keeping its
+  credit), and a paid order keeps its status. Every other change is written with `batch_update_order_status`
+  on condition of the status that was read (`from_status`), so an order the delivery overview changed in between is
+  not overwritten, and a payment still records its event. When nothing may be set, the screen says why
+  (`edit_order_status_not_allowed`). Found: a cancel through `/edit_order` does not tell the customer (as before);
+  `/cancel_order` does. Tests: `tests/test_edit_order_changes.py::TestTheStatusEditKeepsTheBoxRight`.
 - [ ] **A4. Moving an order to another box is three writes, and the last has no rollback**
   (`_apply_box_change`). The new box is incremented, the old one decremented, then the order is updated; when the
   order update fails, both boxes have changed and the order is still in the old one. The move also takes no notice of

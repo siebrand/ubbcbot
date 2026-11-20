@@ -79,6 +79,7 @@
   "edit_order_update_failed": "❌ Could not update the order.",
   "edit_order_bad_price": "❌ Invalid price.",
   "edit_order_bad_status": "❌ Invalid status.",
+  "edit_order_status_not_allowed": "❌ That status cannot be set here. A cancelled or paid order keeps its status, only the delivery overview asks for a payment, and an order awaiting payment can only be marked paid.",
   "edit_order_box_success": "✅ Order {order_id} moved to box {box_id}.",
   "edit_order_price_success": "✅ Unit price of order {order_id} updated; total recalculated.",
   "edit_order_status_success": "✅ Status of order {order_id} changed to {status}.",

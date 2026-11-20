@@ -2,12 +2,21 @@ import logging
 from decimal import Decimal
 from typing import Any
 
-from models.entities import BoxStatus, OrderStatus
+from models.entities import ACTIVE_ORDER_STATUSES, BoxStatus, OrderStatus
 from services.box_status_manager import BoxStatusManager
 
 from .base_order_handler import BaseOrderHandler
 
 logger = logging.getLogger(__name__)
+
+# The statuses of an order whose units are in its box and that no money is involved in yet (see _status_options)
+CORRECTABLE_STATUSES = (
+    OrderStatus.PENDING.value,
+    OrderStatus.ORDERED.value,
+    OrderStatus.RECEIVED_PARTIAL_DELAYED.value,
+    OrderStatus.READY_FOR_LABELING.value,
+    OrderStatus.LABELING_COMPLETED.value,
+)
 
 
 class OrderEditing(BaseOrderHandler):
@@ -89,15 +98,38 @@ class OrderEditing(BaseOrderHandler):
         return True, "edit_order_price_success"
 
     # ------------------------------------------------------------------ status
-    def _status_options(self) -> list[str]:
-        """Order statuses offered for editing, in workflow order."""
-        return [status.value for status in OrderStatus]
+    def _status_options(self, order) -> list[str]:
+        """The statuses this order may be given here, in workflow order (audit 6, A3).
+
+        Between pending and labeling completed the units are in the box and no money is involved: one of those
+        statuses may be corrected into another, and a pending or ordered order may be cancelled (as /cancel_order
+        does: the box gets the units back). A cancelled order is not brought back (its room may have gone to other
+        orders: place a new one), only the delivery overview asks for a payment (it applies the credit and the
+        payment link), an order awaiting payment may only be marked paid, and a paid order keeps its status.
+        """
+        if order.status in CORRECTABLE_STATUSES:
+            options = [status for status in CORRECTABLE_STATUSES if status != order.status]
+            if order.status in ACTIVE_ORDER_STATUSES:
+                options.append(OrderStatus.CANCELLED.value)
+            return options
+        if order.status == OrderStatus.AWAITING_PAYMENT.value:
+            return [OrderStatus.COMPLETED.value]
+        return []
 
     def _apply_status_change(self, order, new_status: str) -> tuple[bool, str]:
-        """Set the order's status (no guards; any workflow status allowed)."""
-        if new_status not in self._status_options():
+        """Give the order one of the statuses of _status_options, on condition that it still has the status it was
+        read with. Cancelling takes the units off the box in the same write."""
+        if new_status not in {status.value for status in OrderStatus}:
             return False, "edit_order_bad_status"
-        if not self.db.update_order(order.order_id, {"status": new_status}, self.admin_user_id, "Order status edited"):
+        if new_status not in self._status_options(order):
+            return False, "edit_order_status_not_allowed"
+        if new_status == OrderStatus.CANCELLED.value:
+            if not self.db.cancel_order_with_box(order):
+                return False, "edit_order_update_failed"
+            self.box_status_manager.update_box_status_after_cancellation(order.box_id)
+            self._check_offer_status_after_change(order.offer_id)
+            return True, "edit_order_status_success"
+        if not self.db.batch_update_order_status([order.order_id], new_status, self.admin_user_id, order.status):
             return False, "edit_order_update_failed"
         return True, "edit_order_status_success"
 
@@ -253,6 +285,11 @@ class OrderEditing(BaseOrderHandler):
         order = self._get_order_or_warn(chat_id, order_id)
         if not order:
             return {"status": "order_not_found"}
+        options = self._status_options(order)
+        if not options:
+            self._send_message(chat_id, self._t("edit_order_status_not_allowed", chat_id))
+            self._return_to_menu(chat_id, order.order_id)
+            return {"status": "no_status_options"}
         buttons = [
             [
                 {
@@ -260,7 +297,7 @@ class OrderEditing(BaseOrderHandler):
                     "callback_data": f"edit_order_setstatus_{order.order_id[:8]}_{s}",
                 }
             ]
-            for s in self._status_options()
+            for s in options
         ]
         buttons.append(
             [{"text": self._t("cancel", user_id=None), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}]
