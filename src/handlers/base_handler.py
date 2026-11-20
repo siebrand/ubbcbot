@@ -316,14 +316,14 @@ class BaseHandler:
             return {"status": "invalid_args"}
         return None
 
-    def _send_error(self, chat_id: int, error_key: str, status: str, **kwargs):
-        """Send error message and return status"""
+    def _send_error(self, chat_id: int, error_key: str, status: str, /, **kwargs):
+        """Send error message and return status. Positional-only, so a text can have a {status} of its own."""
         user_id = kwargs.pop("user_id", None)
         self._send_message(chat_id, self._t(error_key, user_id, **kwargs))
         return {"status": status}
 
-    def _send_success(self, chat_id: int, success_key: str, status: str = "success", **kwargs):
-        """Send success message and return status"""
+    def _send_success(self, chat_id: int, success_key: str, status: str = "success", /, **kwargs):
+        """Send success message and return status. Positional-only, so a text can have a {status} of its own."""
         user_id = kwargs.pop("user_id", None)
         self._send_message(chat_id, self._t(success_key, user_id, **kwargs))
         return {"status": status}

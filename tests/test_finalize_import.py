@@ -1,4 +1,5 @@
-"""/finalize_import: the offer that is announced is active in the table too (against the mocked database)"""
+"""/finalize_import (and /offer_status): the offer that is announced is active in the table too, a wrong status is
+refused (against the mocked database)"""
 
 from decimal import Decimal
 from unittest.mock import Mock
@@ -6,6 +7,7 @@ from unittest.mock import Mock
 import pytest
 
 from handlers.admin.import_handler import ImportHandler
+from handlers.admin.offer.editing import OfferEditingHandler
 from models.entities import Box, Offer, OfferStatus
 from services.database import DynamoDBService
 
@@ -43,3 +45,22 @@ def test_an_offer_with_room_in_its_boxes_is_announced_and_active(handler, db):
 
     handler._announce_offer.assert_called_once()
     assert db.get_offer(7).status == OfferStatus.ACTIVE.value
+
+
+def test_an_offer_that_is_not_being_imported_is_refused_with_its_status(handler, db):
+    assert db.update_offer(7, {"status": OfferStatus.ACTIVE.value})
+
+    assert handler.handle_finalize_import(ADMIN_ID, ["7"]) == {"status": "wrong_status"}
+
+    assert OfferStatus.ACTIVE.value in handler._send_message.call_args.args[1]
+    handler._announce_offer.assert_not_called()
+
+
+def test_offer_status_with_an_unknown_status_names_it(db):
+    """The same clash of a {status} in the text with the status of the answer (audit 5, B4)"""
+    editing = OfferEditingHandler(db, ADMIN_ID, "prod", "token")
+    editing._send_message = Mock(return_value={"status": "sent"})
+
+    assert editing.handle_offer_status(ADMIN_ID, ["7", "bogus"]) == {"status": "invalid_status"}
+
+    assert "bogus" in editing._send_message.call_args.args[1]
