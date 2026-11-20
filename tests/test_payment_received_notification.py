@@ -10,6 +10,37 @@ from models.entities import AuthorizationStatus, Customer, Order, OrderStatus
 ADMIN_ID = 15005473
 
 
+def test_the_amount_received_is_that_of_the_orders_that_were_marked_paid():
+    customer = Customer(
+        customer_id="c1",
+        telegram_user_id=101,
+        first_name="Jan",
+        authorization_status=AuthorizationStatus.APPROVED.value,
+    )
+    db = Mock()
+    db.get_customer.return_value = customer
+    db.get_customer_by_telegram_id.return_value = None
+    db.get_orders_by_customer.return_value = [
+        Order(order_id="o1", customer_id="c1", total_price=Decimal("5"), status=OrderStatus.AWAITING_PAYMENT.value),
+        Order(order_id="o2", customer_id="c1", total_price=Decimal("7"), status=OrderStatus.AWAITING_PAYMENT.value),
+    ]
+    db.mark_order_paid.side_effect = lambda order_id, admin_id: order_id == "o1"
+    handler = DeliveryOverviewHandler(db, ADMIN_ID, "prod", "token")
+    handler._send_message = Mock(return_value={"status": "sent"})
+    handler.lambda_client = Mock()
+
+    with patch("handlers.admin.order_commands.AdminOrderCommands"):
+        handler.handle_process_customer_paid(ADMIN_ID, "c1")
+
+    (message,) = json.loads(handler.lambda_client.invoke.call_args.kwargs["Payload"])["messages"]
+    assert "€5.00" in message["message"]
+    assert "€12.00" not in message["message"]
+    admin_texts = [c.args[1] for c in handler._send_message.call_args_list]
+    confirmed = handler._t("payment_confirmed", ADMIN_ID, customer_name="Jan", updated_count=1, total_amount=5)
+    assert confirmed in admin_texts
+    assert handler._t("payment_partly_marked", ADMIN_ID, customer_name="Jan", failed=1, count=2) in admin_texts
+
+
 def test_the_pickup_location_is_escaped_in_the_html_message():
     customer = Customer(
         customer_id="c1",

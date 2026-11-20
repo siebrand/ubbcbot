@@ -55,11 +55,13 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   recorded for an order that moved. The overview now moves the orders first and builds each message from the ones
   that moved; a customer left with nothing gets no message (and the sender is not invoked for an empty batch). Found
   along the way: a paid order was set back to `awaiting_payment` the same way. `tests/test_overview_payment_link.py`.
-- [ ] **A5. "Payment received" names an amount that was not all marked paid** (`delivery_overview_handler.py`,
+- [x] **A5. "Payment received" names an amount that was not all marked paid** (`delivery_overview_handler.py`,
   `handle_process_customer_paid`). `total_amount` adds up every order awaiting payment, also the ones
   `mark_order_paid` failed for, and the customer is told that amount was received. Fix: the total of the orders that
   were marked; when some failed, tell the admin which. Test: two orders, one fails → the customer hears the amount of
-  one, the admin hears of the failure.
+  one, the admin hears of the failure. **Done**: the total (for the customer and the admin) is that of the orders
+  that were marked; when only some were, the admin gets `payment_partly_marked` (the others still await payment).
+  `tests/test_payment_received_notification.py`.
 
 ## Medium priority
 

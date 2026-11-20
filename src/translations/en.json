@@ -422,6 +422,7 @@
   "no_customers_awaiting_payment": "❌ No customers with orders awaiting payment",
   "no_orders_awaiting_payment": "❌ No orders awaiting payment for {customer_name}",
   "failed_update_orders_customer": "❌ Failed to update orders for {customer_name}",
+  "payment_partly_marked": "⚠️ {failed} of the {count} orders of {customer_name} could not be marked as paid; they are still awaiting payment. Try again.",
   "no_customers_ready_overview": "❌ No customers with orders ready for delivery overview",
   "delivery_overview_for": "📋 Delivery Overview for {customer_name}:",
   "delayed_items_info": "⏳ Delayed Items (for your information):",

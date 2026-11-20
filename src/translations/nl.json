@@ -422,6 +422,7 @@
   "no_customers_awaiting_payment": "❌ Geen klanten met bestellingen die wachten op betaling",
   "no_orders_awaiting_payment": "❌ Geen bestellingen die wachten op betaling voor {customer_name}",
   "failed_update_orders_customer": "❌ Kon bestellingen niet bijwerken voor {customer_name}",
+  "payment_partly_marked": "⚠️ {failed} van de {count} bestellingen van {customer_name} konden niet als betaald worden gemarkeerd; ze wachten nog op betaling. Probeer het opnieuw.",
   "no_customers_ready_overview": "❌ Geen klanten met bestellingen klaar voor leveringsoverzicht",
   "delivery_overview_for": "📋 Leveringsoverzicht voor {customer_name}:",
   "delayed_items_info": "⏳ Vertraagde Items (ter informatie):",

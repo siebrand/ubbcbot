@@ -281,15 +281,26 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
             return {"status": "no_orders"}
 
         # Update orders to COMPLETED using transaction method
-        updated_count = 0
-        for order in awaiting_payment_orders:
-            if self.db.mark_order_paid(order.order_id, self.admin_user_id):
-                updated_count += 1
+        paid_orders = [o for o in awaiting_payment_orders if self.db.mark_order_paid(o.order_id, self.admin_user_id)]
+        updated_count = len(paid_orders)
 
         customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(
             "unknown", user_id=None
         )
-        total_amount = sum(order.total_price for order in awaiting_payment_orders)
+        # The amount of the orders that were marked paid: the customer must not hear of more
+        total_amount = sum(order.total_price for order in paid_orders)
+
+        if 0 < updated_count < len(awaiting_payment_orders):
+            self._send_message(
+                chat_id,
+                self._t(
+                    "payment_partly_marked",
+                    chat_id,
+                    customer_name=customer_name,
+                    failed=len(awaiting_payment_orders) - updated_count,
+                    count=len(awaiting_payment_orders),
+                ),
+            )
 
         if updated_count > 0:
             self._send_message(
