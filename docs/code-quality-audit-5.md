@@ -1,6 +1,6 @@
 # Code quality audit 5: where the money is collected
 
-Status: **open** (2026-11-20). Follows audit 4 (where stock and money change), which is done. Audit 4 followed the
+Status: **done** (2026-11-20; opened the same day). Follows audit 4 (where stock and money change), which is done. Audit 4 followed the
 writes that change what a customer owes or gets; this one follows what happens next: the delivery overview with its
 payment link, marking a payment as received, the reminders, credit at payment time, and the follow-ups audit 4 left.
 Same priorities as before:
@@ -119,12 +119,26 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   pinned first against moto in `tests/test_customers_with_orders_in_status.py` (also: an unapproved customer with
   orders is left out, guests come last in the overviews), which now also asserts no per-customer read. It was five
   copies: `handle_send_delivery_overviews` had one too.
-- [ ] **B4. Text that bypasses the translations or the reader's language** (found in audit 4, B7). English in the
+- [x] **B4. Text that bypasses the translations or the reader's language** (found in audit 4, B7). English in the
   code: the `/send_delivery_overviews` summary, `/failed_notifications` ("orders", "no_username", the closing hint),
   "📧 Ready for next batch...", "Total:" in the admin copy of an overview. And many handlers call `_t` without a
   reader, so the admin always gets Dutch: the import screens, `_validate_args`, `_send_error`/`_send_success` without
   `user_id`, most of `delivery_overview_handler.py` and `order_status.py` (`user_id=None`). Fix: translate with the
   reader (admin screens: the admin); a test that walks the admin screens in English.
+  **Done**: the summary uses the `delivery_overview_summary` text that existed but was never used; "Ready for the
+  next batch" is `ready_for_next_batch`; the `/failed_notifications` texts went with B1. The admin copy with
+  "Total:" (`_send_admin_notification`, `_admin_overview_text`) was dead code, called by tests only: removed, with
+  its two unused texts. Every `user_id=None` in `delivery_overview_handler.py` and `order_status.py` was a text for
+  the admin and reads as the admin now; the import screens likewise; `_validate_args`, `_parse_int_arg`,
+  `_send_error` and `_send_success` read as the user of a private chat when no reader is given (`_reader`; a group
+  stays Dutch); the admin-menu button as the admin; an unknown offer name in a payment message as the customer.
+  `tests/test_admin_payment_screens_in_english.py` marks every Dutch text and walks the overview, payment, reminder
+  and import screens as an English admin. Found along the way, and fixed in a commit of its own: `_send_error` with a
+  `{status}` in its text raised TypeError (`/finalize_import` on an offer that is not being imported, `/offer_status`
+  with an unknown status); its parameters are positional-only now. Not done here (for a next audit): about 150 more
+  `_t` calls without a reader in the other admin handlers (suppliers, offer creation and editing, order placement
+  and editing, the edit-context prompts, wholesale delivery, labeling), and the "unknown" name fallbacks in
+  `base_handler.py`.
 - [x] **B5. The admin sees the text of an exception** (`error_processing_payment_link` with `error=str(e)`,
   `_send_user_message` returns `str(e)`, `send_from_admin` in `message_sender.py` reports and logs the text of a
   Telethon error; audit 4, B9). Fix: the type only, except the Telethon messages the failure report needs ("Could not

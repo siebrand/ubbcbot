@@ -43,7 +43,7 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
             )
 
         if not customers_data:
-            return self._send_message(chat_id, self._t("no_customers_ready_overview", user_id=None))
+            return self._send_message(chat_id, self._t("no_customers_ready_overview", user_id=self.admin_user_id))
 
         # Sort: regular customers first, guest users last
         customers_data.sort(key=lambda x: x["is_guest"])
@@ -65,7 +65,7 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
 
         message = self._t(
             "payment_link_request",
-            user_id=None,
+            user_id=self.admin_user_id,
             batch_number=batch_number,
             total_batches=total_batches,
             batch_size=batch_size,
@@ -145,12 +145,15 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
             current_batch = batch_index + 1
 
             message = self._t(
-                "batch_queued", user_id=None, batch_number=batch_index + 1, batch_size=len(batch_customers)
+                "batch_queued",
+                user_id=self.admin_user_id,
+                batch_number=batch_index + 1,
+                batch_size=len(batch_customers),
             )
 
             # Check if more batches needed
             if current_batch * 50 < len(customers_data):
-                message += "\n📧 Ready for next batch..."
+                message += "\n" + self._t("ready_for_next_batch", user_id=self.admin_user_id)
                 self._send_message(chat_id, message)
 
                 # Update context with new batch number
@@ -158,7 +161,9 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
 
                 return self._request_payment_link(chat_id, customers_data, current_batch)
             else:
-                message += self._t("all_overviews_queued", user_id=None, total_customers=len(customers_data))
+                message += self._t(
+                    "all_overviews_queued", user_id=self.admin_user_id, total_customers=len(customers_data)
+                )
                 self._send_message(chat_id, message)
 
                 return {"status": "completed"}
@@ -166,7 +171,9 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
         except Exception as e:
             # The type only: the text of an exception can name customers, tables or parameters
             logger.error(f"Processing the payment link failed: {type(e).__name__}")
-            self._send_message(chat_id, self._t("error_processing_payment_link", user_id=None, error=type(e).__name__))
+            self._send_message(
+                chat_id, self._t("error_processing_payment_link", user_id=self.admin_user_id, error=type(e).__name__)
+            )
             return {"status": "error"}
 
     def _apply_credit(self, customer_id: str, order_ids: list[str]) -> None:
@@ -202,15 +209,14 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
                 name_parts.append(customer.first_name)
             if customer.last_name:
                 name_parts.append(customer.last_name)
-            customer_name = " ".join(name_parts) if name_parts else self._t("unknown", user_id=None)
+            customer_name = " ".join(name_parts) if name_parts else self._t("unknown", user_id=self.admin_user_id)
 
             # For guests, send to admin; for regular customers, send from admin account
             if customer.is_guest:
                 # Sent as HTML: the guest's name is escaped
                 guest_name = self._html_customer_name(customer)
-                admin_message = (
-                    f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=guest_name)}\n\n{message}"
-                )
+                title = self._t("delivery_overview_for", self.admin_user_id, customer_name=guest_name)
+                admin_message = f"📋 {title}\n\n{message}"
                 return {
                     "user_id": int(self.admin_user_id),
                     "message": str(admin_message),
@@ -232,59 +238,11 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
             logger.error(f"Error building message for customer {customer_data['customer_id']}: {e}")
             return None
 
-    def _admin_overview_text(self, customer, delivered_orders: list, message: str, name: str, delivered_total) -> str:
-        """Admin copy of a delivery overview. ``name`` must already be safe for the way the text is sent."""
-        if customer.is_guest:
-            return f"📋 {self._t('delivery_overview_for', user_id=None, customer_name=name)}\n\n{message}"
-
-        text = f"✅ {name}\n"
-        for offer_name, offer_id, quantity, line_total in self._aggregate_order_lines(delivered_orders):
-            text += f"{quantity}x [{offer_id}] {offer_name} - €{line_total:.2f}\n"
-        return text + f"Total: €{delivered_total:.2f}"
-
-    def _send_admin_notification(
-        self,
-        customer,
-        delivered_orders: list,
-        delayed_orders: list,
-        message: str,
-        success: bool,
-        customer_name: str,
-        delivered_total,
-    ):
-        """Send admin notification about delivery overview"""
-        if success:
-            # Sent as HTML: the customer's name comes from Telegram and must be escaped
-            admin_message = self._admin_overview_text(
-                customer, delivered_orders, message, self._html_customer_name(customer), delivered_total
-            )
-            self._send_message(
-                self.admin_user_id,
-                self._t("admin_overview_sent_success", user_id=None, message=admin_message),
-                parse_mode="HTML",
-            )
-        else:
-            # Sent as plain text, so the name stays as it is
-            admin_message = self._admin_overview_text(
-                customer, delivered_orders, message, customer_name, delivered_total
-            )
-            error_msg = self._t("unknown", user_id=None)
-            self._send_message(
-                self.admin_user_id,
-                self._t(
-                    "admin_overview_sent_failed",
-                    user_id=None,
-                    customer_name=customer_name,
-                    error=error_msg,
-                    message=admin_message,
-                ),
-            )
-
     def handle_process_customer_paid(self, chat_id: int, customer_id: str, current_page: int = 1) -> dict[str, Any]:
         """Set a customer's orders as paid"""
         customer = self.db.get_customer(customer_id)
         if not customer:
-            self._send_message(chat_id, self._t("customer_not_found", user_id=None))
+            self._send_message(chat_id, self._t("customer_not_found", user_id=self.admin_user_id))
             return {"status": "customer_not_found"}
 
         # Get awaiting payment orders
@@ -293,7 +251,8 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
 
         if not awaiting_payment_orders:
             self._send_message(
-                chat_id, self._t("no_orders_awaiting_payment", user_id=None, customer_name=customer.first_name)
+                chat_id,
+                self._t("no_orders_awaiting_payment", user_id=self.admin_user_id, customer_name=customer.first_name),
             )
             return {"status": "no_orders"}
 
@@ -302,7 +261,7 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
         updated_count = len(paid_orders)
 
         customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(
-            "unknown", user_id=None
+            "unknown", user_id=self.admin_user_id
         )
         # The amount of the orders that were marked paid: the customer must not hear of more
         total_amount = sum(order.amount_due for order in paid_orders)
@@ -324,7 +283,7 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
                 chat_id,
                 self._t(
                     "payment_confirmed",
-                    user_id=None,
+                    user_id=self.admin_user_id,
                     customer_name=customer_name,
                     updated_count=updated_count,
                     total_amount=total_amount,
@@ -359,7 +318,8 @@ class DeliveryOverviewHandler(PaymentMessageMixin, BaseHandler):
             return order_commands.handle_process_payment(chat_id, [], current_page)
         else:
             self._send_message(
-                chat_id, self._t("failed_update_orders_customer", user_id=None, customer_name=customer_name)
+                chat_id,
+                self._t("failed_update_orders_customer", user_id=self.admin_user_id, customer_name=customer_name),
             )
             return {"status": "error"}
 

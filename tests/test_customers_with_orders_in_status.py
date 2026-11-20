@@ -107,7 +107,7 @@ class TestTheScreens:
 
         assert handler.handle_send_delivery_overviews(ADMIN_ID, []) == {"status": "confirmation_shown"}
 
-        assert "Customers to notify: 2" in texts(handler)
+        assert "Klanten om te informeren: 2" in texts(handler)
 
     def test_process_payment_lists_the_approved_customers_awaiting_payment_by_last_name(self, db, people):
         handler = status_screen(db)

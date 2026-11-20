@@ -143,29 +143,7 @@ class TestDeliveryOverviewAdminMessages:
     def handler(self):
         handler = DeliveryOverviewHandler(Mock(), ADMIN_ID, "test", "token")
         handler._send_message = Mock(return_value={"success": True})
-        handler._aggregate_order_lines = Mock(return_value=[("Pils", 7, 2, 5)])
         return handler
-
-    def test_a_successful_overview_is_sent_as_html_with_an_escaped_name(self, handler):
-        handler._send_admin_notification(_customer(), [], [], "MSG", True, "plain name", 5)
-
-        call = handler._send_message.call_args
-        assert call.kwargs["parse_mode"] == "HTML"
-        _assert_name_is_inert(call.args[1])
-
-    def test_a_guest_overview_is_escaped_too(self, handler):
-        handler._send_admin_notification(_customer(is_guest=True), [], [], "MSG", True, "plain name", 5)
-
-        call = handler._send_message.call_args
-        assert call.kwargs["parse_mode"] == "HTML"
-        _assert_name_is_inert(call.args[1])
-
-    def test_a_failed_overview_is_plain_text_and_keeps_the_real_name(self, handler):
-        handler._send_admin_notification(_customer(), [], [], "MSG", False, "Bob <Zed>", 5)
-
-        call = handler._send_message.call_args
-        assert "parse_mode" not in call.kwargs  # plain text: escaping here would show "&lt;" literally
-        assert "Bob <Zed>" in call.args[1] and "&lt;" not in call.args[1]
 
     def test_the_guest_payload_sent_via_the_message_sender_is_escaped(self, handler):
         guest = _customer(is_guest=True)

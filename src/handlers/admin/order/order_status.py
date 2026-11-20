@@ -24,23 +24,24 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
         customers_with_ready_orders = self.db.get_approved_customers_with_orders(OrderStatus.LABELING_COMPLETED.value)
 
         if not customers_with_ready_orders:
-            self._send_message(chat_id, self._t("no_customers_ready_overview", user_id=None))
+            self._send_message(chat_id, self._t("no_customers_ready_overview", user_id=self.admin_user_id))
             return {"status": "no_customers"}
 
         total_customers = len(customers_with_ready_orders)
         batches_needed = (total_customers + 49) // 50  # Round up
 
-        message = (
-            f"📊 Delivery Overview Summary:\n\n👥 Customers to notify: {total_customers}\n"
-            f"📦 Payment link batches needed: {batches_needed}\n\n"
-            "This will send delivery overviews and move orders to AWAITING_PAYMENT status."
+        message = self._t(
+            "delivery_overview_summary", chat_id, total_customers=total_customers, batches_needed=batches_needed
         )
 
         keyboard = {
             "inline_keyboard": [
                 [
-                    {"text": self._t("start_sending_overviews", user_id=None), "callback_data": "start_send_overviews"},
-                    {"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"},
+                    {
+                        "text": self._t("start_sending_overviews", user_id=self.admin_user_id),
+                        "callback_data": "start_send_overviews",
+                    },
+                    {"text": self._t("cancel", user_id=self.admin_user_id), "callback_data": "cancel_action"},
                 ]
             ]
         }
@@ -55,7 +56,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
         if not customers_awaiting_payment:
             self._send_message(
                 chat_id,
-                self._t("no_customers_awaiting_payment", user_id=None),
+                self._t("no_customers_awaiting_payment", user_id=self.admin_user_id),
                 reply_markup=self._build_admin_menu_keyboard(),
             )
             return {"status": "no_customers"}
@@ -67,7 +68,9 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
         page_customers, total_pages = PaginationUtils.paginate_list(customers_awaiting_payment, page, 10)
 
         # Show customers as buttons only (name + amount + order count on the button itself)
-        message = self._t("customers_awaiting_payment_title", user_id=None, page=page, total_pages=total_pages)
+        message = self._t(
+            "customers_awaiting_payment_title", user_id=self.admin_user_id, page=page, total_pages=total_pages
+        )
         keyboard_rows = []
 
         for customer, orders in page_customers:
@@ -75,7 +78,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
 
             # Button text: ✓ Last, First €amount (N)
             last_name = customer.last_name or ""
-            first_name = customer.first_name or self._t("unknown", user_id=None)
+            first_name = customer.first_name or self._t("unknown", user_id=self.admin_user_id)
             button_text = f"✓ {last_name}, {first_name} €{total_amount:.2f} ({len(orders)})".strip()
             keyboard_rows.append(
                 [{"text": button_text, "callback_data": f"process_payment_{customer.customer_id}_{page}"}]
@@ -89,7 +92,9 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
             keyboard_rows.extend(pagination_keyboard["inline_keyboard"])
 
         # Add Done button
-        keyboard_rows.append([{"text": self._t("done_general", user_id=None), "callback_data": "cancel_action"}])
+        keyboard_rows.append(
+            [{"text": self._t("done_general", user_id=self.admin_user_id), "callback_data": "cancel_action"}]
+        )
 
         keyboard = {"inline_keyboard": keyboard_rows}
         self._send_message(chat_id, message, reply_markup=keyboard)
@@ -136,7 +141,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
         if not customers_awaiting_payment:
             self._send_message(
                 chat_id,
-                self._t("no_customers_awaiting_payment", user_id=None),
+                self._t("no_customers_awaiting_payment", user_id=self.admin_user_id),
                 reply_markup=self._build_admin_menu_keyboard(),
             )
             return {"status": "no_customers"}
@@ -184,7 +189,9 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
             keyboard_rows.extend(pagination_keyboard["inline_keyboard"])
 
         # Add Done button
-        keyboard_rows.append([{"text": self._t("done_general", user_id=None), "callback_data": "cancel_action"}])
+        keyboard_rows.append(
+            [{"text": self._t("done_general", user_id=self.admin_user_id), "callback_data": "cancel_action"}]
+        )
 
         keyboard = {"inline_keyboard": keyboard_rows}
         self._send_message(chat_id, message, reply_markup=keyboard)
@@ -196,7 +203,7 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
         """Send payment reminder to a specific customer"""
         customer = self.db.get_customer(customer_id)
         if not customer:
-            self._send_message(chat_id, self._t("customer_not_found", user_id=None))
+            self._send_message(chat_id, self._t("customer_not_found", user_id=self.admin_user_id))
             return {"status": "customer_not_found"}
 
         # Get awaiting payment orders
@@ -205,17 +212,18 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
 
         if not awaiting_payment_orders:
             self._send_message(
-                chat_id, self._t("no_orders_awaiting_payment", user_id=None, customer_name=customer.first_name)
+                chat_id,
+                self._t("no_orders_awaiting_payment", user_id=self.admin_user_id, customer_name=customer.first_name),
             )
             return {"status": "no_orders"}
 
         payment_link = self._payment_link_for(awaiting_payment_orders)
         if not payment_link:
-            self._send_message(chat_id, self._t("no_payment_link_stored", user_id=None))
+            self._send_message(chat_id, self._t("no_payment_link_stored", user_id=self.admin_user_id))
             return {"status": "no_payment_link"}
 
         customer_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(
-            "unknown", user_id=None
+            "unknown", user_id=self.admin_user_id
         )
         message = self._build_delivery_message(customer, awaiting_payment_orders, [], payment_link, is_reminder=True)
 
@@ -226,19 +234,24 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
         if customer.is_guest:
             # For guests, send to admin with customer context (sent as HTML, so the name is escaped)
             guest_name = self._html_customer_name(customer)
-            admin_message = f"🔔 {self._t('payment_reminder_for', user_id=None, customer_name=guest_name)}\n\n{message}"
+            title = self._t("payment_reminder_for", self.admin_user_id, customer_name=guest_name)
+            admin_message = f"🔔 {title}\n\n{message}"
             result = self._send_message(self.admin_user_id, admin_message, parse_mode="HTML")
         else:
             # For regular customers, send directly from admin account
             result = self._send_user_message(customer.telegram_user_id, message)
 
         if result.get("success"):
-            self._send_message(chat_id, self._t("payment_reminder_sent", user_id=None, customer_name=customer_name))
+            self._send_message(
+                chat_id, self._t("payment_reminder_sent", user_id=self.admin_user_id, customer_name=customer_name)
+            )
             return self.handle_send_payment_reminder(chat_id, [], current_page)
         else:
             error = result.get("error", "Unknown error")
             self._send_message(
-                chat_id, self._t("payment_reminder_failed", user_id=None, customer_name=customer_name) + f" ({error})"
+                chat_id,
+                self._t("payment_reminder_failed", user_id=self.admin_user_id, customer_name=customer_name)
+                + f" ({error})",
             )
             return {"status": "error"}
 

@@ -37,8 +37,11 @@ class ImportHandler(NotificationHandler):
         # Send prompt with force reply
         self._send_message(
             chat_id,
-            self._t("import_orders_prompt"),
-            reply_markup={"force_reply": True, "input_field_placeholder": self._t("placeholder_csv_file")},
+            self._t("import_orders_prompt", self.admin_user_id),
+            reply_markup={
+                "force_reply": True,
+                "input_field_placeholder": self._t("placeholder_csv_file", self.admin_user_id),
+            },
         )
         return {"status": "awaiting_file"}
 
@@ -97,7 +100,7 @@ class ImportHandler(NotificationHandler):
         if collisions:
             return self._refuse_ambiguous(chat_id, collisions)
 
-        self._send_message(chat_id, self._t("import_processing", row_count=len(rows)))
+        self._send_message(chat_id, self._t("import_processing", self.admin_user_id, row_count=len(rows)))
 
         success_count = 0
         errors: list[str] = []
@@ -114,26 +117,38 @@ class ImportHandler(NotificationHandler):
             try:
                 offer_id = int(offer_id_str)
             except ValueError:
-                errors.append(self._t("import_line_error_invalid_offer_id", line=idx, offer_id=offer_id_str))
+                errors.append(
+                    self._t("import_line_error_invalid_offer_id", self.admin_user_id, line=idx, offer_id=offer_id_str)
+                )
                 continue
 
             # Get offer
             offer = self.db.get_offer(offer_id)
             if not offer:
-                errors.append(self._t("import_line_error_offer_not_found", line=idx, offer_id=offer_id))
+                errors.append(
+                    self._t("import_line_error_offer_not_found", self.admin_user_id, line=idx, offer_id=offer_id)
+                )
                 continue
 
             # Check offer status
             if offer.status != OfferStatus.IMPORT.value:
                 errors.append(
-                    self._t("import_line_error_wrong_status", line=idx, offer_id=offer_id, status=offer.status)
+                    self._t(
+                        "import_line_error_wrong_status",
+                        self.admin_user_id,
+                        line=idx,
+                        offer_id=offer_id,
+                        status=offer.status,
+                    )
                 )
                 continue
 
             # Find customer (no interactive disambiguation: ambiguous names were refused above)
             customer, error = self._find_customer_for_import(username, customers, not_approved)
             if error:
-                errors.append(self._t("import_line_error_customer", line=idx, username=username, reason=error))
+                errors.append(
+                    self._t("import_line_error_customer", self.admin_user_id, line=idx, username=username, reason=error)
+                )
                 continue
 
             # Create order
@@ -141,18 +156,26 @@ class ImportHandler(NotificationHandler):
             if order_result["success"]:
                 success_count += 1
             else:
-                errors.append(self._t("import_line_error_order_failed", line=idx, username=username, offer_id=offer_id))
+                errors.append(
+                    self._t(
+                        "import_line_error_order_failed",
+                        self.admin_user_id,
+                        line=idx,
+                        username=username,
+                        offer_id=offer_id,
+                    )
+                )
 
         # Send summary
-        summary = self._t("import_completed", success_count=success_count)
+        summary = self._t("import_completed", self.admin_user_id, success_count=success_count)
 
         if errors:
-            summary += "\n\n" + self._t("import_errors_header", error_count=len(errors))
+            summary += "\n\n" + self._t("import_errors_header", self.admin_user_id, error_count=len(errors))
             for error in errors[:5]:  # Show max 5 errors
                 summary += f"\n{error}"
 
             if len(errors) > 5:
-                summary += "\n" + self._t("import_more_errors", remaining=len(errors) - 5)
+                summary += "\n" + self._t("import_more_errors", self.admin_user_id, remaining=len(errors) - 5)
 
         self._send_message(chat_id, summary)
         return {"status": "success", "imported": success_count, "errors": len(errors)}
@@ -165,10 +188,10 @@ class ImportHandler(NotificationHandler):
         matches = self.validator.match_customers(username, customers)
         if not matches:
             if self.validator.match_customers(username, not_approved or []):
-                return None, self._t("not_approved")
-            return None, self._t("not_found")
+                return None, self._t("not_approved", self.admin_user_id)
+            return None, self._t("not_found", self.admin_user_id)
         if len(matches) > 1:
-            return None, self._t("multiple_matches")
+            return None, self._t("multiple_matches", self.admin_user_id)
         return matches[0], None
 
     def _find_ambiguous_lines(self, rows: list, customers: list) -> list[tuple[int, str, list]]:
@@ -184,14 +207,20 @@ class ImportHandler(NotificationHandler):
     def _refuse_ambiguous(self, chat_id: int, collisions: list[tuple[int, str, list]]) -> dict[str, Any]:
         """Tell the admin which lines are ambiguous and who they could be. Nothing has been imported."""
         shown = collisions[: self.MAX_AMBIGUOUS_LINES_SHOWN]
-        message = self._t("import_refused_ambiguous", count=len(collisions))
+        reader = self.admin_user_id
+        message = self._t("import_refused_ambiguous", reader, count=len(collisions))
         for line, username, matches in shown:
             candidates = self._format_customer_candidates(matches, self.MAX_CANDIDATES_SHOWN)
             message += "\n" + self._t(
-                "import_line_error_ambiguous", line=line, username=username, count=len(matches), matches=candidates
+                "import_line_error_ambiguous",
+                reader,
+                line=line,
+                username=username,
+                count=len(matches),
+                matches=candidates,
             )
         if len(collisions) > len(shown):
-            message += "\n" + self._t("import_ambiguous_more", remaining=len(collisions) - len(shown))
+            message += "\n" + self._t("import_ambiguous_more", reader, remaining=len(collisions) - len(shown))
 
         self._send_message(chat_id, message)
         return {"status": "ambiguous_customers", "lines": [line for line, _, _ in collisions]}
@@ -317,13 +346,13 @@ class ImportHandler(NotificationHandler):
         import_offers = [o for o in offers if o.status == OfferStatus.IMPORT.value]
 
         if not import_offers:
-            self._send_message(chat_id, self._t("no_import_offers"))
+            self._send_message(chat_id, self._t("no_import_offers", chat_id))
             return {"status": "no_offers"}
 
         # Sort by offer_id
         import_offers.sort(key=lambda x: x.offer_id)
 
-        message = self._t("select_offer_finalize_import") + "\n\n"
+        message = self._t("select_offer_finalize_import", chat_id) + "\n\n"
         keyboard_buttons = []
 
         for offer in import_offers:
@@ -339,7 +368,7 @@ class ImportHandler(NotificationHandler):
                 [{"text": f"{offer.offer_id}. {offer.name}", "callback_data": f"finalize_import_{offer.offer_id}"}]
             )
 
-        keyboard_buttons.append([{"text": self._t("cancel"), "callback_data": "cancel_action"}])
+        keyboard_buttons.append([{"text": self._t("cancel", chat_id), "callback_data": "cancel_action"}])
         keyboard = {"inline_keyboard": keyboard_buttons}
 
         self._send_message(chat_id, message, reply_markup=keyboard)

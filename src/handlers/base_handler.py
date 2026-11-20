@@ -281,7 +281,9 @@ class BaseHandler:
 
     def _build_admin_menu_keyboard(self) -> dict[str, Any]:
         """Build keyboard with button to return to admin menu"""
-        return {"inline_keyboard": [[{"text": self._t("admin_menu", user_id=None), "callback_data": "admin:main"}]]}
+        return {
+            "inline_keyboard": [[{"text": self._t("admin_menu", self.admin_user_id), "callback_data": "admin:main"}]]
+        }
 
     def _paginate_list(self, items: list, page: int, page_size: int = 10) -> tuple:
         """Paginate a list of items"""
@@ -306,25 +308,31 @@ class BaseHandler:
         try:
             return int(arg), None
         except ValueError:
-            self._send_message(chat_id, self._t(error_key))
+            self._send_message(chat_id, self._t(error_key, self._reader(chat_id)))
             return None, {"status": "invalid_format"}
 
     def _validate_args(self, args: list, min_count: int, usage_key: str, chat_id: int):
         """Validate minimum argument count or send usage message"""
         if len(args) < min_count:
-            self._send_message(chat_id, self._t(usage_key))
+            self._send_message(chat_id, self._t(usage_key, self._reader(chat_id)))
             return {"status": "invalid_args"}
         return None
 
+    @staticmethod
+    def _reader(chat_id: int) -> int | None:
+        """Whose language a message to this chat is in: the user of a private chat (its id is theirs). A group
+        (negative id) has no reader: group messages are Dutch."""
+        return chat_id if chat_id > 0 else None
+
     def _send_error(self, chat_id: int, error_key: str, status: str, /, **kwargs):
         """Send error message and return status. Positional-only, so a text can have a {status} of its own."""
-        user_id = kwargs.pop("user_id", None)
+        user_id = kwargs.pop("user_id", self._reader(chat_id))
         self._send_message(chat_id, self._t(error_key, user_id, **kwargs))
         return {"status": status}
 
     def _send_success(self, chat_id: int, success_key: str, status: str = "success", /, **kwargs):
         """Send success message and return status. Positional-only, so a text can have a {status} of its own."""
-        user_id = kwargs.pop("user_id", None)
+        user_id = kwargs.pop("user_id", self._reader(chat_id))
         self._send_message(chat_id, self._t(success_key, user_id, **kwargs))
         return {"status": status}
 
