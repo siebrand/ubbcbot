@@ -37,6 +37,36 @@ def build(cls, db):
     return handler
 
 
+class TestTheOffersMenu:
+    """IO-11: the Offers menu has an instant order button, in the admin's language, that starts the guided flow"""
+
+    @pytest.mark.parametrize("language, label", [("en", "⚡ Instant Order"), ("nl", "⚡ Directe bestelling")])
+    def test_it_has_the_instant_order_button(self, db, language, label):
+        from handlers.admin.admin_commands import AdminCommandsHandler
+
+        admin = Customer(customer_id="a1", telegram_user_id=ADMIN_ID, language=language)
+        db.get_customer_by_telegram_id.side_effect = lambda tid: admin if tid == ADMIN_ID else None
+        handler = build(AdminCommandsHandler, db)
+
+        handler.handle_admin_offers(ADMIN_ID, ADMIN_ID)
+
+        rows = handler._send_message.call_args.kwargs["reply_markup"]["inline_keyboard"]
+        assert {"text": label, "callback_data": "cmd:instant_order"} in [button for row in rows for button in row]
+
+    def test_tapping_it_starts_the_guided_flow(self):
+        from services.callback_handler import CallbackHandler
+
+        offer = Mock()
+        callbacks = CallbackHandler(Mock(), ADMIN_ID, "test", "token", {"offer": offer}, Mock())
+        callbacks._answer_callback_query = Mock()
+        callbacks._edit_message_remove_keyboard = Mock()
+        query = {"id": "q", "from": {"id": ADMIN_ID}, "message": {"chat": {"id": ADMIN_ID}, "message_id": 9}}
+
+        callbacks.handle_callback_query({**query, "data": "cmd:instant_order"})
+
+        offer.handle_instant_order.assert_called_once_with(ADMIN_ID, [])
+
+
 class TestLabeling:
     def test_the_labeling_screens_are_in_the_admin_language(self, db):
         db.get_boxes_by_offer_with_ready_orders.side_effect = [[Box(box_id=BOX_ID, offer_id=7)], []]

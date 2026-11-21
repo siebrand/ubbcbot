@@ -506,6 +506,7 @@ class CallbackHandler:
             "list_suppliers": lambda chat, user: self.handlers["supplier"].handle_list_suppliers(chat, 1, "active"),
             "update_supplier": lambda chat, user: self.handlers["supplier"].handle_list_suppliers(chat, 1, "active"),
             "create_offer": lambda chat, user: self.handlers["offer"].handle_create_offer(chat, []),
+            "instant_order": lambda chat, user: self.handlers["offer"].handle_instant_order(chat, []),
             "publish_offer": lambda chat, user: self._send_usage_message(chat, "usage_publish_offer"),
             "list_offers": lambda chat, user: self.handlers["info"].handle_list_offers(chat, user, []),
             "list_boxes": lambda chat, user: self.handlers["offer"].handle_list_boxes(chat),
