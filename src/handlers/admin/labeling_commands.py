@@ -74,7 +74,7 @@ class LabelingCommands(BaseHandler):
         ready_orders = [o for o in orders if o.status == OrderStatus.READY_FOR_LABELING.value]
 
         if not ready_orders:
-            self._send_message(chat_id, self._t("no_ready_for_labeling_orders", user_id=None, box_id=box_id[:8]))
+            self._send_message(chat_id, self._t("no_ready_for_labeling_orders", user_id=chat_id, box_id=box_id[:8]))
             return {"status": "no_orders"}
 
         # Update all ready orders to LABELING_COMPLETED
@@ -86,9 +86,9 @@ class LabelingCommands(BaseHandler):
         if updated_count > 0:
             self._send_message(
                 chat_id,
-                self._t("labeling_completed_success", user_id=None, box_id=box_id[:8], updated_count=updated_count),
+                self._t("labeling_completed_success", user_id=chat_id, box_id=box_id[:8], updated_count=updated_count),
             )
             return {"status": "success", "updated_count": updated_count}
         else:
-            self._send_message(chat_id, self._t("failed_update_orders", user_id=None, box_id=box_id[:8]))
+            self._send_message(chat_id, self._t("failed_update_orders", user_id=chat_id, box_id=box_id[:8]))
             return {"status": "error"}

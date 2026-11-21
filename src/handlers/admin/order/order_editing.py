@@ -191,25 +191,27 @@ class OrderEditing(BaseOrderHandler):
         buttons = []
         for order, customer in matches:
             offer = self.db.get_offer(order.offer_id)
-            offer_name = offer.name if offer else self._t("unknown", user_id=None)
-            name = f"{customer.first_name} {customer.last_name}" if customer else self._t("unknown", user_id=None)
+            offer_name = offer.name if offer else self._t("unknown", user_id=chat_id)
+            name = f"{customer.first_name} {customer.last_name}" if customer else self._t("unknown", user_id=chat_id)
             label = f"{order.order_id[:8]}: {name} - {order.quantity}x {offer_name}"
             buttons.append([{"text": label, "callback_data": f"edit_order_pick_{order.order_id[:8]}"}])
-        buttons.append([{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}])
+        buttons.append([{"text": self._t("cancel", user_id=chat_id), "callback_data": "cancel_action"}])
         self._send_message(chat_id, message, reply_markup={"inline_keyboard": buttons})
         return {"status": "disambiguation_shown"}
 
     def _order_details_block(self, order) -> str:
         """Human-readable summary of the order shown above the edit buttons."""
         offer = self.db.get_offer(order.offer_id)
-        offer_name = offer.name if offer else self._t("unknown", user_id=None)
+        offer_name = offer.name if offer else self._t("unknown", user_id=self.admin_user_id)
         customer = self.db.get_customer(order.customer_id)
         customer_name = (
-            f"{customer.first_name} {customer.last_name}".strip() if customer else self._t("unknown", user_id=None)
+            f"{customer.first_name} {customer.last_name}".strip()
+            if customer
+            else self._t("unknown", user_id=self.admin_user_id)
         )
         return self._t(
             "edit_order_details",
-            None,
+            self.admin_user_id,
             order_id=order.order_id[:8],
             customer=self._escape_html(customer_name),
             offer_id=order.offer_id,
@@ -227,7 +229,7 @@ class OrderEditing(BaseOrderHandler):
             [{"text": self._t("edit_order_aspect_box", chat_id), "callback_data": f"edit_order_box_{oid}"}],
             [{"text": self._t("edit_order_aspect_price", chat_id), "callback_data": f"edit_order_price_{oid}"}],
             [{"text": self._t("edit_order_aspect_status", chat_id), "callback_data": f"edit_order_status_{oid}"}],
-            [{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}],
+            [{"text": self._t("cancel", user_id=chat_id), "callback_data": "cancel_action"}],
         ]
         message = (
             self._order_details_block(order) + "\n\n" + self._t("edit_order_choose_aspect", chat_id, order_id=oid[:8])
@@ -273,7 +275,7 @@ class OrderEditing(BaseOrderHandler):
             for b in boxes
         ]
         buttons.append(
-            [{"text": self._t("cancel", user_id=None), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}]
+            [{"text": self._t("cancel", user_id=chat_id), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}]
         )
         self._send_message(chat_id, self._t("edit_order_pick_box", chat_id), reply_markup={"inline_keyboard": buttons})
         return {"status": "box_options_shown"}
@@ -289,11 +291,11 @@ class OrderEditing(BaseOrderHandler):
         buttons = [
             [
                 {
-                    "text": self._t("confirm", user_id=None),
+                    "text": self._t("confirm", user_id=chat_id),
                     "callback_data": f"edit_order_applybox_{order.order_id[:8]}_{box.box_id[:8]}",
                 }
             ],
-            [{"text": self._t("cancel", user_id=None), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}],
+            [{"text": self._t("cancel", user_id=chat_id), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}],
         ]
         self._send_message(
             chat_id,
@@ -334,7 +336,7 @@ class OrderEditing(BaseOrderHandler):
             for s in options
         ]
         buttons.append(
-            [{"text": self._t("cancel", user_id=None), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}]
+            [{"text": self._t("cancel", user_id=chat_id), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}]
         )
         self._send_message(
             chat_id, self._t("edit_order_pick_status", chat_id), reply_markup={"inline_keyboard": buttons}
@@ -348,11 +350,11 @@ class OrderEditing(BaseOrderHandler):
         buttons = [
             [
                 {
-                    "text": self._t("confirm", user_id=None),
+                    "text": self._t("confirm", user_id=chat_id),
                     "callback_data": f"edit_order_applystatus_{order.order_id[:8]}_{new_status}",
                 }
             ],
-            [{"text": self._t("cancel", user_id=None), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}],
+            [{"text": self._t("cancel", user_id=chat_id), "callback_data": f"edit_order_pick_{order.order_id[:8]}"}],
         ]
         self._send_message(
             chat_id,

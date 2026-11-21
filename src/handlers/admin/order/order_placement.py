@@ -19,7 +19,9 @@ class OrderPlacement(BaseOrderHandler):
             # Show button-based UI to ask for username
             message = self._t("enter_username_for_order_for", chat_id)
             keyboard = {
-                "inline_keyboard": [[{"text": "📝 Enter Username", "callback_data": "enter_username_order_for"}]]
+                "inline_keyboard": [
+                    [{"text": self._t("enter_username_btn", chat_id), "callback_data": "enter_username_order_for"}]
+                ]
             }
             self._send_message(chat_id, message, reply_markup=keyboard)
             return {"status": "awaiting_input"}
@@ -47,7 +49,7 @@ class OrderPlacement(BaseOrderHandler):
             quantity = int(args[2]) if len(args) > 2 else 1
 
             if quantity <= 0:
-                self._send_message(chat_id, self._t("quantity_must_positive"))
+                self._send_message(chat_id, self._t("quantity_must_positive", chat_id))
                 return {"status": "invalid_quantity"}
 
             # Find target customer
@@ -60,7 +62,7 @@ class OrderPlacement(BaseOrderHandler):
             return self._execute_order_for_customer(chat_id, customer, offer_id, quantity)
 
         except ValueError:
-            self._send_message(chat_id, self._t("invalid_format"))
+            self._send_message(chat_id, self._t("invalid_format", chat_id))
             return {"status": "invalid_format"}
 
     def _show_offers_for_order_for(self, chat_id: int, customer) -> dict[str, Any]:
@@ -68,23 +70,23 @@ class OrderPlacement(BaseOrderHandler):
         offers = [o for o in self.db.list_offers() if o.status in (OfferStatus.ACTIVE.value, OfferStatus.IMPORT.value)]
 
         if not offers:
-            self._send_message(chat_id, self._t("no_offers_available"))
+            self._send_message(chat_id, self._t("no_offers_available", chat_id))
             return {"status": "no_offers"}
 
         display_name = self._escape_html(self._customer_display_name(customer))
-        message = f"🍺 Select offer for {display_name}:\n\n"
+        message = self._t("order_for_select_offer", chat_id, name=display_name) + "\n\n"
 
         keyboard_buttons = []
         for offer in offers[:10]:  # Limit to 10 offers
             supplier = self.db.get_supplier_by_name(offer.supplier_name)
-            supplier_name = supplier.name if supplier else self._t("unknown", user_id=None)
+            supplier_name = supplier.name if supplier else self._t("unknown", user_id=chat_id)
 
             button_text = f"🍺 {offer.name} - €{offer.price_per_unit:.2f} ({supplier_name})"
             keyboard_buttons.append(
                 [{"text": button_text, "callback_data": f"order_for_offer_{customer.customer_id}_{offer.offer_id}"}]
             )
 
-        keyboard_buttons.append([{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}])
+        keyboard_buttons.append([{"text": self._t("cancel", user_id=chat_id), "callback_data": "cancel_action"}])
         keyboard = {"inline_keyboard": keyboard_buttons}
 
         self._send_message(chat_id, message, reply_markup=keyboard)
@@ -93,28 +95,30 @@ class OrderPlacement(BaseOrderHandler):
     def _show_quantity_selection_for_order_for(self, chat_id: int, customer, offer) -> dict[str, Any]:
         """Show quantity selection for order_for workflow"""
         display_name = self._escape_html(self._customer_display_name(customer))
-        message = f"📦 Select quantity for {display_name}:\n\n🍺 {offer.name} - €{offer.price_per_unit:.2f}"
+        message = self._t(
+            "order_for_select_quantity", chat_id, name=display_name, offer=offer.name, price=offer.price_per_unit
+        )
 
         keyboard_buttons = [
             [
                 {
-                    "text": self._t("order_1", user_id=None),
+                    "text": self._t("order_1", user_id=chat_id),
                     "callback_data": f"order_for_quantity_{customer.customer_id}_{offer.offer_id}_1",
                 }
             ],
             [
                 {
-                    "text": self._t("order_2", user_id=None),
+                    "text": self._t("order_2", user_id=chat_id),
                     "callback_data": f"order_for_quantity_{customer.customer_id}_{offer.offer_id}_2",
                 }
             ],
             [
                 {
-                    "text": self._t("other_quantity", user_id=None),
+                    "text": self._t("other_quantity", user_id=chat_id),
                     "callback_data": f"order_for_other_{customer.customer_id}_{offer.offer_id}",
                 }
             ],
-            [{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}],
+            [{"text": self._t("cancel", user_id=chat_id), "callback_data": "cancel_action"}],
         ]
 
         keyboard = {"inline_keyboard": keyboard_buttons}
@@ -126,15 +130,15 @@ class OrderPlacement(BaseOrderHandler):
         # Get offer
         offer = self.db.get_offer(offer_id)
         if not offer:
-            self._send_message(chat_id, self._t("offer_not_found_inactive"))
+            self._send_message(chat_id, self._t("offer_not_found_inactive", chat_id))
             return {"status": "offer_not_found"}
 
         if offer.status == OfferStatus.SOLD_OUT.value:
-            self._send_message(chat_id, self._t("offer_sold_out_named", user_id=None, offer_name=offer.name))
+            self._send_message(chat_id, self._t("offer_sold_out_named", user_id=chat_id, offer_name=offer.name))
             return {"status": "sold_out"}
 
         if offer.status not in (OfferStatus.ACTIVE.value, OfferStatus.IMPORT.value):
-            self._send_message(chat_id, self._t("offer_not_found_inactive"))
+            self._send_message(chat_id, self._t("offer_not_found_inactive", chat_id))
             return {"status": "offer_not_found"}
 
         # Check 10-unit admin limit for target customer
@@ -148,9 +152,9 @@ class OrderPlacement(BaseOrderHandler):
             ]
             total_existing = sum(order.quantity for order in existing_orders)
 
-            display_name = customer.first_name or self._t("unknown", user_id=None)
+            display_name = customer.first_name or self._t("unknown", user_id=chat_id)
             admin_message = self._t(
-                "admin_order_limit_exceeded", user_id=None, customer_name=display_name, total_existing=total_existing
+                "admin_order_limit_exceeded", user_id=chat_id, customer_name=display_name, total_existing=total_existing
             )
 
             # Add order details
@@ -163,9 +167,9 @@ class OrderPlacement(BaseOrderHandler):
 
             remaining_allowed = 10 - total_existing
             if remaining_allowed > 0:
-                admin_message += self._t("admin_remaining_units_allowed", user_id=None, remaining=remaining_allowed)
+                admin_message += self._t("admin_remaining_units_allowed", user_id=chat_id, remaining=remaining_allowed)
             else:
-                admin_message += self._t("admin_limit_reached", user_id=None, customer_name=display_name)
+                admin_message += self._t("admin_limit_reached", user_id=chat_id, customer_name=display_name)
 
             self._send_message(chat_id, admin_message)
             return {"status": "limit_exceeded"}
@@ -249,17 +253,17 @@ class OrderPlacement(BaseOrderHandler):
             logger.info(f"Offer found: {offer is not None}")
         except ValueError as e:
             logger.error(f"ValueError converting offer_id '{offer_id}' to int: {e}")
-            self._send_message(chat_id, self._t("invalid_format"))
+            self._send_message(chat_id, self._t("invalid_format", chat_id))
             return {"status": "invalid_format"}
 
         if not customer:
             logger.error(f"Customer not found for ID: {customer_id}")
-            self._send_message(chat_id, self._t("invalid_selection"))
+            self._send_message(chat_id, self._t("invalid_selection", chat_id))
             return {"status": "invalid_selection"}
 
         if not offer:
             logger.error(f"Offer not found for ID: {offer_id_int}")
-            self._send_message(chat_id, self._t("invalid_selection"))
+            self._send_message(chat_id, self._t("invalid_selection", chat_id))
             return {"status": "invalid_selection"}
 
         logger.info("Proceeding to quantity selection")

@@ -1,6 +1,6 @@
 # Code quality audit 6: where an order changes after it is placed
 
-Status: **open** (2026-11-20). Follows audit 5 (where the money is collected), which is done. Audit 5 followed an order
+Status: **done** (2026-11-21). Follows audit 5 (where the money is collected), which is done. Audit 5 followed an order
 from the delivery overview to its payment; this one follows what can happen to an order on the way: the admin cancels
 it, edits its box, price or status, or the wholesale plan cuts it. Each of those changes the order and the box it
 takes room in, and some of them the money. Same priorities as before:
@@ -48,11 +48,10 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   Pinned: orders awaiting payment (and their credit) are never reached, since such an order sits in a delivered box
   that holds it and the offer is then refused. The offer now closes first, each open order is cancelled with its
   box and on condition of what was read, only emptied boxes are deleted, and an old confirmation changes nothing.
-- [ ] **B4. The order handlers translate without a reader** (left by audit 5, B4). `order_editing.py` (`user_id=None`
-  and `self._t(..., None, ...)`), `order_cancellation.py` (`self._t("order_not_found")`, `self._t("box_not_found")`),
-  `order_placement.py`, `order_viewing.py`, `wholesale_delivery_handler.py`, `labeling_commands.py`: an English admin
-  gets Dutch. Fix as in audit 5: the admin (or the private chat) as reader; extend
-  `tests/test_admin_payment_screens_in_english.py`'s marking approach to these screens.
+- [x] **B4. The order handlers translate without a reader** (left by audit 5, B4). The private chat is the reader
+  (the admin where no chat is at hand, and for the export caption, which always goes to the admin); also in the
+  shared customer lookup (`utils/validation.py`). The English literals in these screens (the username button, the
+  `/order_for` prompts, the export buttons) are translations now.
 
 ## Order of work
 

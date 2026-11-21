@@ -1,5 +1,6 @@
-"""An admin who reads English gets English on the payment and import screens (audit 5, B4), against the mocked
-database. Every Dutch text is marked, so a text that bypasses the admin's language shows."""
+"""An admin who reads English gets English on the payment and import screens (audit 5, B4) and the order screens
+(audit 6, B4), against the mocked database. Every Dutch text is marked, so a text that bypasses the admin's
+language shows."""
 
 import json
 from decimal import Decimal
@@ -9,7 +10,13 @@ import pytest
 
 from handlers.admin.delivery_overview_handler import DeliveryOverviewHandler
 from handlers.admin.import_handler import ImportHandler
+from handlers.admin.labeling_commands import LabelingCommands
+from handlers.admin.order.order_cancellation import OrderCancellation
+from handlers.admin.order.order_editing import OrderEditing
+from handlers.admin.order.order_placement import OrderPlacement
 from handlers.admin.order.order_status import OrderStatusManagement
+from handlers.admin.order.order_viewing import OrderViewing
+from handlers.admin.wholesale_delivery_handler import WholesaleDeliveryHandler
 from handlers.base_handler import BaseHandler
 from models.entities import AuthorizationStatus, Box, Customer, Offer, Order, OrderStatus
 from services import translator
@@ -173,6 +180,126 @@ class TestThePaymentScreens:
         assert_english(handler)
         # The reminder itself is in the customer's language
         assert DUTCH in handler._send_user_message.call_args.args[1]
+
+
+def place(db, who, order_id, box_id=BOX_ID, status=OrderStatus.PENDING.value) -> Order:
+    order = Order(
+        order_id=order_id,
+        customer_id=who.customer_id,
+        box_id=box_id,
+        offer_id=7,
+        quantity=1,
+        unit_price=Decimal("1.00"),
+        total_price=Decimal("1.00"),
+        status=status,
+    )
+    assert db.order_repo.create_order(order)
+    return order
+
+
+class TestTheOrderScreens:
+    """Audit 6, B4: the order handlers translate for the admin"""
+
+    @pytest.fixture
+    def orders(self, db, jan):
+        """Two orders whose ids start alike (a short id that matches both), one in an open box with room"""
+        assert db.create_box(Box(box_id="open0000-box", offer_id=7, max_capacity=6, current_quantity=1, status="open"))
+        assert db.create_box(Box(box_id="open1111-box", offer_id=7, max_capacity=6, current_quantity=0, status="open"))
+        return place(db, jan, "dup00000-0001", "open0000-box"), place(db, jan, "dup00000-0002", "open0000-box")
+
+    def test_edit_order(self, db, orders):
+        order = orders[0]
+        handler = screen(OrderEditing, db)
+
+        handler.handle_edit_order(ADMIN_ID, ["dup0"])  # two orders match
+        handler.handle_edit_order(ADMIN_ID, [order.order_id])
+        handler.show_box_options(ADMIN_ID, order.order_id)
+        handler.confirm_box(ADMIN_ID, order.order_id, "open1111")
+        handler.show_status_options(ADMIN_ID, order.order_id)
+        handler.confirm_status(ADMIN_ID, order.order_id, "ordered")
+        handler.apply_price_input(ADMIN_ID, order.order_id, "2")
+
+        assert_english(handler)
+
+    def test_cancel_order(self, db, jan, orders):
+        handler = screen(OrderCancellation, db)
+        place(db, jan, "nobox000-0001", "gone-box")
+
+        handler.handle_cancel_order(ADMIN_ID, [])
+        handler.handle_cancel_order(ADMIN_ID, ["dup0"])
+        handler.handle_cancel_order(ADMIN_ID, [orders[0].order_id])
+        handler.handle_confirm_cancel_with_reason(ADMIN_ID, "gone", "reason")
+        handler.handle_confirm_cancel_with_reason(ADMIN_ID, "nobox000-0001", "reason")
+
+        assert_english(handler)
+
+    def test_order_for(self, db, jan):
+        handler = screen(OrderPlacement, db)
+        db.create_offer(Offer(offer_id=8, name="Abdij", price_per_unit=Decimal("2.00"), wholesale_box_size=6))
+        db.update_offer(8, {"status": "active"})
+
+        handler.handle_create_order_for(ADMIN_ID, ADMIN_ID, [])
+        handler.handle_create_order_for(ADMIN_ID, ADMIN_ID, ["Jan", "7", "0"])  # not positive
+        handler.handle_create_order_for(ADMIN_ID, ADMIN_ID, ["Jan", "zeven"])
+        handler.handle_create_order_for(ADMIN_ID, ADMIN_ID, ["Jan", "7"])  # sold out
+        handler.handle_create_order_for(ADMIN_ID, ADMIN_ID, ["Jan", "99"])  # no such offer
+        handler.handle_create_order_for_user_select(ADMIN_ID, jan.customer_id)  # the offers
+        handler.handle_create_order_for_offer_select(ADMIN_ID, jan.customer_id, "8")  # the quantities
+        handler.handle_create_order_for_offer_select(ADMIN_ID, jan.customer_id, "acht")
+        handler.handle_create_order_for_offer_select(ADMIN_ID, "gone", "8")
+        handler.handle_create_order_for_quantity_select(ADMIN_ID, jan.customer_id, "8", "11")  # over the limit
+
+        assert_english(handler)
+
+    def test_order_for_without_offers(self, db, jan):
+        handler = screen(OrderPlacement, db)
+
+        handler.handle_create_order_for_user_select(ADMIN_ID, jan.customer_id)
+
+        assert_english(handler)
+
+    def test_order_lists_and_exports(self, db, jan):
+        handler = screen(OrderViewing, db)
+        handler._send_document_message = Mock(return_value={"success": False})
+
+        handler.handle_list_user_orders(ADMIN_ID, [])
+        handler.handle_export_orders(ADMIN_ID, [])
+        handler.handle_export_orders(ADMIN_ID, ["cancelled"])  # none
+        handler.handle_export_orders(ADMIN_ID, ["all"])  # the document fails
+        handler.handle_list_offer_orders(ADMIN_ID, [])
+        handler.handle_list_offer_orders_select(ADMIN_ID, "7")
+
+        assert_english(handler)
+
+    def test_the_export_caption(self, db, jan):
+        handler = screen(OrderViewing, db)
+        handler._send_document_message = Mock(return_value={"success": True, "message_id": 5})
+
+        handler.handle_export_orders(ADMIN_ID, ["all"])
+
+        caption = handler._send_document_message.call_args.args[3]
+        assert DUTCH not in caption
+
+    def test_wholesale_delivery(self, db):
+        assert db.create_box(
+            Box(box_id="ordered0-box", offer_id=7, max_capacity=6, current_quantity=6, status="ordered")
+        )
+        handler = screen(WholesaleDeliveryHandler, db)
+
+        handler.handle_complete_delivery(ADMIN_ID, 7, "")
+        keyboard = handler._build_triage_keyboard("ordered0-box", 7, "")
+
+        assert_english(handler)
+        assert not [b["text"] for row in keyboard["inline_keyboard"] for b in row if DUTCH in b["text"]]
+
+    def test_finish_labeling(self, db, jan):
+        handler = screen(LabelingCommands, db)
+        place(db, jan, "label000-0001", status=OrderStatus.READY_FOR_LABELING.value)
+
+        handler.handle_finish_labeling(ADMIN_ID, "empty000-box")
+        handler.handle_finish_labeling(ADMIN_ID, BOX_ID)
+
+        assert_english(handler)
 
 
 class TestTheImportScreens:

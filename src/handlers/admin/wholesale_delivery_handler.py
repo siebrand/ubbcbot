@@ -118,7 +118,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         keyboard = [
             [
                 {
-                    "text": self._t("full_delivery_btn", user_id=None),
+                    "text": self._t("full_delivery_btn", user_id=self.admin_user_id),
                     "callback_data": (
                         f"wd_action:{DeliveryAction.FULL.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
                     ),
@@ -126,7 +126,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
             ],
             [
                 {
-                    "text": self._t("delayed_delivery_btn", user_id=None),
+                    "text": self._t("delayed_delivery_btn", user_id=self.admin_user_id),
                     "callback_data": (
                         f"wd_action:{DeliveryAction.DELAYED.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
                     ),
@@ -134,7 +134,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
             ],
             [
                 {
-                    "text": self._t("cancel", user_id=None),
+                    "text": self._t("cancel", user_id=self.admin_user_id),
                     "callback_data": (
                         f"wd_action:{DeliveryAction.CANCEL.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
                     ),
@@ -142,7 +142,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
             ],
             [
                 {
-                    "text": self._t("incomplete_delivery_btn", user_id=None),
+                    "text": self._t("incomplete_delivery_btn", user_id=self.admin_user_id),
                     "callback_data": (
                         f"wd_action:{DeliveryAction.INCOMPLETE.value}:{box_id_short}:{offer_id}:{supplier_id_short}"
                     ),
@@ -150,7 +150,7 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
             ],
             [
                 {
-                    "text": self._t("back_to_boxes", user_id=None),
+                    "text": self._t("back_to_boxes", user_id=self.admin_user_id),
                     "callback_data": f"wd_back:boxes:{offer_id}:{supplier_id_short}",
                 }
             ],
@@ -321,13 +321,13 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         keyboard = [
             [
                 {
-                    "text": self._t("confirm", user_id=None),
+                    "text": self._t("confirm", user_id=chat_id),
                     "callback_data": f"wd_confirm_complete:{offer_id}:{supplier_id_short}",
                 }
             ],
             [
                 {
-                    "text": self._t("cancel", user_id=None),
+                    "text": self._t("cancel", user_id=chat_id),
                     "callback_data": f"wd_back:boxes:{offer_id}:{supplier_id_short}",
                 }
             ],

@@ -25,6 +25,18 @@ EXPORT_FILTERS: dict[str, set[str]] = {
     },
 }
 
+# The export buttons of /export_orders, in their order
+EXPORT_CHOICES = (
+    OrderStatus.READY_FOR_LABELING.value,
+    OrderStatus.LABELING_COMPLETED.value,
+    OrderStatus.AWAITING_PAYMENT.value,
+    OrderStatus.COMPLETED.value,
+    "active",
+    OrderStatus.CANCELLED.value,
+    "all",
+    "full",
+)
+
 
 class OrderViewing(BaseOrderHandler):
     """Handles order viewing and export functionality"""
@@ -34,7 +46,11 @@ class OrderViewing(BaseOrderHandler):
         if not args:
             # Show button-based UI to ask for username
             message = self._t("enter_username_for_orders", chat_id)
-            keyboard = {"inline_keyboard": [[{"text": "📝 Enter Username", "callback_data": "enter_username_orders"}]]}
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": self._t("enter_username_btn", chat_id), "callback_data": "enter_username_orders"}]
+                ]
+            }
             self._send_message(chat_id, message, reply_markup=keyboard)
             return {"status": "awaiting_input"}
 
@@ -54,25 +70,29 @@ class OrderViewing(BaseOrderHandler):
         """Handle /all_orders command"""
         if not args:
             # Show status selection buttons
-            keyboard = {
-                "inline_keyboard": [
-                    [{"text": "Ready for Labeling", "callback_data": "export_orders_ready_for_labeling"}],
-                    [{"text": "Labeling Completed", "callback_data": "export_orders_labeling_completed"}],
-                    [{"text": "Awaiting Payment", "callback_data": "export_orders_awaiting_payment"}],
-                    [{"text": "Completed", "callback_data": "export_orders_completed"}],
-                    [{"text": "Active", "callback_data": "export_orders_active"}],
-                    [{"text": "Cancelled", "callback_data": "export_orders_cancelled"}],
-                    [{"text": "All", "callback_data": "export_orders_all"}],
-                    [{"text": "Full Export (All Fields)", "callback_data": "export_orders_full"}],
-                    [{"text": self._t("back_to_admin"), "callback_data": "admin:main"}],
+            buttons = [
+                [
+                    {
+                        "text": self._export_label(status_filter, chat_id),
+                        "callback_data": f"export_orders_{status_filter}",
+                    }
                 ]
-            }
-            self._send_message(chat_id, self._t("select_order_status_export", user_id=None), reply_markup=keyboard)
+                for status_filter in EXPORT_CHOICES
+            ]
+            buttons.append([{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}])
+            keyboard = {"inline_keyboard": buttons}
+            self._send_message(chat_id, self._t("select_order_status_export", user_id=chat_id), reply_markup=keyboard)
             return {"status": "selection_shown"}
 
         # Get filter from args
         status_filter = args[0].lower()
         return self._export_orders_by_status(chat_id, status_filter)
+
+    def _export_label(self, status_filter: str, reader: int) -> str:
+        """The name of an export choice: the order status it selects, or active, all or the full export"""
+        if status_filter in ("active", "all", "full"):
+            return self._t(f"export_orders_{status_filter}_btn", reader)
+        return self._t(f"status_{status_filter}", reader).capitalize()
 
     def _export_orders_by_status(self, chat_id: int, status_filter: str) -> dict[str, Any]:
         """Export orders by status filter"""
@@ -91,8 +111,12 @@ class OrderViewing(BaseOrderHandler):
                     all_orders.append((customer, order))
 
         if not all_orders:
-            keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin"), "callback_data": "admin:main"}]]}
-            self._send_message(chat_id, self._t("no_orders_status", status=status_filter), reply_markup=keyboard)
+            keyboard = {
+                "inline_keyboard": [[{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}]]
+            }
+            self._send_message(
+                chat_id, self._t("no_orders_status", chat_id, status=status_filter), reply_markup=keyboard
+            )
             return {"status": "no_orders"}
 
         # Sort by customer name for grouping
@@ -117,23 +141,23 @@ class OrderViewing(BaseOrderHandler):
         caption = (
             self._t(
                 "pick_list_csv_caption",
-                user_id=None,
-                status=status_filter.replace("_", " ").title(),
+                self.admin_user_id,
+                status=self._export_label(status_filter, self.admin_user_id),
                 count=len(all_orders),
             )
             + "\n"
-            + self._t("export_expiry_notice", user_id=None, minutes=EXPORT_LIFETIME_SECONDS // 60)
+            + self._t("export_expiry_notice", self.admin_user_id, minutes=EXPORT_LIFETIME_SECONDS // 60)
         )
         result = self._send_document_message(self.admin_user_id, csv_content, csv_filename, caption)
 
         if not result.get("success"):
-            self._send_message(chat_id, self._t("export_failed", user_id=None))
+            self._send_message(chat_id, self._t("export_failed", user_id=chat_id))
             return {"status": "error"}
 
         self.export_expiry.track(self.admin_user_id, result["message_id"])
 
         if chat_id != self.admin_user_id:
-            self._send_message(chat_id, self._t("export_sent_privately", user_id=None))
+            self._send_message(chat_id, self._t("export_sent_privately", user_id=chat_id))
 
         return {"status": "success"}
 
@@ -148,7 +172,7 @@ class OrderViewing(BaseOrderHandler):
         customer_orders: dict[str, list[tuple]] = {}
         for customer, order in orders_data:
             customer_key = f"{customer.first_name or ''} {customer.last_name or ''}".strip() or self._t(
-                "unknown", user_id=None
+                "unknown", user_id=self.admin_user_id
             )
             if customer_key not in customer_orders:
                 customer_orders[customer_key] = []
@@ -158,7 +182,7 @@ class OrderViewing(BaseOrderHandler):
         for customer_name in sorted(customer_orders.keys()):
             for customer, order in customer_orders[customer_name]:
                 offer = self.db.get_offer(order.offer_id)
-                offer_name = offer.name if offer else self._t("unknown", user_id=None)
+                offer_name = offer.name if offer else self._t("unknown", user_id=self.admin_user_id)
                 location_prefix = (customer.location or "")[:5]
 
                 # Prefix name with "-" if location starts with "Weer"
@@ -232,7 +256,9 @@ class OrderViewing(BaseOrderHandler):
         ]
 
         if not offers:
-            keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin"), "callback_data": "admin:main"}]]}
+            keyboard = {
+                "inline_keyboard": [[{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}]]
+            }
             self._send_message(chat_id, self._t("no_offers_available", chat_id), reply_markup=keyboard)
             return {"status": "no_offers"}
 
@@ -247,7 +273,7 @@ class OrderViewing(BaseOrderHandler):
 
         for offer in page_offers:
             supplier = self.db.get_supplier_by_name(offer.supplier_name)
-            supplier_name = supplier.name if supplier else self._t("unknown", user_id=None)
+            supplier_name = supplier.name if supplier else self._t("unknown", user_id=chat_id)
 
             # Get order count for this offer
             orders = self.db.get_orders_by_offer(offer.offer_id)
@@ -274,7 +300,7 @@ class OrderViewing(BaseOrderHandler):
             keyboard_buttons.append(nav_buttons)
 
         # Add back to admin button
-        keyboard_buttons.append([{"text": self._t("back_to_admin"), "callback_data": "admin:main"}])
+        keyboard_buttons.append([{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}])
 
         keyboard = {"inline_keyboard": keyboard_buttons}
         self._send_message(chat_id, message, reply_markup=keyboard)
@@ -289,7 +315,9 @@ class OrderViewing(BaseOrderHandler):
 
         orders = self.db.get_orders_by_offer(offer_id)
         if not orders:
-            keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin"), "callback_data": "admin:main"}]]}
+            keyboard = {
+                "inline_keyboard": [[{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}]]
+            }
             self._send_message(
                 chat_id, self._t("no_orders_for_offer", chat_id, offer_name=offer.name), reply_markup=keyboard
             )
@@ -329,7 +357,7 @@ class OrderViewing(BaseOrderHandler):
         for i, order in enumerate(page_orders):
             customer = self.db.get_customer(order.customer_id)
             customer_name = (
-                f"{customer.first_name} {customer.last_name}" if customer else self._t("unknown", user_id=None)
+                f"{customer.first_name} {customer.last_name}" if customer else self._t("unknown", user_id=chat_id)
             )
 
             from utils.timezone import to_cet_string
@@ -369,7 +397,7 @@ class OrderViewing(BaseOrderHandler):
             keyboard_buttons.append(nav_buttons)
 
         # Add back to admin button
-        keyboard_buttons.append([{"text": self._t("back_to_admin"), "callback_data": "admin:main"}])
+        keyboard_buttons.append([{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}])
         keyboard = {"inline_keyboard": keyboard_buttons}
 
         self._send_message(chat_id, message, reply_markup=keyboard)

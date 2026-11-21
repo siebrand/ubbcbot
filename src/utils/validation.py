@@ -99,10 +99,12 @@ class ValidationUtils:
         matches = self.match_customers(identifier, all_customers)
 
         if not matches:
-            keyboard = {"inline_keyboard": [[{"text": self._t("back_to_admin"), "callback_data": "admin:main"}]]}
+            keyboard = {
+                "inline_keyboard": [[{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}]]
+            }
             return None, {
                 "status": "user_not_found",
-                "message": self._t("user_not_found", identifier=identifier),
+                "message": self._t("user_not_found", chat_id, identifier=identifier),
                 "keyboard": keyboard,
             }
 
@@ -110,7 +112,7 @@ class ValidationUtils:
             return matches[0], None
 
         # Multiple matches - show disambiguation
-        message = self._t("multiple_users_found", identifier=identifier) + "\n\n"
+        message = self._t("multiple_users_found", chat_id, identifier=identifier) + "\n\n"
         keyboard_buttons = []
 
         for customer in matches[:10]:  # Limit to 10 matches
@@ -126,7 +128,7 @@ class ValidationUtils:
                 ]
             )
 
-        keyboard_buttons.append([{"text": self._t("cancel"), "callback_data": "cancel_action"}])
+        keyboard_buttons.append([{"text": self._t("cancel", chat_id), "callback_data": "cancel_action"}])
         keyboard = {"inline_keyboard": keyboard_buttons}
 
         return None, {"status": "disambiguation_shown", "message": message, "keyboard": keyboard}

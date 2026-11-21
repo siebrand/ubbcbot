@@ -22,7 +22,11 @@ class OrderCancellation(BaseOrderHandler):
         if not args:
             # Show button-based UI to ask for username
             message = self._t("enter_username_for_cancel", chat_id)
-            keyboard = {"inline_keyboard": [[{"text": "📝 Enter Username", "callback_data": "enter_username_cancel"}]]}
+            keyboard = {
+                "inline_keyboard": [
+                    [{"text": self._t("enter_username_btn", chat_id), "callback_data": "enter_username_cancel"}]
+                ]
+            }
             self._send_message(chat_id, message, reply_markup=keyboard)
             return {"status": "awaiting_input"}
 
@@ -65,9 +69,9 @@ class OrderCancellation(BaseOrderHandler):
 
             for order, customer in matching_orders:
                 offer = self.db.get_offer(order.offer_id)
-                offer_name = offer.name if offer else self._t("unknown", user_id=None)
+                offer_name = offer.name if offer else self._t("unknown", user_id=chat_id)
                 customer_name = (
-                    f"{customer.first_name} {customer.last_name}" if customer else self._t("unknown", user_id=None)
+                    f"{customer.first_name} {customer.last_name}" if customer else self._t("unknown", user_id=chat_id)
                 )
 
                 from utils.timezone import to_cet_string
@@ -82,7 +86,7 @@ class OrderCancellation(BaseOrderHandler):
                     [{"text": button_text, "callback_data": f"cancel_order_confirm_{order.order_id}"}]
                 )
 
-            keyboard_buttons.append([{"text": self._t("cancel", user_id=None), "callback_data": "cancel_action"}])
+            keyboard_buttons.append([{"text": self._t("cancel", user_id=chat_id), "callback_data": "cancel_action"}])
             keyboard = {"inline_keyboard": keyboard_buttons}
 
             self._send_message(chat_id, message, reply_markup=keyboard)
@@ -131,7 +135,7 @@ class OrderCancellation(BaseOrderHandler):
             return {"status": "box_not_found"}
 
         customer_name = self._html_customer_name(customer)  # The message is sent as HTML
-        offer_name = offer.name if offer else self._t("unknown", user_id=None)
+        offer_name = offer.name if offer else self._t("unknown", user_id=chat_id)
 
         from utils.timezone import to_cet_string
 
@@ -241,12 +245,12 @@ class OrderCancellation(BaseOrderHandler):
         order = self.db.get_order(order_id)
 
         if not order:
-            self._send_message(chat_id, self._t("order_not_found"))
+            self._send_message(chat_id, self._t("order_not_found", chat_id))
             return {"status": "order_not_found"}
 
         box = self.db.get_box(order.box_id)
         if not box:
-            self._send_message(chat_id, self._t("box_not_found"))
+            self._send_message(chat_id, self._t("box_not_found", chat_id))
             return {"status": "box_not_found"}
 
         return self._execute_cancel(order, box, chat_id, reason)
