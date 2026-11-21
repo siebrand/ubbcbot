@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from handlers.admin.base_box_workflow_handler import BaseBoxWorkflowHandler
+from handlers.admin.base_box_workflow_handler import BaseBoxWorkflowHandler, OfferCompletion
 from models.entities import Box, BoxStatus, DeliveryAction, Order
 from services.box_status_manager import BoxStatusManager
 from services.wholesaler_delivery import WholesalerDeliveryService
@@ -332,31 +332,28 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
 
     def handle_confirm_complete_delivery(self, chat_id: int, offer_id: int, supplier_id_short: str) -> dict[str, Any]:
         """Confirm and execute complete delivery for all boxes"""
-        ordered_boxes = self._ordered_boxes(offer_id)
-        if not ordered_boxes:
+        if not self._ordered_boxes(offer_id):
             return self._send_message(chat_id, self._t("no_ordered_offers", chat_id))
 
-        # Process complete delivery for all boxes
-        processed_count = 0
-        for box in ordered_boxes:
-            orders = self.db.get_orders_by_box(box.box_id)
-            total_units = sum(order.quantity for order in orders)
-
-            success = self._process_box_delivery(
-                box.box_id,
-                total_units,  # Full delivery
-                False,
-            )
-
-            if success:
-                processed_count += 1
-
+        processed_count = self.complete_offer(offer_id).boxes
         if processed_count > 0:
             self._send_message(chat_id, self._t("complete_delivery_success", chat_id, box_count=processed_count))
             # Continue workflow by showing remaining boxes or go back to supplier selection
             return self._continue_workflow_after_complete_delivery(chat_id, offer_id, supplier_id_short)
         else:
             return self._send_message(chat_id, self._t("delivery_processing_failed", chat_id))
+
+    def complete_offer(self, offer_id: int) -> OfferCompletion:
+        """Deliver every ordered box of the offer in full (as the "complete delivery" button does)"""
+        result = OfferCompletion()
+        for box in self._ordered_boxes(offer_id):
+            units = sum(order.quantity for order in self.db.get_orders_by_box(box.box_id))
+            if self._process_box_delivery(box.box_id, units, False):
+                result.boxes += 1
+                result.units += units
+            else:
+                result.failed_boxes += 1
+        return result
 
     def _continue_workflow_after_complete_delivery(
         self, chat_id: int, offer_id: int, supplier_id_short: str

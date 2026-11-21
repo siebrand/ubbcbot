@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from handlers.admin.base_box_workflow_handler import BaseBoxWorkflowHandler
+from handlers.admin.base_box_workflow_handler import BaseBoxWorkflowHandler, OfferCompletion
 from models.entities import BoxStatus, OfferStatus, OrderStatus
 
 logger = logging.getLogger()
@@ -212,27 +212,38 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         if not all_boxes:
             return self._send_message(chat_id, self._t("no_ready_for_labeling_offers", chat_id))
 
-        processed_count = 0
-        for box in all_boxes:
-            orders = self.db.get_orders_by_box(box.box_id)
-            ready_orders = [o for o in orders if o.status == OrderStatus.READY_FOR_LABELING.value]
-
-            for order in ready_orders:
-                if self.db.update_order(
-                    order.order_id,
-                    {"status": OrderStatus.LABELING_COMPLETED.value},
-                    admin_id=self.admin_user_id,
-                    reason="Labeling completed - batch",
-                ):
-                    processed_count += 1
-
-        if processed_count > 0:
-            self._check_and_update_offer_status(offer_id)
-
+        if self.complete_offer(offer_id).units > 0:
             self._send_message(chat_id, self._t("complete_labeling_success", chat_id, box_count=len(all_boxes)))
             return self.handle_process_labeling(chat_id, self.admin_user_id, [])
         else:
             return self._send_message(chat_id, self._t("delivery_processing_failed", chat_id))
+
+    def complete_offer(self, offer_id: int) -> OfferCompletion:
+        """Mark every order of the offer that is ready for labeling as labeled (as the "complete labeling" button
+        does); then the offer is completed when it is sold out and nothing is left to label"""
+        result = OfferCompletion()
+        for box in self.db.get_boxes_by_offer_with_ready_orders(offer_id):
+            ready = [
+                o for o in self.db.get_orders_by_box(box.box_id) if o.status == OrderStatus.READY_FOR_LABELING.value
+            ]
+            labeled = [
+                o
+                for o in ready
+                if self.db.update_order(
+                    o.order_id,
+                    {"status": OrderStatus.LABELING_COMPLETED.value},
+                    admin_id=self.admin_user_id,
+                    reason="Labeling completed - batch",
+                )
+            ]
+            if labeled:
+                result.boxes += 1
+                result.units += sum(o.quantity for o in labeled)
+            if len(labeled) < len(ready):
+                result.failed_boxes += 1
+        if result.units:
+            self._check_and_update_offer_status(offer_id)
+        return result
 
     def _check_and_update_offer_status(self, offer_id: int):
         """Check if offer should be completed: must be SOLD_OUT, all boxes DELIVERED and nothing left to label"""

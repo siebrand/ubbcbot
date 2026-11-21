@@ -1,10 +1,20 @@
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 from handlers.base_handler import BaseHandler
 from models.entities import Box, Offer, Supplier
 
 logger = logging.getLogger()
+
+
+@dataclass
+class OfferCompletion:
+    """What completing an offer did: the boxes and units that moved on, and the boxes that could not"""
+
+    boxes: int = 0
+    units: int = 0
+    failed_boxes: int = 0
 
 
 class BaseBoxWorkflowHandler(BaseHandler):
