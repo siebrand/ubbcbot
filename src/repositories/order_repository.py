@@ -7,7 +7,7 @@ from boto3.dynamodb.conditions import Key
 from boto3.dynamodb.types import TypeSerializer
 from botocore.exceptions import ClientError
 
-from models.entities import Order, OrderStatus
+from models.entities import Box, Order, OrderStatus
 from repositories.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -102,6 +102,56 @@ class OrderRepository(BaseRepository):
             return False
         except Exception as e:
             logger.error(f"Order+box transaction failed for box {box_id}: {e}")
+            return False
+
+    def create_with_boxes(
+        self, orders: list[Order], new_boxes: list[Box], increments: list[tuple[str, int, int]]
+    ) -> bool:
+        """Write the orders of one request, the new boxes they need and the increments of the existing boxes
+        (box id, units, capacity) in one transaction: all or nothing.
+
+        The new boxes are written with their quantity already set, so a rejected request leaves no empty box behind.
+        Each increment keeps the capacity guard: when another request took the room in the meantime, the whole
+        transaction is rejected and False is returned (the caller can read the boxes again). A transaction holds at
+        most 100 items; with the order limit a request has far fewer.
+        """
+        serializer = TypeSerializer()
+
+        def put(table_name: str, entity, key: str) -> dict[str, Any]:
+            item = {k: serializer.serialize(v) for k, v in self._prepare_item(entity.__dict__).items()}
+            return {
+                "Put": {"TableName": table_name, "Item": item, "ConditionExpression": f"attribute_not_exists({key})"}
+            }
+
+        items = [put(f"{self.table_prefix}-boxes", box, "box_id") for box in new_boxes]
+        items += [put(self.table_name, order, "order_id") for order in orders]
+        items += [
+            {
+                "Update": {
+                    "TableName": f"{self.table_prefix}-boxes",
+                    "Key": {"box_id": {"S": box_id}},
+                    "UpdateExpression": "ADD current_quantity :delta",
+                    "ConditionExpression": "attribute_exists(box_id) AND current_quantity <= :threshold",
+                    "ExpressionAttributeValues": {
+                        ":delta": {"N": str(units)},
+                        ":threshold": {"N": str(capacity - units)},
+                    },
+                }
+            }
+            for box_id, units, capacity in increments
+        ]
+        try:
+            boto3.client("dynamodb").transact_write_items(TransactItems=items)
+            return True
+        except ClientError as e:
+            code = e.response["Error"]["Code"]
+            if code in ("TransactionCanceledException", "ConditionalCheckFailedException"):
+                logger.warning(f"Order request of {len(orders)} orders rejected: {code}")
+            else:
+                logger.error(f"Order request of {len(orders)} orders failed: {code}")
+            return False
+        except Exception as e:
+            logger.error(f"Order request of {len(orders)} orders failed: {type(e).__name__}")
             return False
 
     def move_to_box(

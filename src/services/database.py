@@ -176,6 +176,20 @@ class DynamoDBService:
 
         return order
 
+    def create_orders_in_boxes(
+        self, orders: list[Order], new_boxes: list[Box], increments: list[tuple[str, int, int]]
+    ) -> bool:
+        """The orders of one request, its new boxes and the increments of the existing boxes in one transaction (see
+        OrderRepository.create_with_boxes), then an ORDER_CREATED event per order"""
+        if not self.order_repo.create_with_boxes(orders, new_boxes, increments):
+            return False
+        for order in orders:
+            try:
+                self.purchase_events.order_created(order)
+            except Exception as e:
+                logger.error(f"Order created but the analytics event failed for {order.order_id}: {type(e).__name__}")
+        return True
+
     def move_order_to_box(
         self,
         order_id: str,
