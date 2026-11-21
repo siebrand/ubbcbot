@@ -107,6 +107,14 @@ class TestCreation:
         )
         assert order.placed_by_admin is True
 
+    def test_the_description_says_the_price_includes_any_deposit(self, db, handler, telegram):
+        add_customer(db, 101, "Jan")
+
+        result = instant(handler, "DeMolen Tripel 3.50 Jan 4")
+
+        assert db.get_offer(result["offer_id"]).description == "Prijs incl. eventueel statiegeld."
+        assert "Prijs incl. eventueel statiegeld." in sent_to(telegram, GROUP_ID)[0]
+
     def test_box_size_4_leaves_the_offer_active(self, db, handler, telegram):
         add_customer(db, 101, "Jan")
 

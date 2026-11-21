@@ -275,6 +275,9 @@ class InstantOrderHandler(NotificationHandler):  # an OfferBaseHandler that can 
             supplier_name=supplier.name if supplier else parsed.supplier,
             name=parsed.offer_name,
             price_per_unit=parsed.price,
+            # The offer is shown in the group, which is always Dutch; the admin can change it with
+            # /update_offer_description
+            description=self._t("instant_offer_description", force_group_lang=True),
             wholesale_box_size=parsed.box_size,
             status=OfferStatus.ACTIVE.value if has_room else OfferStatus.SOLD_OUT.value,
         )

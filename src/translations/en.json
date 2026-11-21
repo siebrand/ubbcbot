@@ -164,6 +164,7 @@
   "offer_not_draft": "❌ Offer is not in draft status (current: {status})",
   "offer_published_announced": "✅ Offer {offer_id} published and announced!",
   "failed_publish_offer": "❌ Failed to publish offer",
+  "instant_offer_description": "Price incl. any deposit.",
   "usage_instant_order": "Usage: /instant_order <supplier> <offer name> <price> <customer> [box_size]\nQuote a supplier, name or customer with spaces: /instant_order \"De Molen\" \"Hel & Verdoemenis\" 4.50 \"Jan Jansen\" 4\nBox size: 1 to 6 (default 1).",
   "instant_order_created": "✅ Instant order created\nOffer {offer_id}: {name}\nPrice: €{price:.2f}\nBox size: {box_size}\nCustomer: {customer}\nStatus: {status}",
   "instant_order_created_with_room": "✅ Instant order created\nOffer {offer_id}: {name}\nPrice: €{price:.2f}\nBox size: {box_size}\nCustomer: {customer}\nStatus: {status}\n\nThe box has room for more orders: /order_for {customer_ref} {offer_id}",

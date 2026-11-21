@@ -164,6 +164,7 @@
   "offer_not_draft": "❌ Aanbieding is niet in concept status (huidige: {status})",
   "offer_published_announced": "✅ Aanbieding {offer_id} gepubliceerd en aangekondigd!",
   "failed_publish_offer": "❌ Kon aanbieding niet publiceren",
+  "instant_offer_description": "Prijs incl. eventueel statiegeld.",
   "usage_instant_order": "Gebruik: /instant_order <leverancier> <naam aanbieding> <prijs> <klant> [doosgrootte]\nZet een leverancier, naam of klant met spaties tussen aanhalingstekens: /instant_order \"De Molen\" \"Hel & Verdoemenis\" 4.50 \"Jan Jansen\" 4\nDoosgrootte: 1 tot en met 6 (standaard 1).",
   "instant_order_created": "✅ Directe bestelling aangemaakt\nAanbieding {offer_id}: {name}\nPrijs: €{price:.2f}\nDoosgrootte: {box_size}\nKlant: {customer}\nStatus: {status}",
   "instant_order_created_with_room": "✅ Directe bestelling aangemaakt\nAanbieding {offer_id}: {name}\nPrijs: €{price:.2f}\nDoosgrootte: {box_size}\nKlant: {customer}\nStatus: {status}\n\nDe doos heeft ruimte voor meer bestellingen: /order_for {customer_ref} {offer_id}",
