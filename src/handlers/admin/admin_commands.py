@@ -117,6 +117,7 @@ class AdminCommandsHandler(BaseHandler):
                     {"text": self._t("cancel_order_btn", user_id), "callback_data": "cmd:cancel_order"},
                 ],
                 [{"text": self._t("failed_notifications_btn", user_id), "callback_data": "cmd:failed_notifications"}],
+                [{"text": self._t("list_open_payments_btn", user_id), "callback_data": "cmd:list_open_payments"}],
                 [{"text": self._t("back_to_admin", user_id), "callback_data": "admin:main"}],
             ]
         }

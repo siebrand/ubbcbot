@@ -185,6 +185,7 @@ COMMAND_ROUTES: dict[str, Route] = {
     "/process_labeling": admin_command("labeling", "handle_process_labeling", private_user_rest),
     "/send_delivery_overviews": admin_command("admin_order", "handle_send_delivery_overviews", private_rest),
     "/process_payment": admin_command("admin_order", "handle_process_payment", private_rest),
+    "/list_open_payments": admin_command("admin_order", "handle_list_open_payments", private_rest),
     "/send_payment_reminder": admin_command("admin_order", "handle_send_payment_reminder", private_rest),
     "/failed_notifications": admin_command("admin_order", "handle_failed_notifications", private_rest),
     "/delete_old_orders": admin_command("admin_order", "handle_delete_old_orders", private),

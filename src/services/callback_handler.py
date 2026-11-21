@@ -457,6 +457,10 @@ class CallbackHandler:
             lambda m, ctx: self.handlers["user"].handle_list_guests(ctx["chat_id"], int(m.group(1))),
         )
         register(
+            r"^page_list_open_payments_(\d+)$",
+            lambda m, ctx: self.handlers["admin_order"].handle_list_open_payments(ctx["chat_id"], [], int(m.group(1))),
+        )
+        register(
             r"^page_process_payment_(\d+)$",
             lambda m, ctx: self.handlers["admin_order"].handle_process_payment(ctx["chat_id"], [], int(m.group(1))),
         )
@@ -545,6 +549,7 @@ class CallbackHandler:
                 chat, []
             ),
             "process_payment": lambda chat, user: self.handlers["admin_order"].handle_process_payment(chat, []),
+            "list_open_payments": lambda chat, user: self.handlers["admin_order"].handle_list_open_payments(chat, []),
             "send_payment_reminder": lambda chat, user: self.handlers["admin_order"].handle_send_payment_reminder(
                 chat, []
             ),

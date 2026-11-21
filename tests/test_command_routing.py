@@ -269,6 +269,7 @@ class TestCommandRouting:
             ("/process_labeling", "labeling", "handle_process_labeling"),
             ("/send_delivery_overviews", "admin_order", "handle_send_delivery_overviews"),
             ("/process_payment", "admin_order", "handle_process_payment"),
+            ("/list_open_payments", "admin_order", "handle_list_open_payments"),
             ("/import_orders", "import", "handle_import_orders"),
             ("/finalize_import 1", "import", "handle_finalize_import"),
             ("/delete_old_orders", "admin_order", "handle_delete_old_orders"),

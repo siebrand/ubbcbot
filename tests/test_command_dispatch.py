@@ -229,6 +229,7 @@ ADMIN_COMMANDS = [
     admin_row("/process_labeling", "labeling", "handle_process_labeling", AD, U, ARGS),
     admin_row("/send_delivery_overviews", "admin_order", "handle_send_delivery_overviews", AD, ARGS),
     admin_row("/process_payment", "admin_order", "handle_process_payment", AD, ARGS),
+    admin_row("/list_open_payments", "admin_order", "handle_list_open_payments", AD, ARGS),
     admin_row("/send_payment_reminder", "admin_order", "handle_send_payment_reminder", AD, ARGS),
     admin_row("/failed_notifications", "admin_order", "handle_failed_notifications", AD, ARGS),
     admin_row("/delete_old_orders", "admin_order", "handle_delete_old_orders", AD),

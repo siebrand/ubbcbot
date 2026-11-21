@@ -58,6 +58,7 @@
     {"command": "list_guests", "description": "View all guest users"},
     {"command": "list_offer_orders", "description": "View all orders of an offer: <offer_id>"},
     {"command": "list_offers", "description": "View available offers"},
+    {"command": "list_open_payments", "description": "Customers with unpaid orders and their age"},
     {"command": "list_pending", "description": "View users awaiting approval"},
     {"command": "list_suppliers", "description": "View suppliers: [active|retired|all]"},
     {"command": "list_user_orders", "description": "View the orders of a customer: <customer>"},

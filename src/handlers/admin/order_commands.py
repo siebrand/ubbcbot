@@ -105,6 +105,9 @@ class AdminOrderCommands(BaseHandler):
     ) -> dict[str, Any]:
         return self.status_mgmt.handle_payment_confirm(chat_id, customer_id, amount_cents, token, page)
 
+    def handle_list_open_payments(self, chat_id: int, args: list, page: int = 1) -> dict[str, Any]:
+        return self.status_mgmt.handle_list_open_payments(chat_id, args, page)
+
     def handle_process_payment(self, chat_id: int, args: list, page: int = 1) -> dict[str, Any]:
         return self.status_mgmt.handle_process_payment(chat_id, args, page)
 

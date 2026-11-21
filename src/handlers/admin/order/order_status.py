@@ -7,7 +7,7 @@ import boto3
 
 from handlers.payment_message import PaymentMessageMixin
 from models.entities import EditContext, OrderStatus
-from services.payment_matching import cents, find_payment_match, parse_amount, selection_token
+from services.payment_matching import age_key, cents, find_payment_match, parse_amount, selection_token
 from utils.pagination import PaginationUtils
 
 from .base_order_handler import BaseOrderHandler
@@ -271,6 +271,48 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
             )
         if not self._send_user_message(customer.telegram_user_id, message).get("success"):
             self._send_message(chat_id, self._t("payment_customer_not_reached", chat_id, customer_name=name))
+
+    def handle_list_open_payments(self, chat_id: int, args: list, page: int = 1) -> dict[str, Any]:
+        """/list_open_payments: read only. Per customer with open orders: the open total (amount due), the number of
+        orders and the age in days of the oldest open order; oldest first, 10 per page."""
+        from datetime import UTC, datetime
+
+        customers = self.db.get_approved_customers_with_orders(OrderStatus.AWAITING_PAYMENT.value)
+        back = [{"text": self._t("back_to_admin", chat_id), "callback_data": "admin:main"}]
+        if not customers:
+            self._send_message(chat_id, self._t("no_open_payments", chat_id), reply_markup={"inline_keyboard": [back]})
+            return {"status": "no_open_payments"}
+
+        customers.sort(key=lambda entry: min(age_key(order) for order in entry[1]))
+        page_customers, total_pages = PaginationUtils.paginate_list(customers, page, 10)
+        now = datetime.now(UTC)
+        lines = []
+        for customer, orders in page_customers:
+            oldest = min(orders, key=age_key)
+            lines.append(
+                self._t(
+                    "list_open_payments_line",
+                    chat_id,
+                    name=self._customer_name(customer, chat_id),
+                    amount=sum((o.amount_due for o in orders), Decimal("0")),
+                    count=len(orders),
+                    days=max((now - age_key(oldest)[0]).days, 0),
+                )
+            )
+        page_label = self._t("page_indicator", chat_id, page=page, total_pages=total_pages)
+        message = self._t("list_open_payments_title", chat_id, page=page_label) + "\n\n" + "\n".join(lines)
+
+        rows = []
+        if total_pages > 1:
+            rows.extend(
+                PaginationUtils.build_pagination_keyboard(page, total_pages, "list_open_payments", enhanced=True)[
+                    "inline_keyboard"
+                ]
+            )
+        rows.append([{"text": self._t("open_payments_process_btn", chat_id), "callback_data": "cmd:process_payment"}])
+        rows.append(back)
+        self._send_message(chat_id, message, reply_markup={"inline_keyboard": rows})
+        return {"status": "open_payments_shown"}
 
     def handle_failed_notifications(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /failed_notifications: the labeled orders that have no delivery overview yet.

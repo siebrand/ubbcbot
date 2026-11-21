@@ -313,6 +313,7 @@ PAGE_ADMIN = [
     ("page_customers_subscribers_1", C("user", call.handle_list_users(CHAT, 1, "subscribers"))),
     ("page_guests_2", C("user", call.handle_list_guests(CHAT, 2))),
     ("page_process_payment_2", C("admin_order", call.handle_process_payment(CHAT, [], 2))),
+    ("page_list_open_payments_2", C("admin_order", call.handle_list_open_payments(CHAT, [], 2))),
     ("page_remind_payment_2", C("admin_order", call.handle_send_payment_reminder(CHAT, [], 2))),
     (f"page_user_orders_{CID}_2", C("admin_order", call.viewing.show_user_orders(CHAT, CUSTOMER_OBJ, 2))),
     (f"page_list_user_orders_{CID}_3", C("admin_order", call.viewing.show_user_orders(CHAT, CUSTOMER_OBJ, 3))),
@@ -559,6 +560,12 @@ ROUND_TRIPS = [
     pytest.param("guests", True, ADMIN_ID, lambda p: C("user", call.handle_list_guests(CHAT, p))),
     pytest.param(
         "process_payment", True, ADMIN_ID, lambda p: C("admin_order", call.handle_process_payment(CHAT, [], p))
+    ),
+    pytest.param(
+        "list_open_payments",
+        True,
+        ADMIN_ID,
+        lambda p: C("admin_order", call.handle_list_open_payments(CHAT, [], p)),
     ),
     pytest.param(
         "remind_payment", True, ADMIN_ID, lambda p: C("admin_order", call.handle_send_payment_reminder(CHAT, [], p))
