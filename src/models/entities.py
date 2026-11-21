@@ -57,6 +57,15 @@ class AuthorizationStatus(Enum):
     REJECTED = "rejected"
 
 
+# One letter per authorization status in button data: a customer ID is 36 characters, and Telegram refuses a whole
+# message when one button's data is longer than 64 bytes
+AUTHORIZATION_STATUS_CODES = {
+    "a": AuthorizationStatus.APPROVED.value,
+    "p": AuthorizationStatus.UNAUTHORIZED.value,
+    "r": AuthorizationStatus.REJECTED.value,
+}
+
+
 @dataclass
 class Supplier:
     supplier_id: str = field(default_factory=lambda: str(uuid.uuid4()))

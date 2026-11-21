@@ -2,7 +2,7 @@ import logging
 import re
 from typing import Any
 
-from models.entities import AuthorizationStatus
+from models.entities import AUTHORIZATION_STATUS_CODES, AuthorizationStatus
 from services.routing.callback_router import DELETE_MESSAGE, KEEP_KEYBOARD, REMOVE_KEYBOARD, CallbackRouter
 from services.telegram_client import TelegramClient
 from services.translator import Translator
@@ -635,16 +635,19 @@ class CallbackHandler:
             r"^edit_customer_status_([^_]+)$",
             lambda m, ctx: self.handlers["user"].handle_customer_status_options(ctx["chat_id"], m.group(1)),
         )
+        # A status as one letter (AUTHORIZATION_STATUS_CODES): the data must fit in Telegram's 64 bytes
         register(
             # The confirmation of the warning about open orders
-            r"^edit_customer_forcestatus_([^_]+)_(.+)$",
+            r"^edit_cstok_([^_]+)_(.+)$",
             lambda m, ctx: self.handlers["user"].handle_set_customer_status(
-                ctx["chat_id"], m.group(1), m.group(2), confirmed=True
+                ctx["chat_id"], m.group(1), AUTHORIZATION_STATUS_CODES.get(m.group(2), m.group(2)), confirmed=True
             ),
         )
         register(
-            r"^edit_customer_setstatus_([^_]+)_(.+)$",
-            lambda m, ctx: self.handlers["user"].handle_set_customer_status(ctx["chat_id"], m.group(1), m.group(2)),
+            r"^edit_cst_([^_]+)_(.+)$",
+            lambda m, ctx: self.handlers["user"].handle_set_customer_status(
+                ctx["chat_id"], m.group(1), AUTHORIZATION_STATUS_CODES.get(m.group(2), m.group(2))
+            ),
         )
         register(
             r"^edit_customer_(first_name|last_name|contact|location)_([^_]+)$",

@@ -3,7 +3,7 @@ from collections.abc import Callable
 from typing import Any
 
 from handlers.base_handler import BaseHandler
-from models.entities import AuthorizationStatus, Customer
+from models.entities import AUTHORIZATION_STATUS_CODES, AuthorizationStatus, Customer
 from services.customer_deletion import SETTLED_ORDER_STATUSES, CustomerDeletionService
 from services.user_cache import UserCache
 from utils.pagination import PaginationUtils
@@ -66,6 +66,11 @@ class UserCommands(BaseHandler):
         AuthorizationStatus.REJECTED.value,
     )
 
+    @staticmethod
+    def status_code(status: str) -> str:
+        """The letter of a status in button data (AUTHORIZATION_STATUS_CODES)"""
+        return next(code for code, value in AUTHORIZATION_STATUS_CODES.items() if value == status)
+
     def _statuses_for(self, customer) -> tuple[str, ...]:
         """The statuses a customer can be given: a guest cannot sign up, so never pending"""
         if customer.is_guest:
@@ -90,7 +95,7 @@ class UserCommands(BaseHandler):
             [
                 {
                     "text": self._t("confirm_status_change_btn", chat_id),
-                    "callback_data": f"edit_customer_forcestatus_{customer.customer_id}_{status}",
+                    "callback_data": f"edit_cstok_{customer.customer_id}_{self.status_code(status)}",
                 },
                 {"text": self._t("cancel", chat_id), "callback_data": "cancel_action"},
             ]
@@ -108,7 +113,7 @@ class UserCommands(BaseHandler):
             [
                 {
                     "text": f"{self.STATUS_EMOJIS[status]} {self._t(f'customer_status_{status}', chat_id)}",
-                    "callback_data": f"edit_customer_setstatus_{customer.customer_id}_{status}",
+                    "callback_data": f"edit_cst_{customer.customer_id}_{self.status_code(status)}",
                 }
             ]
             for status in self._statuses_for(customer)

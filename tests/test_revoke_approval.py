@@ -70,9 +70,7 @@ class TestTheStatusOnTheEditScreen:
 
         users.handle_customer_status_options(ADMIN_ID, guest.customer_id)
         # a guest cannot sign up, so "pending" is not offered
-        assert [b for b in users.sent[-1][2] if b.startswith("edit_customer_setstatus_")] == [
-            f"edit_customer_setstatus_{guest.customer_id}_approved"
-        ]
+        assert [b for b in users.sent[-1][2] if b.startswith("edit_cst_")] == [f"edit_cst_{guest.customer_id}_a"]
 
         assert users.handle_set_customer_status(ADMIN_ID, guest.customer_id, "approved")["status"] == "success"
         assert status_of(db, guest) == "approved"
@@ -87,14 +85,30 @@ class TestTheStatusOnTheEditScreen:
         )
         assert status_of(db, guest) == "approved"
 
+    def test_every_status_button_fits_in_telegrams_64_bytes(self, db, users):
+        """Telegram refuses a whole message when one button's data is longer: the status screen never appeared"""
+        jan = approved(db, 101, "Jan")
+        order(db, jan, "ordered")
+
+        users._show_user_edit_interface(jan, ADMIN_ID)
+        users.handle_customer_status_options(ADMIN_ID, jan.customer_id)
+        db.update_customer(jan.customer_id, {"authorization_status": "rejected"})
+        users.handle_customer_status_options(ADMIN_ID, jan.customer_id)
+        db.update_customer(jan.customer_id, {"authorization_status": "approved"})
+        users.handle_set_customer_status(ADMIN_ID, jan.customer_id, "unauthorized")  # the open-orders warning
+
+        buttons = [b for _, _, row in users.sent for b in row]
+        assert len(buttons) > 6
+        assert [b for b in buttons if len(b.encode()) > 64] == []
+
     def test_the_other_statuses_are_offered(self, db, users):
         jan = approved(db, 101, "Jan")
 
         users.handle_customer_status_options(ADMIN_ID, jan.customer_id)
 
-        assert [b for b in users.sent[-1][2] if b.startswith("edit_customer_setstatus_")] == [
-            f"edit_customer_setstatus_{jan.customer_id}_unauthorized",
-            f"edit_customer_setstatus_{jan.customer_id}_rejected",
+        assert [b for b in users.sent[-1][2] if b.startswith("edit_cst_")] == [
+            f"edit_cst_{jan.customer_id}_p",
+            f"edit_cst_{jan.customer_id}_r",
         ]
 
     def test_a_rejected_customer_can_be_approved_again(self, db, users):
@@ -129,7 +143,7 @@ class TestTheStatusOnTheEditScreen:
         users._notify_customer.assert_not_called()
         _, warning, buttons = users.sent[-1]
         assert "1" in warning
-        assert f"edit_customer_forcestatus_{jan.customer_id}_{new_status}" in buttons
+        assert f"edit_cstok_{jan.customer_id}_{UserCommands.status_code(new_status)}" in buttons
 
     @pytest.mark.parametrize("new_status", ["rejected", "unauthorized"])
     def test_the_confirmation_changes_the_status_despite_the_open_orders(self, db, users, new_status):
@@ -155,7 +169,7 @@ class TestRejectUser:
 
         assert users.handle_reject_user(ADMIN_ID, ["Jan"]) == {"status": "confirmation_required"}
         assert status_of(db, jan) == "approved"
-        confirm = f"edit_customer_forcestatus_{jan.customer_id}_rejected"
+        confirm = f"edit_cstok_{jan.customer_id}_r"
         assert confirm in users.sent[-1][2] and "cancel_action" in users.sent[-1][2]
 
         users.handle_set_customer_status(ADMIN_ID, jan.customer_id, "rejected", confirmed=True)
