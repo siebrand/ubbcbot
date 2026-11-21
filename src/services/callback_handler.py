@@ -630,6 +630,15 @@ class CallbackHandler:
             r"^edit_offer_([^_]+)_([^_]+)$",
             lambda m, ctx: self.edit_context_manager.handle_offer_edit(ctx["chat_id"], m.group(1), m.group(2)),
         )
+        # The authorization status of a customer (the edit screen of /update_user)
+        register(
+            r"^edit_customer_status_([^_]+)$",
+            lambda m, ctx: self.handlers["user"].handle_customer_status_options(ctx["chat_id"], m.group(1)),
+        )
+        register(
+            r"^edit_customer_setstatus_([^_]+)_(.+)$",
+            lambda m, ctx: self.handlers["user"].handle_set_customer_status(ctx["chat_id"], m.group(1), m.group(2)),
+        )
         register(
             r"^edit_customer_(first_name|last_name|contact|location)_([^_]+)$",
             lambda m, ctx: self.edit_context_manager.handle_customer_edit(ctx["chat_id"], m.group(1), m.group(2)),

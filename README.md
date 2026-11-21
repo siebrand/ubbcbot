@@ -211,7 +211,7 @@ has every admin command.
 - `/approve_user <name_or_username>` - Approve user
 - `/reject_user <name_or_username>` - Reject user
 - `/user_status <name_or_username>` - Check user status
-- `/update_user <username|customer_id> <new_first_name> [new_last_name]` - Update customer name (customer_id may be a partial UUID of 8+ characters, like order IDs)
+- `/update_user <username|customer_id> <new_first_name> [new_last_name]` - Update customer name (customer_id may be a partial UUID of 8+ characters, like order IDs). The edit screen also changes the status (approved, pending, rejected), so a rejected customer can be approved again. Approval is not taken away while the customer has orders that are not paid or cancelled (also not with `/reject_user`): without approval those orders would get no delivery overview, payment or reminder
 - `/update_user_first_name <customer_id> <new_first_name>` - Update customer first name
 - `/update_user_last_name <customer_id> <new_last_name>` - Update customer last name
 - `/delete_user <username|customer_id>` - Delete a customer record (right to be forgotten). Refused while the customer has orders that are not completed or cancelled (not yet delivered and/or unpaid) or a non-zero credit balance. Orders, credit transactions and purchase history are kept

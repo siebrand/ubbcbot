@@ -4,7 +4,8 @@ from typing import Any
 
 from handlers.base_handler import BaseHandler
 from models.entities import AuthorizationStatus, Customer
-from services.customer_deletion import CustomerDeletionService
+from services.customer_deletion import SETTLED_ORDER_STATUSES, CustomerDeletionService
+from services.user_cache import UserCache
 from utils.pagination import PaginationUtils
 from utils.update_utils import UpdateUtils
 
@@ -58,7 +59,92 @@ class UserCommands(BaseHandler):
         if not result.get("success") and not result.get("skipped_guest"):
             self._send_message(chat_id, self._t("user_not_notified", chat_id, name=self._full_name(customer, chat_id)))
 
+    # The statuses the edit screen can set, in this order
+    EDITABLE_STATUSES = (
+        AuthorizationStatus.APPROVED.value,
+        AuthorizationStatus.UNAUTHORIZED.value,
+        AuthorizationStatus.REJECTED.value,
+    )
+
+    def _refuse_while_open_orders(self, chat_id: int, customer) -> dict[str, Any] | None:
+        """An approved customer keeps the approval while they have orders that are not paid or cancelled: the
+        delivery overview, /process_payment and the payment reminders only handle approved customers, so those
+        orders would be stuck. None when the approval may go."""
+        if customer.authorization_status != AuthorizationStatus.APPROVED.value:
+            return None
+        open_orders = [
+            o for o in self.db.get_orders_by_customer(customer.customer_id) if o.status not in SETTLED_ORDER_STATUSES
+        ]
+        if not open_orders:
+            return None
+        self._send_message(
+            chat_id,
+            self._t(
+                "customer_status_open_orders", chat_id, name=self._full_name(customer, chat_id), count=len(open_orders)
+            ),
+        )
+        return {"status": "has_open_orders"}
+
+    def handle_customer_status_options(self, chat_id: int, customer_id: str) -> dict[str, Any]:
+        """The status button of the edit screen: the other statuses this customer can be given"""
+        customer = self.db.get_customer(customer_id)
+        if not customer or customer.is_guest:
+            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
+            return {"status": "user_not_found"}
+        buttons = [
+            [
+                {
+                    "text": f"{self.STATUS_EMOJIS[status]} {self._t(f'customer_status_{status}', chat_id)}",
+                    "callback_data": f"edit_customer_setstatus_{customer.customer_id}_{status}",
+                }
+            ]
+            for status in self.EDITABLE_STATUSES
+            if status != customer.authorization_status
+        ]
+        buttons.append([{"text": self._t("cancel", chat_id), "callback_data": f"edit_user_select_{customer_id}"}])
+        current = self._t(f"customer_status_{customer.authorization_status}", chat_id)
+        self._send_message(
+            chat_id,
+            self._t("choose_customer_status", chat_id, name=self._full_name(customer, chat_id), status=current),
+            reply_markup={"inline_keyboard": buttons},
+        )
+        return {"status": "status_options_shown"}
+
+    def handle_set_customer_status(self, chat_id: int, customer_id: str, status: str) -> dict[str, Any]:
+        """Give the customer another authorization status: approved (they are told, as with /approve_user), rejected
+        (they are told, as with /reject_user) or unauthorized (back to the pending list, not told)"""
+        if status not in self.EDITABLE_STATUSES:
+            self._send_message(chat_id, self._t("failed_customer_status", chat_id))
+            return {"status": "invalid_status"}
+        customer = self.db.get_customer(customer_id)
+        if not customer or customer.is_guest:
+            self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
+            return {"status": "user_not_found"}
+        if status == AuthorizationStatus.APPROVED.value:
+            return self._approve_user_by_customer(chat_id, customer)
+        if status == AuthorizationStatus.REJECTED.value:
+            result = self._reject_customer(chat_id, customer)
+        else:
+            refused = self._refuse_while_open_orders(chat_id, customer)
+            if refused:
+                return refused
+            if not self.db.update_customer(customer.customer_id, {"authorization_status": status}):
+                self._send_message(chat_id, self._t("failed_customer_status", chat_id))
+                return {"status": "error"}
+            name = self._full_name(customer, chat_id)
+            self._send_message(chat_id, self._t("customer_status_set_pending", chat_id, name=name))
+            result = {"status": "success"}
+        if result["status"] == "success":
+            UserCache.invalidate_cache()
+            updated = self.db.get_customer(customer_id)
+            if updated:
+                self._show_user_edit_interface(updated, chat_id)
+        return result
+
     def _reject_customer(self, chat_id: int, customer) -> dict[str, Any]:
+        refused = self._refuse_while_open_orders(chat_id, customer)
+        if refused:
+            return refused
         if not self.db.update_customer(
             customer.customer_id, {"authorization_status": AuthorizationStatus.REJECTED.value}
         ):
@@ -231,6 +317,15 @@ class UserCommands(BaseHandler):
                 }
             ]
         )
+        if not customer.is_guest:  # a guest has no Telegram account to give access to
+            keyboard_buttons.append(
+                [
+                    {
+                        "text": self._t("edit_customer_status_btn", chat_id),
+                        "callback_data": f"edit_customer_status_{customer.customer_id}",
+                    }
+                ]
+            )
         keyboard_buttons.append([{"text": self._t("done", chat_id), "callback_data": "done_action"}])
 
         keyboard = {"inline_keyboard": keyboard_buttons}

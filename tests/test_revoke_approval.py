@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import pytest
 
 from handlers.admin.user_commands import UserCommands
-from models.entities import AuthorizationStatus, Customer
+from models.entities import AuthorizationStatus, Customer, Order
 from services.database import DynamoDBService
 from services.user_cache import UserCache
 
@@ -46,7 +46,85 @@ def status_of(db, customer) -> str:
     return db.get_customer(customer.customer_id).authorization_status
 
 
+def order(db, customer, status):
+    assert db.order_repo.create_order(Order(customer_id=customer.customer_id, box_id="b1", offer_id=7, status=status))
+
+
+class TestTheStatusOnTheEditScreen:
+    """/update_user: the status can be changed, also back to approved after a rejection"""
+
+    def test_the_edit_screen_has_a_status_button(self, db, users):
+        jan = approved(db, 101, "Jan")
+
+        users._show_user_edit_interface(jan, ADMIN_ID)
+
+        assert f"edit_customer_status_{jan.customer_id}" in users.sent[-1][2]
+
+    def test_a_guest_has_no_status_button(self, db, users):
+        guest = db.create_customer(
+            Customer(telegram_user_id=-1, first_name="Gast", is_guest=True, authorization_status="approved")
+        )
+
+        users._show_user_edit_interface(guest, ADMIN_ID)
+
+        assert not any(b.startswith("edit_customer_status_") for b in users.sent[-1][2])
+
+    def test_the_other_statuses_are_offered(self, db, users):
+        jan = approved(db, 101, "Jan")
+
+        users.handle_customer_status_options(ADMIN_ID, jan.customer_id)
+
+        assert [b for b in users.sent[-1][2] if b.startswith("edit_customer_setstatus_")] == [
+            f"edit_customer_setstatus_{jan.customer_id}_unauthorized",
+            f"edit_customer_setstatus_{jan.customer_id}_rejected",
+        ]
+
+    def test_a_rejected_customer_can_be_approved_again(self, db, users):
+        jan = approved(db, 101, "Jan")
+        db.update_customer(jan.customer_id, {"authorization_status": "rejected"})
+
+        result = users.handle_set_customer_status(ADMIN_ID, jan.customer_id, "approved")
+
+        assert result["status"] == "success"
+        assert status_of(db, jan) == "approved"
+        assert users._notify_customer.call_args.args[1] == "user_authorized"
+
+    def test_approval_is_withdrawn_from_a_customer_without_open_orders(self, db, users):
+        jan = approved(db, 101, "Jan")
+        order(db, jan, "completed")
+        order(db, jan, "cancelled")
+
+        users.handle_set_customer_status(ADMIN_ID, jan.customer_id, "rejected")
+
+        assert status_of(db, jan) == "rejected"
+
+    @pytest.mark.parametrize("new_status", ["rejected", "unauthorized"])
+    @pytest.mark.parametrize("open_status", ["pending", "ready_for_labeling", "awaiting_payment"])
+    def test_approval_stays_while_the_customer_has_open_orders(self, db, users, new_status, open_status):
+        jan = approved(db, 101, "Jan")
+        order(db, jan, open_status)
+
+        result = users.handle_set_customer_status(ADMIN_ID, jan.customer_id, new_status)
+
+        assert result == {"status": "has_open_orders"}
+        assert status_of(db, jan) == "approved"
+        users._notify_customer.assert_not_called()
+
+    def test_an_unknown_status_changes_nothing(self, db, users):
+        jan = approved(db, 101, "Jan")
+
+        assert users.handle_set_customer_status(ADMIN_ID, jan.customer_id, "vip")["status"] == "invalid_status"
+        assert status_of(db, jan) == "approved"
+
+
 class TestRejectUser:
+    def test_a_customer_with_open_orders_is_not_rejected(self, db, users):
+        jan = approved(db, 101, "Jan")
+        order(db, jan, "ordered")
+
+        assert users.handle_reject_user(ADMIN_ID, ["Jan"]) == {"status": "has_open_orders"}
+        assert status_of(db, jan) == "approved"
+
     def test_the_list_of_matches_rejects_the_customer_picked(self, db, users):
         approved(db, 101, "Jan")
         janneke = approved(db, 102, "Janneke")
