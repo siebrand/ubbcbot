@@ -263,6 +263,32 @@ class TestCancelOffer:
 
         assert db.get_offer(7).status == "inactive"
 
+    @pytest.fixture
+    def delivered(self, db):
+        """An instant offer: a delivered box with free units and an order in it, nothing pending"""
+        jan = customer(db, 101, "Jan")
+        box(db, "bd", 1, "delivered")
+        order(db, "od", jan, "bd", 1, 1, status="ready_for_labeling")
+
+    @pytest.mark.parametrize("command", ["handle_cancel_offer", "handle_confirm_cancel_offer"])
+    def test_an_offer_with_a_delivered_box_that_holds_orders_is_not_cancelled(self, db, handler, delivered, command):
+        result = getattr(handler, command)(ADMIN_ID, ["7"])
+
+        assert result == {"status": "has_delivered_orders"}
+        assert db.get_offer(7).status == "active"
+        assert db.get_box("bd").current_quantity == 1
+        assert db.get_order("od").status == "ready_for_labeling"
+        assert "7" in messages_to(handler, ADMIN_ID)[-1]
+
+    def test_an_offer_with_ordered_boxes_is_still_cancelled(self, db, handler):
+        jan = customer(db, 101, "Jan")
+        box(db, "bo", 2, "ordered")
+        order(db, "oo", jan, "bo", 2, 1, status="ordered")
+
+        assert handler.handle_confirm_cancel_offer(ADMIN_ID, ["7"]) == {"status": "success"}
+        assert db.get_order("oo").status == "cancelled"
+        assert db.get_offer(7).status == "inactive"
+
     def test_an_offer_with_orders_asks_for_confirmation(self, db, handler, three_orders):
         assert handler.handle_cancel_offer(ADMIN_ID, ["7"]) == {"status": "confirmation_required"}
 

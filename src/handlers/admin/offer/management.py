@@ -394,6 +394,9 @@ class OfferManagementHandler(OfferBaseHandler):
         if offer.status != OfferStatus.ACTIVE.value:
             self._send_message(chat_id, self._t("offer_not_active"))
             return {"status": "offer_not_active"}
+        refused = self._refuse_cancel_with_delivered_orders(chat_id, offer.offer_id)
+        if refused:
+            return refused
 
         # Get all orders for this offer
         active_orders = self._active_orders(offer.offer_id)
@@ -433,6 +436,9 @@ class OfferManagementHandler(OfferBaseHandler):
         offer, error = self._validate_and_get_offer(args, chat_id)
         if error:
             return error
+        refused = self._refuse_cancel_with_delivered_orders(chat_id, offer.offer_id)
+        if refused:
+            return refused
 
         # Get all pending orders
         active_orders = self._active_orders(offer.offer_id)
@@ -469,6 +475,17 @@ class OfferManagementHandler(OfferBaseHandler):
 
         self._send_message(chat_id, summary)
         return {"status": "success"}
+
+    def _refuse_cancel_with_delivered_orders(self, chat_id: int, offer_id: int) -> dict[str, Any] | None:
+        """Cancelling an offer deletes its boxes: an offer with a delivered box that holds units (an instant offer,
+        or one after a partial delivery) is not cancelled, so those orders keep their box. None when it may be."""
+        if not any(
+            box.status == BoxStatus.DELIVERED.value and box.current_quantity > 0
+            for box in self.db.get_boxes_by_offer(offer_id)
+        ):
+            return None
+        self._send_message(chat_id, self._t("offer_cannot_cancel_delivered", chat_id, offer_id=offer_id))
+        return {"status": "has_delivered_orders"}
 
     def _delete_offer_boxes(self, offer_id: int) -> int:
         """Delete all boxes for an offer and return count"""

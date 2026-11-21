@@ -184,6 +184,7 @@
   "orders_changed_meanwhile": "⚠️ Ongemoeid gelaten, want ze veranderden terwijl dit liep (geannuleerd of verplaatst): {details}",
   "total_allocated": "📦 Totaal toegewezen stuks: {allocated}/{available}",
   "cleaned_empty_boxes": "🗑️ {count} lege dozen opgeruimd",
+  "offer_cannot_cancel_delivered": "❌ Aanbieding {offer_id} kan niet worden geannuleerd: er is een afgeleverde doos met bestellingen erin. Annuleren zou die doos verwijderen en die bestellingen zonder doos laten.",
   "usage_cancel_offer": "Gebruik: /cancel_offer [aanbieding_id]",
   "cancel_offer_warning": "⚠️ WAARSCHUWING: Annuleren van aanbieding {offer_id} zal:\n\n🍺 Aanbieding annuleren: {name}\n📦 Alle dozen verwijderen\n❌ {order_count} actieve bestellingen annuleren\n📧 Alle getroffen klanten informeren\n\n",
   "confirm_cancel": "✅ Bevestig Annulering",

@@ -185,6 +185,7 @@
   "total_allocated": "📦 Total units allocated: {allocated}/{available}",
   "cleaned_empty_boxes": "🗑️ Cleaned up {count} empty boxes",
   "new_user_pending_notification": "🔔 New user authorization pending:\n\n👤 {name}\n📱 @{username}\n🆔 ID: {telegram_user_id}\n\nUse /list_pending to review.",
+  "offer_cannot_cancel_delivered": "❌ Offer {offer_id} cannot be cancelled: it has a delivered box with orders in it. Cancelling would delete that box and leave those orders without one.",
   "usage_cancel_offer": "Usage: /cancel_offer [offer_id]",
   "cancel_offer_warning": "⚠️ WARNING: Cancelling offer {offer_id} will:\n\n🍺 Cancel offer: {name}\n📦 Delete all boxes\n❌ Cancel {order_count} active orders\n📧 Notify all affected customers\n\n",
   "confirm_cancel": "✅ Confirm Cancel",
