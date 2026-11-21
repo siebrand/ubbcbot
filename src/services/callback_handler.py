@@ -332,6 +332,20 @@ class CallbackHandler:
             keyboard=DELETE_MESSAGE,
         )
         self.router.register(
+            r"^payment_amount_([^_]+)_(\d+)$",
+            lambda match, ctx: self.edit_context_manager.handle_payment_amount_prompt(
+                ctx["chat_id"], match.group(1), int(match.group(2))
+            ),
+        )
+        self.router.register(
+            r"^payok_([^_]+)_(\d+)_([0-9a-f]{6})_(\d+)$",
+            lambda match, ctx: self.handlers["admin_order"].handle_payment_confirm(
+                ctx["chat_id"], match.group(1), int(match.group(2)), match.group(3), int(match.group(4))
+            ),
+            # The handler sends the list again; the proposal must not be confirmed twice
+            keyboard=DELETE_MESSAGE,
+        )
+        self.router.register(
             r"^remind_payment_(.+)_(\d+)$",
             lambda match, ctx: self.handlers["admin_order"].handle_send_payment_reminder_to_customer(
                 ctx["chat_id"], match.group(1), int(match.group(2))

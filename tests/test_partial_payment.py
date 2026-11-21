@@ -10,6 +10,7 @@ import pytest
 from handlers.admin.order.order_status import OrderStatusManagement
 from models.entities import AuthorizationStatus, Customer, Offer, Order
 from services.database import DynamoDBService
+from services.payment_matching import selection_token
 from services.user_cache import UserCache
 
 ADMIN_ID = 15005473
@@ -193,6 +194,81 @@ class TestTheConfirmation:
 
     def test_an_unknown_customer(self, db, handler):
         assert handler.handle_payment_confirm(ADMIN_ID, "nobody", 100, "abcdef", 1)["status"] == "customer_not_found"
+
+
+class TestFromTheList:
+    """PP-4: the amount button of /process_payment, its prompt and the confirm button, through the real BotService"""
+
+    @pytest.fixture
+    def bot(self, db, monkeypatch):
+        import json
+        from types import SimpleNamespace
+
+        from services.bot_service import BotService
+        from services.telegram_client import TelegramClient
+
+        monkeypatch.setenv("ENVIRONMENT", "prod")
+        sent: list = []
+
+        def call(client, method, data=None, get=False):
+            if method == "sendMessage":
+                markup = data.get("reply_markup") or {}
+                markup = json.loads(markup) if isinstance(markup, str) else markup
+                buttons = [b.get("callback_data") for row in markup.get("inline_keyboard", []) for b in row]
+                sent.append((data["chat_id"], data["text"], buttons))
+            return SimpleNamespace(ok=True, message_id=1, result={"username": "ubbc_bot"}, status_code=200, body="")
+
+        with (
+            patch.object(BotService, "_get_telegram_token", return_value="token"),
+            patch.object(TelegramClient, "call", call),
+            patch("services.bot_service.ADMIN_USER_ID", ADMIN_ID),
+            patch.object(OrderStatusManagement, "_send_user_message", return_value={"success": True}),
+        ):
+            service = BotService()
+            service.sent = sent
+            yield service
+
+    @staticmethod
+    def text(bot, words, sender=ADMIN_ID):
+        message = {"message_id": 1, "chat": {"id": sender, "type": "private"}, "from": {"id": sender}, "text": words}
+        return bot.process_update({"update_id": abs(hash((words, sender))) % 10**9, "message": message})
+
+    @staticmethod
+    def tap(bot, data, sender=ADMIN_ID):
+        query = {"id": "q", "from": {"id": sender}, "message": {"chat": {"id": sender}, "message_id": 9}, "data": data}
+        return bot.process_update({"update_id": abs(hash((data, sender))) % 10**9, "callback_query": query})
+
+    def test_each_row_has_two_buttons_and_the_first_still_pays_everything(self, bot, jan, three):
+        self.text(bot, "/process_payment")
+
+        buttons = bot.sent[-1][2]
+        assert f"process_payment_{jan.customer_id}_1" in buttons
+        assert f"payment_amount_{jan.customer_id}_1" in buttons
+
+        self.tap(bot, f"process_payment_{jan.customer_id}_1")
+
+        assert statuses(bot.db, three) == ["completed"] * 3
+
+    def test_from_the_list_to_a_confirmed_payment(self, bot, jan, three):
+        self.tap(bot, f"payment_amount_{jan.customer_id}_1")
+        context = bot.db.get_edit_context_by_chat_id(ADMIN_ID)
+        assert (context.edit_type, context.entity_id) == ("payment_amount_input", f"{jan.customer_id}_1")
+
+        self.text(bot, "20,50")
+        [confirm] = [b for b in bot.sent[-1][2] if b.startswith("payok_")]
+        assert len(confirm.encode()) <= 64
+        self.tap(bot, confirm)
+
+        assert statuses(bot.db, three) == ["completed", "completed", "awaiting_payment"]
+
+    def test_a_customer_who_taps_the_buttons_is_refused(self, bot, jan, three):
+        token = selection_token(three[:2])
+
+        self.tap(bot, f"payment_amount_{jan.customer_id}_1", sender=101)
+        self.tap(bot, f"payok_{jan.customer_id}_2050_{token}_1", sender=101)
+
+        assert bot.db.get_edit_context_by_chat_id(101) is None
+        assert statuses(bot.db, three) == ["awaiting_payment"] * 3
 
 
 class TestTheCustomerIsTold:

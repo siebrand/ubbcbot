@@ -33,6 +33,13 @@ class EditContextManager:
         context = EditContext(chat_id=chat_id, edit_type=edit_type, entity_id=entity_id)
         self.db.create_edit_context(context)
 
+    def handle_payment_amount_prompt(self, chat_id: int, customer_id: str, page: int) -> dict[str, Any]:
+        """The amount button of /process_payment: ask what was received from the customer (the list page is kept to
+        show the list again afterwards)"""
+        self.store_edit_context(chat_id, "payment_amount_input", f"{customer_id}_{page}")
+        self.prompt_for_text_input(chat_id, "enter_payment_amount", self._t("placeholder_payment_amount"))
+        return {"status": "awaiting_amount"}
+
     def prompt_for_text_input(self, chat_id: int, prompt_key: str, placeholder: str, **kwargs):
         """Send text input prompt with force reply"""
         self._send_message(

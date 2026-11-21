@@ -268,6 +268,7 @@ class TestCallbackRouting:
         [
             ("confirm_process_wholesale_123_6", "offer", "handle_confirm_process_wholesale"),
             ("confirm_cancel_offer_456", "offer", "handle_confirm_cancel_offer"),
+            ("payok_aaaaaaaa-1111-4111-8111-111111111111_2050_abc123_2", "admin_order", "handle_payment_confirm"),
         ],
     )
     def test_confirm_patterns(self, callback_handler, mock_handlers, callback_data, handler, method):

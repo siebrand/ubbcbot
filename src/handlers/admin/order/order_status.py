@@ -83,7 +83,15 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
             first_name = customer.first_name or self._t("unknown", user_id=self.admin_user_id)
             button_text = f"✓ {last_name}, {first_name} €{total_amount:.2f} ({len(orders)})".strip()
             keyboard_rows.append(
-                [{"text": button_text, "callback_data": f"process_payment_{customer.customer_id}_{page}"}]
+                [
+                    # Pays everything, as before
+                    {"text": button_text, "callback_data": f"process_payment_{customer.customer_id}_{page}"},
+                    # Asks for the amount received and pays the oldest open orders that add up to it
+                    {
+                        "text": self._t("payment_amount_btn", chat_id),
+                        "callback_data": f"payment_amount_{customer.customer_id}_{page}",
+                    },
+                ]
             )
 
         # Add pagination keyboard if needed

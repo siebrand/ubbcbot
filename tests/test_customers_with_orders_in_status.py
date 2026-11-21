@@ -114,7 +114,8 @@ class TestTheScreens:
 
         assert handler.handle_process_payment(ADMIN_ID, []) == {"status": "customers_shown"}
 
-        assert buttons(handler)[:2] == ["✓ Aalders, Zoe €5.00 (1)", "✓ Bakker, Bram €8.00 (2)"]
+        # each row: pay everything, and the amount received (💶)
+        assert buttons(handler)[:4] == ["✓ Aalders, Zoe €5.00 (1)", "💶", "✓ Bakker, Bram €8.00 (2)", "💶"]
         assert not any("Puk" in b for b in buttons(handler))
 
     def test_failed_notifications_lists_the_approved_customers_with_labeled_orders(self, db, people):
