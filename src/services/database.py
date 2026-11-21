@@ -528,8 +528,8 @@ class DynamoDBService:
     def get_all_credit_transactions_by_customer(self, customer_id: str) -> list:
         return self.credit_repo.get_all_credit_transactions_by_customer(customer_id)
 
-    def get_customers_with_credit_balance(self, min_amount=None) -> list:
-        return self.credit_repo.get_customers_with_credit_balance(min_amount)
+    def get_customers_with_credit_balance(self, min_amount=None, strict: bool = False) -> list:
+        return self.credit_repo.get_customers_with_credit_balance(min_amount, strict=strict)
 
     # Payment link operations
     def store_payment_link(self, payment_url: str) -> bool:

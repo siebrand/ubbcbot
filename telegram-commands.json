@@ -55,6 +55,7 @@
     {"command": "import_orders", "description": "Import orders from a CSV file"},
     {"command": "instant_order", "description": "Create an offer and an order at once: <supplier> <name> <price> <customer> [box_size]"},
     {"command": "list_boxes", "description": "View box status and capacity"},
+    {"command": "list_credits", "description": "Customers with credit or a negative balance"},
     {"command": "list_guests", "description": "View all guest users"},
     {"command": "list_offer_orders", "description": "View all orders of an offer: <offer_id>"},
     {"command": "list_offers", "description": "View available offers"},

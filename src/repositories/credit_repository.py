@@ -217,7 +217,11 @@ class CreditRepository(BaseRepository):
             logger.error(f"Error getting all credit transactions: {e}")
             raise
 
-    def get_customers_with_credit_balance(self, min_amount: Decimal | None = None) -> list[CustomerCredit]:
+    def get_customers_with_credit_balance(
+        self, min_amount: Decimal | None = None, strict: bool = False
+    ) -> list[CustomerCredit]:
+        """The credit records with at least ``min_amount``; without it every record, negative and zero balances
+        included. A failed read is an empty list, or raised with ``strict`` (so "nobody" and "failed" differ)."""
         try:
             if min_amount:
                 items = self._scan_items(
@@ -229,5 +233,7 @@ class CreditRepository(BaseRepository):
 
             return [self._item_to_credit(item) for item in items]
         except Exception as e:
-            logger.error(f"Error getting customers with credit balance: {e}")
+            logger.error(f"Error getting customers with credit balance: {type(e).__name__}")
+            if strict:
+                raise
             return []

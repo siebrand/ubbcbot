@@ -4,10 +4,14 @@ from typing import Any
 from handlers.base_handler import BaseHandler
 from models.entities import EditContext
 from services.credit_service import CreditService
+from utils.pagination import PaginationUtils
 from utils.validation import ValidationUtils
 
 # The largest credit or debt one /credit can issue, in euros: a typo of a few zeros is refused, not booked
 MAX_CREDIT_AMOUNT = Decimal("1000")
+
+# Customers per page of /list_credits
+LIST_CREDITS_PAGE_SIZE = 10
 
 
 def parse_credit_amount(text: str) -> Decimal | None:
@@ -91,6 +95,56 @@ class CreditCommands(BaseHandler):
 
         self.db.delete_edit_context(context.context_id)
         return self._issue_credit_to_customer(chat_id, customer, amount, reason)
+
+    def handle_list_credits(self, chat_id: int, page: int = 1) -> dict[str, Any]:
+        """Every customer whose balance is not zero: the credit, highest first, then the negative balances (they owe
+        money), most negative first. Each part with its total over the whole list, on every page."""
+        try:
+            records = self.db.get_customers_with_credit_balance(strict=True)
+        except Exception:
+            self._send_message(chat_id, self._t("list_credits_failed", chat_id))
+            return {"status": "error"}
+
+        credit = sorted((r for r in records if r.current_balance > 0), key=lambda r: -r.current_balance)
+        debt = sorted((r for r in records if r.current_balance < 0), key=lambda r: r.current_balance)
+        if not credit and not debt:
+            self._send_message(chat_id, self._t("list_credits_none", chat_id))
+            return {"status": "no_balances"}
+
+        page_records, total_pages = self._paginate_list(credit + debt, page, LIST_CREDITS_PAGE_SIZE)
+        lines = [self._t("list_credits_header", chat_id, page=page, total_pages=total_pages)]
+        for key, part in (("list_credits_total_credit", credit), ("list_credits_total_debt", debt)):
+            if part:
+                total = sum((r.current_balance for r in part), Decimal("0"))
+                lines.append(self._t(key, chat_id, count=len(part), amount=self._euros(total)))
+
+        heading = None
+        for record in page_records:
+            part_heading = "list_credits_heading_credit" if record.current_balance > 0 else "list_credits_heading_debt"
+            if part_heading != heading:
+                lines += ["", self._t(part_heading, chat_id)]
+                heading = part_heading
+            lines.append(f"• {self._balance_holder(record.customer_id, chat_id)} {self._euros(record.current_balance)}")
+
+        keyboard = None
+        if total_pages > 1:
+            keyboard = PaginationUtils.build_pagination_keyboard(page, total_pages, "credits", enhanced=True)
+        self._send_message(chat_id, "\n".join(lines), reply_markup=keyboard)
+        return {"status": "success"}
+
+    def _balance_holder(self, customer_id: str, chat_id: int) -> str:
+        """Full name (or "unknown") and the username of a customer; a deleted one as ✗ and the short id"""
+        customer = self.db.get_customer(customer_id)
+        if customer is None:
+            return f"✗ {customer_id[:8]}"
+        name = " ".join(filter(None, [customer.first_name, customer.last_name])) or self._t("unknown", chat_id)
+        if not customer.username:
+            return name
+        return f"{name} ({customer.username})" if customer.is_guest else f"{name} (@{customer.username})"
+
+    @staticmethod
+    def _euros(amount: Decimal) -> str:
+        return f"-€{-amount:.2f}" if amount < 0 else f"€{amount:.2f}"
 
     def _issue_credit_to_customer(self, chat_id: int, customer, amount: Decimal, reason: str) -> dict[str, Any]:
         """Issue credit to a customer and send notifications"""

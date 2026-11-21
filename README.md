@@ -208,6 +208,8 @@ has every admin command.
 - `/list_users` - View all customers (paginated with status filtering)
 - `/create_guest <first_name> [last_name] [contact]` - Add guest user (non-Telegram)
 - `/list_guests` - View all guest users (paginated)
+- `/credit <username> <amount> [reason]` - Issue credit to a customer; a negative amount (with a reason) charges a debt
+- `/list_credits` - Every customer whose balance is not zero: the credit (highest first) and the negative balances, the customers who owe money (most negative first), each part with its total; paginated, also the "Tegoeden" button in the Users section of `/admin`
 - `/approve_user <name_or_username>` - Approve user
 - `/reject_user <name_or_username>` - Reject user
 - `/user_status <name_or_username>` - Check user status

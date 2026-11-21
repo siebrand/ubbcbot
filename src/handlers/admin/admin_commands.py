@@ -137,6 +137,7 @@ class AdminCommandsHandler(BaseHandler):
                     {"text": self._t("add_guest_btn", user_id), "callback_data": "cmd:create_guest"},
                     {"text": self._t("list_guests_btn", user_id), "callback_data": "cmd:list_guests"},
                 ],
+                [{"text": self._t("list_credits_btn", user_id), "callback_data": "cmd:list_credits"}],
                 [
                     {"text": self._t("approve_user_btn", user_id), "callback_data": "cmd:approve_user"},
                     {"text": self._t("user_status_btn", user_id), "callback_data": "cmd:user_status"},

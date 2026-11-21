@@ -236,6 +236,7 @@ CMD = [
     ("cmd:list_users", C("user", call.handle_list_users(CHAT, 1, "all"))),
     ("cmd:create_guest", Says("usage_add_guest")),
     ("cmd:list_guests", C("user", call.handle_list_guests(CHAT))),
+    ("cmd:list_credits", C("credit", call.handle_list_credits(CHAT))),
     ("cmd:approve_user", Prompt("approve_user_input")),
     ("cmd:user_status", Prompt("user_status_input")),
     ("cmd:process_delivery", C("wholesale_delivery", call.handle_process_delivery(CHAT, ADMIN_ID, []))),
@@ -313,6 +314,7 @@ PAGE_ADMIN = [
     ("page_customers_all_2", C("user", call.handle_list_users(CHAT, 2, "all"))),
     ("page_customers_subscribers_1", C("user", call.handle_list_users(CHAT, 1, "subscribers"))),
     ("page_guests_2", C("user", call.handle_list_guests(CHAT, 2))),
+    ("page_credits_2", C("credit", call.handle_list_credits(CHAT, 2))),
     ("page_process_payment_2", C("admin_order", call.handle_process_payment(CHAT, [], 2))),
     ("page_list_open_payments_2", C("admin_order", call.handle_list_open_payments(CHAT, [], 2))),
     ("page_remind_payment_2", C("admin_order", call.handle_send_payment_reminder(CHAT, [], 2))),
@@ -559,6 +561,7 @@ ROUND_TRIPS = [
         "customers_approved", True, ADMIN_ID, lambda p: C("user", call.handle_list_users(CHAT, p, "approved"))
     ),
     pytest.param("guests", True, ADMIN_ID, lambda p: C("user", call.handle_list_guests(CHAT, p))),
+    pytest.param("credits", True, ADMIN_ID, lambda p: C("credit", call.handle_list_credits(CHAT, p))),
     pytest.param(
         "process_payment", True, ADMIN_ID, lambda p: C("admin_order", call.handle_process_payment(CHAT, [], p))
     ),
