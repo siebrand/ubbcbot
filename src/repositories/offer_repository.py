@@ -1,7 +1,11 @@
 import logging
 from typing import Any
 
-from models.entities import Offer
+import boto3
+from boto3.dynamodb.types import TypeSerializer
+from botocore.exceptions import ClientError
+
+from models.entities import Box, Offer, Order
 from repositories.base_repository import BaseRepository
 from repositories.system_repository import SystemRepository
 from services.offer_cache import OfferCache
@@ -30,6 +34,49 @@ class OfferRepository(BaseRepository):
         except Exception as e:
             logger.error(f"Error creating offer: {e}")
             return False
+
+    def create_with_box_and_order(self, offer: Offer, box: Box, order: Order) -> bool:
+        """Write a new offer, its box and its first order in one transaction: all three or none.
+
+        The offer gets the next offer ID (a gap after a failed write is harmless); the box and the order point at
+        it, and the order at the box. The box is written with its quantity already set. Each item only when its key
+        does not exist yet. Returns False when the transaction was rejected or failed.
+        """
+        try:
+            offer.offer_id = self.system_repo.get_next_id("offer_id")
+            box.offer_id = order.offer_id = offer.offer_id
+            order.box_id = box.box_id
+
+            serializer = TypeSerializer()
+
+            def put(table: str, entity, key: str) -> dict[str, Any]:
+                item = {k: serializer.serialize(v) for k, v in self._prepare_item(entity.__dict__).items()}
+                return {
+                    "Put": {
+                        "TableName": f"{self.table_prefix}-{table}",
+                        "Item": item,
+                        "ConditionExpression": f"attribute_not_exists({key})",
+                    }
+                }
+
+            # A plain low-level client, as in OrderRepository.create_with_box_increment
+            boto3.client("dynamodb").transact_write_items(
+                TransactItems=[
+                    put("offers", offer, "offer_id"),
+                    put("boxes", box, "box_id"),
+                    put("orders", order, "order_id"),
+                ]
+            )
+        except ClientError as e:
+            logger.error(
+                f"Creating offer {offer.offer_id} with its box and order failed: {e.response['Error']['Code']}"
+            )
+            return False
+        except Exception as e:
+            logger.error(f"Creating offer {offer.offer_id} with its box and order failed: {type(e).__name__}")
+            return False
+        OfferCache.invalidate_cache()
+        return True
 
     def get_offer(self, offer_id: int) -> Offer | None:
         try:

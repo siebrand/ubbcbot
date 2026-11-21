@@ -20,6 +20,19 @@ def offer_repo(dynamodb, system_repo):
     return OfferRepository(system_repo)
 
 
+class TestCreateWithBoxAndOrder:
+    def test_the_offer_gets_an_id_and_the_box_and_order_point_at_it(self, offer_repo):
+        from models.entities import Box, Order
+
+        offer, box, order = Offer(name="Tripel"), Box(current_quantity=1, status="delivered"), Order(quantity=1)
+
+        assert offer_repo.create_with_box_and_order(offer, box, order) is True
+
+        assert offer.offer_id == 1
+        assert (box.offer_id, order.offer_id, order.box_id) == (1, 1, box.box_id)
+        assert offer_repo.get_offer(1).name == "Tripel"
+
+
 class TestOfferRepository:
     def test_create_offer_generates_id(self, offer_repo):
         offer = Offer(name="Test IPA", price_per_unit=Decimal("2.50"))

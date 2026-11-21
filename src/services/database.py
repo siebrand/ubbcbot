@@ -69,6 +69,17 @@ class DynamoDBService:
     def create_offer(self, offer: Offer) -> bool:
         return self.offer_repo.create_offer(offer)
 
+    def create_instant_offer(self, offer: Offer, box: Box, order: Order) -> bool:
+        """An offer, its delivered box and its first order in one write (see OfferRepository.create_with_box_and_order),
+        then the ORDER_CREATED event, as for every new order"""
+        if not self.offer_repo.create_with_box_and_order(offer, box, order):
+            return False
+        try:
+            self.purchase_events.order_created(order)
+        except Exception as e:
+            logger.error(f"Instant offer {offer.offer_id} created but the analytics event failed: {type(e).__name__}")
+        return True
+
     def get_offer(self, offer_id: int) -> Offer | None:
         return self.offer_repo.get_offer(offer_id)
 
