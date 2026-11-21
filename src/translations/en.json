@@ -245,7 +245,6 @@
   "quantity_must_positive": "❌ Quantity must be positive",
   "user_not_found_username": "❌ User '{username}' not found",
   "offer_not_found_inactive": "❌ Offer not found or inactive",
-  "order_placed_for_user": "✅ Order placed for {name}",
   "failed_cancel_order": "❌ Failed to cancel order",
   "usage_list_user_orders": "Usage: /list_user_orders <username>",
   "no_orders_for_user": "📋 No orders found for {name}",

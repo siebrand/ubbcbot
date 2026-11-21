@@ -123,7 +123,9 @@ class TestOrderFor:
         assert [o.quantity for o in db.get_orders_by_customer(jan.customer_id)] == [2]
         assert len(sent_to(telegram, 101)) == 1  # the customer is told
         assert len(sent_to(telegram, GROUP_ID)) == 1  # the group sees the order
-        assert placement._t("order_placed_for_user", name="Jan") in sent_to(telegram, ADMIN_ID)
+        [confirmation] = sent_to(telegram, ADMIN_ID)  # one message for the admin, not two
+        [order] = db.get_orders_by_customer(jan.customer_id)
+        assert "Jan" in confirmation and order.order_id[:8] in confirmation and "Pils" in confirmation
 
     def test_a_guest_is_never_messaged_and_its_order_not_announced(self, db, placement, telegram):
         add_customer(db, -1, "Gast", is_guest=True)
@@ -133,6 +135,25 @@ class TestOrderFor:
 
         assert result == {"status": "success"}
         assert [chat for chat, _ in telegram.sent if chat != ADMIN_ID] == []
-        admin_texts = sent_to(telegram, ADMIN_ID)
-        assert placement._t("order_placed_for_user", name="Kees") in admin_texts
-        assert not any(placement._t("pm_notification_failed", name="Kees") in text for text in admin_texts)
+        [confirmation] = sent_to(telegram, ADMIN_ID)
+        assert "Kees" in confirmation
+        assert placement._t("pm_notification_failed", name="Kees") not in confirmation
+
+    def test_a_failed_message_to_the_customer_is_in_the_same_admin_message(self, db, placement, telegram):
+        jan = add_customer(db, 101, "Jan")
+
+        with patch.object(OrderPlacement, "_notify_customer", return_value={"success": False}):
+            placement.handle_create_order_for_quantity_select(ADMIN_ID, jan.customer_id, "7", "1")
+
+        [confirmation] = sent_to(telegram, ADMIN_ID)
+        assert placement._t("pm_notification_failed", name="Jan") in confirmation
+
+    def test_the_confirmation_is_in_the_admins_language(self, db, placement, telegram):
+        jan = db.create_customer(
+            Customer(telegram_user_id=101, first_name="Jan", language="en", authorization_status="approved")
+        )
+
+        placement.handle_create_order_for_quantity_select(ADMIN_ID, jan.customer_id, "7", "1")
+
+        [confirmation] = sent_to(telegram, ADMIN_ID)
+        assert "Bestelling" in confirmation  # the admin reads Dutch, whatever the customer's language

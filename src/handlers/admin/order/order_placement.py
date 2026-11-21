@@ -1,6 +1,6 @@
 from typing import Any
 
-from models.entities import ACTIVE_ORDER_STATUSES, EditContext, OfferStatus, OrderStatus
+from models.entities import ACTIVE_ORDER_STATUSES, EditContext, OfferStatus
 from services.box_status_manager import BoxStatusManager
 
 from .base_order_handler import BaseOrderHandler
@@ -180,11 +180,7 @@ class OrderPlacement(BaseOrderHandler):
 
         if result["status"] == "success":
             self._check_offer_status_after_change(offer_id)
-
-            # Get the actual order to show correct status
-            orders = self.db.get_orders_by_customer(customer.customer_id)
-            latest_order = max(orders, key=lambda o: o.created_at) if orders else None
-            order_status = latest_order.status if latest_order else OrderStatus.PENDING.value
+            order = result.pop("order")
 
             # Tell the customer, in their language (a guest has no Telegram and gets nothing)
             pm_result = self._notify_customer(
@@ -192,22 +188,37 @@ class OrderPlacement(BaseOrderHandler):
                 "admin_order_placed",
                 product=offer.name,
                 quantity=quantity,
-                total=offer.price_per_unit * quantity,
-                order_id=latest_order.order_id[:8] if latest_order else "",
-                status=self._t(f"status_{order_status}", customer.telegram_user_id),
+                total=order.total_price,
+                order_id=order.order_id[:8],
+                status=self._t(f"status_{order.status}", customer.telegram_user_id),
             )
 
             # Announce in the group (execute_order does not for orders the admin places)
             order_handler.announce_order_for(customer, offer, quantity)
 
-            # Confirm to admin with PM status
-            display_name = customer.first_name or self._t("unknown", user_id=None)
-            admin_message = self._t("order_placed_for_user", name=display_name)
-            if not customer.is_guest and not pm_result.get("success"):
-                admin_message += "\n" + self._t("pm_notification_failed", user_id=None, name=display_name)
-            self._send_message(chat_id, admin_message)
+            # One confirmation for the admin, in the admin's language, with whether the customer was told
+            self._send_message(chat_id, self._order_for_confirmation(chat_id, customer, offer, order, pm_result))
 
         return result
+
+    def _order_for_confirmation(self, chat_id: int, customer, offer, order, pm_result: dict) -> str:
+        """The admin's confirmation of an order placed for a customer"""
+        display_name = " ".join(part for part in (customer.first_name, customer.last_name) if part) or self._t(
+            "unknown", chat_id
+        )
+        message = self._t(
+            "order_placed_single",
+            chat_id,
+            name=display_name,
+            order_id=order.order_id[:8],
+            product=offer.name,
+            quantity=order.quantity,
+            total=float(order.total_price),
+            status=self._t(f"status_{order.status}", chat_id),
+        )
+        if not customer.is_guest and not pm_result.get("success"):
+            message += "\n" + self._t("pm_notification_failed", chat_id, name=display_name)
+        return message
 
     def handle_create_order_for_user_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:
         """Handle user selection from disambiguation for create_order_for"""

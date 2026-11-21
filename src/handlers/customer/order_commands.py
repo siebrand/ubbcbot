@@ -87,6 +87,9 @@ class CustomerOrderCommands(PaymentMessageMixin, BaseHandler):
 
             # Update offer status and send notifications (syncs channel messages)
             self._check_offer_status_after_change(offer.offer_id)
+            if placed_by_admin:
+                # The admin gets one confirmation, from the caller, which also says whether the customer was told
+                return {"status": "success", "order": order}
             self._send_order_confirmation(chat_id, user_id, order, offer, quantity, placed_by_admin, customer)
 
             return {"status": "success"}

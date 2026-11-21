@@ -256,10 +256,12 @@ class TestWhoIsTold:
         monkeypatch.setenv("DEFAULT_GROUP_ID", "-100777")
         offer = db.get_offer(7)
 
-        assert handler.execute_order(ADMIN_ID, ADMIN_ID, 2, offer, jan, placed_by_admin=True) == {"status": "success"}
+        result = handler.execute_order(ADMIN_ID, ADMIN_ID, 2, offer, jan, placed_by_admin=True)
 
+        assert result["status"] == "success"
+        assert result["order"].quantity == 2  # the caller (/order_for) confirms it, in one message
         assert texts_to(handler, -100777) == []
-        assert len(texts_to(handler, ADMIN_ID)) == 1  # the confirmation only
+        assert texts_to(handler, ADMIN_ID) == []
 
 
 class TestOrderInput:
