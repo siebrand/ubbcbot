@@ -247,7 +247,7 @@ class TestSalesByPeriod:
         assert re.search(r"2026-W01\s+–", report)  # the week of 1 January, also without sales
 
     def test_words_may_come_in_any_order(self, env):
-        env.handler.handle_report_sales_by_period(ADMIN_ID, ["dag", "2026-01-01", "paid"])
+        env.handler.handle_report_sales_by_period(ADMIN_ID, ["day", "2026-01-01", "paid"])
 
         event_type, start, _ = env.db.get_events_by_type.call_args.args
         assert event_type == "PAYMENT_RECEIVED" and start.month == 1
@@ -355,11 +355,12 @@ class TestSalesPerWeekday:
         assert (start.day, end.day) == (1, 31)
         assert "maandag" in text(env)
 
-    def test_only_the_english_word(self, env):
-        """The granularity word is weekday only, whatever the admin's language (owner, 2026-11-21)"""
+    @pytest.mark.parametrize("word", ["weekdag", "dag", "maand"])
+    def test_only_the_english_words(self, env, word):
+        """The granularity words are English only, whatever the admin's language (owner, 2026-11-21)"""
         self.orders(env)
 
-        assert env.handler.handle_report_sales_by_period(ADMIN_ID, ["weekdag"]) == {"status": "invalid_args"}
+        assert env.handler.handle_report_sales_by_period(ADMIN_ID, [word]) == {"status": "invalid_args"}
 
     def test_a_year(self, env):
         env.db.get_events_by_type.return_value = [payment("c1", "53", datetime(2025, 1, 1, 12, tzinfo=UTC))]

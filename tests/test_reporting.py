@@ -264,6 +264,10 @@ class TestWeekdays:
             6: (1, Decimal("4")),
         }
 
-    def test_the_word(self):
-        assert reporting.GRANULARITY_WORDS["weekday"] == reporting.WEEKDAY
-        assert "weekdag" not in reporting.GRANULARITY_WORDS
+    def test_the_words(self):
+        assert reporting.GRANULARITY_WORDS == {
+            "day": reporting.DAY,
+            "week": reporting.WEEK,
+            "month": reporting.MONTH,
+            "weekday": reporting.WEEKDAY,
+        }

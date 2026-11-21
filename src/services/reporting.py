@@ -19,14 +19,7 @@ DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 PERIOD_CODE_PATTERN = re.compile(r"^(\d{8})-(\d{8})$")
 
 DAY, WEEK, MONTH, WEEKDAY = "day", "week", "month", "weekday"
-GRANULARITY_WORDS = {
-    "day": DAY,
-    "dag": DAY,
-    "week": WEEK,
-    "month": MONTH,
-    "maand": MONTH,
-    "weekday": WEEKDAY,
-}
+GRANULARITY_WORDS = {"day": DAY, "week": WEEK, "month": MONTH, "weekday": WEEKDAY}
 PAID_WORDS = {"paid", "betaald"}
 ANON_WORDS = {"anon", "anoniem"}
 
