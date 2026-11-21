@@ -36,12 +36,8 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
 
 ## Medium priority
 
-- [ ] **B1. The box status after a quantity change is decided from a stale read**
-  (`update_box_after_order_placement`/`_cancellation`). The status (`full`/`open`) is computed from the box read
-  before the atomic increment plus this change; a concurrent placement or cancel in between makes it wrong (a full
-  box left `open`, an open one `full`), and the status write is unconditional. Fix: take the quantity from the
-  increment's `UpdateItem` (`ReturnValues="UPDATED_NEW"`) and write the status on condition of it (and never from
-  `delivered`).
+- [x] **B1. The box status after a quantity change is decided from a stale read**
+  (`update_box_after_order_placement`/`_cancellation`).
 - [ ] **B2. A unit price edit ignores what has happened to the order** (`_apply_unit_price_change`). The price of an
   order awaiting payment can change after the overview asked for it (with `credit_applied` possibly above the new
   total, so `amount_due` goes negative), and the price of a completed order after the payment event was recorded.

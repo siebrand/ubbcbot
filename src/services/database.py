@@ -123,6 +123,16 @@ class DynamoDBService:
     def increment_box_quantity(self, box_id: str, delta: int, max_capacity: int) -> bool:
         return self.box_repo.increment_box_quantity(box_id, delta, max_capacity)
 
+    def add_to_box_quantity(self, box_id: str, delta: int, max_capacity: int) -> int | None:
+        """The quantity after the change, or None when it was rejected (see BoxRepository.add_to_box_quantity)"""
+        return self.box_repo.add_to_box_quantity(box_id, delta, max_capacity)
+
+    def mark_box_full_if_at_capacity(self, box_id: str) -> bool:
+        return self.box_repo.mark_full_if_at_capacity(box_id)
+
+    def reopen_box_if_below_capacity(self, box_id: str) -> bool:
+        return self.box_repo.reopen_if_below_capacity(box_id)
+
     # Order operations
     def create_order(self, order: Order, admin_id: int = 0) -> Order | None:
         """Create order (records an ORDER_CREATED analytics event)"""

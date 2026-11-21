@@ -84,13 +84,20 @@ class BoxRepository(BaseRepository):
             return []
 
     def increment_box_quantity(self, box_id: str, delta: int, max_capacity: int) -> bool:
+        """Atomically add `delta` to current_quantity, failing if it would exceed max_capacity (see
+        add_to_box_quantity). Returns True on success, False if the condition failed or on error."""
+        return self.add_to_box_quantity(box_id, delta, max_capacity) is not None
+
+    def add_to_box_quantity(self, box_id: str, delta: int, max_capacity: int) -> int | None:
         """Atomically add `delta` to current_quantity, failing if it would exceed max_capacity.
 
         Uses a single conditional UpdateItem so concurrent orders cannot overfill a box:
         the ADD and the capacity check happen server-side in one operation. `delta` may be
         negative (e.g. on cancellation); the guard only limits the upper bound.
 
-        Returns True on success, False if the condition failed (would overfill) or on error.
+        Returns the quantity the box holds after this change (so a status can follow the
+        quantity this write left, not a read from before it), or None if the condition
+        failed (would overfill) or on error.
         """
         from botocore.exceptions import ClientError
 
@@ -99,21 +106,52 @@ class BoxRepository(BaseRepository):
             # threshold in Python: current_quantity must be <= max_capacity - delta
             # for the post-increment value to stay within capacity. For a negative
             # delta (cancellation) the threshold grows, making the guard a no-op.
-            self.table.update_item(
+            response = self.table.update_item(
                 Key={"box_id": box_id},
                 UpdateExpression="ADD current_quantity :delta",
                 ConditionExpression="attribute_exists(box_id) AND current_quantity <= :threshold",
                 ExpressionAttributeValues={":delta": delta, ":threshold": max_capacity - delta},
+                ReturnValues="UPDATED_NEW",
             )
-            return True
+            return int(response["Attributes"]["current_quantity"])
         except ClientError as e:
             if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
                 logger.warning(f"Box {box_id} increment by {delta} rejected: would exceed capacity {max_capacity}")
-                return False
+                return None
             logger.error(f"Error incrementing box {box_id}: {e}")
-            return False
+            return None
         except Exception as e:
             logger.error(f"Error incrementing box {box_id}: {e}")
+            return None
+
+    def mark_full_if_at_capacity(self, box_id: str) -> bool:
+        """OPEN → FULL, only while the box is open and holds its capacity at the time of the write"""
+        return self._set_status_if(box_id, "open", "full", "current_quantity >= max_capacity")
+
+    def reopen_if_below_capacity(self, box_id: str) -> bool:
+        """FULL → OPEN, only while the box is full and holds less than its capacity at the time of the write. An
+        ORDERED or DELIVERED box is never reopened."""
+        return self._set_status_if(box_id, "full", "open", "current_quantity < max_capacity")
+
+    def _set_status_if(self, box_id: str, from_status: str, to_status: str, quantity_condition: str) -> bool:
+        """Set the status on condition of the current status and the live quantity; False when the condition failed"""
+        from botocore.exceptions import ClientError
+
+        try:
+            self.table.update_item(
+                Key={"box_id": box_id},
+                UpdateExpression="SET #status = :to",
+                ConditionExpression=f"#status = :from AND {quantity_condition}",
+                ExpressionAttributeNames={"#status": "status"},
+                ExpressionAttributeValues={":from": from_status, ":to": to_status},
+            )
+            return True
+        except ClientError as e:
+            if e.response["Error"]["Code"] != "ConditionalCheckFailedException":
+                logger.error(f"Error setting box {box_id} to {to_status}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Error setting box {box_id} to {to_status}: {type(e).__name__}")
             return False
 
     def update_box(self, box_id: str, updates: dict[str, Any]) -> bool:

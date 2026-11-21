@@ -32,8 +32,10 @@ class BoxStatusManager:
         """Atomically add quantity to a box, rejecting if it would exceed capacity.
 
         The quantity change is a single conditional UpdateItem, so two concurrent
-        orders can never overfill the box. The FULL status transition is a best-effort
-        follow-up write based on the box's own capacity.
+        orders can never overfill the box. The FULL status follows the quantity that
+        increment returned, and is written only while the box is still open and at
+        capacity: a concurrent cancel in between cannot leave an open box marked full,
+        and an ORDERED or DELIVERED box keeps its status.
         """
         box = self.db.get_box(box_id)
         if not box:
@@ -41,12 +43,12 @@ class BoxStatusManager:
             return False
 
         # Atomic, capacity-guarded increment: concurrent callers cannot overfill.
-        if not self.db.increment_box_quantity(box_id, quantity_added, box.max_capacity):
+        new_quantity = self.db.add_to_box_quantity(box_id, quantity_added, box.max_capacity)
+        if new_quantity is None:
             return False
 
-        # Status follow-up: mark FULL once at/over capacity (unless already ORDERED).
-        if box.status != BoxStatus.ORDERED.value and box.current_quantity + quantity_added >= box.max_capacity:
-            self.db.update_box(box_id, {"status": BoxStatus.FULL.value})
+        if new_quantity >= box.max_capacity:
+            self.db.mark_box_full_if_at_capacity(box_id)
 
         return True
 
@@ -54,8 +56,10 @@ class BoxStatusManager:
         """Atomically subtract quantity from a box after an order is cancelled.
 
         Uses the same atomic increment (with a negative delta) so a concurrent
-        placement and cancellation cannot clobber each other's quantity. The OPEN
-        status transition is a best-effort follow-up based on the box's own capacity.
+        placement and cancellation cannot clobber each other's quantity. A FULL box
+        reopens when the quantity the decrement returned is below capacity, written only
+        while it is still full and below capacity (whatever the status read before the
+        decrement said); ORDERED and DELIVERED boxes stay.
         """
         box = self.db.get_box(box_id)
         if not box:
@@ -63,26 +67,27 @@ class BoxStatusManager:
             return False
 
         # Atomic decrement (negative delta; max guard is a no-op for subtraction).
-        if not self.db.increment_box_quantity(box_id, -quantity_removed, box.max_capacity):
+        new_quantity = self.db.add_to_box_quantity(box_id, -quantity_removed, box.max_capacity)
+        if new_quantity is None:
             return False
 
-        # Status follow-up: a FULL box reopens once it drops below capacity; ORDERED and DELIVERED boxes stay
-        if box.status == BoxStatus.FULL.value and box.current_quantity - quantity_removed < box.max_capacity:
-            self.db.update_box(box_id, {"status": BoxStatus.OPEN.value})
+        if new_quantity < box.max_capacity:
+            self.db.reopen_box_if_below_capacity(box_id)
 
         return True
 
     def update_box_status_after_change(self, box_id: str) -> None:
         """The status follow-up of a change whose units already moved in the same write as the order (a cancel or a
         move, see DynamoDBService.cancel_order_with_box and move_order_to_box): a FULL box below capacity reopens, an
-        OPEN box at capacity is FULL. An ORDERED or DELIVERED box keeps its status: it is never reopened."""
+        OPEN box at capacity is FULL, each on condition of the live status and quantity. An ORDERED or DELIVERED box
+        keeps its status: it is never reopened."""
         box = self.db.get_box(box_id)
         if not box:
             return
-        if box.status == BoxStatus.FULL.value and box.current_quantity < box.max_capacity:
-            self.db.update_box(box_id, {"status": BoxStatus.OPEN.value})
-        elif box.status == BoxStatus.OPEN.value and box.current_quantity >= box.max_capacity:
-            self.db.update_box(box_id, {"status": BoxStatus.FULL.value})
+        if box.current_quantity < box.max_capacity:
+            self.db.reopen_box_if_below_capacity(box_id)
+        else:
+            self.db.mark_box_full_if_at_capacity(box_id)
 
     def mark_boxes_as_ordered(self, box_ids: list) -> list:
         """Mark multiple boxes as ORDERED, returns list of updated box objects"""
