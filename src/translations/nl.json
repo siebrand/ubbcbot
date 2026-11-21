@@ -449,6 +449,8 @@
   "payment_match_too_many": "❌ {customer_name} heeft te veel open bestellingen om een passende combinatie te zoeken. Markeer ze als betaald met de knop of met /edit_order. Er is niets geregistreerd.",
   "payment_match_changed": "⚠️ De open bestellingen zijn veranderd sinds dit voorstel (of het is al bevestigd). Er is niets geregistreerd; geef het bedrag opnieuw.",
   "payment_match_confirm_btn": "✅ Betaling bevestigen",
+  "payment_partial_received_notification": "<b>✅ Betaling ontvangen</b>\n\nDank je wel! Je betaling van €{amount:.2f} voor {count} bestelling(en) is ontvangen.\n\nNog te betalen: €{open_total:.2f} voor {open_count} bestelling(en).",
+  "payment_customer_not_reached": "⚠️ De betaling is geregistreerd, maar {customer_name} kon er geen bericht over krijgen.",
   "payment_partly_marked": "⚠️ {failed} van de {count} bestellingen van {customer_name} konden niet als betaald worden gemarkeerd; ze wachten nog op betaling. Probeer het opnieuw.",
   "no_customers_ready_overview": "❌ Geen klanten met bestellingen klaar voor leveringsoverzicht",
   "delivery_overview_for": "📋 Leveringsoverzicht voor {customer_name}:",

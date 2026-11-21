@@ -233,8 +233,36 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
                     total_amount=sum((o.amount_due for o in paid), Decimal("0")),
                 ),
             )
+            self._tell_customer_of_payment(chat_id, customer, name, paid)
         self.handle_process_payment(chat_id, [], page)
         return {"status": "paid" if paid else "nothing_paid", "paid": len(paid)}
+
+    def _tell_customer_of_payment(self, chat_id: int, customer, name: str, paid: list) -> None:
+        """From the admin account, in the customer's language: what was received and, when orders remain open, what
+        is still to pay. Not for guests. A failed send does not undo the payment; the admin is told."""
+        if customer.is_guest:
+            return
+        language_of = customer.telegram_user_id
+        amount = sum((o.amount_due for o in paid), Decimal("0"))
+        still_open = self._open_orders_of(customer.customer_id)
+        if still_open:
+            message = self._t(
+                "payment_partial_received_notification",
+                language_of,
+                amount=amount,
+                count=len(paid),
+                open_total=sum((o.amount_due for o in still_open), Decimal("0")),
+                open_count=len(still_open),
+            )
+        else:
+            message = self._t(
+                "payment_received_notification",
+                language_of,
+                total_amount=amount,
+                location=self._escape_html(customer.location),
+            )
+        if not self._send_user_message(customer.telegram_user_id, message).get("success"):
+            self._send_message(chat_id, self._t("payment_customer_not_reached", chat_id, customer_name=name))
 
     def handle_failed_notifications(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /failed_notifications: the labeled orders that have no delivery overview yet.

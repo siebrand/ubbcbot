@@ -193,3 +193,54 @@ class TestTheConfirmation:
 
     def test_an_unknown_customer(self, db, handler):
         assert handler.handle_payment_confirm(ADMIN_ID, "nobody", 100, "abcdef", 1)["status"] == "customer_not_found"
+
+
+class TestTheCustomerIsTold:
+    """PP-3: from the admin account, in the customer's language; guests get nothing"""
+
+    def test_a_partial_payment_tells_what_was_paid_and_what_is_still_open(self, db, handler, jan, three):
+        propose(handler, jan, "20.50")
+        confirm(handler, confirm_button(handler))
+
+        [(user_id, message)] = [c.args[:2] for c in handler._send_user_message.call_args_list]
+        assert user_id == 101
+        assert message == handler._t(
+            "payment_partial_received_notification",
+            101,
+            amount=Decimal("20.50"),
+            count=2,
+            open_total=Decimal("20.00"),
+            open_count=1,
+        )
+        assert "20.50" in message and "20.00" in message  # English: the customer's language
+
+    def test_the_last_payment_sends_the_existing_message(self, db, handler, jan, three):
+        propose(handler, jan, "40.50")
+        confirm(handler, confirm_button(handler))
+
+        [message] = [c.args[1] for c in handler._send_user_message.call_args_list]
+        assert message == handler._t(
+            "payment_received_notification", 101, total_amount=Decimal("40.50"), location=jan.location
+        )
+
+    def test_a_guest_gets_nothing(self, db, handler):
+        guest = db.create_customer(
+            Customer(telegram_user_id=-1, first_name="Gast", is_guest=True, authorization_status="approved")
+        )
+        open_order(db, guest, 1, "5.00")
+        open_order(db, guest, 2, "6.00")
+        propose(handler, guest, "5")
+        confirm(handler, confirm_button(handler))
+
+        handler._send_user_message.assert_not_called()
+
+    def test_a_failed_send_is_reported_and_the_orders_stay_paid(self, db, handler, jan, three):
+        handler._send_user_message.return_value = {"success": False, "error": "PeerIdInvalid"}
+        propose(handler, jan, "8.50")
+
+        result = confirm(handler, confirm_button(handler))
+
+        assert result["status"] == "paid"
+        assert db.get_order(three[1].order_id).status == "completed"
+        expected = handler._t("payment_customer_not_reached", ADMIN_ID, customer_name="Jan Jansen")
+        assert any(expected in t for _, t, _ in handler.sent)

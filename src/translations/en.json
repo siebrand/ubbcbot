@@ -449,6 +449,8 @@
   "payment_match_too_many": "❌ {customer_name} has too many open orders to search for a matching set. Mark them as paid with the button or /edit_order. Nothing was registered.",
   "payment_match_changed": "⚠️ The open orders have changed since this proposal (or it was already confirmed). Nothing was registered; enter the amount again.",
   "payment_match_confirm_btn": "✅ Confirm payment",
+  "payment_partial_received_notification": "<b>✅ Payment Received</b>\n\nThank you! Your payment of €{amount:.2f} for {count} order(s) has been received.\n\nStill to pay: €{open_total:.2f} for {open_count} order(s).",
+  "payment_customer_not_reached": "⚠️ The payment is registered, but {customer_name} could not be sent a message about it.",
   "payment_partly_marked": "⚠️ {failed} of the {count} orders of {customer_name} could not be marked as paid; they are still awaiting payment. Try again.",
   "no_customers_ready_overview": "❌ No customers with orders ready for delivery overview",
   "delivery_overview_for": "📋 Delivery Overview for {customer_name}:",
