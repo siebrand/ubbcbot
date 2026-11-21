@@ -155,7 +155,8 @@ class UserCommands(BaseHandler):
             return {"status": "invalid_args"}
 
         identifier = " ".join(args)
-        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "edit_user_select")
+        # With several matches the list's buttons reject the customer picked (reject_user_<id>)
+        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "reject_user")
 
         if error:
             return error
