@@ -771,6 +771,11 @@
   "report_sales_title_day": "📈 <b>Verkopen per dag</b>",
   "report_sales_title_week": "📈 <b>Verkopen per week</b>",
   "report_sales_title_month": "📈 <b>Verkopen per maand</b>",
+  "report_sales_title_weekday": "📈 <b>Verkopen per weekdag</b>",
+  "report_weekday_names": "maandag,dinsdag,woensdag,donderdag,vrijdag,zaterdag,zondag",
+  "report_weekday_average": "gem.",
+  "report_sales_weekday_peak": "Beste weekdag: {day} (gemiddeld €{average:.2f})",
+  "report_sales_weekday_btn": "📆 Bestellingen per weekdag",
   "report_customer_title": "👤 <b>Klantrapport: {name}</b>",
   "report_period": "📅 {start} – {end}",
   "report_based_on_orders": "Geplaatste bestellingen (bestelde waarde)",
@@ -793,7 +798,7 @@
   "report_failed": "❌ Kon de gegevens voor het rapport niet lezen. Probeer het later opnieuw.",
   "report_month_names": "jan,feb,mrt,apr,mei,jun,jul,aug,sep,okt,nov,dec",
   "usage_report_top_customers": "Gebruik: /report_top_customers [periode] [anoniem]\n\nPeriode: JJJJ (dat jaar), JJJJ-MM-DD (vanaf die datum tot nu) of JJJJ-MM-DD JJJJ-MM-DD (van–tot en met). Standaard: dit jaar. Met anoniem: verzonnen namen in plaats van de echte.",
-  "usage_report_sales_by_period": "Gebruik: /report_sales_by_period [periode] [dag|week|maand] [betaald]\n\nPeriode: JJJJ (dat jaar), JJJJ-MM-DD (vanaf die datum tot nu) of JJJJ-MM-DD JJJJ-MM-DD (van–tot en met). Standaard: dit jaar. Standaard per maand. Geplaatste bestellingen, of met betaald: ontvangen betalingen.",
+  "usage_report_sales_by_period": "Gebruik: /report_sales_by_period [periode] [dag|week|maand|weekday] [betaald]\n\nPeriode: JJJJ (dat jaar), JJJJ-MM-DD (vanaf die datum tot nu) of JJJJ-MM-DD JJJJ-MM-DD (van–tot en met). Standaard: dit jaar. Standaard per maand; met weekday per dag van de week, met het gemiddelde per keer dat die dag in de periode voorkomt. Geplaatste bestellingen, of met betaald: ontvangen betalingen.",
   "usage_report_customer": "Gebruik: /report_customer <naam_gebruikersnaam_of_klant_id> [periode]\n\nPeriode: JJJJ (dat jaar), JJJJ-MM-DD (vanaf die datum tot nu) of JJJJ-MM-DD JJJJ-MM-DD (van–tot en met). Standaard: dit jaar.",
   "admin_reports": "📊 Rapporten",
   "admin_reports_menu": "📊 Rapporten\n\nAankooprapporten over dit jaar. Voor een andere periode gebruik je de commando's (zie /help reports).",
@@ -803,5 +808,5 @@
   "report_paid_month_btn": "💶 Betalingen per maand",
   "report_customer_btn": "👤 Klantrapport",
   "enter_customer_for_report": "👤 Welke klant? Stuur een naam, gebruikersnaam of klant-ID, eventueel gevolgd door een periode (JJJJ, JJJJ-MM-DD of twee datums).",
-  "help_reports": "📊 Rapporten:\n\n/report_top_customers [periode] [anoniem] - Topklanten op betaald bedrag (met anoniem: verzonnen namen)\n/report_sales_by_period [periode] [dag|week|maand] [betaald] - Bestellingen (met betaald: betalingen) per dag, week of maand\n/report_customer <klant> [periode] - Betaald per maand en openstaand bedrag van één klant\n\nPeriode: JJJJ (dat jaar), JJJJ-MM-DD (vanaf die datum tot nu) of JJJJ-MM-DD JJJJ-MM-DD (van–tot en met). Standaard: dit jaar. Datums zijn in Nederlandse tijd."
+  "help_reports": "📊 Rapporten:\n\n/report_top_customers [periode] [anoniem] - Topklanten op betaald bedrag (met anoniem: verzonnen namen)\n/report_sales_by_period [periode] [dag|week|maand|weekday] [betaald] - Bestellingen (met betaald: betalingen) per dag, week, maand of dag van de week\n/report_customer <klant> [periode] - Betaald per maand en openstaand bedrag van één klant\n\nPeriode: JJJJ (dat jaar), JJJJ-MM-DD (vanaf die datum tot nu) of JJJJ-MM-DD JJJJ-MM-DD (van–tot en met). Standaard: dit jaar. Datums zijn in Nederlandse tijd."
 }

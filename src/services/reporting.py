@@ -18,8 +18,15 @@ YEAR_PATTERN = re.compile(r"^\d{4}$")
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 PERIOD_CODE_PATTERN = re.compile(r"^(\d{8})-(\d{8})$")
 
-DAY, WEEK, MONTH = "day", "week", "month"
-GRANULARITY_WORDS = {"day": DAY, "dag": DAY, "week": WEEK, "month": MONTH, "maand": MONTH}
+DAY, WEEK, MONTH, WEEKDAY = "day", "week", "month", "weekday"
+GRANULARITY_WORDS = {
+    "day": DAY,
+    "dag": DAY,
+    "week": WEEK,
+    "month": MONTH,
+    "maand": MONTH,
+    "weekday": WEEKDAY,
+}
 PAID_WORDS = {"paid", "betaald"}
 ANON_WORDS = {"anon", "anoniem"}
 
@@ -238,6 +245,23 @@ def aggregate_by_bucket(events: Iterable, granularity: str) -> dict[date, Bucket
         key = bucket_start(local_moment(event.changed_at).date(), granularity)
         buckets.setdefault(key, Bucket()).add(event.amount)
     return buckets
+
+
+def aggregate_by_weekday(events: Iterable) -> dict[int, Bucket]:
+    """Count and amount of the events per day of the week in local time (0 = Monday, 6 = Sunday)"""
+    weekdays: dict[int, Bucket] = {}
+    for event in events:
+        weekdays.setdefault(local_moment(event.changed_at).weekday(), Bucket()).add(event.amount)
+    return weekdays
+
+
+def weekday_occurrences(period: Period) -> list[int]:
+    """How often each day of the week (0 = Monday) occurs from the period's first through its last day"""
+    full_weeks, rest = divmod((period.last_day - period.first_day).days + 1, 7)
+    occurrences = [full_weeks] * 7
+    for offset in range(rest):
+        occurrences[(period.first_day.weekday() + offset) % 7] += 1
+    return occurrences
 
 
 def without_excluded(events: Iterable) -> list:

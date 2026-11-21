@@ -234,7 +234,7 @@ has every admin command.
 - `/delete_completed_orders` - Delete all completed orders from database
 - `/audit_orders` - Audit orders - add update_date to orders missing it
 - `/report_top_customers [period] [anon]` - Top 10 customers by amount paid in the period; with `anon` made-up names instead of the real ones (see "Purchase Reports")
-- `/report_sales_by_period [period] [day|week|month] [paid]` - Number and value of the orders placed per day, week or month (default: month); with `paid` the payments received instead
+- `/report_sales_by_period [period] [day|week|month|weekday] [paid]` - Number and value of the orders placed per day, week, month or day of the week (default: month); with `paid` the payments received instead
 - `/report_customer <username|customer_id> [period]` - What one customer paid per month in the period, and the amount of their orders that are not paid yet
 - `/cancel` - Cancel pending operation (e.g., text input prompts)
 
@@ -311,7 +311,10 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
     deleted ones included, gets a made-up beer name from `ANON_NAMES` (`services/reporting.py`), drawn at random each
     time and never twice in one report.
   - `/report_sales_by_period` counts `ORDER_CREATED` events (or `PAYMENT_RECEIVED` with `paid`) and sums their amount
-    per day, ISO week or month, with a bar per period and the best period.
+    per day, ISO week or month, with a bar per period and the best period. With `weekday` it shows seven rows, Monday
+    to Sunday: the count, the amount and the average per occurrence of that weekday in the period (a period with five
+    Mondays and four Sundays divides Monday by 5 and Sunday by 4); the bar follows the average, and the footer names
+    the best weekday by average.
   - `/report_customer` shows a customer's payments per month, and the open order amount: the sum of `total_price` of
     their orders in the orders table that are not `completed` or `cancelled`. That amount is the current state, not
     limited to the period; the history table cannot show it, because cancellations are not recorded there.

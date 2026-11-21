@@ -568,6 +568,9 @@ class CallbackHandler:
             "report_sales_week": lambda chat, user: self.handlers["report"].handle_report_sales_by_period(
                 chat, ["week"]
             ),
+            "report_sales_weekday": lambda chat, user: self.handlers["report"].handle_report_sales_by_period(
+                chat, ["weekday"]
+            ),
             "report_paid_month": lambda chat, user: self.handlers["report"].handle_report_sales_by_period(
                 chat, ["month", "paid"]
             ),

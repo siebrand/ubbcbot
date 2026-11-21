@@ -771,6 +771,11 @@
   "report_sales_title_day": "📈 <b>Sales per day</b>",
   "report_sales_title_week": "📈 <b>Sales per week</b>",
   "report_sales_title_month": "📈 <b>Sales per month</b>",
+  "report_sales_title_weekday": "📈 <b>Sales per weekday</b>",
+  "report_weekday_names": "Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday",
+  "report_weekday_average": "avg",
+  "report_sales_weekday_peak": "Best weekday: {day} (average €{average:.2f})",
+  "report_sales_weekday_btn": "📆 Orders per weekday",
   "report_customer_title": "👤 <b>Customer report: {name}</b>",
   "report_period": "📅 {start} – {end}",
   "report_based_on_orders": "Orders placed (ordered value)",
@@ -793,7 +798,7 @@
   "report_failed": "❌ Could not read the report data. Please try again later.",
   "report_month_names": "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec",
   "usage_report_top_customers": "Usage: /report_top_customers [period] [anon]\n\nPeriod: YYYY (that year), YYYY-MM-DD (from that date until now) or YYYY-MM-DD YYYY-MM-DD (from–to, inclusive). Default: this year. With anon: made-up names instead of the real ones.",
-  "usage_report_sales_by_period": "Usage: /report_sales_by_period [period] [day|week|month] [paid]\n\nPeriod: YYYY (that year), YYYY-MM-DD (from that date until now) or YYYY-MM-DD YYYY-MM-DD (from–to, inclusive). Default: this year. Per month by default. Orders placed, or with paid: payments received.",
+  "usage_report_sales_by_period": "Usage: /report_sales_by_period [period] [day|week|month|weekday] [paid]\n\nPeriod: YYYY (that year), YYYY-MM-DD (from that date until now) or YYYY-MM-DD YYYY-MM-DD (from–to, inclusive). Default: this year. Per month by default; with weekday per day of the week, with the average per occurrence of that day in the period. Orders placed, or with paid: payments received.",
   "usage_report_customer": "Usage: /report_customer <name_username_or_customer_id> [period]\n\nPeriod: YYYY (that year), YYYY-MM-DD (from that date until now) or YYYY-MM-DD YYYY-MM-DD (from–to, inclusive). Default: this year.",
   "admin_reports": "📊 Reports",
   "admin_reports_menu": "📊 Reports\n\nPurchase reports for this year. For another period, use the commands (see /help reports).",
@@ -803,5 +808,5 @@
   "report_paid_month_btn": "💶 Payments per month",
   "report_customer_btn": "👤 Customer report",
   "enter_customer_for_report": "👤 Which customer? Send a name, username or customer ID, optionally followed by a period (YYYY, YYYY-MM-DD or two dates).",
-  "help_reports": "📊 Reports:\n\n/report_top_customers [period] [anon] - Top customers by amount paid (with anon: made-up names)\n/report_sales_by_period [period] [day|week|month] [paid] - Orders (with paid: payments) per day, week or month\n/report_customer <customer> [period] - Paid per month and open order amount of one customer\n\nPeriod: YYYY (that year), YYYY-MM-DD (from that date until now) or YYYY-MM-DD YYYY-MM-DD (from–to, inclusive). Default: this year. Dates are in Dutch time."
+  "help_reports": "📊 Reports:\n\n/report_top_customers [period] [anon] - Top customers by amount paid (with anon: made-up names)\n/report_sales_by_period [period] [day|week|month|weekday] [paid] - Orders (with paid: payments) per day, week, month or day of the week\n/report_customer <customer> [period] - Paid per month and open order amount of one customer\n\nPeriod: YYYY (that year), YYYY-MM-DD (from that date until now) or YYYY-MM-DD YYYY-MM-DD (from–to, inclusive). Default: this year. Dates are in Dutch time."
 }

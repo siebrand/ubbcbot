@@ -315,6 +315,74 @@ class TestSalesByPeriod:
         assert "Totaal" in messages[-1]
 
 
+class TestSalesPerWeekday:
+    """Seven rows, Monday to Sunday: count, total and the average per occurrence of that weekday in the period"""
+
+    def orders(self, env):
+        """March 2026 starts on a Sunday: five Sundays, Mondays and Tuesdays, four of every other weekday"""
+        env.db.get_events_by_type.return_value = [
+            payment("c1", "20", datetime(2026, 3, 2, 12, tzinfo=UTC), "ORDER_CREATED"),  # Monday
+            payment("c2", "5", datetime(2026, 3, 9, 12, tzinfo=UTC), "ORDER_CREATED"),  # Monday
+            payment("c1", "8", datetime(2026, 3, 5, 12, tzinfo=UTC), "ORDER_CREATED"),  # Thursday
+            payment("c1", "10", datetime(2026, 3, 1, 12, tzinfo=UTC), "ORDER_CREATED"),  # Sunday
+        ]
+
+    def test_seven_rows_with_totals_and_averages(self, env):
+        self.orders(env)
+
+        assert env.handler.handle_report_sales_by_period(ADMIN_ID, ["weekday", "2026-03-01", "2026-03-31"]) == {
+            "status": "success"
+        }
+
+        report = text(env)
+        days = re.findall(r"(?:^|<pre>)(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag) ", report, re.M)
+        assert days == ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
+        assert re.search(r"maandag\s+2× €\s+25\.00  gem\. €\s+5\.00 █{10}$", report, re.M)  # 25 / 5 Mondays
+        assert re.search(r"donderdag\s+1× €\s+8\.00  gem\. €\s+2\.00 █{4}$", report, re.M)  # 8 / 4 Thursdays
+        assert re.search(r"zondag\s+1× €\s+10\.00  gem\. €\s+2\.00 █{4}</pre>", report)  # 10 / 5 Sundays
+        assert re.search(r"^dinsdag\s+–$", report, re.M)
+        assert "Verkopen per weekdag" in report
+        assert "Totaal: <b>4×</b>, <b>€43.00</b>" in report
+        assert "Beste weekdag: maandag (gemiddeld €5.00)" in report
+
+    def test_the_words_in_any_order_with_paid(self, env):
+        self.orders(env)
+
+        env.handler.handle_report_sales_by_period(ADMIN_ID, ["paid", "2026-03-01", "weekday", "2026-03-31"])
+
+        event_type, start, end = env.db.get_events_by_type.call_args.args
+        assert event_type == "PAYMENT_RECEIVED"
+        assert (start.day, end.day) == (1, 31)
+        assert "maandag" in text(env)
+
+    def test_only_the_english_word(self, env):
+        """The granularity word is weekday only, whatever the admin's language (owner, 2026-11-21)"""
+        self.orders(env)
+
+        assert env.handler.handle_report_sales_by_period(ADMIN_ID, ["weekdag"]) == {"status": "invalid_args"}
+
+    def test_a_year(self, env):
+        env.db.get_events_by_type.return_value = [payment("c1", "53", datetime(2025, 1, 1, 12, tzinfo=UTC))]
+
+        env.handler.handle_report_sales_by_period(ADMIN_ID, ["2025", "weekday"])
+
+        assert re.search(r"woensdag\s+1× €\s+53\.00  gem\. €\s+1\.00", text(env))  # 2025 has 53 Wednesdays
+
+    def test_in_english(self, env):
+        env.db.get_customer_by_telegram_id.return_value = Customer(telegram_user_id=ADMIN_ID, language="en")
+        self.orders(env)
+
+        env.handler.handle_report_sales_by_period(ADMIN_ID, ["weekday", "2026-03-01", "2026-03-31"])
+
+        report = text(env)
+        assert re.search(r"Monday\s+2× €\s+25\.00  avg €\s+5\.00", report)
+        assert "Best weekday: Monday (average €5.00)" in report
+
+    def test_no_sales(self, env):
+        assert env.handler.handle_report_sales_by_period(ADMIN_ID, ["weekday"]) == {"status": "no_data"}
+        assert "Geen verkopen" in text(env)
+
+
 class TestCustomerReport:
     def _jan(self, env):
         jan = customer("11111111-aaaa", "Jan", "Jansen", "jantje")

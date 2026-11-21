@@ -159,6 +159,7 @@ class AdminCommandsHandler(BaseHandler):
                     {"text": self._t("report_sales_month_btn", user_id), "callback_data": "cmd:report_sales_month"},
                     {"text": self._t("report_sales_week_btn", user_id), "callback_data": "cmd:report_sales_week"},
                 ],
+                [{"text": self._t("report_sales_weekday_btn", user_id), "callback_data": "cmd:report_sales_weekday"}],
                 [{"text": self._t("report_paid_month_btn", user_id), "callback_data": "cmd:report_paid_month"}],
                 [{"text": self._t("report_customer_btn", user_id), "callback_data": "cmd:report_customer"}],
                 [{"text": self._t("back_to_admin", user_id), "callback_data": "admin:main"}],

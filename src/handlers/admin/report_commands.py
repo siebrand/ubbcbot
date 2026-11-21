@@ -14,7 +14,7 @@ from typing import Any
 
 from handlers.base_handler import BaseHandler
 from services import reporting
-from services.reporting import MONTH, WEEK, Bucket, Period, PeriodError
+from services.reporting import MONTH, WEEK, WEEKDAY, Bucket, Period, PeriodError
 
 logger = logging.getLogger()
 
@@ -76,10 +76,11 @@ class ReportCommands(BaseHandler):
         self._send_report(chat_id, header, rows, footer)
         return {"status": "success"}
 
-    # --- /report_sales_by_period [period] [day|week|month] [paid] -----------------------------------
+    # --- /report_sales_by_period [period] [day|week|month|weekday] [paid] ---------------------------
 
     def handle_report_sales_by_period(self, chat_id: int, args: list) -> dict[str, Any]:
-        """Number of orders and their value per day, week or month. With "paid": payments received instead."""
+        """Number of orders and their value per day, week, month or day of the week. With "paid": payments
+        received instead."""
         granularity = MONTH
         paid = False
         period_args = []
@@ -111,29 +112,60 @@ class ReportCommands(BaseHandler):
             self._send_report(chat_id, header + ["", self._t("report_no_sales", chat_id)])
             return {"status": "no_data"}
 
-        buckets = reporting.aggregate_by_bucket(events, granularity)
-        starts = reporting.bucket_starts(period, granularity)
-        if len(starts) > MAX_FILLED_BUCKETS:
-            starts = sorted(buckets)
-            header.append(self._t("report_empty_periods_hidden", chat_id))
-        rows = self._bucket_rows(chat_id, starts, buckets, granularity)
-
-        overall = reporting.total(events)
-        peak_start = max(buckets, key=lambda start: (buckets[start].amount, buckets[start].count))
-        peak = buckets[peak_start]
-        footer = [
-            self._t("report_sales_total", chat_id, count=overall.count, amount=overall.amount),
-            self._t(
+        if granularity == WEEKDAY:
+            rows, peak_line = self._weekday_rows(chat_id, period, events)
+        else:
+            buckets = reporting.aggregate_by_bucket(events, granularity)
+            starts = reporting.bucket_starts(period, granularity)
+            if len(starts) > MAX_FILLED_BUCKETS:
+                starts = sorted(buckets)
+                header.append(self._t("report_empty_periods_hidden", chat_id))
+            rows = self._bucket_rows(chat_id, starts, buckets, granularity)
+            peak_start = max(buckets, key=lambda start: (buckets[start].amount, buckets[start].count))
+            peak = buckets[peak_start]
+            peak_line = self._t(
                 "report_sales_peak",
                 chat_id,
                 label=self._bucket_label(chat_id, peak_start, granularity),
                 count=peak.count,
                 amount=peak.amount,
-            ),
-        ]
+            )
+
+        overall = reporting.total(events)
+        footer = [self._t("report_sales_total", chat_id, count=overall.count, amount=overall.amount), peak_line]
 
         self._send_report(chat_id, header, rows, footer)
         return {"status": "success"}
+
+    def _weekday_rows(self, chat_id: int, period: Period, events: list) -> tuple[list[str], str]:
+        """Seven rows, Monday to Sunday: count, amount and the average per occurrence of that weekday in the period
+        (a dash for a day without sales), with a bar that follows the average; and the footer line of the best day"""
+        weekdays = reporting.aggregate_by_weekday(events)
+        occurrences = reporting.weekday_occurrences(period)
+        averages = {day: bucket.amount / max(occurrences[day], 1) for day, bucket in weekdays.items()}
+
+        names = self._t("report_weekday_names", chat_id).split(",")
+        name_width = max(len(name) for name in names)
+        count_width = max(len(str(bucket.count)) for bucket in weekdays.values())
+        amount_width = max(len(f"{bucket.amount:.2f}") for bucket in weekdays.values())
+        average_width = max(len(f"{average:.2f}") for average in averages.values())
+        largest = max(averages.values())
+        average_word = self._t("report_weekday_average", chat_id)
+        rows = []
+        for day, name in enumerate(names):
+            label = name.ljust(name_width)
+            bucket = weekdays.get(day)
+            if bucket is None:
+                rows.append(f"{label} {'–':>{count_width + 1}}")
+                continue
+            rows.append(
+                f"{label} {bucket.count:>{count_width}}× € {bucket.amount:>{amount_width}.2f}  "
+                f"{average_word} € {averages[day]:>{average_width}.2f} {reporting.bar(averages[day], largest)}".rstrip()
+            )
+
+        best = max(averages, key=lambda day: (averages[day], weekdays[day].count))
+        peak_line = self._t("report_sales_weekday_peak", chat_id, day=names[best], average=averages[best])
+        return rows, peak_line
 
     # --- /report_customer <customer> [period] -----------------------------------------------------------
 

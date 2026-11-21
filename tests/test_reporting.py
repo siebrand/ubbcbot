@@ -203,3 +203,67 @@ def test_period_days():
 
     assert (period.first_day, period.last_day) == (date(2026, 1, 1), date(2026, 1, 31))
     assert period.code == "20260101-20260131"
+
+
+class TestWeekdays:
+    @staticmethod
+    def period(first, last):
+        return Period(datetime.combine(first, time.min, tzinfo=CET), datetime.combine(last, time.max, tzinfo=CET))
+
+    def test_a_week_has_each_weekday_once(self):
+        assert reporting.weekday_occurrences(self.period(date(2026, 11, 16), date(2026, 11, 22))) == [1] * 7
+
+    def test_a_month(self):
+        # November 2026 starts on a Sunday and ends on a Monday
+        assert reporting.weekday_occurrences(self.period(date(2026, 11, 1), date(2026, 11, 30))) == [
+            5,
+            4,
+            4,
+            4,
+            4,
+            4,
+            5,
+        ]
+
+    def test_a_year(self):
+        # 2025 starts on a Wednesday: 53 Wednesdays
+        assert reporting.weekday_occurrences(self.period(date(2025, 1, 1), date(2025, 12, 31))) == [
+            52,
+            52,
+            53,
+            52,
+            52,
+            52,
+            52,
+        ]
+
+    def test_a_period_from_mid_week_to_mid_week(self):
+        # Wednesday 18 through Thursday 26 November: two Wednesdays and Thursdays, one of the others
+        assert reporting.weekday_occurrences(self.period(date(2026, 11, 18), date(2026, 11, 26))) == [
+            1,
+            1,
+            2,
+            2,
+            1,
+            1,
+            1,
+        ]
+
+    def test_events_per_weekday_in_dutch_time(self):
+        events = [
+            event(amount="1", at=datetime(2026, 11, 16, 22, 59, tzinfo=UTC)),  # 23:59 Monday in Amsterdam
+            event(amount="2", at=datetime(2026, 11, 16, 23, 1, tzinfo=UTC)),  # 00:01 Tuesday in Amsterdam
+            event(amount="4", at=datetime(2026, 11, 22, 12, tzinfo=UTC)),  # Sunday
+        ]
+
+        per_day = reporting.aggregate_by_weekday(events)
+
+        assert {day: (b.count, b.amount) for day, b in per_day.items()} == {
+            0: (1, Decimal("1")),
+            1: (1, Decimal("2")),
+            6: (1, Decimal("4")),
+        }
+
+    def test_the_word(self):
+        assert reporting.GRANULARITY_WORDS["weekday"] == reporting.WEEKDAY
+        assert "weekdag" not in reporting.GRANULARITY_WORDS

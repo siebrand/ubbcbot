@@ -252,6 +252,7 @@ CMD = [
     ("cmd:report_top_customers", C("report", call.handle_report_top_customers(CHAT, []))),
     ("cmd:report_sales_month", C("report", call.handle_report_sales_by_period(CHAT, ["month"]))),
     ("cmd:report_sales_week", C("report", call.handle_report_sales_by_period(CHAT, ["week"]))),
+    ("cmd:report_sales_weekday", C("report", call.handle_report_sales_by_period(CHAT, ["weekday"]))),
     ("cmd:report_paid_month", C("report", call.handle_report_sales_by_period(CHAT, ["month", "paid"]))),
     ("cmd:report_customer", Prompt("report_customer_input")),
     (
