@@ -8,6 +8,12 @@ class ChangelogCommands(BaseHandler):
         super().__init__(*args, **kwargs)
         self.changelog_entries = [
             {
+                "title": "Up to 2026-11-21",
+                "content": """<b>Admin-Facing Updates</b>
+• <b>New /instant_order Command</b> - Sell beer you already have in one step: <code>/instant_order &lt;supplier&gt; &lt;name&gt; &lt;price&gt; &lt;customer&gt; [box_size]</code> creates the offer, a delivered box and the customer's order, ready for labeling. With a box size of 2 to 6 the offer is announced in the group and others can order the rest. Without arguments, or with the button in the Offers menu, the bot asks for each part in turn
+• <b>Cancel Before Labeling</b> - An order that is ready for labeling can now be cancelled; its unit is free again""",
+            },
+            {
                 "title": "Up to 2026-11-19",
                 "content": """<b>User-Facing Updates</b>
 • <b>Your Own Language</b> - <code>/start</code>, <code>/help</code>, <code>/list_offers</code>, <code>/view_offer</code> and the order buttons are now in the language you chose, as are the messages about an order that was cut or cancelled
