@@ -861,6 +861,7 @@ class TestEditReplyTypes:
         "edit_order_price_input": ("admin_order", "handle_edit_order_price_answer", (E, X)),
         "incomplete_delivery": ("wholesale_delivery", "handle_incomplete_delivery_reply", (ADMIN_ID, X, E)),
         "payment_link_input": ("delivery_overview", "handle_payment_link_input", (X, E)),
+        "payment_amount_input": ("admin_order", "handle_payment_amount_answer", (E, X)),
         "report_customer_input": ("report", "handle_report_customer", (["two", "words"],)),
     }
     TEXT = "two words"

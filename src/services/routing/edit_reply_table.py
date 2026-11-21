@@ -109,5 +109,6 @@ ANSWER_ROUTES: dict[str, AnswerRoute] = {
     # Deliveries, payments and reports
     "incomplete_delivery": AnswerRoute("wholesale_delivery", "handle_incomplete_delivery_reply", incomplete_delivery),
     "payment_link_input": AnswerRoute("delivery_overview", "handle_payment_link_input", text_then_entity),
+    "payment_amount_input": AnswerRoute("admin_order", "handle_payment_amount_answer", entity_then_text),
     "report_customer_input": AnswerRoute("report", "handle_report_customer", words),
 }

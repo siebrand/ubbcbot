@@ -97,6 +97,14 @@ class AdminOrderCommands(BaseHandler):
     def handle_send_delivery_overviews(self, chat_id: int, args: list) -> dict[str, Any]:
         return self.status_mgmt.handle_send_delivery_overviews(chat_id, args)
 
+    def handle_payment_amount_answer(self, chat_id: int, entity_id: str, text: str) -> dict[str, Any]:
+        return self.status_mgmt.handle_payment_amount_answer(chat_id, entity_id, text)
+
+    def handle_payment_confirm(
+        self, chat_id: int, customer_id: str, amount_cents: int, token: str, page: int
+    ) -> dict[str, Any]:
+        return self.status_mgmt.handle_payment_confirm(chat_id, customer_id, amount_cents, token, page)
+
     def handle_process_payment(self, chat_id: int, args: list, page: int = 1) -> dict[str, Any]:
         return self.status_mgmt.handle_process_payment(chat_id, args, page)
 

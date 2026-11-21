@@ -1,11 +1,13 @@
 import json
 import os
+from decimal import Decimal
 from typing import Any
 
 import boto3
 
 from handlers.payment_message import PaymentMessageMixin
-from models.entities import OrderStatus
+from models.entities import EditContext, OrderStatus
+from services.payment_matching import cents, find_payment_match, parse_amount, selection_token
 from utils.pagination import PaginationUtils
 
 from .base_order_handler import BaseOrderHandler
@@ -99,6 +101,140 @@ class OrderStatusManagement(PaymentMessageMixin, BaseOrderHandler):
         keyboard = {"inline_keyboard": keyboard_rows}
         self._send_message(chat_id, message, reply_markup=keyboard)
         return {"status": "customers_shown"}
+
+    # ------------------------------------------------------------ partial payments (partial-payments-design.md)
+    def _open_orders_of(self, customer_id: str) -> list:
+        return [
+            o for o in self.db.get_orders_by_customer(customer_id) if o.status == OrderStatus.AWAITING_PAYMENT.value
+        ]
+
+    def _customer_name(self, customer, chat_id: int) -> str:
+        return " ".join(part for part in (customer.first_name, customer.last_name) if part) or self._t(
+            "unknown", chat_id
+        )
+
+    def handle_payment_amount_answer(self, chat_id: int, entity_id: str, text: str) -> dict[str, Any]:
+        """The amount the admin received from a customer (entity "<customer_id>_<page>"): propose the oldest open
+        orders whose amounts due add up to it. An invalid amount is asked again."""
+        customer_id, _, page_text = entity_id.rpartition("_")
+        page = int(page_text) if page_text.isdigit() else 1
+        amount = parse_amount(text)
+        if amount is None:
+            self.db.create_edit_context(
+                EditContext(chat_id=chat_id, edit_type="payment_amount_input", entity_id=entity_id)
+            )
+            self._send_message(chat_id, self._t("payment_amount_invalid", chat_id))
+            return {"status": "invalid_amount"}
+
+        customer = self.db.get_customer(customer_id)
+        if not customer:
+            self._send_message(chat_id, self._t("customer_not_found", chat_id))
+            return {"status": "customer_not_found"}
+        open_orders = self._open_orders_of(customer_id)
+        if not open_orders:
+            self._send_message(
+                chat_id, self._t("no_orders_awaiting_payment", chat_id, customer_name=customer.first_name)
+            )
+            return {"status": "no_orders"}
+
+        name = self._customer_name(customer, chat_id)
+        result = find_payment_match(open_orders, amount)
+        if result.too_many:
+            self._send_message(chat_id, self._t("payment_match_too_many", chat_id, customer_name=name))
+            self.handle_process_payment(chat_id, [], page)
+            return {"status": "too_many"}
+        if result.match is None:
+            closest = result.closest_total if result.closest_total is not None else Decimal("0")
+            self._send_message(
+                chat_id, self._t("payment_match_none", chat_id, customer_name=name, amount=amount, closest=closest)
+            )
+            self.handle_process_payment(chat_id, [], page)
+            return {"status": "no_match"}
+
+        self._send_payment_proposal(chat_id, customer, name, amount, result.match, open_orders, page)
+        return {"status": "proposal_shown"}
+
+    def _send_payment_proposal(self, chat_id: int, customer, name, amount, match, open_orders, page: int) -> None:
+        """What would be paid, what is settled along (nothing due) and what stays open; confirm or cancel"""
+        settled = {o.order_id for o in match.selected + match.settle_with}
+        staying = [o for o in open_orders if o.order_id not in settled]
+        message = self._t(
+            "payment_match_proposal",
+            chat_id,
+            customer_name=name,
+            amount=amount,
+            orders="\n".join(self._payment_line(o, chat_id) for o in match.selected + match.settle_with),
+            open_total=sum((o.amount_due for o in staying), Decimal("0")),
+            open_count=len(staying),
+        )
+        confirm = f"payok_{customer.customer_id}_{cents(amount)}_{selection_token(match.selected)}_{page}"
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": self._t("payment_match_confirm_btn", chat_id), "callback_data": confirm},
+                    {"text": self._t("cancel", chat_id), "callback_data": "cancel_action"},
+                ]
+            ]
+        }
+        self._send_message(chat_id, message, reply_markup=keyboard)
+
+    def _payment_line(self, order, chat_id: int) -> str:
+        from utils.timezone import to_cet_string
+
+        offer = self.db.get_offer(order.offer_id)
+        offer_name = offer.name if offer else self._t("unknown", chat_id)
+        date = to_cet_string(order.update_date or order.created_at, "%Y-%m-%d")
+        return f"• {offer_name} ({date}) €{max(order.amount_due, Decimal('0')):.2f}"
+
+    def handle_payment_confirm(self, chat_id: int, customer_id: str, amount_cents: int, token: str, page: int):
+        """The admin confirmed the proposal. Nothing of it is stored: search again, and pay only when the same
+        orders come out (an order that changed in between, or a second tap, gives another or no selection)."""
+        customer = self.db.get_customer(customer_id)
+        if not customer:
+            self._send_message(chat_id, self._t("customer_not_found", chat_id))
+            return {"status": "customer_not_found"}
+        result = find_payment_match(self._open_orders_of(customer_id), Decimal(amount_cents) / 100)
+        if result.match is None or selection_token(result.match.selected) != token:
+            self._send_message(chat_id, self._t("payment_match_changed", chat_id))
+            self.handle_process_payment(chat_id, [], page)
+            return {"status": "match_changed"}
+
+        to_pay = result.match.selected + result.match.settle_with
+        # Each order only while it still awaits payment; the payment events are written for those that changed
+        paid_ids = set(
+            self.db.batch_update_order_status(
+                [o.order_id for o in to_pay],
+                OrderStatus.COMPLETED.value,
+                self.admin_user_id,
+                from_status=OrderStatus.AWAITING_PAYMENT.value,
+            )
+        )
+        paid = [o for o in to_pay if o.order_id in paid_ids]
+        name = self._customer_name(customer, chat_id)
+        if len(paid) < len(to_pay):
+            self._send_message(
+                chat_id,
+                self._t(
+                    "payment_partly_marked",
+                    chat_id,
+                    customer_name=name,
+                    failed=len(to_pay) - len(paid),
+                    count=len(to_pay),
+                ),
+            )
+        if paid:
+            self._send_message(
+                chat_id,
+                self._t(
+                    "payment_confirmed",
+                    chat_id,
+                    customer_name=name,
+                    updated_count=len(paid),
+                    total_amount=sum((o.amount_due for o in paid), Decimal("0")),
+                ),
+            )
+        self.handle_process_payment(chat_id, [], page)
+        return {"status": "paid" if paid else "nothing_paid", "paid": len(paid)}
 
     def handle_failed_notifications(self, chat_id: int, args: list) -> dict[str, Any]:
         """Handle /failed_notifications: the labeled orders that have no delivery overview yet.
