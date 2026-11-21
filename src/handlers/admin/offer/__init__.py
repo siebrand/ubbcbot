@@ -11,8 +11,8 @@ class OfferCommands(
     OfferManagementHandler,
     OfferEditingHandler,
     BoxManagementHandler,
+    InstantOrderHandler,  # before NotificationHandler, its base
     NotificationHandler,
-    InstantOrderHandler,
 ):
     """Main offer commands handler that combines all offer-related functionality"""
 

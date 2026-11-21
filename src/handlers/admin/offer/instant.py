@@ -6,6 +6,7 @@ straight to ready_for_labeling, as after a partial wholesale delivery.
 
 import json
 import logging
+import os
 from dataclasses import asdict
 from decimal import Decimal
 from typing import Any
@@ -13,14 +14,14 @@ from typing import Any
 from models.entities import Box, BoxStatus, EditContext, Offer, OfferStatus, Order, OrderStatus
 from services.instant_order_input import InstantOrderInput, InstantOrderInputError, parse_instant_order
 
-from .base import OfferBaseHandler
+from .notifications import NotificationHandler
 
 logger = logging.getLogger(__name__)
 
 CUSTOMER_SELECT = "instant_order_customer_select"
 
 
-class InstantOrderHandler(OfferBaseHandler):
+class InstantOrderHandler(NotificationHandler):  # an OfferBaseHandler that can announce offers
     def handle_instant_order(self, chat_id: int, args: list) -> dict[str, Any]:
         """/instant_order <supplier> <offer name> <price> <customer> [box_size]"""
         if not args:
@@ -127,7 +128,17 @@ class InstantOrderHandler(OfferBaseHandler):
             status=self._t(f"status_{order.status}", customer.telegram_user_id),
         )
         self._send_message(chat_id, self._instant_order_confirmation(chat_id, offer, order, customer, pm_result))
+        if offer.wholesale_box_size > 1:
+            self._announce_instant_offer(offer)
         return {"status": "success", "offer_id": offer.offer_id}
+
+    def _announce_instant_offer(self, offer) -> None:
+        """An offer with free units gets one tracked group announcement with the order buttons (synced later, as any
+        announcement). It names no customer, and subscribers get no message."""
+        self.expire_exports()
+        group_id = os.environ.get("DEFAULT_GROUP_ID")
+        if group_id:
+            self._send_rich_offer_message(int(group_id), offer, force_group=True, include_buttons=True)
 
     def _instant_order_confirmation(self, chat_id: int, offer, order, customer, pm_result: dict) -> str:
         name = " ".join(part for part in (customer.first_name, customer.last_name) if part) or self._t(

@@ -143,6 +143,67 @@ class TestCreation:
         assert [chat for chat, _, _ in telegram.sent] == [ADMIN_ID]
 
 
+class TestTheGroupAnnouncement:
+    """IO-6: an instant offer with free units is announced in the group, once, without naming the customer"""
+
+    def test_box_size_4_posts_one_announcement_with_order_buttons(self, db, handler, telegram):
+        add_customer(db, 101, "Jan")
+
+        result = instant(handler, "DeMolen Tripel 3.50 Jan 4")
+
+        offer_id = result["offer_id"]
+        [(text, buttons)] = [(t, b) for chat, t, b in telegram.sent if chat == GROUP_ID]
+        assert "Tripel" in text and "Jan" not in text
+        assert f"order_{offer_id}_1" in buttons
+        assert [row.kind for row in db.get_notification_messages_by_offer(offer_id)] == ["group"]
+
+    def test_a_subscriber_gets_nothing(self, db, handler, telegram):
+        add_customer(db, 101, "Jan")
+        subscriber = add_customer(db, 202, "Abonnee")
+        db.update_customer(subscriber.customer_id, {"subscribed_to_offers": True})
+        UserCache.invalidate_cache()
+
+        instant(handler, "DeMolen Tripel 3.50 Jan 4")
+
+        assert sent_to(telegram, 202) == []
+
+    def test_box_size_1_posts_nothing_in_the_group(self, db, handler, telegram):
+        add_customer(db, 101, "Jan")
+
+        instant(handler, "DeMolen Tripel 3.50 Jan")
+
+        assert sent_to(telegram, GROUP_ID) == []
+
+    def test_without_a_group_nothing_is_posted(self, db, handler, telegram, monkeypatch):
+        monkeypatch.delenv("DEFAULT_GROUP_ID")
+        add_customer(db, 101, "Jan")
+
+        assert instant(handler, "DeMolen Tripel 3.50 Jan 4")["status"] == "success"
+        assert [chat for chat, _, _ in telegram.sent if chat < 0] == []
+
+    def test_the_order_that_fills_the_box_edits_the_announcement(self, db, handler, telegram):
+        from handlers.base_handler import BaseHandler
+        from handlers.customer.order_commands import CustomerOrderCommands
+
+        add_customer(db, 101, "Jan")
+        add_customer(db, 102, "Piet")
+        offer_id = instant(handler, "DeMolen Tripel 3.50 Jan 4")["offer_id"]
+        edits = []
+
+        def edit(self, chat_id, message_id, text, parse_mode=None, reply_markup=None):
+            edits.append((chat_id, reply_markup))
+            return {"success": True}
+
+        with patch.object(BaseHandler, "_edit_message_text", edit):
+            CustomerOrderCommands(db, ADMIN_ID, "prod", "token").handle_create_order(102, 102, [str(offer_id), "3"])
+
+        assert db.get_offer(offer_id).status == "sold_out"
+        [(chat, markup)] = [e for e in edits if e[0] == GROUP_ID]
+        assert not any(
+            b.get("callback_data", "").startswith("order_") for row in markup["inline_keyboard"] for b in row
+        )
+
+
 class TestTheCustomer:
     def test_no_match_creates_nothing(self, db, handler, telegram):
         result = instant(handler, "DeMolen Tripel 3.50 Niemand")
