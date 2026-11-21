@@ -61,6 +61,12 @@ def _price(token: _Token) -> Decimal | None:
     return price if price > 0 else None
 
 
+def parse_price(text: str) -> Decimal | None:
+    """A typed price (the guided /instant_order): positive, at most two decimals, rounded to cents; None otherwise"""
+    price = _price(_Token((text or "").strip(), quoted=False))
+    return price.quantize(Decimal("0.01")) if price is not None else None
+
+
 def parse_instant_order(words: list[str]) -> InstantOrderInput:
     """The arguments as the router split them on spaces; raises InstantOrderInputError"""
     tokens = _tokens(words)

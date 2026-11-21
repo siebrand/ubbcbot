@@ -12,21 +12,31 @@ from decimal import Decimal
 from typing import Any
 
 from models.entities import Box, BoxStatus, EditContext, Offer, OfferStatus, Order, OrderStatus
-from services.instant_order_input import InstantOrderInput, InstantOrderInputError, parse_instant_order
+from services.instant_order_input import (
+    MAX_BOX_SIZE,
+    MIN_BOX_SIZE,
+    InstantOrderInput,
+    InstantOrderInputError,
+    parse_instant_order,
+    parse_price,
+)
 
 from .notifications import NotificationHandler
 
 logger = logging.getLogger(__name__)
 
+# Edit contexts answered by a button, not by text: the kept input while the admin picks a customer or a box size
 CUSTOMER_SELECT = "instant_order_customer_select"
+BOX_SIZE_SELECT = "instant_order_box_size_select"
+# The box size of an input that was entered step by step and has no box size yet
+GUIDED_BOX_SIZE = 0
 
 
 class InstantOrderHandler(NotificationHandler):  # an OfferBaseHandler that can announce offers
     def handle_instant_order(self, chat_id: int, args: list) -> dict[str, Any]:
-        """/instant_order <supplier> <offer name> <price> <customer> [box_size]"""
+        """/instant_order <supplier> <offer name> <price> <customer> [box_size]; without arguments, step by step"""
         if not args:
-            self._send_message(chat_id, self._t("usage_instant_order", chat_id))
-            return {"status": "invalid_args"}
+            return self._ask_instant_order_supplier(chat_id)
         try:
             parsed = parse_instant_order(args)
         except InstantOrderInputError as error:
@@ -88,6 +98,170 @@ class InstantOrderHandler(NotificationHandler):  # an OfferBaseHandler that can 
         if not customer or customer.authorization_status != "approved":
             self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
             return {"status": "user_not_found"}
+        if parsed.box_size == GUIDED_BOX_SIZE:
+            return self._ask_instant_order_box_size(chat_id, parsed, customer)
+        error = self._instant_offer_error(chat_id, parsed)
+        if error:
+            return error
+        return self._create_instant_order(chat_id, parsed, customer)
+
+    # --------------------------------------------------------------- step by step (/instant_order without arguments)
+    # Each step keeps what was entered in the edit context (its entity is the JSON of the input so far), so there is
+    # no other state. /cancel clears the context and so ends the flow.
+
+    def _ask_instant_order_supplier(self, chat_id: int) -> dict[str, Any]:
+        suppliers = sorted((s for s in self.db.list_suppliers() if s.status == "active"), key=lambda s: s.name.lower())
+        if not suppliers:
+            self._send_message(chat_id, self._t("no_suppliers", chat_id))
+            return {"status": "no_suppliers"}
+        buttons = [[{"text": s.name, "callback_data": f"instant_order_supplier_{s.supplier_id}"}] for s in suppliers]
+        buttons.append([{"text": self._t("cancel", chat_id), "callback_data": "cancel_action"}])
+        self._send_message(
+            chat_id, self._t("choose_instant_order_supplier", chat_id), reply_markup={"inline_keyboard": buttons}
+        )
+        return {"status": "awaiting_supplier"}
+
+    def _prompt(self, chat_id: int, edit_type: str, state: dict, prompt_key: str, placeholder_key: str) -> None:
+        self.db.create_edit_context(EditContext(chat_id=chat_id, edit_type=edit_type, entity_id=json.dumps(state)))
+        self._send_message(
+            chat_id,
+            self._t(prompt_key, chat_id),
+            reply_markup={"force_reply": True, "input_field_placeholder": self._t(placeholder_key, chat_id)},
+        )
+
+    @staticmethod
+    def _state(entity_id: str) -> dict | None:
+        try:
+            state = json.loads(entity_id)
+        except TypeError, ValueError:
+            return None
+        return state if isinstance(state, dict) else None
+
+    def _expired(self, chat_id: int) -> dict[str, Any]:
+        self._send_message(chat_id, self._t("instant_order_context_expired", chat_id))
+        return {"status": "context_expired"}
+
+    def handle_instant_order_supplier(self, chat_id: int, supplier_id: str) -> dict[str, Any]:
+        """Step 1 done: the supplier was tapped. Ask for the name."""
+        supplier = self.db.get_supplier(supplier_id)
+        if not supplier or supplier.status != "active":
+            self._send_message(chat_id, self._t("supplier_not_found", chat_id, name=supplier_id))
+            return {"status": "supplier_not_found"}
+        self._prompt(
+            chat_id,
+            "instant_order_name",
+            {"supplier": supplier.name},
+            "enter_instant_order_name",
+            "placeholder_instant_order_name",
+        )
+        return {"status": "awaiting_name"}
+
+    def handle_instant_order_name_answer(self, chat_id: int, entity_id: str, text: str) -> dict[str, Any]:
+        """Step 2: the name. An invalid one is asked again."""
+        state = self._state(entity_id)
+        if state is None:
+            return self._expired(chat_id)
+        name = (text or "").strip()
+        valid, key = self._validate_offer_name(name) if name else (False, "enter_instant_order_name")
+        if not valid:
+            if key != "enter_instant_order_name":
+                self._send_message(chat_id, self._t(key, chat_id))
+            self._prompt(
+                chat_id, "instant_order_name", state, "enter_instant_order_name", "placeholder_instant_order_name"
+            )
+            return {"status": "invalid_name"}
+        self._prompt(
+            chat_id,
+            "instant_order_price",
+            {**state, "offer_name": name},
+            "enter_instant_order_price",
+            "placeholder_instant_order_price",
+        )
+        return {"status": "awaiting_price"}
+
+    def handle_instant_order_price_answer(self, chat_id: int, entity_id: str, text: str) -> dict[str, Any]:
+        """Step 3: the price. An invalid one is asked again."""
+        state = self._state(entity_id)
+        if state is None:
+            return self._expired(chat_id)
+        price = parse_price(text)
+        if price is None:
+            self._send_message(chat_id, self._t("instant_order_price_invalid", chat_id))
+            self._prompt(
+                chat_id, "instant_order_price", state, "enter_instant_order_price", "placeholder_instant_order_price"
+            )
+            return {"status": "invalid_price"}
+        self._prompt(
+            chat_id,
+            "instant_order_customer",
+            {**state, "price": str(price)},
+            "enter_instant_order_customer",
+            "placeholder_instant_order_customer",
+        )
+        return {"status": "awaiting_customer"}
+
+    def handle_instant_order_customer_answer(self, chat_id: int, entity_id: str, text: str) -> dict[str, Any]:
+        """Step 4: the customer, matched as in the one-line form; no match asks again, more than one shows the list"""
+        state = self._state(entity_id)
+        if state is None:
+            return self._expired(chat_id)
+        try:
+            parsed = InstantOrderInput(
+                supplier=state["supplier"],
+                offer_name=state["offer_name"],
+                price=Decimal(state["price"]),
+                customer=(text or "").strip(),
+                box_size=GUIDED_BOX_SIZE,
+            )
+        except TypeError, KeyError, ArithmeticError:
+            return self._expired(chat_id)
+
+        customer, found = self._find_customer_with_disambiguation(
+            parsed.customer, chat_id, "instant_order_customer", status_filter="approved"
+        )
+        if not found:
+            return self._ask_instant_order_box_size(chat_id, parsed, customer)
+        if found.get("status") == "disambiguation_shown":
+            self.db.create_edit_context(
+                EditContext(chat_id=chat_id, edit_type=CUSTOMER_SELECT, entity_id=self._input_json(parsed))
+            )
+        else:
+            self._prompt(
+                chat_id,
+                "instant_order_customer",
+                state,
+                "enter_instant_order_customer",
+                "placeholder_instant_order_customer",
+            )
+        return found
+
+    def _ask_instant_order_box_size(self, chat_id: int, parsed: InstantOrderInput, customer) -> dict[str, Any]:
+        """Step 5: buttons for the box size; the input so far and the customer are kept"""
+        state = {**json.loads(self._input_json(parsed)), "customer_id": customer.customer_id}
+        self.db.create_edit_context(
+            EditContext(chat_id=chat_id, edit_type=BOX_SIZE_SELECT, entity_id=json.dumps(state))
+        )
+        sizes = range(MIN_BOX_SIZE, MAX_BOX_SIZE + 1)
+        buttons = [[{"text": str(n), "callback_data": f"instant_order_box_{n}"} for n in sizes]]
+        buttons.append([{"text": self._t("cancel", chat_id), "callback_data": "cancel_action"}])
+        self._send_message(
+            chat_id, self._t("choose_instant_order_box_size", chat_id), reply_markup={"inline_keyboard": buttons}
+        )
+        return {"status": "awaiting_box_size"}
+
+    def handle_instant_order_box_size(self, chat_id: int, box_size_text: str) -> dict[str, Any]:
+        """Step 5 done: the box size was tapped. Create the order."""
+        context = self.db.get_edit_context_by_chat_id(chat_id)
+        if not context or context.edit_type != BOX_SIZE_SELECT:
+            return self._expired(chat_id)
+        self.db.delete_edit_context(context.context_id)
+        state = self._state(context.entity_id) or {}
+        parsed = self._input_from_json(json.dumps({k: v for k, v in state.items() if k != "customer_id"}))
+        customer = self.db.get_customer(state.get("customer_id", ""))
+        box_size = int(box_size_text) if box_size_text.isdigit() else 0
+        if parsed is None or customer is None or not MIN_BOX_SIZE <= box_size <= MAX_BOX_SIZE:
+            return self._expired(chat_id)
+        parsed = InstantOrderInput(**{**asdict(parsed), "box_size": box_size})
         error = self._instant_offer_error(chat_id, parsed)
         if error:
             return error

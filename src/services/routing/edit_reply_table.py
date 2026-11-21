@@ -89,6 +89,9 @@ ANSWER_ROUTES: dict[str, AnswerRoute] = {
     "offer_price": AnswerRoute("offer", "handle_update_offer_price", entity_and_text_as_args),
     "offer_description": AnswerRoute("offer", "handle_offer_description_answer", description),
     "custom_wholesale_quantity": AnswerRoute("offer", "handle_custom_wholesale_quantity_answer", entity_then_text),
+    "instant_order_name": AnswerRoute("offer", "handle_instant_order_name_answer", entity_then_text),
+    "instant_order_price": AnswerRoute("offer", "handle_instant_order_price_answer", entity_then_text),
+    "instant_order_customer": AnswerRoute("offer", "handle_instant_order_customer_answer", entity_then_text),
     # Users
     "customer_first_name": AnswerRoute("user", "handle_update_user_first_name", entity_and_text_as_args),
     "customer_last_name": AnswerRoute("user", "handle_update_user_last_name", entity_and_text_as_args),

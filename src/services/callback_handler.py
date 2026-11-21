@@ -242,6 +242,14 @@ class CallbackHandler:
             lambda match, ctx: self.handlers["credit"].handle_credit_customer_select(ctx["chat_id"], match.group(1)),
         )
         self.router.register(
+            r"^instant_order_supplier_(.+)$",
+            lambda match, ctx: self.handlers["offer"].handle_instant_order_supplier(ctx["chat_id"], match.group(1)),
+        )
+        self.router.register(
+            r"^instant_order_box_(.+)$",
+            lambda match, ctx: self.handlers["offer"].handle_instant_order_box_size(ctx["chat_id"], match.group(1)),
+        )
+        self.router.register(
             r"^instant_order_customer_(.+)$",
             lambda match, ctx: self.handlers["offer"].handle_instant_order_customer_select(
                 ctx["chat_id"], match.group(1)

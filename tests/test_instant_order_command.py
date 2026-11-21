@@ -267,7 +267,3 @@ class TestInvalidInput:
         assert sent_to(telegram, ADMIN_ID)[-1].startswith(handler._t(key, ADMIN_ID, name="X")[:12])
         assert db.list_offers() == []
         assert sent_to(telegram, 101) == []
-
-    def test_no_arguments_show_the_usage(self, db, handler, telegram):
-        assert handler.handle_instant_order(ADMIN_ID, []) == {"status": "invalid_args"}
-        assert sent_to(telegram, ADMIN_ID) == [handler._t("usage_instant_order", ADMIN_ID)]
