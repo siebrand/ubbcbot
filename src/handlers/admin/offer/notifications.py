@@ -13,9 +13,16 @@ class NotificationHandler(OfferBaseHandler):
     """Handler for offer notifications and announcements"""
 
     def _send_rich_offer_message(
-        self, chat_id: int, offer, preview: bool = False, force_group: bool = False, include_buttons: bool = True
+        self,
+        chat_id: int,
+        offer,
+        preview: bool = False,
+        force_group: bool = False,
+        include_buttons: bool = True,
+        available: int | None = None,
     ):
-        """Send rich offer message using view_offer formatting with optimizations"""
+        """Send rich offer message using view_offer formatting with optimizations. ``available``: the units still
+        free in delivered stock, shown as the later re-edits show them (OfferMessageBuilder)."""
 
         # Pre-generate presigned URLs to avoid repeated S3 calls
         presigned_images = []
@@ -47,6 +54,8 @@ class NotificationHandler(OfferBaseHandler):
             f"{offer.name} €{offer.price_per_unit:.2f}</b>\n\n"
         )
         message += f"{offer.description}\n"
+        if available:
+            message += "\n" + self._t("announcement_units_left", force_group_lang=True, count=available) + "\n"
 
         # Add order buttons for non-preview announcements
         reply_markup = None

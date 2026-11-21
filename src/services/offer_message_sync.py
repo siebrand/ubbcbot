@@ -70,8 +70,12 @@ class OfferAnnouncements:
         self.environment = environment
 
     def render(self, offer, cancelled: bool = False) -> tuple:
-        """The text and keyboard of an announcement: order buttons when active, none when sold out or cancelled"""
-        return OfferMessageBuilder(self.bot_username(), self.translate_group).build(offer, cancelled=cancelled)
+        """The text and keyboard of an announcement: order buttons when active, none when sold out or cancelled; the
+        units still free when all the offer's boxes are delivered"""
+        available = OfferMessageBuilder.delivered_stock(self.db.get_boxes_by_offer(offer.offer_id))
+        return OfferMessageBuilder(self.bot_username(), self.translate_group).build(
+            offer, cancelled=cancelled, available=available
+        )
 
     def sync(self, offer, cancelled: bool = False) -> None:
         """Edit the group post first (one call, the most important), then the subscriber messages: inline when there

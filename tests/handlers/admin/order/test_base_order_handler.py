@@ -14,6 +14,7 @@ class TestBaseOrderHandler(unittest.TestCase):
 
     def setUp(self):
         self.mock_db = Mock()
+        self.mock_db.get_boxes_by_offer.return_value = []  # no delivered stock to show
         self.handler = BaseOrderHandler(self.mock_db, 15005473, "test", "test_token")
         self.handler.box_status_manager = Mock()
         # Isolate the wrapper from the Telegram-touching message sync.

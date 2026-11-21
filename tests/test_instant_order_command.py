@@ -157,6 +157,44 @@ class TestTheGroupAnnouncement:
         assert f"order_{offer_id}_1" in buttons
         assert [row.kind for row in db.get_notification_messages_by_offer(offer_id)] == ["group"]
 
+    def test_the_announcement_says_how_many_units_are_still_available(self, db, handler, telegram):
+        add_customer(db, 101, "Jan")
+
+        instant(handler, "DeMolen Tripel 3.50 Jan 4")
+
+        [text] = sent_to(telegram, GROUP_ID)
+        assert "📦 Nog 3 beschikbaar" in text  # group messages are Dutch
+
+    def test_each_order_updates_the_units_still_available(self, db, handler, telegram):
+        from handlers.base_handler import BaseHandler
+        from handlers.customer.order_commands import CustomerOrderCommands
+
+        add_customer(db, 101, "Jan")
+        add_customer(db, 102, "Piet")
+        offer_id = instant(handler, "DeMolen Tripel 3.50 Jan 4")["offer_id"]
+        edits = []
+
+        def edit(self, chat_id, message_id, text, parse_mode=None, reply_markup=None):
+            edits.append((chat_id, text))
+            return {"success": True}
+
+        with patch.object(BaseHandler, "_edit_message_text", edit):
+            CustomerOrderCommands(db, ADMIN_ID, "prod", "token").handle_create_order(102, 102, [str(offer_id), "1"])
+
+        assert db.get_offer(offer_id).status == "active"
+        [(chat, text)] = [e for e in edits if e[0] == GROUP_ID]
+        assert "📦 Nog 2 beschikbaar" in text
+
+    def test_an_offer_with_an_open_box_shows_no_units_line(self, db, handler):
+        from models.entities import Box, Offer
+
+        db.create_offer(Offer(offer_id=50, name="Pils", status="active"))
+        db.create_box(Box(offer_id=50, max_capacity=6, current_quantity=2, status="open"))
+
+        text, _ = handler.announcements.render(db.get_offer(50))
+
+        assert "beschikbaar" not in text
+
     def test_a_subscriber_gets_nothing(self, db, handler, telegram):
         add_customer(db, 101, "Jan")
         subscriber = add_customer(db, 202, "Abonnee")

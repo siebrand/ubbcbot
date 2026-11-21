@@ -381,6 +381,7 @@
   "multiple_days_label": "multiple days",
   "subtotal_label": "Subtotal: €{total:.2f}",
   "sufficient_available": "sufficient available",
+  "announcement_units_left": "📦 {count} still available",
   "units_available": "{count} available",
   "units": "units",
   "unit": "unit",

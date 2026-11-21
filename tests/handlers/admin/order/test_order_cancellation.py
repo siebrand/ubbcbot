@@ -16,6 +16,7 @@ class TestOrderCancellation(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         self.mock_db = Mock()
+        self.mock_db.get_boxes_by_offer.return_value = []  # no delivered stock to show
         self.admin_user_id = 15005473
         self.environment = "test"
         self.telegram_token = "test_token"

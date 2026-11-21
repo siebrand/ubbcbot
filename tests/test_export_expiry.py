@@ -389,6 +389,7 @@ class TestTriggers:
         db = Mock()
         db.get_offer.return_value = Offer(offer_id=1, name="Pils")
         db.get_notification_messages_by_offer.return_value = []
+        db.get_boxes_by_offer.return_value = []
         handler = BaseHandler(db, ADMIN_ID, "test", "token")
         handler.expire_exports = Mock()
         handler._get_bot_username = Mock(return_value="ubbc_test_bot")

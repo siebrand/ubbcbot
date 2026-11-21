@@ -6,6 +6,7 @@ from models.entities import CANCELLABLE_ORDER_STATUSES, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
 from services.export_expiry import ExportExpiryService
+from services.offer_message_builder import OfferMessageBuilder
 from services.offer_message_sync import OfferAnnouncements
 from services.telegram_client import TelegramClient
 from services.translator import Translator, load_translations
@@ -422,7 +423,8 @@ class BaseHandler:
         the channel/subscriber announcement messages so they reflect the new
         sold_out/active state (icon + order buttons)."""
         new_status = self.box_status_manager.update_offer_status_after_change(offer_id)
-        if new_status is not None:
+        # An offer sold from delivered stock shows how many units are left: that changes with every order
+        if new_status is not None or OfferMessageBuilder.delivered_stock(self.db.get_boxes_by_offer(offer_id)):
             self.sync_offer_messages(offer_id)
 
     def _refuse_cancel(self, order, chat_id: int) -> dict[str, Any] | None:

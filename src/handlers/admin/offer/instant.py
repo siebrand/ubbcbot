@@ -307,12 +307,18 @@ class InstantOrderHandler(NotificationHandler):  # an OfferBaseHandler that can 
         return {"status": "success", "offer_id": offer.offer_id}
 
     def _announce_instant_offer(self, offer) -> None:
-        """An offer with free units gets one tracked group announcement with the order buttons (synced later, as any
-        announcement). It names no customer, and subscribers get no message."""
+        """An offer with free units gets one tracked group announcement with the order buttons and the units still
+        available (synced later, as any announcement). It names no customer, and subscribers get no message."""
         self.expire_exports()
         group_id = os.environ.get("DEFAULT_GROUP_ID")
         if group_id:
-            self._send_rich_offer_message(int(group_id), offer, force_group=True, include_buttons=True)
+            self._send_rich_offer_message(
+                int(group_id),
+                offer,
+                force_group=True,
+                include_buttons=True,
+                available=offer.wholesale_box_size - 1,  # the first unit is the customer's
+            )
 
     def _instant_order_confirmation(self, chat_id: int, offer, order, customer, pm_result: dict) -> str:
         name = " ".join(part for part in (customer.first_name, customer.last_name) if part) or self._t(

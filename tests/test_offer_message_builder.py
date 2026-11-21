@@ -37,6 +37,23 @@ class TestOfferMessageBuilder(unittest.TestCase):
         self.assertIn("order_12_1", callbacks)
         self.assertIn("order_12_2", callbacks)
 
+    def test_an_active_offer_with_delivered_stock_shows_the_units_left(self):
+        builder = OfferMessageBuilder(
+            "ubbc_test_bot",
+            lambda key: (
+                {"announcement_units_left": "📦 {count} left"}[key] if key == "announcement_units_left" else key
+            ),
+        )
+
+        text, _ = builder.build(self.offer, available=3)
+
+        self.assertIn("📦 3 left", text)
+
+    def test_no_units_line_without_delivered_stock_or_when_sold_out(self):
+        self.assertNotIn("announcement_units_left", self.builder.build(self.offer)[0])
+        self.offer.status = OfferStatus.SOLD_OUT.value
+        self.assertNotIn("announcement_units_left", self.builder.build(self.offer, available=0)[0])
+
     def test_sold_out_has_icon_and_no_buttons(self):
         self.offer.status = OfferStatus.SOLD_OUT.value
         text, markup = self.builder.build(self.offer)

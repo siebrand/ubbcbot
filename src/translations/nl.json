@@ -380,6 +380,7 @@
   "multiple_days_label": "meerdere dagen",
   "subtotal_label": "Subtotaal: €{total:.2f}",
   "sufficient_available": "voldoende beschikbaar",
+  "announcement_units_left": "📦 Nog {count} beschikbaar",
   "units_available": "{count} beschikbaar",
   "units": "stuks",
   "unit": "stuk",

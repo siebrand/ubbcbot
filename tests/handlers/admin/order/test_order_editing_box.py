@@ -12,6 +12,7 @@ from models.entities import Box, BoxStatus, Order
 class TestOrderEditingBox(unittest.TestCase):
     def setUp(self):
         self.mock_db = Mock()
+        self.mock_db.get_boxes_by_offer.return_value = []  # no delivered stock to show
         self.handler = OrderEditing(self.mock_db, 15005473, "test", "token")
         self.handler.box_status_manager = Mock()
         self.handler.box_status_manager.update_offer_status_after_change.return_value = None

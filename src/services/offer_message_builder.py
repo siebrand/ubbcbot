@@ -14,7 +14,7 @@ cancelled even when the caller does not pass ``cancelled=True``.
 
 import html
 
-from models.entities import OfferStatus
+from models.entities import BoxStatus, OfferStatus
 
 _SOLD_OUT_ICON = "🔴"
 _CANCELLED_ICON = "⛔"
@@ -25,11 +25,14 @@ class OfferMessageBuilder:
         self.bot_username = bot_username
         self._t = translate
 
-    def build(self, offer, cancelled: bool = False):
+    def build(self, offer, cancelled: bool = False, available: int | None = None):
         """Return the text and reply_markup for the offer.
 
         reply_markup is the order keyboard when the offer is active. It is None
         when the offer is sold out or when the offer is cancelled.
+
+        ``available``: the units still free in the offer's delivered stock (see delivered_stock), shown while the
+        offer is active; None for an offer that is still to be ordered at the wholesaler.
         """
         name = html.escape(offer.name or "")
         title = (
@@ -42,6 +45,8 @@ class OfferMessageBuilder:
             title = f"{icon} {title} — {self._t(suffix_key)}"
 
         text = f"{title}\n\n{offer.description or ''}\n"
+        if active and available:
+            text += "\n" + self._t("announcement_units_left").format(count=available) + "\n"
 
         reply_markup = None
         if active:
@@ -54,6 +59,15 @@ class OfferMessageBuilder:
                 ]
             }
         return text, reply_markup
+
+    @staticmethod
+    def delivered_stock(boxes) -> int | None:
+        """The units still free when every box of the offer is delivered (an instant offer, or the rest after a
+        partial wholesale delivery): what can still be ordered. None while a box is still to be ordered, as the
+        offer can then grow."""
+        if not boxes or any(box.status != BoxStatus.DELIVERED.value for box in boxes):
+            return None
+        return sum(max(box.max_capacity - box.current_quantity, 0) for box in boxes)
 
     @staticmethod
     def _state(offer, cancelled: bool):

@@ -57,6 +57,7 @@ def test_the_handler_uses_its_own_environment(monkeypatch):
         NotificationMessage(notification_id=f"s{i}", offer_id=7, chat_id=i, message_id=i, kind="subscriber")
         for i in range(11)
     ]
+    db.get_boxes_by_offer.return_value = []
     handler = BaseHandler(db, 1, "prod", "token")
     handler._get_bot_username = Mock(return_value="ubbc_bot")
 
