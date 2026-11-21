@@ -66,24 +66,31 @@ class UserCommands(BaseHandler):
         AuthorizationStatus.REJECTED.value,
     )
 
-    def _refuse_while_open_orders(self, chat_id: int, customer) -> dict[str, Any] | None:
-        """An approved customer keeps the approval while they have orders that are not paid or cancelled: the
+    def _confirm_if_open_orders(self, chat_id: int, customer, status: str, confirmed: bool) -> dict[str, Any] | None:
+        """Taking the approval from a customer with orders that are not paid or cancelled needs a confirmation: the
         delivery overview, /process_payment and the payment reminders only handle approved customers, so those
-        orders would be stuck. None when the approval may go."""
-        if customer.authorization_status != AuthorizationStatus.APPROVED.value:
+        orders get stuck. Without open orders, or once confirmed, None: the status may change."""
+        if confirmed or customer.authorization_status != AuthorizationStatus.APPROVED.value:
             return None
         open_orders = [
             o for o in self.db.get_orders_by_customer(customer.customer_id) if o.status not in SETTLED_ORDER_STATUSES
         ]
         if not open_orders:
             return None
-        self._send_message(
-            chat_id,
-            self._t(
-                "customer_status_open_orders", chat_id, name=self._full_name(customer, chat_id), count=len(open_orders)
-            ),
+        warning = self._t(
+            "customer_status_open_orders", chat_id, name=self._full_name(customer, chat_id), count=len(open_orders)
         )
-        return {"status": "has_open_orders"}
+        buttons = [
+            [
+                {
+                    "text": self._t("confirm_status_change_btn", chat_id),
+                    "callback_data": f"edit_customer_forcestatus_{customer.customer_id}_{status}",
+                },
+                {"text": self._t("cancel", chat_id), "callback_data": "cancel_action"},
+            ]
+        ]
+        self._send_message(chat_id, warning, reply_markup={"inline_keyboard": buttons})
+        return {"status": "confirmation_required"}
 
     def handle_customer_status_options(self, chat_id: int, customer_id: str) -> dict[str, Any]:
         """The status button of the edit screen: the other statuses this customer can be given"""
@@ -110,9 +117,12 @@ class UserCommands(BaseHandler):
         )
         return {"status": "status_options_shown"}
 
-    def handle_set_customer_status(self, chat_id: int, customer_id: str, status: str) -> dict[str, Any]:
+    def handle_set_customer_status(
+        self, chat_id: int, customer_id: str, status: str, confirmed: bool = False
+    ) -> dict[str, Any]:
         """Give the customer another authorization status: approved (they are told, as with /approve_user), rejected
-        (they are told, as with /reject_user) or unauthorized (back to the pending list, not told)"""
+        (they are told, as with /reject_user) or unauthorized (back to the pending list, not told). ``confirmed``:
+        the admin confirmed the warning about open orders."""
         if status not in self.EDITABLE_STATUSES:
             self._send_message(chat_id, self._t("failed_customer_status", chat_id))
             return {"status": "invalid_status"}
@@ -123,11 +133,11 @@ class UserCommands(BaseHandler):
         if status == AuthorizationStatus.APPROVED.value:
             return self._approve_user_by_customer(chat_id, customer)
         if status == AuthorizationStatus.REJECTED.value:
-            result = self._reject_customer(chat_id, customer)
+            result = self._reject_customer(chat_id, customer, confirmed)
         else:
-            refused = self._refuse_while_open_orders(chat_id, customer)
-            if refused:
-                return refused
+            asked = self._confirm_if_open_orders(chat_id, customer, status, confirmed)
+            if asked:
+                return asked
             if not self.db.update_customer(customer.customer_id, {"authorization_status": status}):
                 self._send_message(chat_id, self._t("failed_customer_status", chat_id))
                 return {"status": "error"}
@@ -141,10 +151,10 @@ class UserCommands(BaseHandler):
                 self._show_user_edit_interface(updated, chat_id)
         return result
 
-    def _reject_customer(self, chat_id: int, customer) -> dict[str, Any]:
-        refused = self._refuse_while_open_orders(chat_id, customer)
-        if refused:
-            return refused
+    def _reject_customer(self, chat_id: int, customer, confirmed: bool = False) -> dict[str, Any]:
+        asked = self._confirm_if_open_orders(chat_id, customer, AuthorizationStatus.REJECTED.value, confirmed)
+        if asked:
+            return asked
         if not self.db.update_customer(
             customer.customer_id, {"authorization_status": AuthorizationStatus.REJECTED.value}
         ):

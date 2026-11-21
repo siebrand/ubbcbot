@@ -100,15 +100,28 @@ class TestTheStatusOnTheEditScreen:
 
     @pytest.mark.parametrize("new_status", ["rejected", "unauthorized"])
     @pytest.mark.parametrize("open_status", ["pending", "ready_for_labeling", "awaiting_payment"])
-    def test_approval_stays_while_the_customer_has_open_orders(self, db, users, new_status, open_status):
+    def test_open_orders_are_warned_about_and_need_a_confirmation(self, db, users, new_status, open_status):
         jan = approved(db, 101, "Jan")
         order(db, jan, open_status)
 
         result = users.handle_set_customer_status(ADMIN_ID, jan.customer_id, new_status)
 
-        assert result == {"status": "has_open_orders"}
+        assert result == {"status": "confirmation_required"}
         assert status_of(db, jan) == "approved"
         users._notify_customer.assert_not_called()
+        _, warning, buttons = users.sent[-1]
+        assert "1" in warning
+        assert f"edit_customer_forcestatus_{jan.customer_id}_{new_status}" in buttons
+
+    @pytest.mark.parametrize("new_status", ["rejected", "unauthorized"])
+    def test_the_confirmation_changes_the_status_despite_the_open_orders(self, db, users, new_status):
+        jan = approved(db, 101, "Jan")
+        order(db, jan, "awaiting_payment")
+
+        result = users.handle_set_customer_status(ADMIN_ID, jan.customer_id, new_status, confirmed=True)
+
+        assert result == {"status": "success"}
+        assert status_of(db, jan) == new_status
 
     def test_an_unknown_status_changes_nothing(self, db, users):
         jan = approved(db, 101, "Jan")
@@ -118,12 +131,26 @@ class TestTheStatusOnTheEditScreen:
 
 
 class TestRejectUser:
-    def test_a_customer_with_open_orders_is_not_rejected(self, db, users):
+    def test_a_customer_with_open_orders_is_warned_about_and_rejected_after_the_confirmation(self, db, users):
         jan = approved(db, 101, "Jan")
         order(db, jan, "ordered")
 
-        assert users.handle_reject_user(ADMIN_ID, ["Jan"]) == {"status": "has_open_orders"}
+        assert users.handle_reject_user(ADMIN_ID, ["Jan"]) == {"status": "confirmation_required"}
         assert status_of(db, jan) == "approved"
+        confirm = f"edit_customer_forcestatus_{jan.customer_id}_rejected"
+        assert confirm in users.sent[-1][2] and "cancel_action" in users.sent[-1][2]
+
+        users.handle_set_customer_status(ADMIN_ID, jan.customer_id, "rejected", confirmed=True)
+
+        assert status_of(db, jan) == "rejected"
+        assert users._notify_customer.call_args.args[1] == "access_rejected"
+
+    def test_a_customer_without_open_orders_is_rejected_without_a_confirmation(self, db, users):
+        jan = approved(db, 101, "Jan")
+        order(db, jan, "completed")
+
+        assert users.handle_reject_user(ADMIN_ID, ["Jan"]) == {"status": "success"}
+        assert status_of(db, jan) == "rejected"
 
     def test_the_list_of_matches_rejects_the_customer_picked(self, db, users):
         approved(db, 101, "Jan")
