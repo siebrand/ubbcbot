@@ -66,6 +66,12 @@ class UserCommands(BaseHandler):
         AuthorizationStatus.REJECTED.value,
     )
 
+    def _statuses_for(self, customer) -> tuple[str, ...]:
+        """The statuses a customer can be given: a guest cannot sign up, so never pending"""
+        if customer.is_guest:
+            return tuple(s for s in self.EDITABLE_STATUSES if s != AuthorizationStatus.UNAUTHORIZED.value)
+        return self.EDITABLE_STATUSES
+
     def _confirm_if_open_orders(self, chat_id: int, customer, status: str, confirmed: bool) -> dict[str, Any] | None:
         """Taking the approval from a customer with orders that are not paid or cancelled needs a confirmation: the
         delivery overview, /process_payment and the payment reminders only handle approved customers, so those
@@ -95,7 +101,7 @@ class UserCommands(BaseHandler):
     def handle_customer_status_options(self, chat_id: int, customer_id: str) -> dict[str, Any]:
         """The status button of the edit screen: the other statuses this customer can be given"""
         customer = self.db.get_customer(customer_id)
-        if not customer or customer.is_guest:
+        if not customer:
             self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
             return {"status": "user_not_found"}
         buttons = [
@@ -105,7 +111,7 @@ class UserCommands(BaseHandler):
                     "callback_data": f"edit_customer_setstatus_{customer.customer_id}_{status}",
                 }
             ]
-            for status in self.EDITABLE_STATUSES
+            for status in self._statuses_for(customer)
             if status != customer.authorization_status
         ]
         buttons.append([{"text": self._t("cancel", chat_id), "callback_data": f"edit_user_select_{customer_id}"}])
@@ -123,13 +129,13 @@ class UserCommands(BaseHandler):
         """Give the customer another authorization status: approved (they are told, as with /approve_user), rejected
         (they are told, as with /reject_user) or unauthorized (back to the pending list, not told). ``confirmed``:
         the admin confirmed the warning about open orders."""
-        if status not in self.EDITABLE_STATUSES:
-            self._send_message(chat_id, self._t("failed_customer_status", chat_id))
-            return {"status": "invalid_status"}
         customer = self.db.get_customer(customer_id)
-        if not customer or customer.is_guest:
+        if not customer:
             self._send_message(chat_id, self._t("user_not_found", chat_id, identifier=customer_id))
             return {"status": "user_not_found"}
+        if status not in self._statuses_for(customer):
+            self._send_message(chat_id, self._t("failed_customer_status", chat_id))
+            return {"status": "invalid_status"}
         if status == AuthorizationStatus.APPROVED.value:
             return self._approve_user_by_customer(chat_id, customer)
         if status == AuthorizationStatus.REJECTED.value:
@@ -327,15 +333,14 @@ class UserCommands(BaseHandler):
                 }
             ]
         )
-        if not customer.is_guest:  # a guest has no Telegram account to give access to
-            keyboard_buttons.append(
-                [
-                    {
-                        "text": self._t("edit_customer_status_btn", chat_id),
-                        "callback_data": f"edit_customer_status_{customer.customer_id}",
-                    }
-                ]
-            )
+        keyboard_buttons.append(
+            [
+                {
+                    "text": self._t("edit_customer_status_btn", chat_id),
+                    "callback_data": f"edit_customer_status_{customer.customer_id}",
+                }
+            ]
+        )
         keyboard_buttons.append([{"text": self._t("done", chat_id), "callback_data": "done_action"}])
 
         keyboard = {"inline_keyboard": keyboard_buttons}

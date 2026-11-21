@@ -60,14 +60,32 @@ class TestTheStatusOnTheEditScreen:
 
         assert f"edit_customer_status_{jan.customer_id}" in users.sent[-1][2]
 
-    def test_a_guest_has_no_status_button(self, db, users):
+    def test_a_rejected_guest_can_be_approved_again(self, db, users):
         guest = db.create_customer(
-            Customer(telegram_user_id=-1, first_name="Gast", is_guest=True, authorization_status="approved")
+            Customer(telegram_user_id=-4, first_name="mutti", is_guest=True, authorization_status="rejected")
         )
 
         users._show_user_edit_interface(guest, ADMIN_ID)
+        assert f"edit_customer_status_{guest.customer_id}" in users.sent[-1][2]
 
-        assert not any(b.startswith("edit_customer_status_") for b in users.sent[-1][2])
+        users.handle_customer_status_options(ADMIN_ID, guest.customer_id)
+        # a guest cannot sign up, so "pending" is not offered
+        assert [b for b in users.sent[-1][2] if b.startswith("edit_customer_setstatus_")] == [
+            f"edit_customer_setstatus_{guest.customer_id}_approved"
+        ]
+
+        assert users.handle_set_customer_status(ADMIN_ID, guest.customer_id, "approved")["status"] == "success"
+        assert status_of(db, guest) == "approved"
+
+    def test_a_guest_is_not_made_pending(self, db, users):
+        guest = db.create_customer(
+            Customer(telegram_user_id=-4, first_name="mutti", is_guest=True, authorization_status="approved")
+        )
+
+        assert users.handle_set_customer_status(ADMIN_ID, guest.customer_id, "unauthorized")["status"] == (
+            "invalid_status"
+        )
+        assert status_of(db, guest) == "approved"
 
     def test_the_other_statuses_are_offered(self, db, users):
         jan = approved(db, 101, "Jan")
