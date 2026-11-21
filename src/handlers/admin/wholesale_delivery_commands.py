@@ -25,6 +25,22 @@ class WholesaleDeliveryCommands(BaseHandler):
 
         return self.delivery_handler.handle_incomplete_delivery_reply(chat_id, text, context_data)
 
+    # The checklist of a supplier's offers (see BaseBoxWorkflowHandler)
+    def handle_checklist_toggle(self, chat_id: int, message_id: int, markup, offer_id: int, supplier_id: str):
+        return self.delivery_handler.handle_checklist_toggle(chat_id, message_id, markup, offer_id, supplier_id)
+
+    def handle_checklist_select(self, chat_id: int, message_id: int, supplier_id: str, everything: bool):
+        return self.delivery_handler.handle_checklist_select(chat_id, message_id, supplier_id, everything)
+
+    def handle_checklist_bulk(self, chat_id: int, message_id: int, markup, supplier_id: str):
+        return self.delivery_handler.handle_checklist_bulk(chat_id, message_id, markup, supplier_id)
+
+    def handle_checklist_back(self, chat_id: int, message_id: int, markup, supplier_id: str):
+        return self.delivery_handler.handle_checklist_back(chat_id, message_id, markup, supplier_id)
+
+    def handle_checklist_confirm(self, chat_id: int, message_id: int, markup, supplier_id: str):
+        return self.delivery_handler.handle_checklist_confirm(chat_id, message_id, markup, supplier_id)
+
     def handle_supplier_selection(self, chat_id: int, supplier_id: str) -> dict[str, Any]:
         """Handle supplier selection"""
         return self.delivery_handler.handle_supplier_selection(chat_id, supplier_id)

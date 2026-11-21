@@ -17,6 +17,22 @@ class LabelingCommands(BaseHandler):
 
         return self.completion_handler.handle_process_labeling(chat_id, user_id, args)
 
+    # The checklist of a supplier's offers (see BaseBoxWorkflowHandler)
+    def handle_checklist_toggle(self, chat_id: int, message_id: int, markup, offer_id: int, supplier_id_short: str):
+        return self.completion_handler.handle_checklist_toggle(chat_id, message_id, markup, offer_id, supplier_id_short)
+
+    def handle_checklist_select(self, chat_id: int, message_id: int, supplier_id_short: str, everything: bool):
+        return self.completion_handler.handle_checklist_select(chat_id, message_id, supplier_id_short, everything)
+
+    def handle_checklist_bulk(self, chat_id: int, message_id: int, markup, supplier_id_short: str):
+        return self.completion_handler.handle_checklist_bulk(chat_id, message_id, markup, supplier_id_short)
+
+    def handle_checklist_back(self, chat_id: int, message_id: int, markup, supplier_id_short: str):
+        return self.completion_handler.handle_checklist_back(chat_id, message_id, markup, supplier_id_short)
+
+    def handle_checklist_confirm(self, chat_id: int, message_id: int, markup, supplier_id_short: str):
+        return self.completion_handler.handle_checklist_confirm(chat_id, message_id, markup, supplier_id_short)
+
     def handle_supplier_selection(self, chat_id: int, supplier_id_short: str) -> dict[str, Any]:
         """Handle supplier selection"""
         return self.completion_handler.handle_supplier_selection(chat_id, supplier_id_short)

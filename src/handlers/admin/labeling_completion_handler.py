@@ -8,8 +8,30 @@ logger = logging.getLogger()
 
 
 class LabelingCompletionHandler(BaseBoxWorkflowHandler):
+    callback_prefix = "lc"
+    checklist_title_key = "checklist_labeling_title"
+    checklist_confirm_key = "checklist_labeling_confirm"
+    no_offers_key = "no_ready_for_labeling_offers_for_supplier"
+
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
+
+    def _workflow_suppliers(self) -> list:
+        return self.db.get_suppliers_with_ready_for_labeling_offers()
+
+    def _workflow_offers(self, supplier_name: str) -> list:
+        return self.db.get_ready_for_labeling_offers_by_supplier(supplier_name)
+
+    def _open_work(self, offer_id: int) -> tuple[int, int]:
+        """The boxes of the offer with orders to label, and the units of those orders"""
+        boxes = self.db.get_boxes_by_offer_with_ready_orders(offer_id)
+        units = sum(
+            o.quantity
+            for box in boxes
+            for o in self.db.get_orders_by_box(box.box_id)
+            if o.status == OrderStatus.READY_FOR_LABELING.value
+        )
+        return len(boxes), units
 
     def handle_process_labeling(self, chat_id: int, user_id: int, args: list[str]) -> dict[str, Any]:
         """Start labeling completion drill-down interface"""
@@ -28,16 +50,8 @@ class LabelingCompletionHandler(BaseBoxWorkflowHandler):
         return self._send_message(chat_id, self._t("select_supplier_for_labeling", user_id), reply_markup=keyboard)
 
     def handle_supplier_selection(self, chat_id: int, supplier_id_short: str) -> dict[str, Any]:
-        """Handle supplier selection and show offers"""
-        return super().handle_supplier_selection(
-            chat_id,
-            supplier_id_short,
-            "lc",
-            self.db.get_suppliers_with_ready_for_labeling_offers,
-            self.db.get_ready_for_labeling_offers_by_supplier,
-            "select_offer_for_labeling",
-            "no_ready_for_labeling_offers_for_supplier",
-        )
+        """The supplier's offers with orders to label as a checklist, nothing ticked"""
+        return self.show_offer_checklist(chat_id, supplier_id_short, set())
 
     def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id_short: str) -> dict[str, Any]:
         """Handle offer selection and show boxes"""

@@ -11,6 +11,22 @@ logger = logging.getLogger()
 
 
 class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
+    callback_prefix = "wd"
+    checklist_title_key = "checklist_delivery_title"
+    checklist_confirm_key = "checklist_delivery_confirm"
+    no_offers_key = "no_ordered_offers_for_supplier"
+
+    def _workflow_suppliers(self) -> list:
+        return self.db.get_suppliers_with_ordered_offers()
+
+    def _workflow_offers(self, supplier_name: str) -> list:
+        return self.db.get_ordered_offers_by_supplier(supplier_name)
+
+    def _open_work(self, offer_id: int) -> tuple[int, int]:
+        """The ordered boxes of the offer and the units ordered in them"""
+        boxes = self._ordered_boxes(offer_id)
+        return len(boxes), sum(o.quantity for box in boxes for o in self.db.get_orders_by_box(box.box_id))
+
     def __init__(self, db, admin_user_id: int, environment: str, telegram_token: str):
         super().__init__(db, admin_user_id, environment, telegram_token)
         box_status_manager = BoxStatusManager(db)
@@ -50,15 +66,8 @@ class WholesaleDeliveryHandler(BaseBoxWorkflowHandler):
         return self._send_message(chat_id, self._t("select_supplier_for_delivery", user_id), reply_markup=keyboard)
 
     def handle_supplier_selection(self, chat_id: int, supplier_id_short: str) -> dict[str, Any]:
-        """Handle supplier selection and show offers"""
-        return super().handle_supplier_selection(
-            chat_id,
-            supplier_id_short,
-            "wd",
-            self.db.get_suppliers_with_ordered_offers,
-            self.db.get_ordered_offers_by_supplier,
-            "select_offer_for_delivery",
-        )
+        """The supplier's ordered offers as a checklist, nothing ticked"""
+        return self.show_offer_checklist(chat_id, supplier_id_short, set())
 
     def handle_offer_selection(self, chat_id: int, offer_id: int, supplier_id_short: str) -> dict[str, Any]:
         """Handle offer selection and show boxes"""

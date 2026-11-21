@@ -706,6 +706,46 @@ class CallbackHandler:
         def register(pattern, handler):
             self.router.register(pattern, handler, keyboard=self._workflow_keyboard(prefix))
 
+        def checklist(pattern, handler):
+            # The checklist edits the tapped message in place: its keyboard must stay
+            self.router.register(pattern, handler, keyboard=KEEP_KEYBOARD)
+
+        checklist(
+            rf"^{prefix}_tg:(\d+):([^:]+)$",
+            lambda m, ctx: self.handlers[key].handle_checklist_toggle(
+                ctx["chat_id"], ctx["message_id"], ctx.get("reply_markup"), int(m.group(1)), m.group(2)
+            ),
+        )
+        checklist(
+            rf"^{prefix}_all:([^:]+)$",
+            lambda m, ctx: self.handlers[key].handle_checklist_select(
+                ctx["chat_id"], ctx["message_id"], m.group(1), True
+            ),
+        )
+        checklist(
+            rf"^{prefix}_none:([^:]+)$",
+            lambda m, ctx: self.handlers[key].handle_checklist_select(
+                ctx["chat_id"], ctx["message_id"], m.group(1), False
+            ),
+        )
+        checklist(
+            rf"^{prefix}_bulk:([^:]+)$",
+            lambda m, ctx: self.handlers[key].handle_checklist_bulk(
+                ctx["chat_id"], ctx["message_id"], ctx.get("reply_markup"), m.group(1)
+            ),
+        )
+        checklist(
+            rf"^{prefix}_bulkok:([^:]+)$",
+            lambda m, ctx: self.handlers[key].handle_checklist_confirm(
+                ctx["chat_id"], ctx["message_id"], ctx.get("reply_markup"), m.group(1)
+            ),
+        )
+        checklist(
+            rf"^{prefix}_bulkback:([^:]+)$",
+            lambda m, ctx: self.handlers[key].handle_checklist_back(
+                ctx["chat_id"], ctx["message_id"], ctx.get("reply_markup"), m.group(1)
+            ),
+        )
         register(
             rf"^{prefix}_sup:([^:]+)$",
             lambda m, ctx: self.handlers[key].handle_supplier_selection(ctx["chat_id"], m.group(1)),
@@ -807,6 +847,8 @@ class CallbackHandler:
                 "user_id": user_id,
                 "message_id": message_id,
                 "reply_chat_id": reply_chat_id,
+                # The keyboard of the tapped message: a checklist keeps its ticks there
+                "reply_markup": callback_query["message"].get("reply_markup"),
             }
             route, match = self.router.match(data)
             if route:
