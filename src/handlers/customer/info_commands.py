@@ -37,8 +37,9 @@ class InfoCommands(OrderListMixin):
         # Show general help
         message = self._t("welcome_ubbc", user_id)
 
+        # Only the admin is told the admin menu exists
         if self._is_admin(user_id):
-            message += self._t("admin_sections_available", user_id)
+            message += self._t("help_admin_block", user_id) + self._t("admin_sections_available", user_id)
 
         result = self._send_message(chat_id, message)
         success = result.get("success", False)

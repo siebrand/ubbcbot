@@ -534,6 +534,27 @@ class TestStartAndHelp:
 
         assert env.handler._t("admin_sections_available") in sent(env)
 
+    @pytest.mark.parametrize("language", ["nl", "en"])
+    def test_a_customer_is_not_told_about_the_admin_menu(self, env, language):
+        env.db.get_customer_by_telegram_id.return_value = Customer(telegram_user_id=CUSTOMER_ID, language=language)
+
+        env.handler.handle_start(CHAT, CUSTOMER_ID)
+        env.handler.handle_help(CHAT, CUSTOMER_ID)
+
+        for text in [c.args[1] for c in env.handler._send_message.call_args_list]:
+            assert "/admin" not in text and "/list_boxes" not in text and "👑" not in text
+
+    @pytest.mark.parametrize("language", ["nl", "en"])
+    def test_the_admin_gets_a_block_of_their_own(self, env, language):
+        env.db.get_customer_by_telegram_id.return_value = Customer(telegram_user_id=ADMIN_ID, language=language)
+        texts = env.handler._load_translations(language)
+
+        env.handler.handle_start(CHAT, ADMIN_ID)
+
+        text = sent(env)
+        assert text == texts["welcome_ubbc"] + texts["help_admin_block"] + texts["admin_sections_available"]
+        assert "/admin" in text and "/list_boxes" not in text
+
     def test_start_with_a_section_shows_that_section(self, env):
         env.handler.handle_start(CHAT, CUSTOMER_ID, ["orders"])
 
