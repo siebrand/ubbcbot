@@ -211,6 +211,7 @@
   "offer_cancelled_no_orders": "✅ Offer {offer_id} cancelled (no active orders)",
   "usage_confirm_cancel_offer": "Usage: /confirm_cancel_offer <offer_id>",
   "offer_cancelled_summary": "✅ Offer {offer_id} cancelled:\n\n❌ Cancelled {cancelled_count} orders\n🗑️ Deleted {deleted_boxes} boxes\n📧 Notified {notified_count} customers",
+  "offer_cancel_orders_kept": "⚠️ {count} order(s) changed while the offer was cancelled and were not cancelled; their boxes were kept. Customers: {customers}",
   "order_cancelled_offer_cancelled": "❌ Your order has been cancelled:\n\n🍺 {name}\nQuantity: {quantity} units\nAmount: €{total:.2f}\nReason: UBBC cancelled the offer",
   "usage_create_box": "Usage: /create_box [offer_id]",
   "box_added_offer_active": "✅ Added new box for offer {offer_id} (offer status updated to active)",

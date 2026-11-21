@@ -404,7 +404,7 @@ class OfferManagementHandler(OfferBaseHandler):
         if not active_orders:
             # No active orders, just cancel the offer
             self.db.update_offer(offer.offer_id, {"status": OfferStatus.INACTIVE.value})
-            self._delete_offer_boxes(offer.offer_id)
+            self.box_deletion_service.delete_emptied_offer_boxes(offer.offer_id)
             self.sync_offer_messages(offer.offer_id, cancelled=True)
             self._send_message(chat_id, self._t("offer_cancelled_no_orders", offer_id=offer.offer_id))
             return {"status": "success"}
@@ -436,45 +436,72 @@ class OfferManagementHandler(OfferBaseHandler):
         offer, error = self._validate_and_get_offer(args, chat_id)
         if error:
             return error
+        # An old confirmation tapped again: the offer was cancelled already (or changed), nothing is cancelled twice
+        if offer.status != OfferStatus.ACTIVE.value:
+            self._send_message(chat_id, self._t("offer_not_active", chat_id))
+            return {"status": "offer_not_active"}
         refused = self._refuse_cancel_with_delivered_orders(chat_id, offer.offer_id)
         if refused:
             return refused
 
-        # Get all pending orders
-        active_orders = self._active_orders(offer.offer_id)
-
-        # Cancel all active orders and notify customers
-        cancelled_count = 0
-        notified_customers = []
-        for order in active_orders:
-            if self.db.cancel_order(order.order_id, self.admin_user_id, "Offer cancelled by admin"):
-                cancelled_count += 1
-                customer = self.db.get_customer(order.customer_id)
-                if customer:
-                    notified_customers.append(customer.first_name)
-                self._notify_customer_cancellation(order, offer)
-
-        # Delete all boxes
-        deleted_boxes = self._delete_offer_boxes(offer.offer_id)
-
-        # Cancel the offer
+        # Closed first, so no new order comes in while the open ones are cancelled
         self.db.update_offer(offer.offer_id, {"status": OfferStatus.INACTIVE.value})
+        cancelled, kept = self._cancel_open_orders(offer)
+
+        # Only the boxes the cancels emptied: a box that still holds an order is kept
+        deleted_boxes = self.box_deletion_service.delete_emptied_offer_boxes(offer.offer_id)
+        for box in self.db.get_boxes_by_offer(offer.offer_id):
+            self.box_status_manager.update_box_status_after_change(box.box_id)
         self.sync_offer_messages(offer.offer_id, cancelled=True)
 
-        # Send summary
         summary = self._t(
             "offer_cancelled_summary",
+            chat_id,
             offer_id=offer.offer_id,
-            cancelled_count=cancelled_count,
+            cancelled_count=len(cancelled),
             deleted_boxes=deleted_boxes,
-            notified_count=cancelled_count,
+            notified_count=len(cancelled),
         )
-
+        notified_customers = self._first_names(cancelled)
         if notified_customers:
-            summary += "\n" + self._t("notified_customers", customers=", ".join(notified_customers))
+            summary += "\n" + self._t("notified_customers", chat_id, customers=", ".join(notified_customers))
+        if kept:
+            summary += "\n" + self._t(
+                "offer_cancel_orders_kept", chat_id, count=len(kept), customers=", ".join(self._first_names(kept))
+            )
 
         self._send_message(chat_id, summary)
         return {"status": "success"}
+
+    def _cancel_open_orders(self, offer) -> tuple[list, list]:
+        """Cancel the open orders of a closed offer, each with its box and only while it is as it was read (see
+        DynamoDBService.cancel_order_with_box); the customer of each cancelled order is told.
+
+        The orders are read again until none is open (at most three times): an order placed just before the offer
+        closed, or changed while it was cancelled, is read once more. Returns the cancelled orders and the ones kept
+        because they moved on in the meantime (delivered, say); one that was cancelled elsewhere is neither.
+        """
+        cancelled: list = []
+        changed: dict[str, Any] = {}
+        for _ in range(3):
+            orders = self._active_orders(offer.offer_id)
+            if not orders:
+                break
+            for order in orders:
+                if self.db.cancel_order_with_box(order):
+                    cancelled.append(order)
+                    changed.pop(order.order_id, None)
+                    self._notify_customer_cancellation(order, offer)
+                else:
+                    changed[order.order_id] = order
+        current = (self.db.get_order(order_id) for order_id in changed)
+        kept = [order for order in current if order and order.status != OrderStatus.CANCELLED.value]
+        return cancelled, kept
+
+    def _first_names(self, orders: list) -> list[str]:
+        """The first names of the customers of ``orders``, in their order; a deleted customer is left out"""
+        customers = (self.db.get_customer(order.customer_id) for order in orders)
+        return [customer.first_name for customer in customers if customer]
 
     def _refuse_cancel_with_delivered_orders(self, chat_id: int, offer_id: int) -> dict[str, Any] | None:
         """Cancelling an offer deletes its boxes: an offer with a delivered box that holds units (an instant offer,

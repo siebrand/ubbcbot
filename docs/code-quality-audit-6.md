@@ -43,9 +43,10 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
   total, so `amount_due` goes negative), and the price of a completed order after the payment event was recorded.
   Fix: decide which statuses may get a new price; for one awaiting payment, keep the credit within the new total (and
   tell the admin the customer was asked for another amount).
-- [ ] **B3. `/cancel_offer` cancels orders one by one without their boxes or a condition** (`handle_cancel_offer`).
-  Check what it does with the boxes and the credit of orders already awaiting payment (same questions as A1, A2);
-  pin it first.
+- [x] **B3. `/cancel_offer` cancels orders one by one without their boxes or a condition** (`handle_cancel_offer`).
+  Pinned: orders awaiting payment (and their credit) are never reached, since such an order sits in a delivered box
+  that holds it and the offer is then refused. The offer now closes first, each open order is cancelled with its
+  box and on condition of what was read, only emptied boxes are deleted, and an old confirmation changes nothing.
 - [ ] **B4. The order handlers translate without a reader** (left by audit 5, B4). `order_editing.py` (`user_id=None`
   and `self._t(..., None, ...)`), `order_cancellation.py` (`self._t("order_not_found")`, `self._t("box_not_found")`),
   `order_placement.py`, `order_viewing.py`, `wholesale_delivery_handler.py`, `labeling_commands.py`: an English admin

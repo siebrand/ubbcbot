@@ -97,9 +97,9 @@ class DynamoDBService:
     def delete_box(self, box_id: str) -> bool:
         return self.box_repo.delete_box(box_id)
 
-    def delete_box_if_empty(self, box_id: str) -> bool:
-        """Delete a box that is not yet ordered, only while it holds nothing"""
-        return self.box_repo.delete_box_if_empty(box_id, REFILLABLE_BOX_STATUSES)
+    def delete_box_if_empty(self, box_id: str, statuses: tuple[str, ...] = REFILLABLE_BOX_STATUSES) -> bool:
+        """Delete a box in one of ``statuses`` (by default: not yet ordered), only while it holds nothing"""
+        return self.box_repo.delete_box_if_empty(box_id, statuses)
 
     # Customer operations
     def create_customer(self, customer: Customer) -> Customer | None:

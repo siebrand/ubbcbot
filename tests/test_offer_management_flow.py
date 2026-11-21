@@ -294,6 +294,79 @@ class TestCancelOffer:
 
         assert db.get_offer(7).status == "active"
 
+    @pytest.mark.parametrize("status", ["labeling_completed", "awaiting_payment", "completed"])
+    def test_orders_past_labeling_keep_their_box_and_credit(self, db, handler, status):
+        """Audit 6, B3 (pinned): an order past labeling sits in a delivered box that holds it, so the offer is not
+        cancelled, and its credit is not touched"""
+        jan = customer(db, 101, "Jan")
+        box(db, "bd", 2, "delivered")
+        order(db, "od", jan, "bd", 2, 1, status=status)
+        db.order_repo.update_order("od", {"credit_applied": Decimal("4.00")})
+
+        assert handler.handle_confirm_cancel_offer(ADMIN_ID, ["7"]) == {"status": "has_delivered_orders"}
+
+        kept = db.get_order("od")
+        assert (kept.status, kept.credit_applied) == (status, Decimal("4.00"))
+        assert db.get_box("bd").current_quantity == 2
+
+
+class TestCancelOfferWhileOrdersChange:
+    """Audit 6, B3: the orders are cancelled on condition of what was read, and a box that still holds units is kept"""
+
+    @staticmethod
+    def run_with(handler, change):
+        """Confirm the cancel; ``change`` runs right after the first read of the open orders"""
+        read = handler._active_orders
+        changed = []
+
+        def active_orders(offer_id):
+            orders = read(offer_id)
+            if not changed:
+                changed.append(True)
+                change()
+            return orders
+
+        handler._active_orders = active_orders
+        return handler.handle_confirm_cancel_offer(ADMIN_ID, ["7"])
+
+    def test_an_order_cancelled_in_between_is_not_cancelled_or_told_again(self, db, handler, three_orders):
+        self.run_with(handler, lambda: db.cancel_order_with_box(db.get_order("o3")))
+
+        assert {db.get_order(o).status for o in ("o1", "o2", "o3")} == {"cancelled"}
+        assert messages_to(handler, 103) == []
+        assert db.get_boxes_by_offer(7) == []
+
+    def test_an_order_delivered_in_between_keeps_its_box_and_the_admin_is_told(self, db, handler, three_orders):
+        def deliver():
+            db.order_repo.update_order("o3", {"status": "ready_for_labeling"})
+            db.update_box("b2", {"status": "delivered"})
+
+        self.run_with(handler, deliver)
+
+        assert db.get_order("o3").status == "ready_for_labeling"
+        assert db.get_box("b2").current_quantity == 3
+        assert messages_to(handler, 103) == []
+        assert db.get_box("b1") is None
+        assert "Kees" in messages_to(handler, ADMIN_ID)[-1].split("\n", 1)[1]
+
+    def test_an_order_placed_in_between_is_cancelled_too(self, db, handler, three_orders):
+        def place():
+            box(db, "b3", 1)
+            order(db, "o4", three_orders.jan, "b3", 1, 4)
+
+        self.run_with(handler, place)
+
+        assert db.get_order("o4").status == "cancelled"
+        assert db.get_boxes_by_offer(7) == []
+
+    def test_an_old_confirmation_tapped_again_changes_nothing(self, db, handler, three_orders):
+        handler.handle_confirm_cancel_offer(ADMIN_ID, ["7"])
+        told = len(handler.sent)
+
+        assert handler.handle_confirm_cancel_offer(ADMIN_ID, ["7"]) == {"status": "offer_not_active"}
+        assert [chat for chat, _ in handler.sent[told:]] == [ADMIN_ID]
+        handler.sync_offer_messages.assert_called_once_with(7, cancelled=True)
+
 
 class TestWholesaleSummary:
     def test_the_pending_orders_are_listed_oldest_first_with_the_boxes_needed(self, db, handler, three_orders):
