@@ -91,6 +91,7 @@ class CreditRepository(BaseRepository):
         used_delta: Decimal,
         now: str,
         order_credits: dict[str, Decimal] | None = None,
+        order_items: list[dict[str, Any]] | None = None,
     ) -> bool:
         """Write the transaction and move the balance from its balance_before to its balance_after, in one
         transaction: both or neither.
@@ -101,9 +102,10 @@ class CreditRepository(BaseRepository):
 
         ``order_credits`` (order id → credit used for it) are written in the same transaction, each only while the
         order awaits payment and has no credit applied yet: credit is never used twice for one order. When one of
-        them no longer qualifies, nothing is written and False is returned.
+        them no longer qualifies, nothing is written and False is returned. ``order_items`` are other order writes
+        (with their own conditions) that belong to the change, such as a new price (OrderRepository.price_item).
         """
-        order_items = [
+        credit_items = [
             {
                 "Update": {
                     "TableName": f"{self.table_prefix}-orders",
@@ -158,7 +160,8 @@ class CreditRepository(BaseRepository):
                             },
                         }
                     },
-                    *order_items,
+                    *credit_items,
+                    *(order_items or []),
                 ]
             )
             return True

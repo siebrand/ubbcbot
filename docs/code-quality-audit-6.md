@@ -38,11 +38,12 @@ is fuzzy on purpose, also in the CSV import (owner, 2026-11-20): do not make it 
 
 - [x] **B1. The box status after a quantity change is decided from a stale read**
   (`update_box_after_order_placement`/`_cancellation`).
-- [ ] **B2. A unit price edit ignores what has happened to the order** (`_apply_unit_price_change`). The price of an
-  order awaiting payment can change after the overview asked for it (with `credit_applied` possibly above the new
-  total, so `amount_due` goes negative), and the price of a completed order after the payment event was recorded.
-  Fix: decide which statuses may get a new price; for one awaiting payment, keep the credit within the new total (and
-  tell the admin the customer was asked for another amount).
+- [x] **B2. A unit price edit ignores what has happened to the order** (`_apply_unit_price_change`). Decision: an
+  order gets a new price as long as no payment is recorded for it (`PRICE_EDITABLE_STATUSES`: pending through
+  awaiting payment), because only then the price can still be right without correcting a payment event; a
+  completed or cancelled order keeps its price. The price is written on condition of the status, quantity and
+  credit that were read. For an order awaiting payment the credit stays within the new total, the rest goes back to
+  the balance in the same transaction, and the admin is told what the customer was asked for and what is due now.
 - [x] **B3. `/cancel_offer` cancels orders one by one without their boxes or a condition** (`handle_cancel_offer`).
   Pinned: orders awaiting payment (and their credit) are never reached, since such an order sits in a delivered box
   that holds it and the offer is then refused. The offer now closes first, each open order is cancelled with its

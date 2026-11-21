@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from typing import Any
 
 import boto3
@@ -243,6 +244,54 @@ class OrderRepository(BaseRepository):
             return False
         except Exception as e:
             logger.error(f"Cancelling order {order.order_id} failed: {type(e).__name__}")
+            return False
+
+    def price_item(self, order: Order, unit_price: Decimal, total_price: Decimal, credit_applied: Decimal) -> dict:
+        """The transaction item that gives ``order`` a new price and credit, only while it still has the status,
+        quantity and credit it was read with (a payment or the delivery overview in between refuses it)"""
+        from datetime import UTC, datetime
+
+        read_credit = order.credit_applied or Decimal("0")
+        credit_condition = "credit_applied = :read_credit"
+        if read_credit == 0:
+            credit_condition = f"(attribute_not_exists(credit_applied) OR {credit_condition})"
+        return {
+            "Update": {
+                "TableName": self.table_name,
+                "Key": {"order_id": {"S": order.order_id}},
+                "UpdateExpression": (
+                    "SET unit_price = :unit, total_price = :total, credit_applied = :credit, update_date = :now"
+                ),
+                "ConditionExpression": f"#status = :read_status AND quantity = :read_qty AND {credit_condition}",
+                "ExpressionAttributeNames": {"#status": "status"},
+                "ExpressionAttributeValues": {
+                    ":unit": {"N": str(unit_price)},
+                    ":total": {"N": str(total_price)},
+                    ":credit": {"N": str(credit_applied)},
+                    ":now": {"S": datetime.now(UTC).isoformat()},
+                    ":read_status": {"S": order.status},
+                    ":read_qty": {"N": str(order.quantity)},
+                    ":read_credit": {"N": str(read_credit)},
+                },
+            }
+        }
+
+    def set_price_as_read(self, order: Order, unit_price: Decimal, total_price: Decimal) -> bool:
+        """Give the order a new price, its credit unchanged, only while it is as it was read (see price_item).
+        False when it changed in the meantime or the write failed."""
+        item = self.price_item(order, unit_price, total_price, order.credit_applied or Decimal("0"))
+        try:
+            boto3.client("dynamodb").transact_write_items(TransactItems=[item])
+            return True
+        except ClientError as e:
+            code = e.response["Error"]["Code"]
+            if code in ("TransactionCanceledException", "ConditionalCheckFailedException"):
+                logger.warning(f"Price of order {order.order_id} not set: it changed since it was read")
+            else:
+                logger.error(f"Setting the price of order {order.order_id} failed: {code}")
+            return False
+        except Exception as e:
+            logger.error(f"Setting the price of order {order.order_id} failed: {type(e).__name__}")
             return False
 
     def update_as_read(self, order: Order, updates: dict[str, Any], box_delta: int = 0) -> bool:

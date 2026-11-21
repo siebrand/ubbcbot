@@ -5,6 +5,7 @@ from typing import Any
 from models.entities import CANCELLABLE_ORDER_STATUSES, BoxStatus, OrderStatus
 from services.box_refill import REFILLABLE_BOX_STATUSES
 from services.box_status_manager import BoxStatusManager
+from services.credit_service import CreditService
 
 from .base_order_handler import BaseOrderHandler
 
@@ -18,6 +19,10 @@ CORRECTABLE_STATUSES = (
     OrderStatus.READY_FOR_LABELING.value,
     OrderStatus.LABELING_COMPLETED.value,
 )
+
+# The statuses of an order that may get a new price: no payment has been recorded for it (see
+# _apply_unit_price_change). A completed order keeps the price its payment event holds; a cancelled one is not paid.
+PRICE_EDITABLE_STATUSES = (*CORRECTABLE_STATUSES, OrderStatus.AWAITING_PAYMENT.value)
 
 # The boxes an order may be moved between: a pending order between boxes not yet ordered at the wholesaler, an
 # ordered one between boxes that were (which box it is in is corrected). A delivered order stays in its box.
@@ -85,25 +90,45 @@ class OrderEditing(BaseOrderHandler):
         return True, "edit_order_box_success"
 
     # -------------------------------------------------------------- unit price
-    def _apply_unit_price_change(self, order, new_unit_price) -> tuple[bool, str]:
-        """Set the order's unit_price and recompute total_price = unit * quantity."""
+    def _apply_unit_price_change(self, order, new_unit_price) -> tuple[bool, str, dict[str, Any]]:
+        """Set the order's unit_price and recompute total_price = unit * quantity (audit 6, B2), on condition that
+        the order still has the status, quantity and credit it was read with. Returns (success, message_key,
+        message params).
+
+        Only an order without a recorded payment gets a new price (PRICE_EDITABLE_STATUSES): a completed order's
+        payment event holds its amount. For an order awaiting payment the customer was already asked for an
+        amount: the credit used for it stays within the new total (the rest goes back to the balance in the same
+        write), and the params say what was asked and what is due now, so the admin can tell the customer.
+        """
         try:
             unit = Decimal(str(new_unit_price))
         except ArithmeticError, ValueError:
-            return False, "edit_order_bad_price"
+            return False, "edit_order_bad_price", {}
         # A unit price of 0 is allowed (free / comped item); only negatives are rejected.
-        if unit < 0:
-            return False, "edit_order_bad_price"
+        if not unit.is_finite() or unit < 0:
+            return False, "edit_order_bad_price", {}
+        if order.status not in PRICE_EDITABLE_STATUSES:
+            return False, "edit_order_price_not_allowed", {}
 
         total = unit * order.quantity
-        if not self.db.update_order(
-            order.order_id,
-            {"unit_price": unit, "total_price": total},
-            self.admin_user_id,
-            "Order unit price edited",
-        ):
-            return False, "edit_order_update_failed"
-        return True, "edit_order_price_success"
+        if order.status != OrderStatus.AWAITING_PAYMENT.value:
+            if not self.db.set_order_price(order, unit, total):
+                return False, "edit_order_update_failed", {}
+            return True, "edit_order_price_success", {}
+
+        credit = order.credit_applied or Decimal("0")
+        kept_credit = min(credit, total) if credit > 0 else credit  # a debt charged with the order stays
+        returned = credit - kept_credit
+        if returned > 0:
+            written = CreditService(self.db).set_price_returning_credit(
+                order, unit, total, kept_credit, self.admin_user_id
+            )
+        else:
+            written = self.db.set_order_price(order, unit, total)
+        if not written:
+            return False, "edit_order_update_failed", {}
+        due = {"old_due": float(order.amount_due), "new_due": float(total - kept_credit), "returned": float(returned)}
+        return True, "edit_order_price_success_awaiting_payment", due
 
     # ------------------------------------------------------------------ status
     def _status_options(self, order) -> list[str]:
@@ -359,8 +384,11 @@ class OrderEditing(BaseOrderHandler):
         order = self._get_order_or_warn(chat_id, order_id)
         if not order:
             return {"status": "order_not_found"}
-        ok, key = self._apply_unit_price_change(order, (text or "").strip())
-        self._send_message(chat_id, self._t(key, chat_id, order_id=order_id[:8]))
+        ok, key, params = self._apply_unit_price_change(order, (text or "").strip())
+        message = self._t(key, chat_id, order_id=order_id[:8], **params)
+        if params.get("returned"):
+            message += "\n" + self._t("edit_order_price_credit_returned", chat_id, returned=params["returned"])
+        self._send_message(chat_id, message)
         self._return_to_menu(chat_id, order.order_id)
         return {"status": key if ok else "edit_failed"}
 

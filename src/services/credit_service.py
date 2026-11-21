@@ -37,11 +37,14 @@ class CreditService:
         make_transaction: Callable[[Decimal], CreditTransaction | None],
         is_credit: bool,
         order_credits: Callable[[CreditTransaction], dict[str, Decimal]] | None = None,
+        order_items: list | None = None,
+        returns_used: bool = False,
     ) -> CreditTransaction | None:
         """Read the balance, let make_transaction say what changes, and write the transaction and the new balance
         in one write that only succeeds when the balance is still the one that was read. When another write came
         in between, read again (MAX_ATTEMPTS times). ``order_credits`` says which orders the change is used for;
-        they are written in the same transaction.
+        they are written in the same transaction, as are ``order_items`` (other conditional order writes).
+        ``returns_used``: the change gives back credit that was used, so it comes off the credit used.
 
         Returns the written transaction; None when make_transaction wants no change or the write failed.
         """
@@ -52,7 +55,7 @@ class CreditService:
 
             delta = transaction.balance_after - transaction.balance_before
             issued_delta = delta if is_credit and delta > 0 else Decimal("0.0")
-            used_delta = -delta if not is_credit and delta < 0 else Decimal("0.0")
+            used_delta = -delta if not is_credit and (delta < 0 or returns_used) else Decimal("0.0")
             try:
                 written = self.db.record_credit_change(
                     transaction,
@@ -60,6 +63,7 @@ class CreditService:
                     used_delta,
                     datetime.now(UTC).isoformat(),
                     order_credits(transaction) if order_credits else None,
+                    order_items,
                 )
             except CreditBalanceChanged:
                 continue
@@ -169,6 +173,31 @@ class CreditService:
             "payment_required": delivery_total - applied,
             "remaining_credit": transaction.balance_after,
         }
+
+    def set_price_returning_credit(
+        self, order: Order, unit_price: Decimal, total_price: Decimal, kept_credit: Decimal, admin_id: int
+    ) -> bool:
+        """Give an order awaiting payment a lower price and keep its credit within it: the credit above
+        ``kept_credit`` goes back to the balance, in the same write as the new price and credit, which is refused
+        when the order no longer has the status, quantity and credit it was read with."""
+        returned = (order.credit_applied or Decimal("0")) - kept_credit
+
+        def credit_returned(balance: Decimal) -> CreditTransaction:
+            return CreditTransaction(
+                customer_id=order.customer_id,
+                transaction_type="ADJUSTMENT",
+                amount=returned,
+                balance_before=balance,
+                balance_after=balance + returned,
+                reason=f"Credit returned: price of order {order.order_id[:8]} lowered",
+                created_by=admin_id,
+            )
+
+        price = self.db.order_price_item(order, unit_price, total_price, kept_credit)
+        transaction = self._change_balance(
+            order.customer_id, credit_returned, is_credit=False, order_items=[price], returns_used=True
+        )
+        return transaction is not None
 
     @staticmethod
     def _applied(transaction: CreditTransaction) -> Decimal:

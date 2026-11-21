@@ -84,11 +84,11 @@ class TestOrderEditingCallbacks(unittest.TestCase):
 
     @patch.object(OrderEditing, "_send_message")
     def test_apply_price_input_recomputes_and_confirms(self, mock_send):
-        self.mock_db.update_order.return_value = True
+        self.mock_db.set_order_price.return_value = True
         result = self.handler.apply_price_input(123, self.order.order_id, "2.50")
         self.assertEqual(result["status"], "edit_order_price_success")
-        updates = self.mock_db.update_order.call_args[0][1]
-        self.assertEqual(str(updates["total_price"]), "5.00")  # 2.50 * 2
+        total = self.mock_db.set_order_price.call_args[0][2]
+        self.assertEqual(str(total), "5.00")  # 2.50 * 2
 
     @patch.object(OrderEditing, "_send_message")
     def test_apply_status_sends_confirmation(self, mock_send):

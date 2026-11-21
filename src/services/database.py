@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from models.entities import AuthorizationStatus, Box, BoxStatus, Customer, Offer, Order, OrderStatus, Supplier
@@ -503,10 +504,20 @@ class DynamoDBService:
     def update_customer_credit(self, customer_id: str, updates: dict[str, Any]) -> bool:
         return self.credit_repo.update_customer_credit(customer_id, updates)
 
-    def record_credit_change(self, transaction, issued_delta, used_delta, now: str, order_credits=None) -> bool:
+    def record_credit_change(
+        self, transaction, issued_delta, used_delta, now: str, order_credits=None, order_items=None
+    ) -> bool:
         """The transaction, its balance change and the credit of the orders it is used for, in one write (see
         CreditRepository.record_change)"""
-        return self.credit_repo.record_change(transaction, issued_delta, used_delta, now, order_credits)
+        return self.credit_repo.record_change(transaction, issued_delta, used_delta, now, order_credits, order_items)
+
+    def set_order_price(self, order: Order, unit_price: Decimal, total_price: Decimal) -> bool:
+        """A new price for the order, only while it is as it was read (see OrderRepository.set_price_as_read)"""
+        return self.order_repo.set_price_as_read(order, unit_price, total_price)
+
+    def order_price_item(self, order: Order, unit_price: Decimal, total_price: Decimal, credit_applied: Decimal):
+        """The conditional write of a new price and credit, to go with a credit change (see OrderRepository)"""
+        return self.order_repo.price_item(order, unit_price, total_price, credit_applied)
 
     def create_credit_transaction(self, transaction) -> bool:
         return self.credit_repo.create_credit_transaction(transaction)
