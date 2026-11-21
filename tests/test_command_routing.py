@@ -247,6 +247,7 @@ class TestCommandRouting:
             ("/create_offer S B 10 12", "offer", "handle_create_offer"),
             ("/publish_offer 1", "offer", "handle_publish_offer"),
             ("/cancel_offer 1", "offer", "handle_cancel_offer"),
+            ("/instant_order DeMolen Tripel 3.50 Jan", "offer", "handle_instant_order"),
             ("/delete_offer 1", "offer", "handle_delete_offer"),
             ("/create_box 1", "offer", "handle_create_box"),
             ("/list_boxes", "offer", "handle_list_boxes"),

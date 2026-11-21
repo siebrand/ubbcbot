@@ -53,6 +53,7 @@
     {"command": "fomo", "description": "View active offers you have not ordered yet"},
     {"command": "help", "description": "Show help for specific section"},
     {"command": "import_orders", "description": "Import orders from a CSV file"},
+    {"command": "instant_order", "description": "Create an offer and an order at once: <supplier> <name> <price> <customer> [box_size]"},
     {"command": "list_boxes", "description": "View box status and capacity"},
     {"command": "list_guests", "description": "View all guest users"},
     {"command": "list_offer_orders", "description": "View all orders of an offer: <offer_id>"},

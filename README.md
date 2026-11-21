@@ -182,6 +182,8 @@ has every admin command.
 - `/update_supplier_contact <supplier_id> <email>` - Update supplier contact email
 - `/update_supplier_full_name <supplier_id> <new_name>` - Update supplier full name
 - `/create_offer <supplier_name> <name> <price> <box_size>` - Create draft beer offer
+- `/instant_order <supplier> <name> <price> <customer> [box_size]` - Create an offer, a delivered box and the first
+  order at once (box size 1 to 6, default 1; quote a supplier, name or customer with spaces, see "Instant Orders")
 - `/view_offer <offer_id>` - View and edit offer details
 - `/update_offer_name <offer_id> <new_name>` - Update offer name
 - `/update_offer_price <offer_id> <new_price>` - Update offer price
@@ -325,6 +327,21 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
 - **Long reports** (for example per day over a year) are split over several messages. Periods without sales are shown
   as a dash, except when there would be more than 62 rows; then only the periods with sales are listed.
 
+### Instant Orders
+
+- **What**: `/instant_order` sells beer the admin already has. One write creates the offer, a box that is already
+  `delivered` and holds one unit, and the customer's order (`ready_for_labeling`, placed by the admin). The customer is
+  told as for `/order_for`; a guest gets nothing.
+- **Box size 1**: the offer is `sold_out` at once and nothing is posted in the group.
+- **Box size 2 to 6**: the offer is `active` and gets one group announcement with the order buttons (no subscriber
+  messages, no customer name). Later orders go straight to `ready_for_labeling` in the same box; the order that fills
+  it sells the offer out and edits the announcement. The admin can add orders with `/order_for`.
+- **Input**: `/instant_order DeMolen Tripel 3.50 Jan 4`, or with quotes (straight or curly):
+  `/instant_order "De Molen" "Hel & Verdoemenis" 4.50 "Jan Jansen"`. Only approved customers are matched; more than
+  one match shows a list to pick from.
+- **Afterwards** the offer is an ordinary offer: labeling, the delivery overview and payment work as for any other.
+  An offer with a delivered box that holds orders cannot be cancelled with `/cancel_offer`.
+
 ### Export Expiry
 
 - **Why**: an order export contains customer data and should not stay in the chat history.
@@ -376,7 +393,7 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
 
 ## Business Rules
 
-- Wholesale box sizes: 1,2,6,8,10,12,15,16,18,20,24 units
+- Box sizes: 1 to 6, 8, 9, 10, 12, 15, 16, 18, 20 and 24 units (`/instant_order`: 1 to 6)
 - Auto-create new boxes when capacity reached
 - Box status: open → full → ordered → delivered
 - Admin access controlled via ADMIN_USER_ID environment variable

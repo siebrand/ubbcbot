@@ -187,6 +187,7 @@ ADMIN_COMMANDS = [
     ),
     admin_row("/create_offer Acme Pils 2.5 24", "offer", "handle_create_offer", AD, ARGS),
     admin_row("/cancel_offer 7", "offer", "handle_cancel_offer", AD, ARGS),
+    admin_row("/instant_order DeMolen Tripel 3.50 Jan 4", "offer", "handle_instant_order", AD, ARGS),
     admin_row("/create_box 7", "offer", "handle_create_box", AD, ARGS),
     admin_row("/list_boxes active 2", "offer", "handle_list_boxes", AD, ARGS),
     admin_row("/audit_offer 7", "offer", "handle_audit_offer", AD, ARGS),
