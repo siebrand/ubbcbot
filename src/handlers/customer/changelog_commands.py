@@ -9,7 +9,11 @@ class ChangelogCommands(BaseHandler):
         self.changelog_entries = [
             {
                 "title": "Up to 2026-11-21",
-                "content": """<b>Admin-Facing Updates</b>
+                "content": """<b>User-Facing Updates</b>
+• <b>Part Payments</b> - When you pay for some of your open orders, you get a message with what was received and what is still to pay
+
+<b>Admin-Facing Updates</b>
+• <b>Partial Payments</b> - In <code>/process_payment</code> the 💶 button asks for the amount a customer paid and proposes the oldest open orders that add up to it exactly; confirm to mark those paid. The new <code>/list_open_payments</code> shows who still has to pay, how much, and for how long
 • <b>New /instant_order Command</b> - Sell beer you already have in one step: <code>/instant_order &lt;supplier&gt; &lt;name&gt; &lt;price&gt; &lt;customer&gt; [box_size]</code> creates the offer, a delivered box and the customer's order, ready for labeling. With a box size of 2 to 6 the offer is announced in the group and others can order the rest. Without arguments, or with the button in the Offers menu, the bot asks for each part in turn
 • <b>Cancel Before Labeling</b> - An order that is ready for labeling can now be cancelled; its unit is free again""",
             },

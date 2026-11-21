@@ -220,7 +220,9 @@ has every admin command.
 - `/process_delivery` - Process wholesale deliveries and manage delivery status
 - `/process_labeling` - Complete labeling process for delivered orders
 - `/send_delivery_overviews` - Send delivery overviews to customers
-- `/process_payment` - Mark customers as paid
+- `/process_payment` - Mark customers as paid: ✓ pays all their open orders, 💶 asks for the amount received and pays
+  the oldest open orders that add up to it exactly (see "Partial Payments")
+- `/list_open_payments` - Customers with unpaid orders: open total, number of orders and age of the oldest, oldest first
 - `/send_payment_reminder` - Send payment reminder to customers awaiting payment
 - `/failed_notifications` - Labeled orders without a delivery overview yet (an overview that could not be delivered
   is reported when it is sent)
@@ -341,6 +343,22 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
   one match shows a list to pick from.
 - **Afterwards** the offer is an ordinary offer: labeling, the delivery overview and payment work as for any other.
   An offer with a delivered box that holds orders cannot be cancelled with `/cancel_offer`.
+
+### Partial Payments
+
+- **What**: a customer who pays part of what is open. In `/process_payment` the 💶 button next to a customer asks for
+  the amount received (`40`, `40,50`, `€40.50`; at most 10 000).
+- **Whole orders only**: the bot looks for the set of open orders whose amounts due (price minus credit applied) add up
+  to exactly that amount. When several sets do, the one with the oldest order wins (oldest: open the longest), then
+  the next oldest. Orders with nothing due are settled along. No credit is involved: an amount that matches no set is
+  not booked, and the closest total is shown.
+- **Confirmation**: the proposal lists the orders and what stays open. The confirm button carries no stored state; the
+  bot searches again and pays only when the same orders come out, so an order that changed in between, or a second
+  tap, changes nothing. Each order is set to paid only while it still awaits payment, with its `PAYMENT_RECEIVED`
+  event (amount: the order's price, as for "pay everything").
+- **The customer** is told from the admin account what was received and what is still to pay (guests get nothing).
+- **Limits**: more than 60 open orders, or more than €100 000 open, cannot be searched; pay those with ✓ or
+  `/edit_order`.
 
 ### Export Expiry
 

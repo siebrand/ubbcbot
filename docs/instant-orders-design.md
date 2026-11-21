@@ -1,6 +1,6 @@
 # Instant Orders: Technical Design
 
-Status: draft for review. The use cases are in
+Status: implemented (2026-11-21). The use cases are in
 [instant-orders-and-partial-payments.md](instant-orders-and-partial-payments.md). This document says how to build
 them, in small steps that each leave the bot working and the tests green.
 

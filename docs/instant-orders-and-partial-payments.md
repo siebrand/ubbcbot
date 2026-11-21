@@ -1,7 +1,7 @@
 # Instant Orders and Partial Payments: Use Cases
 
-Status: instant orders implemented (2026-11-21); partial payments: use cases agreed. The technical designs are in
-[instant-orders-design.md](instant-orders-design.md) and [partial-payments-design.md](partial-payments-design.md).
+Status: implemented (2026-11-21). The technical designs are in [instant-orders-design.md](instant-orders-design.md)
+and [partial-payments-design.md](partial-payments-design.md).
 
 This document gives the use cases for two features, in terms of the current system. It has no data model, handler or
 table changes. Those are in the technical designs.
