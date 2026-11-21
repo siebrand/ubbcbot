@@ -2,7 +2,7 @@ import logging
 from decimal import Decimal
 from typing import Any
 
-from models.entities import ACTIVE_ORDER_STATUSES, BoxStatus, OrderStatus
+from models.entities import CANCELLABLE_ORDER_STATUSES, BoxStatus, OrderStatus
 from services.box_refill import REFILLABLE_BOX_STATUSES
 from services.box_status_manager import BoxStatusManager
 
@@ -110,14 +110,15 @@ class OrderEditing(BaseOrderHandler):
         """The statuses this order may be given here, in workflow order (audit 6, A3).
 
         Between pending and labeling completed the units are in the box and no money is involved: one of those
-        statuses may be corrected into another, and a pending or ordered order may be cancelled (as /cancel_order
-        does: the box gets the units back). A cancelled order is not brought back (its room may have gone to other
-        orders: place a new one), only the delivery overview asks for a payment (it applies the credit and the
-        payment link), an order awaiting payment may only be marked paid, and a paid order keeps its status.
+        statuses may be corrected into another, and a pending, ordered or ready_for_labeling order may be cancelled
+        (as /cancel_order does: the box gets the units back). A cancelled order is not brought back (its room may
+        have gone to other orders: place a new one), only the delivery overview asks for a payment (it applies the
+        credit and the payment link), an order awaiting payment may only be marked paid, and a paid order keeps its
+        status.
         """
         if order.status in CORRECTABLE_STATUSES:
             options = [status for status in CORRECTABLE_STATUSES if status != order.status]
-            if order.status in ACTIVE_ORDER_STATUSES:
+            if order.status in CANCELLABLE_ORDER_STATUSES:
                 options.append(OrderStatus.CANCELLED.value)
             return options
         if order.status == OrderStatus.AWAITING_PAYMENT.value:

@@ -196,9 +196,56 @@ class TestAnOrderIsCancelledOnce:
         assert notify.call_count == 1
 
 
+class TestAnOrderReadyForLabelingIsCancelled:
+    """A delivered order that is not labeled yet may be cancelled: no money is involved yet, the unit is free again in
+    its delivered box (instant-orders-design.md, D1/IO-10)"""
+
+    @pytest.fixture
+    def ready(self, db, order):
+        """The fixture order (2 units) is ready for labeling in a full delivered box of a sold-out offer"""
+        db.update_box(order.box_id, {"status": BoxStatus.DELIVERED.value, "max_capacity": 2})
+        db.update_order(order.order_id, {"status": "ready_for_labeling", "received_quantity": 2})
+        db.update_offer(7, {"status": OfferStatus.SOLD_OUT.value})
+        return db.get_order(order.order_id)
+
+    def test_the_units_are_free_again_and_the_offer_reopens(self, flow, db, ready):
+        with (
+            patch.object(BaseHandler, "sync_offer_messages") as sync,
+            patch.object(BaseHandler, "_notify_customer") as notify,
+        ):
+            result = flow.admin_order.handle_confirm_cancel_with_reason(ADMIN_ID, ready.order_id, "Wrong customer")
+
+        assert result == {"status": "success"}
+        assert db.get_order(ready.order_id).status == "cancelled"
+        box = db.get_box(ready.box_id)
+        assert (box.status, box.current_quantity) == (BoxStatus.DELIVERED.value, 0)
+        assert db.get_offer(7).status == OfferStatus.ACTIVE.value
+        sync.assert_called_with(7)  # the announcement gets its order buttons back
+        assert notify.call_args.args[1] == "order_cancelled_by_admin"
+
+    def test_the_confirmation_is_shown_for_it(self, flow, db, ready):
+        result = flow.admin_order.handle_cancel_order_by_id(ADMIN_ID, ready.order_id)
+
+        assert result == {"status": "confirmation_required"}
+        assert f"request_cancel_reason_{ready.order_id}" in flow.sent[-1].buttons
+
+    def test_a_second_tap_changes_nothing(self, flow, db, ready):
+        with patch.object(BaseHandler, "sync_offer_messages"):
+            flow.admin_order.handle_confirm_cancel_with_reason(ADMIN_ID, ready.order_id, "Wrong customer")
+            second = flow.admin_order.handle_confirm_cancel_with_reason(ADMIN_ID, ready.order_id, "Wrong customer")
+
+        assert second == {"status": "already_cancelled"}
+        assert db.get_box(ready.box_id).current_quantity == 0
+
+    def test_it_is_listed_with_the_customers_orders_to_cancel(self, flow, db, ready):
+        flow.admin_order.handle_cancel_order(ADMIN_ID, ["siebran"])
+
+        assert f"cancel_order_confirm_{ready.order_id}" in flow.sent[-1].buttons
+
+
 class TestADeliveredOrderIsNotCancelled:
-    """Only a pending or ordered order may be cancelled: a delivered one keeps its box, its credit and its payment
-    (audit 6, A2)"""
+    """Only a pending, ordered or ready_for_labeling order may be cancelled: from labeling completed on an order keeps
+    its box, its credit and its payment (audit 6, A2; IO-10)"""
 
     @pytest.fixture
     def delivered(self, db, order):
@@ -218,7 +265,7 @@ class TestADeliveredOrderIsNotCancelled:
 
     @pytest.mark.parametrize(
         "status",
-        ["received_partial_delayed", "ready_for_labeling", "labeling_completed", "awaiting_payment", "completed"],
+        ["received_partial_delayed", "labeling_completed", "awaiting_payment", "completed"],
     )
     def test_the_full_id_shows_no_confirmation_for_an_order_past_ordering(self, flow, db, delivered, status):
         db.update_order(delivered.order_id, {"status": status})

@@ -246,7 +246,7 @@
   "usage_cancel_order": "Gebruik: /cancel_order <bestelling_id>",
   "order_not_found": "❌ Bestelling niet gevonden",
   "order_already_cancelled": "❌ Bestelling al geannuleerd",
-  "order_cannot_be_cancelled": "⚠️ Bestelling {order_id} kan niet worden geannuleerd: de status is {status}. Alleen een open of bestelde bestelling kan worden geannuleerd.",
+  "order_cannot_be_cancelled": "⚠️ Bestelling {order_id} kan niet worden geannuleerd: de status is {status}. Alleen een open of bestelde bestelling, of een die klaar is voor labelen, kan worden geannuleerd.",
   "box_not_found": "❌ Colli niet gevonden",
   "usage_order_for": "Gebruik: /order_for <gebruikersnaam> <aanbieding_id> [aantal]",
   "quantity_must_positive": "❌ Aantal moet positief zijn",

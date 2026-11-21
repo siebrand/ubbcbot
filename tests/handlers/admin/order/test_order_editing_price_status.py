@@ -67,10 +67,13 @@ class TestOrderEditingPriceStatus(unittest.TestCase):
             ["pending", "received_partial_delayed", "ready_for_labeling", "labeling_completed", "cancelled"],
         )
 
-    def test_a_delivered_order_is_not_offered_cancelled(self):
-        options = self.handler._status_options(self._order(status="ready_for_labeling"))
+    def test_a_labeled_order_is_not_offered_cancelled(self):
+        options = self.handler._status_options(self._order(status="labeling_completed"))
         self.assertNotIn("cancelled", options)
         self.assertNotIn("awaiting_payment", options)
+
+    def test_an_order_ready_for_labeling_is_offered_cancelled(self):
+        self.assertIn("cancelled", self.handler._status_options(self._order(status="ready_for_labeling")))
 
     def test_apply_status_change_valid(self):
         order = self._order(status="ordered")

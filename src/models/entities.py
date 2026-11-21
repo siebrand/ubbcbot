@@ -38,6 +38,11 @@ class OrderStatus(Enum):
 # labeled, charged or paid): such an order is not cancelled, its box and credit stay as they are (audit 6, A2).
 ACTIVE_ORDER_STATUSES = (OrderStatus.PENDING.value, OrderStatus.ORDERED.value)
 
+# The orders the admin may cancel: also a delivered one that is not labeled yet (no money is involved until the
+# delivery overview, after labeling); its unit is free again in its delivered box (instant-orders-design.md, D1).
+# ACTIVE_ORDER_STATUSES stays as it is: it also drives the order limits, the "active" export and /cancel_offer.
+CANCELLABLE_ORDER_STATUSES = (*ACTIVE_ORDER_STATUSES, OrderStatus.READY_FOR_LABELING.value)
+
 
 class DeliveryAction(Enum):
     FULL = "full"

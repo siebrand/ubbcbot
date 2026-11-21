@@ -2,7 +2,7 @@ import html
 import logging
 from typing import Any
 
-from models.entities import ACTIVE_ORDER_STATUSES, OrderStatus
+from models.entities import CANCELLABLE_ORDER_STATUSES, OrderStatus
 from services.box_status_manager import BoxStatusManager
 from services.database import DynamoDBService
 from services.export_expiry import ExportExpiryService
@@ -428,10 +428,10 @@ class BaseHandler:
     def _refuse_cancel(self, order, chat_id: int) -> dict[str, Any] | None:
         """None when the order may be cancelled; otherwise tell the admin why not and return the result.
 
-        A delivered order (ready for labeling up to paid) is not cancelled: its units are in a delivered box, and
-        credit can have been used for it.
+        From labeling completed on an order is not cancelled: it has been labeled for, and credit can have been used
+        for it (CANCELLABLE_ORDER_STATUSES).
         """
-        if order.status in ACTIVE_ORDER_STATUSES:
+        if order.status in CANCELLABLE_ORDER_STATUSES:
             return None
         if order.status == OrderStatus.CANCELLED.value:
             self._send_message(chat_id, self._t("order_already_cancelled", chat_id))
@@ -445,8 +445,8 @@ class BaseHandler:
         """Cancel an order as the admin: the box gets the units back, the customer is told, the admin sees the box.
 
         The order and its box change in one write, only while the order is as it was read: an order that was
-        cancelled in the meantime (an old confirmation tapped again) gives its units back once. Only a pending or
-        ordered order is cancelled (see ACTIVE_ORDER_STATUSES).
+        cancelled in the meantime (an old confirmation tapped again) gives its units back once. Only a pending,
+        ordered or ready_for_labeling order is cancelled (see CANCELLABLE_ORDER_STATUSES).
         """
         refused = self._refuse_cancel(order, chat_id)
         if refused:
