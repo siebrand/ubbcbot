@@ -54,13 +54,13 @@ def db(dynamodb):
     UserCache.invalidate_cache()
 
 
-def add_customer(db, telegram_id, name, is_guest=False):
+def add_customer(db, telegram_id, name, is_guest=False, status=AuthorizationStatus.APPROVED.value):
     return db.create_customer(
         Customer(
             telegram_user_id=telegram_id,
             first_name=name,
             is_guest=is_guest,
-            authorization_status=AuthorizationStatus.APPROVED.value,
+            authorization_status=status,
         )
     )
 
@@ -74,6 +74,43 @@ def placement(db, telegram):
     handler = OrderPlacement(db, ADMIN_ID, "prod", "token")
     handler.sync_offer_messages = lambda *a, **k: None
     return handler
+
+
+class TestOnlyApprovedCustomersAreMatched:
+    """/order_for finds approved customers (guests are approved) and nobody else"""
+
+    @pytest.fixture
+    def others(self, db):
+        add_customer(db, 201, "Janneke", status=AuthorizationStatus.UNAUTHORIZED.value)
+        add_customer(db, 202, "Jantje", status=AuthorizationStatus.REJECTED.value)
+
+    def test_a_pending_or_rejected_customer_is_not_matched_or_listed(self, db, placement, telegram, others):
+        jan = add_customer(db, 101, "Jan")
+
+        result = placement.handle_create_order_for(ADMIN_ID, ADMIN_ID, ["Jan"])
+
+        assert result == {"status": "success"}  # one match: the offers are shown for Jan
+        assert jan.first_name in sent_to(telegram, ADMIN_ID)[-1]
+        assert not any("Janneke" in text or "Jantje" in text for text in sent_to(telegram, ADMIN_ID))
+
+    def test_only_a_pending_customer_is_no_match(self, db, placement, telegram, others):
+        result = placement.handle_create_order_for(ADMIN_ID, ADMIN_ID, ["Janneke"])
+
+        assert result["status"] == "user_not_found"
+
+    def test_the_one_line_form_does_not_order_for_a_rejected_customer(self, db, placement, telegram, others):
+        result = placement.handle_create_order_for(ADMIN_ID, ADMIN_ID, ["Jantje", "7", "1"])
+
+        assert result["status"] == "user_not_found"
+        assert db.get_orders_by_offer(7) == []
+
+    def test_a_guest_is_matched(self, db, placement, telegram):
+        guest = add_customer(db, -1, "Gast", is_guest=True)
+
+        result = placement.handle_create_order_for(ADMIN_ID, ADMIN_ID, ["Gast", "7", "1"])
+
+        assert result == {"status": "success"}
+        assert [o.customer_id for o in db.get_orders_by_offer(7)] == [guest.customer_id]
 
 
 class TestOrderFor:

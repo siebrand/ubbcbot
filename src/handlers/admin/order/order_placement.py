@@ -30,7 +30,9 @@ class OrderPlacement(BaseOrderHandler):
 
         # Username provided - find customer and show offers
         identifier = " ".join(args)
-        customer, error = self._find_customer_with_disambiguation(identifier, chat_id, "order_for_user_select")
+        customer, error = self._find_customer_with_disambiguation(
+            identifier, chat_id, "order_for_user_select", status_filter="approved"
+        )
 
         if error:
             return error
@@ -49,7 +51,9 @@ class OrderPlacement(BaseOrderHandler):
                 return {"status": "invalid_quantity"}
 
             # Find target customer
-            customer, error = self._find_customer_with_disambiguation(username, chat_id, "order_for_user_select")
+            customer, error = self._find_customer_with_disambiguation(
+                username, chat_id, "order_for_user_select", status_filter="approved"
+            )
             if error:
                 return error
 
