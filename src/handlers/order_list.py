@@ -165,10 +165,11 @@ class OrderListMixin(BaseHandler):
                 offer_id_link = str(data["offer_id"])
 
             if show_order_ids or is_admin:
-                short_order_id = data["order_ids"][0][:8] if data["order_ids"] else "unknown"
+                # Every order the line adds up, sorted: each can be looked up or cancelled by its short id
+                short_order_ids = ", ".join(sorted(order_id[:8] for order_id in data["order_ids"]))
                 message += (
                     f"{line_icon} {date_display} [{offer_id_link}] {self._escape_html(data['offer_name'])} "
-                    f"€{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_id}\n"
+                    f"€{data['unit_price']:.2f} {data['quantity']}x €{data['total_price']:.2f} - {short_order_ids}\n"
                 )
             else:
                 message += (

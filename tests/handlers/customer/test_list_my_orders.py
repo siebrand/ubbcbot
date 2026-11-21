@@ -53,6 +53,52 @@ def test_with_id_the_order_ids_are_shown():
     assert "order-12" in handler._send_message.call_args.args[1]
 
 
+def _three_orders_on_one_line(handler):
+    """Three orders of one offer, price and status: one line in the list"""
+    handler.db.get_orders_by_customer.return_value = [
+        Order(
+            order_id=order_id,
+            customer_id="cust-1",
+            offer_id=7,
+            quantity=1,
+            unit_price=Decimal("2.00"),
+            total_price=Decimal("2.00"),
+            status=OrderStatus.PENDING.value,
+            created_at=datetime(2026, 11, 1, 12, 0, tzinfo=UTC),
+        )
+        for order_id in ("9c9c9c9c-3333", "1a2b3c4d-1111", "5e6f7a8b-2222")
+    ]
+
+
+def test_a_line_of_several_orders_shows_every_order_id_sorted():
+    handler = _handler()
+    _three_orders_on_one_line(handler)
+
+    handler.handle_list_my_orders(42, 42, ["id"])
+
+    assert "Pils €2.00 3x €6.00 - 1a2b3c4d, 5e6f7a8b, 9c9c9c9c\n" in handler._send_message.call_args.args[1]
+
+
+def test_the_admin_sees_every_order_id_of_a_line():
+    handler = _handler()
+    _three_orders_on_one_line(handler)
+
+    handler.show_customer_orders(ADMIN_ID, CUSTOMER, user_id=ADMIN_ID)
+
+    assert "- 1a2b3c4d, 5e6f7a8b, 9c9c9c9c\n" in handler._send_message.call_args.args[1]
+
+
+def test_without_id_a_line_of_several_orders_shows_none():
+    handler = _handler()
+    _three_orders_on_one_line(handler)
+
+    handler.handle_list_my_orders(42, 42)
+
+    message = handler._send_message.call_args.args[1]
+    assert "Pils €2.00 3x €6.00" in message
+    assert not any(order_id in message for order_id in ("1a2b3c4d", "5e6f7a8b", "9c9c9c9c"))
+
+
 def test_someone_without_a_customer_record_is_told():
     handler = _handler()
     handler.db.get_customer_by_telegram_id.return_value = None
