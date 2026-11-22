@@ -10,17 +10,7 @@ class ChangelogCommands(BaseHandler):
             {
                 "title": "Up to 2026-11-22",
                 "content": """<b>User-Facing Updates</b>
-• <b>Order What Is There</b> - When you ask for more than one box has room for, your order is spread over the boxes that have room (and new boxes, as long as the offer may get them). If fewer units are left than you asked for, you get what is left and are told how many could be ordered; with nothing left the offer is sold out. You get one confirmation for the whole order, and the group sees it once
-
-<b>Admin-Facing Updates</b>
-• <b>Order For, Over Several Boxes</b> - <code>/order_for</code> works the same way, and your confirmation says how many of the request could be ordered
-
-<b>Behind the Scenes</b>
-• <b>One Write Per Request</b> - All orders, new boxes and box quantities of one request are written in one transaction that only succeeds while each box still has the room, so two people ordering the last units at the same time never get more than there is""",
-            },
-            {
-                "title": "Up to 2026-11-21",
-                "content": """<b>User-Facing Updates</b>
+• <b>Order What Is There</b> - If fewer units are left than you asked for, you get what is left and are told how many could be ordered; with nothing left the offer is sold out. You get one confirmation for the whole order
 • <b>Partial Payments</b> - When you pay for some of your open orders, you get a message with what was received and what is still to pay
 • <b>Later or Not at All</b> - You are told when wholesale units of your order come later, or not at all
 • <b>Instant Offers</b> - A beer the admin already has can be ordered at once; the group post shows how many units are still available, and says "Prijs incl. eventueel statiegeld."
@@ -34,12 +24,13 @@ class ChangelogCommands(BaseHandler):
 • <b>Sales Per Weekday</b> - <code>/report_sales_by_period weekday</code> shows Monday to Sunday with the average per occurrence of each day; a button in the Reports section. The granularity words are <code>day</code>, <code>week</code>, <code>month</code> and <code>weekday</code> only
 • <b>Checklists</b> - <code>/process_delivery</code> and <code>/process_labeling</code> let you tick several offers and process them at once
 • <b>Customer Status</b> - The <code>/update_user</code> screen changes a customer's status, also for guests; <code>/reject_user</code> picks the right customer from the list and asks for a confirmation when there are open orders
-• <b>Order For</b> - <code>/order_for</code> matches only approved customers and confirms in one message
+• <b>Order For</b> - <code>/order_for</code> matches only approved customers, spreads a request over several boxes like a customer's order, and confirms in one message that says how many of the request could be ordered
 • <b>Safer Cancelling and Editing</b> - An order is cancelled once, with its box in one write; an order ready for labeling can be cancelled, a delivered box is never reopened; <code>/edit_order</code> offers only statuses that keep the box and the money right, moves an order to another box in one write, and changes a price only while no payment is recorded (credit above a lowered price goes back to the balance); <code>/cancel_offer</code> cancels each order with its box, keeps boxes that still hold orders, and refuses an offer with delivered boxes
 • <b>Money Fixes</b> - Credit is used once per delivery overview, delayed units are booked in, only the amount of the orders actually marked paid is confirmed, and payment links must be https
 • <b>Your Language</b> - The payment, import and order screens follow the admin's language
 
 <b>Behind the Scenes</b>
+• <b>One Write Per Request</b> - All orders, new boxes and box quantities of one request are written in one transaction that only succeeds while each box still has the room, so two people ordering the last units at the same time never get more than there is
 • <b>Box Status From the Real Quantity</b> - Full and open follow the quantity a box holds after each change, written only while it still applies""",
             },
             {
