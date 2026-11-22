@@ -225,6 +225,7 @@ CMD = [
     ("cmd:publish_offer", Says("usage_publish_offer")),
     ("cmd:list_offers", C("info", call.handle_list_offers(CHAT, ADMIN_ID, []))),
     ("cmd:list_boxes", C("offer", call.handle_list_boxes(CHAT))),
+    ("cmd:offer_overview", C("offer", call.handle_offer_overview(CHAT))),
     ("cmd:audit_offer", C("offer", call.handle_audit_offer(CHAT, []))),
     ("cmd:process_wholesale", C("offer", call.handle_process_wholesale(CHAT, []))),
     ("cmd:export_orders", C("admin_order", call.handle_export_orders(CHAT, []))),

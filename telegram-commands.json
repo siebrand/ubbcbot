@@ -66,6 +66,7 @@
     {"command": "list_users", "description": "View customers: [status] [search]"},
     {"command": "my_data", "description": "Download all data we have about you"},
     {"command": "my_orders", "description": "View your orders"},
+    {"command": "offer_overview", "description": "Overview of what can be ordered, to pin in the group"},
     {"command": "offer_status", "description": "Change offer status: <offer_id> <status>"},
     {"command": "order", "description": "Place order: /order <offer_id> [quantity]"},
     {"command": "payment_info", "description": "View payment details"},

@@ -194,6 +194,7 @@ has every admin command.
 - `/create_box <offer_id>` - Add single box to offer (updates sold out offers to active)
 - `/list_boxes [<offer_id>|active|ordered|full|delivered|all|help]` - View box status and capacity (paginated with
   enhanced navigation)
+- `/offer_overview` - The active offers as one list to edit and pin in the group, sent to the admin only (also the 📌 button in the Offers section of `/admin`). The offers are grouped by the style in parentheses in their name (`STYLE_GROUPS` in `services/offer_overview.py`; several styles are separated by `/`, the first decides; no known style: OVERIG), lowest offer number first. The intro and the group headings are bold; each line has the offer number (bold, a link to the offer), the name (bold), the price, and in parentheses how many can still be ordered (the room left in its boxes; nothing when it has no box yet or the next order opens a new one)
 - `/audit_offer <offer_id>` - Audit offer capacity vs orders
 - `/refill_boxes <offer_id>` - After cancellations, move pending orders from later boxes into the room of earlier
   ones (boxes not yet ordered) and remove the boxes that end up empty; shows the moves first (button confirmation)

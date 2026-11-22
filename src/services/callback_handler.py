@@ -532,6 +532,7 @@ class CallbackHandler:
             "publish_offer": lambda chat, user: self._send_usage_message(chat, "usage_publish_offer"),
             "list_offers": lambda chat, user: self.handlers["info"].handle_list_offers(chat, user, []),
             "list_boxes": lambda chat, user: self.handlers["offer"].handle_list_boxes(chat),
+            "offer_overview": lambda chat, user: self.handlers["offer"].handle_offer_overview(chat),
             "audit_offer": lambda chat, user: self.handlers["offer"].handle_audit_offer(chat, []),
             "process_wholesale": lambda chat, user: self.handlers["offer"].handle_process_wholesale(chat, []),
             "export_orders": lambda chat, user: self.handlers["admin_order"].handle_export_orders(chat, []),

@@ -226,6 +226,7 @@ ADMIN_COMMANDS = [
     admin_row("/create_guest Piet Puk contact", "user", "handle_create_guest", AD, ARGS),
     admin_row("/list_guests", "user", "handle_list_guests", AD),
     admin_row("/list_credits", "credit", "handle_list_credits", AD),
+    admin_row("/offer_overview", "offer", "handle_offer_overview", AD),
     admin_row("/process_delivery", "wholesale_delivery", "handle_process_delivery", AD, U, ARGS),
     admin_row("/process_labeling", "labeling", "handle_process_labeling", AD, U, ARGS),
     admin_row("/send_delivery_overviews", "admin_order", "handle_send_delivery_overviews", AD, ARGS),

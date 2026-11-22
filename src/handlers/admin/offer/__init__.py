@@ -4,11 +4,13 @@ from .editing import OfferEditingHandler
 from .instant import InstantOrderHandler
 from .management import OfferManagementHandler
 from .notifications import NotificationHandler
+from .overview import OfferOverviewHandler
 
 
 class OfferCommands(
     OfferCreationHandler,
     OfferManagementHandler,
+    OfferOverviewHandler,
     OfferEditingHandler,
     BoxManagementHandler,
     InstantOrderHandler,  # before NotificationHandler, its base
