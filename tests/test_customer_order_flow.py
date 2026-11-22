@@ -325,6 +325,18 @@ class TestARequestOverSeveralBoxes:
         assert all(o.order_id[:8] in confirmation for o in orders_of(db, jan))
         assert handler._t("order_shortfall", USER_ID, requested=4, placed=4) not in confirmation
 
+    def test_the_confirmation_is_one_order_line(self, db, handler, jan):
+        delivered(db, "d1", 4, 1)
+        delivered(db, "d2", 4, 2)
+        db.update_offer(7, {"name": "Pils & <Co>"})
+
+        handler.handle_create_order(USER_ID, USER_ID, ["7", "4"])
+
+        short_ids = ", ".join(sorted(o.order_id[:8] for o in orders_of(db, jan)))
+        [(text, options)] = [(text, kw) for chat, text, kw in handler.sent if chat == USER_ID]
+        assert text == f"✅ Je bestelling is geplaatst:\n\n4x [7] <b>Pils &amp; &lt;Co&gt;</b> €10.00 ({short_ids})"
+        assert options.get("parse_mode") == "HTML"
+
     def test_what_is_left_after_a_delivered_box_is_the_shortfall(self, db, handler, jan):
         delivered(db, "d1", 4, 1)
 

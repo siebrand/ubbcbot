@@ -194,7 +194,7 @@ class OrderPlacement(BaseOrderHandler):
                 parse_mode="HTML",
                 offer_id=offer.offer_id,
                 product=self._escape_html(offer.name),
-                **order_handler.request_summary(orders, customer.telegram_user_id),
+                **CustomerOrderCommands.request_summary(orders),
             )
 
             # Announce in the group (execute_order does not for orders the admin places)
@@ -202,24 +202,29 @@ class OrderPlacement(BaseOrderHandler):
             order_handler.announce_order_for(customer, offer, placed)
 
             # One confirmation for the admin, in the admin's language, with whether the customer was told
-            message = self._order_for_confirmation(chat_id, customer, offer, orders, quantity, pm_result, order_handler)
-            self._send_message(chat_id, message)
+            message = self._order_for_confirmation(chat_id, customer, offer, orders, quantity, pm_result)
+            self._send_message(chat_id, message, parse_mode="HTML")
 
         return result
 
-    def _order_for_confirmation(
-        self, chat_id: int, customer, offer, orders: list, requested: int, pm_result: dict, order_handler
-    ) -> str:
-        """The admin's confirmation of the orders placed for a customer, with how many of the request could be"""
+    def _order_for_confirmation(self, chat_id: int, customer, offer, orders: list, requested: int, pm_result) -> str:
+        """The admin's confirmation (HTML) of the orders placed for a customer: one order line under the customer's
+        name, with how many of the request could be ordered and whether the customer was told"""
+        from handlers.customer.order_commands import CustomerOrderCommands
+
         display_name = " ".join(part for part in (customer.first_name, customer.last_name) if part) or self._t(
             "unknown", chat_id
         )
-        summary = order_handler.request_summary(orders, chat_id)
-        message = self._t("order_placed_single", chat_id, name=display_name, product=offer.name, **summary)
+        name = self._escape_html(display_name)
+        summary = CustomerOrderCommands.request_summary(orders)
+        product = self._escape_html(offer.name)
+        message = self._t(
+            "order_placed_single", chat_id, name=name, offer_id=offer.offer_id, product=product, **summary
+        )
         if summary["quantity"] < requested:
-            message += "\n" + self._t("order_for_shortfall", chat_id, requested=requested, placed=summary["quantity"])
+            message += "\n\n" + self._t("order_for_shortfall", chat_id, requested=requested, placed=summary["quantity"])
         if not customer.is_guest and not pm_result.get("success"):
-            message += "\n" + self._t("pm_notification_failed", chat_id, name=display_name)
+            message += "\n\n" + self._t("pm_notification_failed", chat_id, name=name)
         return message
 
     def handle_create_order_for_user_select(self, chat_id: int, customer_id: str) -> dict[str, Any]:

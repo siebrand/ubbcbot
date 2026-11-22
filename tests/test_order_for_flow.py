@@ -181,6 +181,19 @@ class TestOrderFor:
             f"Er is een bestelling voor je geplaatst door de beheerder:\n\n3x [7] <b>Pils</b> €7.50 ({short_ids})"
         )
 
+    def test_the_admin_gets_one_order_line_with_the_customer_name(self, db, placement, telegram):
+        jan = db.create_customer(
+            Customer(telegram_user_id=101, first_name="Jan", last_name="<Jansen>", authorization_status="approved")
+        )
+
+        placement.handle_create_order_for_quantity_select(ADMIN_ID, jan.customer_id, "7", "2")
+
+        [order] = db.get_orders_by_customer(jan.customer_id)
+        [confirmation] = sent_to(telegram, ADMIN_ID)
+        assert confirmation == (
+            f"✅ Bestelling geplaatst voor Jan &lt;Jansen&gt;:\n\n2x [7] <b>Pils</b> €5.00 ({order.order_id[:8]})"
+        )
+
     def test_the_offer_name_is_bold_and_escaped_for_the_customer(self, db, placement, telegram):
         jan = add_customer(db, 101, "Jan")
         db.update_offer(7, {"name": "Pils & <Co>"})

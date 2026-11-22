@@ -153,15 +153,13 @@ class CustomerOrderCommands(PaymentMessageMixin, BaseHandler):
             placed_by_admin=placed_by_admin,
         )
 
-    def request_summary(self, orders: list, reader: int) -> dict[str, Any]:
-        """The confirmation params of the orders of one request: their short ids (sorted), the units, the amount and
-        their statuses (in the reader's language, each once)"""
-        statuses = list(dict.fromkeys(self._t(f"status_{order.status}", reader) for order in orders))
+    @staticmethod
+    def request_summary(orders: list) -> dict[str, Any]:
+        """The confirmation params of the orders of one request: their short ids (sorted), the units and the amount"""
         return {
             "order_id": ", ".join(sorted(order.order_id[:8] for order in orders)),
             "quantity": sum(order.quantity for order in orders),
             "total": float(sum(order.total_price for order in orders)),
-            "status": ", ".join(statuses),
         }
 
     def _get_offer_and_customer(self, chat_id: int, user_id: int, offer_id: int) -> tuple:
@@ -231,12 +229,12 @@ class CustomerOrderCommands(PaymentMessageMixin, BaseHandler):
 
     def _send_order_confirmation(self, chat_id: int, user_id: int, orders: list, offer, requested: int, customer):
         """One confirmation of the orders of a request, with what could not be ordered; one group announcement"""
-        display_name = f"{customer.first_name} {customer.last_name}".strip() if customer else ""
-        summary = self.request_summary(orders, user_id)
-        message = self._t("order_placed_single", user_id, name=display_name, product=offer.name, **summary)
+        summary = self.request_summary(orders)
+        product = self._escape_html(offer.name)
+        message = self._t("order_placed_own", user_id, offer_id=offer.offer_id, product=product, **summary)
         if summary["quantity"] < requested:
             message += "\n\n" + self._t("order_shortfall", user_id, requested=requested, placed=summary["quantity"])
-        self._send_message(chat_id, message)
+        self._send_message(chat_id, message, parse_mode="HTML")
 
         announcement = self._build_order_notification_message(customer, offer, summary["quantity"])
         if announcement:
