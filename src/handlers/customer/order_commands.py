@@ -5,8 +5,12 @@ from handlers.base_handler import BaseHandler
 from handlers.payment_message import PaymentMessageMixin
 from models.entities import AuthorizationStatus, Box, BoxStatus, OfferStatus, Order, OrderStatus
 from services.box_status_manager import BoxStatusManager
+from services.order_allocation import allocate, may_create_boxes
 
 logger = logging.getLogger()
+
+# How often a request is allocated and written: once more when another request took the room in between
+ORDER_ATTEMPTS = 2
 
 
 class CustomerOrderCommands(PaymentMessageMixin, BaseHandler):
@@ -63,41 +67,102 @@ class CustomerOrderCommands(PaymentMessageMixin, BaseHandler):
     def execute_order(
         self, chat_id: int, user_id: int, quantity: int, offer, customer, placed_by_admin: bool = False
     ) -> dict[str, Any]:
-        """Execute order placement"""
+        """Place a request: spread over the boxes of the offer that have room and, while the offer may get them, new
+        boxes (services/order_allocation.py), one order per box, all in one transaction. What does not fit is not
+        ordered, and the customer is told; with no room at all the offer is sold out. One confirmation and one group
+        announcement per request. The order limit and the duplicate check are the caller's, on the whole request."""
+        # The messages below go to chat_id: the admin's own chat for an order the admin places
+        reader = chat_id if placed_by_admin else user_id
         try:
-            # Validate quantity
-            if quantity > offer.wholesale_box_size:
-                self._send_message(
-                    chat_id,
-                    self._t("quantity_exceeds_box_size", user_id, quantity=quantity, box_size=offer.wholesale_box_size),
-                )
-                return {"status": "quantity_too_large"}
-
-            # Find or create suitable box
-            suitable_box = self._find_or_create_box(chat_id, user_id, offer.offer_id, quantity, offer)
-            if not suitable_box:
-                return {"status": "insufficient_space"}
-
-            # Create and assign order
-            order = self._create_and_assign_order(
-                chat_id, user_id, customer, offer, suitable_box, quantity, placed_by_admin
-            )
-            if not order:
+            placed = self._place_request(customer, offer, quantity, placed_by_admin)
+            if placed is None:
+                self._send_message(chat_id, self._t("order_failed", reader))
                 return {"status": "error"}
+            orders, allocation = placed
+            if not orders:
+                self._send_message(chat_id, self._t("offer_sold_out_named", reader, offer_name=offer.name))
+                return {"status": "sold_out"}
 
+            # An existing box the request filled is full now (written on condition: an ordered or delivered box stays)
+            for box, units in allocation.existing:
+                if box.current_quantity + units >= box.max_capacity:
+                    self.db.mark_box_full_if_at_capacity(box.box_id)
             # Update offer status and send notifications (syncs channel messages)
             self._check_offer_status_after_change(offer.offer_id)
             if placed_by_admin:
                 # The admin gets one confirmation, from the caller, which also says whether the customer was told
-                return {"status": "success", "order": order}
-            self._send_order_confirmation(chat_id, user_id, order, offer, quantity, placed_by_admin, customer)
+                return {"status": "success", "orders": orders, "shortfall": allocation.shortfall}
+            self._send_order_confirmation(chat_id, user_id, orders, offer, quantity, customer)
 
             return {"status": "success"}
 
         except Exception as e:
-            logger.error(f"Error in execute_order: {e}")
-            self._send_message(chat_id, self._t("order_processing_failed", user_id))
+            logger.error(f"Error in execute_order: {type(e).__name__}")
+            self._send_message(chat_id, self._t("order_processing_failed", reader))
             return {"status": "error"}
+
+    def _place_request(self, customer, offer, quantity: int, placed_by_admin: bool):
+        """Allocate and write the request: (orders, allocation), no orders when there is no room. When another
+        request took the room between the read and the write, the boxes are read again (ORDER_ATTEMPTS times); None
+        when the write kept failing."""
+        for _ in range(ORDER_ATTEMPTS):
+            boxes = self.db.get_boxes_by_offer(offer.offer_id)
+            allocation = allocate(boxes, quantity, offer.wholesale_box_size, may_create_boxes(offer, boxes))
+            if allocation.placed == 0:
+                return [], allocation
+
+            new_boxes = [
+                Box(
+                    offer_id=offer.offer_id,
+                    max_capacity=offer.wholesale_box_size,
+                    current_quantity=units,
+                    status=BoxStatus.FULL.value if units >= offer.wholesale_box_size else BoxStatus.OPEN.value,
+                )
+                for units in allocation.new_boxes
+            ]
+            orders = [
+                self._new_order(customer, offer, box, units, placed_by_admin) for box, units in allocation.existing
+            ]
+            orders += [
+                self._new_order(customer, offer, box, box.current_quantity, placed_by_admin) for box in new_boxes
+            ]
+            increments = [(box.box_id, units, box.max_capacity) for box, units in allocation.existing]
+            if self.db.create_orders_in_boxes(orders, new_boxes, increments):
+                return orders, allocation
+        return None
+
+    @staticmethod
+    def _new_order(customer, offer, box, quantity: int, placed_by_admin: bool) -> Order:
+        """An order of ``quantity`` in ``box``, its status from the box: delivered units are ready for labeling, units
+        in an ordered box are ordered, others pending"""
+        if box.status == BoxStatus.DELIVERED.value:
+            status, received = OrderStatus.READY_FOR_LABELING.value, quantity
+        elif box.status == BoxStatus.ORDERED.value:
+            status, received = OrderStatus.ORDERED.value, 0
+        else:
+            status, received = OrderStatus.PENDING.value, 0
+        return Order(
+            customer_id=customer.customer_id,
+            box_id=box.box_id,
+            offer_id=offer.offer_id,
+            quantity=quantity,
+            received_quantity=received,
+            unit_price=offer.price_per_unit,
+            total_price=offer.price_per_unit * quantity,
+            status=status,
+            placed_by_admin=placed_by_admin,
+        )
+
+    def request_summary(self, orders: list, reader: int) -> dict[str, Any]:
+        """The confirmation params of the orders of one request: their short ids, the units, the amount and their
+        statuses (in the reader's language, each once)"""
+        statuses = list(dict.fromkeys(self._t(f"status_{order.status}", reader) for order in orders))
+        return {
+            "order_id": ", ".join(order.order_id[:8] for order in orders),
+            "quantity": sum(order.quantity for order in orders),
+            "total": float(sum(order.total_price for order in orders)),
+            "status": ", ".join(statuses),
+        }
 
     def _get_offer_and_customer(self, chat_id: int, user_id: int, offer_id: int) -> tuple:
         """Get and validate offer and customer"""
@@ -164,117 +229,19 @@ class CustomerOrderCommands(PaymentMessageMixin, BaseHandler):
         self._send_message(chat_id, message, reply_markup=keyboard)
         return True
 
-    def _find_or_create_box(self, chat_id: int, user_id: int, offer_id: int, quantity: int, offer) -> Box:
-        """Find existing box with space or create new one"""
-        boxes = self.db.get_boxes_by_offer(offer_id)
-
-        # Prioritize delivered boxes first
-        delivered_boxes = self.box_status_manager.get_delivered_boxes(boxes)
-        for box in delivered_boxes:
-            available_space = box.max_capacity - box.current_quantity
-            if available_space >= quantity:
-                return box
-
-        # Then try other boxes (open, full, ordered)
-        for box in boxes:
-            if box.status in [BoxStatus.OPEN.value, BoxStatus.FULL.value, BoxStatus.ORDERED.value]:
-                available_space = box.max_capacity - box.current_quantity
-                if available_space >= quantity:
-                    return box
-
-        # Create new box if allowed
-        has_ordered_boxes = any(box.status == BoxStatus.ORDERED.value for box in boxes) if boxes else False
-        has_delivered_boxes = len(self.box_status_manager.get_delivered_boxes(boxes)) > 0
-
-        # Cannot create new boxes if delivered boxes exist
-        if (
-            offer.status in (OfferStatus.ACTIVE.value, OfferStatus.IMPORT.value)
-            and not has_ordered_boxes
-            and not has_delivered_boxes
-        ):
-            new_box = Box(offer_id=offer_id, max_capacity=offer.wholesale_box_size)
-            suitable_box = self.db.create_box(new_box)
-            if not suitable_box:
-                self._send_message(chat_id, self._t("order_processing_failed", user_id))
-            return suitable_box
-        else:
-            self._send_message(chat_id, self._t("order_too_large_for_remaining_space", user_id))
-            return None
-
-    def _create_and_assign_order(
-        self, chat_id: int, user_id: int, customer, offer, box, quantity: int, placed_by_admin: bool
-    ) -> Order:
-        """Create the order and increment its box atomically in one transaction.
-
-        The order's box_id and final status are set before the write, so the order
-        row and the box quantity are committed together (TransactWriteItems) instead
-        of as separate writes that could diverge. The box's FULL status flip remains
-        a best-effort follow-up.
-        """
-        # Decide the order's final status from the box it will join.
-        if box.status == BoxStatus.DELIVERED.value:
-            final_status = OrderStatus.READY_FOR_LABELING.value
-            received_quantity = quantity
-        elif box.status == BoxStatus.ORDERED.value:
-            final_status = OrderStatus.ORDERED.value
-            received_quantity = 0
-        else:
-            final_status = OrderStatus.PENDING.value
-            received_quantity = 0
-
-        order = Order(
-            customer_id=customer.customer_id,
-            box_id=box.box_id,
-            offer_id=offer.offer_id,
-            quantity=quantity,
-            received_quantity=received_quantity,
-            unit_price=offer.price_per_unit,
-            total_price=offer.price_per_unit * quantity,
-            status=final_status,
-            placed_by_admin=placed_by_admin,
-        )
-
-        # Atomic: order row + capacity-guarded box increment commit together.
-        created_order = self.db.create_order_with_box_increment(
-            order, box.box_id, quantity, box.max_capacity, admin_id=0
-        )
-        if not created_order:
-            self._send_message(chat_id, self._t("order_failed", user_id))
-            return None
-
-        # Best-effort status follow-up: mark the box FULL once at/over capacity.
-        if (
-            box.status not in (BoxStatus.ORDERED.value, BoxStatus.DELIVERED.value)
-            and box.current_quantity + quantity >= box.max_capacity
-        ):
-            self.db.update_box(box.box_id, {"status": BoxStatus.FULL.value})
-
-        return created_order
-
-    def _send_order_confirmation(
-        self, chat_id: int, user_id: int, order, offer, quantity: int, placed_by_admin: bool, customer
-    ):
-        """Send order confirmation and notifications"""
+    def _send_order_confirmation(self, chat_id: int, user_id: int, orders: list, offer, requested: int, customer):
+        """One confirmation of the orders of a request, with what could not be ordered; one group announcement"""
         display_name = f"{customer.first_name} {customer.last_name}".strip() if customer else ""
-        self._send_message(
-            chat_id,
-            self._t(
-                "order_placed_single",
-                user_id,
-                name=display_name,
-                order_id=order.order_id[:8],
-                product=offer.name,
-                quantity=quantity,
-                total=float(order.total_price),
-                status=self._t(f"status_{order.status}", user_id),
-            ),
-        )
+        summary = self.request_summary(orders, user_id)
+        message = self._t("order_placed_single", user_id, name=display_name, product=offer.name, **summary)
+        if summary["quantity"] < requested:
+            message += "\n\n" + self._t("order_shortfall", user_id, requested=requested, placed=summary["quantity"])
+        self._send_message(chat_id, message)
 
-        if not placed_by_admin:
-            message = self._build_order_notification_message(customer, offer, quantity)
-            if message:
-                self._send_order_notification_to_group(message)
-                self._send_message(self.admin_user_id, message, parse_mode="HTML")
+        announcement = self._build_order_notification_message(customer, offer, summary["quantity"])
+        if announcement:
+            self._send_order_notification_to_group(announcement)
+            self._send_message(self.admin_user_id, announcement, parse_mode="HTML")
 
     def _build_order_notification_message(self, customer, offer, quantity):
         """Build order notification message"""

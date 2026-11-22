@@ -126,10 +126,10 @@ class TestGroupOrderNotification:
     def test_group_and_admin_both_receive_the_escaped_message(self, handler):
         handler._send_message = Mock(return_value={"success": True})
         handler._send_order_notification_to_group = Mock()
-        order = SimpleNamespace(order_id="abcdefgh-1", total_price=5, status="pending")
+        order = SimpleNamespace(order_id="abcdefgh-1", quantity=2, total_price=5, status="pending")
         offer = Offer(offer_id=7, name="Pils & Co")
 
-        handler._send_order_confirmation(1, 4242, order, offer, 2, False, _customer())
+        handler._send_order_confirmation(1, 4242, [order], offer, 2, _customer())
 
         group_message = handler._send_order_notification_to_group.call_args.args[0]
         admin_calls = [c for c in handler._send_message.call_args_list if c.args[0] == ADMIN_ID]

@@ -1,6 +1,6 @@
 # Order what is left when a request is more than one box has room for
 
-Status: **in progress** (2026-11-22). Item 5 of the planning of 2026-11-21 (decisions taken that day); the planning
+Status: **done** (2026-11-22). Item 5 of the planning of 2026-11-21 (decisions taken that day); the planning
 file was lost, this is its text, with the decisions made while building it and the state of the work below.
 
 Every item follows the project rules (CLAUDE.md): tests first, texts in `nl.json` and `en.json`, a new command in
@@ -107,10 +107,12 @@ sent once.
 
 ## State of the work
 
-- Done and committed: the allocation (`2394117`), the transaction (`73b4965`).
-- Written, not committed yet: `execute_order` on the allocation and the transaction, the confirmation, `/order_for`,
-  the texts, and the tests in `tests/test_customer_order_flow.py` (`TestARequestOverSeveralBoxes` and the updated
-  one-box tests), `tests/test_instant_offer_state.py` and `tests/test_html_escaping.py`. The full suite passes.
-- To do: an `/order_for` test with a shortfall (`tests/test_order_for_flow.py`), a test through the group order
-  button and the deep link, the README ordering section and the `/order` and `/order_for` help texts; then commit as
-  `feat:`.
+- The allocation (`2394117`), the transaction (`73b4965`), and ordering on both (the commit after this document):
+  `execute_order`, the confirmation, `/order_for`, the texts, the README ("Order Management").
+- Tests: `tests/test_order_allocation.py`, `tests/test_order_request_transaction.py`,
+  `tests/test_customer_order_flow.py` (`TestARequestOverSeveralBoxes`, with the race for the last units and the
+  duplicate check), `tests/test_order_for_flow.py` (the shortfall and a request over two boxes) and
+  `tests/test_instant_offer_state.py`. The group order buttons (`order_<offer>_<quantity>`) and the deep link
+  (`create_order_<offer>_<quantity>`) call `handle_create_order` (`tests/test_callback_dispatch.py`,
+  `tests/test_command_dispatch.py`), so the flow tests cover them.
+- The help texts of `/order` and `/order_for` never said an order must fit one box: unchanged.

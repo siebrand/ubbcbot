@@ -184,42 +184,38 @@ class OrderPlacement(BaseOrderHandler):
 
         if result["status"] == "success":
             self._check_offer_status_after_change(offer_id)
-            order = result.pop("order")
+            orders = result.pop("orders")
+            result.pop("shortfall", None)
 
             # Tell the customer, in their language (a guest has no Telegram and gets nothing)
             pm_result = self._notify_customer(
                 customer,
                 "admin_order_placed",
                 product=offer.name,
-                quantity=quantity,
-                total=order.total_price,
-                order_id=order.order_id[:8],
-                status=self._t(f"status_{order.status}", customer.telegram_user_id),
+                **order_handler.request_summary(orders, customer.telegram_user_id),
             )
 
             # Announce in the group (execute_order does not for orders the admin places)
-            order_handler.announce_order_for(customer, offer, quantity)
+            placed = sum(order.quantity for order in orders)
+            order_handler.announce_order_for(customer, offer, placed)
 
             # One confirmation for the admin, in the admin's language, with whether the customer was told
-            self._send_message(chat_id, self._order_for_confirmation(chat_id, customer, offer, order, pm_result))
+            message = self._order_for_confirmation(chat_id, customer, offer, orders, quantity, pm_result, order_handler)
+            self._send_message(chat_id, message)
 
         return result
 
-    def _order_for_confirmation(self, chat_id: int, customer, offer, order, pm_result: dict) -> str:
-        """The admin's confirmation of an order placed for a customer"""
+    def _order_for_confirmation(
+        self, chat_id: int, customer, offer, orders: list, requested: int, pm_result: dict, order_handler
+    ) -> str:
+        """The admin's confirmation of the orders placed for a customer, with how many of the request could be"""
         display_name = " ".join(part for part in (customer.first_name, customer.last_name) if part) or self._t(
             "unknown", chat_id
         )
-        message = self._t(
-            "order_placed_single",
-            chat_id,
-            name=display_name,
-            order_id=order.order_id[:8],
-            product=offer.name,
-            quantity=order.quantity,
-            total=float(order.total_price),
-            status=self._t(f"status_{order.status}", chat_id),
-        )
+        summary = order_handler.request_summary(orders, chat_id)
+        message = self._t("order_placed_single", chat_id, name=display_name, product=offer.name, **summary)
+        if summary["quantity"] < requested:
+            message += "\n" + self._t("order_for_shortfall", chat_id, requested=requested, placed=summary["quantity"])
         if not customer.is_guest and not pm_result.get("success"):
             message += "\n" + self._t("pm_notification_failed", chat_id, name=display_name)
         return message

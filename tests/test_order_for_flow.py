@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from handlers.admin.order.order_placement import OrderPlacement
-from models.entities import AuthorizationStatus, Customer, Offer, OfferStatus
+from models.entities import AuthorizationStatus, Box, Customer, Offer, OfferStatus
 from services.database import DynamoDBService
 from services.user_cache import UserCache
 
@@ -147,6 +147,34 @@ class TestOrderFor:
 
         [confirmation] = sent_to(telegram, ADMIN_ID)
         assert placement._t("pm_notification_failed", name="Jan") in confirmation
+
+    def test_what_could_not_be_ordered_is_in_the_confirmation(self, db, placement, telegram):
+        """docs/order-over-boxes.md: a delivered box with 2 free units and no new box allowed, 4 asked for"""
+        jan = add_customer(db, 101, "Jan")
+        assert db.create_box(Box(box_id="dlvr", offer_id=7, max_capacity=6, current_quantity=4, status="delivered"))
+
+        result = placement.handle_create_order_for_quantity_select(ADMIN_ID, jan.customer_id, "7", "4")
+
+        assert result == {"status": "success"}
+        [order] = db.get_orders_by_customer(jan.customer_id)
+        assert (order.box_id, order.quantity, order.status) == ("dlvr", 2, "ready_for_labeling")
+        [confirmation] = sent_to(telegram, ADMIN_ID)
+        assert placement._t("order_for_shortfall", ADMIN_ID, requested=4, placed=2) in confirmation
+        [to_group] = sent_to(telegram, GROUP_ID)
+        assert "2x" in to_group
+
+    def test_a_request_over_two_boxes_is_one_confirmation(self, db, placement, telegram):
+        jan = add_customer(db, 101, "Jan")
+        db.update_offer(7, {"wholesale_box_size": 2})
+
+        placement.handle_create_order_for_quantity_select(ADMIN_ID, jan.customer_id, "7", "3")
+
+        orders = db.get_orders_by_customer(jan.customer_id)
+        assert sorted(o.quantity for o in orders) == [1, 2]
+        [confirmation] = sent_to(telegram, ADMIN_ID)
+        assert all(o.order_id[:8] in confirmation for o in orders)
+        assert placement._t("order_for_shortfall", ADMIN_ID, requested=3, placed=3) not in confirmation
+        assert len(sent_to(telegram, 101)) == 1 and len(sent_to(telegram, GROUP_ID)) == 1
 
     def test_the_confirmation_is_in_the_admins_language(self, db, placement, telegram):
         jan = db.create_customer(

@@ -412,12 +412,21 @@ See [docs/static-analysis.md](docs/static-analysis.md) for details.
 - **5-unit customer limit**: Customers can order max 5 units per offer
 - **10-unit admin limit**: Admins can place up to 10 units for customers via `/order_for`
 - **Duplicate order confirmation**: Warns customers about existing orders before placing new ones
+- **A request over several boxes**: an order stays in one box, so a request that does not fit in one box becomes one
+  order per box (`services/order_allocation.py`). The boxes with room are filled first: delivered, then ordered, then
+  open, each oldest first. The rest goes into as many new boxes of the box size as it needs, but only for an active
+  or import offer none of whose boxes is ordered or delivered (room next to those is added with `/create_box`).
+  What cannot be placed is not ordered: the customer (or, with `/order_for`, the admin) is told how many of the
+  request could be ordered; with no room at all the offer is sold out. All orders, new boxes and box quantities of a
+  request are one DynamoDB transaction that only succeeds while each box still has the room; when another request
+  took it in between, the boxes are read again once. One confirmation and one group announcement per request. There
+  is no limit per box size: a request is limited by the order limit above.
 - **Sold out notifications**: Group notifications include "SOLD OUT" status when last item ordered
 
 ## Business Rules
 
 - Box sizes: 1 to 6, 8, 9, 10, 12, 15, 16, 18, 20 and 24 units (`/instant_order`: 1 to 6)
-- Auto-create new boxes when capacity reached
+- Auto-create new boxes when capacity reached (not once a box of the offer is ordered or delivered)
 - Box status: open → full → ordered → delivered
 - Admin access controlled via ADMIN_USER_ID environment variable
 

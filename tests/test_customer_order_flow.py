@@ -101,11 +101,12 @@ class TestPlaceAnOrder:
         [placed] = orders_of(db, jan)
         assert (placed.box_id, placed.status) == ("dlvr", "ready_for_labeling")
 
-    def test_more_than_a_box(self, db, handler, jan):
+    def test_more_than_a_box_opens_as_many_boxes_as_needed(self, db, handler, jan):
         db.update_offer(7, {"wholesale_box_size": 3})
 
-        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "4"]) == {"status": "quantity_too_large"}
-        assert orders_of(db, jan) == []
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "4"]) == {"status": "success"}
+        assert sorted(o.quantity for o in orders_of(db, jan)) == [1, 3]
+        assert sorted((b.current_quantity, b.status) for b in db.get_boxes_by_offer(7)) == [(1, "open"), (3, "full")]
 
     def test_more_than_the_limit_per_customer(self, db, handler, jan):
         assert handler.handle_create_order(USER_ID, USER_ID, ["7", "6"]) == {"status": "limit_exceeded"}
@@ -218,16 +219,19 @@ class TestWhichBoxAnOrderJoins:
     def test_no_new_box_once_the_wholesale_order_is_placed(self, db, handler, jan):
         assert db.create_box(Box(box_id="ordr", offer_id=7, max_capacity=6, current_quantity=5, status="ordered"))
 
-        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "2"]) == {"status": "insufficient_space"}
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "2"]) == {"status": "success"}
 
-        assert texts_to(handler, USER_ID) == [handler._t("order_too_large_for_remaining_space", USER_ID)]
-        assert orders_of(db, jan) == []
+        [placed] = orders_of(db, jan)
+        assert (placed.box_id, placed.quantity, placed.status) == ("ordr", 1, "ordered")
+        assert handler._t("order_shortfall", USER_ID, requested=2, placed=1) in texts_to(handler, USER_ID)[0]
         assert len(db.get_boxes_by_offer(7)) == 1
 
     def test_no_new_box_next_to_a_delivered_box(self, db, handler, jan):
         assert db.create_box(Box(box_id="dlvr", offer_id=7, max_capacity=6, current_quantity=6, status="delivered"))
 
-        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "1"]) == {"status": "insufficient_space"}
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "1"]) == {"status": "sold_out"}
+        assert texts_to(handler, USER_ID) == [handler._t("offer_sold_out_named", USER_ID, offer_name="Pils")]
+        assert orders_of(db, jan) == []
 
     def test_a_full_box_opens_a_second_one(self, db, handler, jan):
         assert db.create_box(Box(box_id="b1", offer_id=7, max_capacity=6, current_quantity=6, status="full"))
@@ -259,7 +263,7 @@ class TestWhoIsTold:
         result = handler.execute_order(ADMIN_ID, ADMIN_ID, 2, offer, jan, placed_by_admin=True)
 
         assert result["status"] == "success"
-        assert result["order"].quantity == 2  # the caller (/order_for) confirms it, in one message
+        assert [o.quantity for o in result["orders"]] == [2]  # the caller (/order_for) confirms it, in one message
         assert texts_to(handler, -100777) == []
         assert texts_to(handler, ADMIN_ID) == []
 
@@ -286,7 +290,134 @@ class TestOrderInput:
         assert texts_to(handler, USER_ID) == [handler._t("customer_not_found", USER_ID)]
 
     def test_a_failure_while_ordering_is_reported(self, db, handler, jan):
-        handler._find_or_create_box = Mock(side_effect=RuntimeError("boom"))
+        db.create_orders_in_boxes = Mock(side_effect=RuntimeError("boom"))
 
         assert handler.handle_create_order(USER_ID, USER_ID, ["7"]) == {"status": "error"}
         assert texts_to(handler, USER_ID) == [handler._t("order_processing_failed", USER_ID)]
+
+
+def delivered(db, box_id, quantity, day, status="delivered"):
+    assert db.create_box(
+        Box(
+            box_id=box_id,
+            offer_id=7,
+            max_capacity=6,
+            current_quantity=quantity,
+            status=status,
+            created_at=f"2026-11-0{day}T09:00:00+00:00",
+        )
+    )
+
+
+class TestARequestOverSeveralBoxes:
+    """Planning item 5: a request is spread over the boxes with room, and what is left over is said plainly"""
+
+    def test_two_delivered_boxes_share_the_request_in_one_confirmation(self, db, handler, jan):
+        delivered(db, "d1", 4, 1)
+        delivered(db, "d2", 4, 2)
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "4"]) == {"status": "success"}
+
+        placed = sorted((o.box_id, o.quantity, o.status) for o in orders_of(db, jan))
+        assert placed == [("d1", 2, "ready_for_labeling"), ("d2", 2, "ready_for_labeling")]
+        [confirmation] = texts_to(handler, USER_ID)
+        assert "4" in confirmation and "10.00" in confirmation  # 4 units, €10.00
+        assert all(o.order_id[:8] in confirmation for o in orders_of(db, jan))
+        assert handler._t("order_shortfall", USER_ID, requested=4, placed=4) not in confirmation
+
+    def test_what_is_left_after_a_delivered_box_is_the_shortfall(self, db, handler, jan):
+        delivered(db, "d1", 4, 1)
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "4"]) == {"status": "success"}
+
+        [placed] = orders_of(db, jan)
+        assert (placed.box_id, placed.quantity) == ("d1", 2)
+        [confirmation] = texts_to(handler, USER_ID)
+        assert handler._t("order_shortfall", USER_ID, requested=4, placed=2) in confirmation
+        assert db.get_box("d1").current_quantity == 6
+
+    def test_an_open_box_and_a_new_one(self, db, handler, jan):
+        delivered(db, "o1", 3, 1, status="open")
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "5"]) == {"status": "success"}
+
+        assert sorted(o.quantity for o in orders_of(db, jan)) == [2, 3]
+        assert db.get_box("o1").status == "full"
+        assert len(texts_to(handler, USER_ID)) == 1
+
+    def test_box_size_one_makes_a_box_per_unit(self, db, handler, jan):
+        db.update_offer(7, {"wholesale_box_size": 1})
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "5"]) == {"status": "success"}
+
+        assert [o.quantity for o in orders_of(db, jan)] == [1] * 5
+        boxes = db.get_boxes_by_offer(7)
+        assert len(boxes) == 5 and all((b.current_quantity, b.status) == (1, "full") for b in boxes)
+        assert len(texts_to(handler, USER_ID)) == 1
+
+    def test_six_is_over_the_order_limit_and_writes_nothing(self, db, handler, jan):
+        db.update_offer(7, {"wholesale_box_size": 1})
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "6"]) == {"status": "limit_exceeded"}
+        assert orders_of(db, jan) == [] and db.get_boxes_by_offer(7) == []
+
+    def test_delivered_old_then_new_then_ordered_then_open(self, db, handler, jan):
+        delivered(db, "open-old", 5, 1, status="open")
+        delivered(db, "dlvr-old", 5, 2)
+        delivered(db, "ordr", 5, 3, status="ordered")
+        delivered(db, "dlvr-new", 5, 4)
+
+        handler.handle_create_order(USER_ID, USER_ID, ["7", "5"])
+
+        assert sorted((o.box_id, o.quantity) for o in orders_of(db, jan)) == [
+            ("dlvr-new", 1),
+            ("dlvr-old", 1),
+            ("open-old", 1),
+            ("ordr", 1),
+        ]
+        assert len(db.get_boxes_by_offer(7)) == 4  # no new box
+        assert handler._t("order_shortfall", USER_ID, requested=5, placed=4) in texts_to(handler, USER_ID)[0]
+
+    def test_the_group_is_told_once_with_the_total(self, db, handler, jan, monkeypatch):
+        monkeypatch.setenv("DEFAULT_GROUP_ID", "-100777")
+        delivered(db, "d1", 4, 1)
+        delivered(db, "d2", 4, 2)
+
+        handler.handle_create_order(USER_ID, USER_ID, ["7", "4"])
+
+        [to_group] = texts_to(handler, -100777)
+        assert "4" in to_group
+
+    def test_two_requests_for_the_last_units_never_overbook(self, db, handler, jan):
+        """Another customer takes the last units after this request read the boxes: the transaction is refused,
+        the boxes are read again, and nothing is left"""
+        delivered(db, "d1", 4, 1)
+        piet = db.create_customer(
+            Customer(telegram_user_id=5151, first_name="Piet", authorization_status=AuthorizationStatus.APPROVED.value)
+        )
+        read = db.get_boxes_by_offer
+        reads = []
+
+        def boxes_then_piet_orders(offer_id):
+            boxes = read(offer_id)
+            if not reads:
+                reads.append(True)
+                handler.execute_order(5151, 5151, 2, db.get_offer(7), piet)
+            return boxes
+
+        db.get_boxes_by_offer = boxes_then_piet_orders
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "2"]) == {"status": "sold_out"}
+
+        assert db.get_box("d1").current_quantity == 6
+        assert orders_of(db, jan) == []
+        assert [o.quantity for o in db.get_orders_by_customer(piet.customer_id)] == [2]
+
+    def test_a_duplicate_request_over_several_boxes_asks_first(self, db, handler, jan):
+        delivered(db, "d1", 4, 1)
+        delivered(db, "d2", 4, 2)
+        handler.handle_create_order(USER_ID, USER_ID, ["7", "1"])
+        handler.sent.clear()
+
+        assert handler.handle_create_order(USER_ID, USER_ID, ["7", "3"]) == {"status": "confirmation_required"}
+        assert [o.quantity for o in orders_of(db, jan)] == [1]

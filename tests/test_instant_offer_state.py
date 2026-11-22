@@ -115,12 +115,14 @@ class TestOrdersOnADeliveredBoxWithFreeUnits:
         assert len(db.get_boxes_by_offer(7)) == 1
         assert db.get_offer(7).status == "sold_out"
 
-    def test_a_customer_cannot_order_more_than_the_free_units(self, db, customer_orders, instant):
+    def test_a_customer_who_asks_for_more_than_the_free_units_gets_what_is_left(self, db, customer_orders, instant):
+        """Planning item 5: the free units are ordered, the rest is the shortfall, and no box is added"""
         result = customer_orders.handle_create_order(102, 102, ["7", "4"])
 
-        assert result["status"] != "success"
-        assert db.get_orders_by_customer(instant.piet.customer_id) == []
-        assert db.get_box(instant.box.box_id).current_quantity == 1
+        assert result == {"status": "success"}
+        [order] = db.get_orders_by_customer(instant.piet.customer_id)
+        assert (order.box_id, order.quantity, order.status) == (instant.box.box_id, 3, "ready_for_labeling")
+        assert db.get_box(instant.box.box_id).current_quantity == 4
         assert len(db.get_boxes_by_offer(7)) == 1
 
 
