@@ -298,11 +298,12 @@ class InstantOrderHandler(NotificationHandler):  # an OfferBaseHandler that can 
         pm_result = self._notify_customer(
             customer,
             "admin_order_placed",
-            product=offer.name,
+            parse_mode="HTML",
+            offer_id=offer.offer_id,
+            product=self._escape_html(offer.name),
             quantity=order.quantity,
             total=order.total_price,
             order_id=order.order_id[:8],
-            status=self._t(f"status_{order.status}", customer.telegram_user_id),
         )
         self._send_message(chat_id, self._instant_order_confirmation(chat_id, offer, order, customer, pm_result))
         if offer.wholesale_box_size > 1:

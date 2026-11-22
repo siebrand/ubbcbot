@@ -141,6 +141,21 @@ class TestCreation:
         [message] = sent_to(telegram, 101)
         assert "An order has been placed for you" in message and "Tripel" in message
 
+    def test_the_customer_gets_one_order_line(self, db, handler, telegram):
+        add_customer(db, 101, "Jan")
+
+        with patch.object(handler, "_send_message", wraps=handler._send_message) as send:
+            result = instant(handler, "DeMolen Tripel 3.50 Jan")
+
+        [order] = db.get_orders_by_offer(result["offer_id"])
+        [message] = sent_to(telegram, 101)
+        assert message.endswith(
+            "Er is een bestelling voor je geplaatst door de beheerder:\n\n"
+            f"1x [{result['offer_id']}] <b>Tripel</b> €3.50 ({order.order_id[:8]})"
+        )
+        [to_customer] = [c for c in send.call_args_list if c.args[0] == 101]
+        assert to_customer.kwargs.get("parse_mode") == "HTML"
+
     def test_a_guest_is_matched_and_not_messaged(self, db, handler, telegram):
         guest = add_customer(db, -1, "Gast", is_guest=True)
 

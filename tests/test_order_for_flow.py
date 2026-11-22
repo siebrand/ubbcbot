@@ -174,7 +174,21 @@ class TestOrderFor:
         [confirmation] = sent_to(telegram, ADMIN_ID)
         assert all(o.order_id[:8] in confirmation for o in orders)
         assert placement._t("order_for_shortfall", ADMIN_ID, requested=3, placed=3) not in confirmation
-        assert len(sent_to(telegram, 101)) == 1 and len(sent_to(telegram, GROUP_ID)) == 1
+        assert len(sent_to(telegram, GROUP_ID)) == 1
+        [to_customer] = sent_to(telegram, 101)
+        short_ids = ", ".join(sorted(o.order_id[:8] for o in orders))
+        assert to_customer.endswith(
+            f"Er is een bestelling voor je geplaatst door de beheerder:\n\n3x [7] <b>Pils</b> €7.50 ({short_ids})"
+        )
+
+    def test_the_offer_name_is_bold_and_escaped_for_the_customer(self, db, placement, telegram):
+        jan = add_customer(db, 101, "Jan")
+        db.update_offer(7, {"name": "Pils & <Co>"})
+
+        placement.handle_create_order_for_quantity_select(ADMIN_ID, jan.customer_id, "7", "1")
+
+        [to_customer] = sent_to(telegram, 101)
+        assert "1x [7] <b>Pils &amp; &lt;Co&gt;</b> €2.50" in to_customer
 
     def test_the_confirmation_is_in_the_admins_language(self, db, placement, telegram):
         jan = db.create_customer(

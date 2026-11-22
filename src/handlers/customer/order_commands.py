@@ -154,11 +154,11 @@ class CustomerOrderCommands(PaymentMessageMixin, BaseHandler):
         )
 
     def request_summary(self, orders: list, reader: int) -> dict[str, Any]:
-        """The confirmation params of the orders of one request: their short ids, the units, the amount and their
-        statuses (in the reader's language, each once)"""
+        """The confirmation params of the orders of one request: their short ids (sorted), the units, the amount and
+        their statuses (in the reader's language, each once)"""
         statuses = list(dict.fromkeys(self._t(f"status_{order.status}", reader) for order in orders))
         return {
-            "order_id": ", ".join(order.order_id[:8] for order in orders),
+            "order_id": ", ".join(sorted(order.order_id[:8] for order in orders)),
             "quantity": sum(order.quantity for order in orders),
             "total": float(sum(order.total_price for order in orders)),
             "status": ", ".join(statuses),

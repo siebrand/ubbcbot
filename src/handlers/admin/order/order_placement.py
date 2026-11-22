@@ -191,7 +191,9 @@ class OrderPlacement(BaseOrderHandler):
             pm_result = self._notify_customer(
                 customer,
                 "admin_order_placed",
-                product=offer.name,
+                parse_mode="HTML",
+                offer_id=offer.offer_id,
+                product=self._escape_html(offer.name),
                 **order_handler.request_summary(orders, customer.telegram_user_id),
             )
 

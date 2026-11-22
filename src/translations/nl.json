@@ -326,7 +326,7 @@
   "limit_reached": "\nJe hebt de 5-eenheden limiet voor deze aanbieding bereikt",
   "duplicate_order_warning": "⚠️ Je hebt al bestellingen voor {offer_name}:",
   "confirm_additional_order": "\nWeet je zeker dat je {quantity}x meer wilt bestellen?",
-  "admin_order_placed": "🍺 Er is een bestelling voor je geplaatst door de beheerder\n\nProduct: {product}\nAantal: {quantity}\nTotaal: €{total:.2f}\nBestelling ID: {order_id}\nStatus: {status}",
+  "admin_order_placed": "Er is een bestelling voor je geplaatst door de beheerder:\n\n{quantity}x [{offer_id}] <b>{product}</b> €{total:.2f} ({order_id})",
   "order_cancelled_by_admin": "❌ Je bestelling is geannuleerd:\n\n🍺 {name}\nAantal: {quantity} stuks\nBedrag: €{total:.2f}\nReden: {reason}",
   "order_cancelled_success": "✅ Bestelling geannuleerd\nBestelling ID: {order_id}\nKlant geïnformeerd\nColli aantal bijgewerkt: {new_quantity}/{max_capacity}",
   "user_orders_title": "📋 Bestellingen voor {name}:",
