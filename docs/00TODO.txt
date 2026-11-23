@@ -1,8 +1,5 @@
-- Complete credit system
-- Give users opportunity to see complete history. Should be query efficient, maybe export option?
 - BIN management
 - Address IDE code remarks
-- More refactoring
 
 P3:
 - I want to be able to order boxes with 0 orders in them. However, this is problematic for the current process design.
