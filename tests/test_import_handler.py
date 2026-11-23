@@ -164,7 +164,7 @@ class TestImportHandler(unittest.TestCase):
 
             self.handler.handle_finalize_import(123, ["1"])
 
-            mock_update_status.assert_called_once_with(1)
+            mock_update_status.assert_called_once_with(1, finalizing_import=True)
             mock_send.assert_called_once()
 
     def test_finalize_import_active(self):
@@ -194,7 +194,7 @@ class TestImportHandler(unittest.TestCase):
 
             self.handler.handle_finalize_import(123, ["1"])
 
-            mock_update_status.assert_called_once_with(1)
+            mock_update_status.assert_called_once_with(1, finalizing_import=True)
             mock_announce.assert_called_once()
             mock_send.assert_called_once()
 

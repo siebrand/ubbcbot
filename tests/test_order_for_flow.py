@@ -203,6 +203,20 @@ class TestOrderFor:
         [to_customer] = sent_to(telegram, 101)
         assert "1x [7] <b>Pils &amp; &lt;Co&gt;</b> €2.50" in to_customer
 
+    @pytest.mark.parametrize("quantity", ["1", "6"])  # also when the order fills the box
+    def test_an_import_offer_stays_import_and_is_not_announced(self, db, placement, telegram, quantity):
+        jan = add_customer(db, 101, "Jan")
+        db.update_offer(7, {"status": OfferStatus.IMPORT.value})
+
+        result = placement.handle_create_order_for_quantity_select(ADMIN_ID, jan.customer_id, "7", quantity)
+
+        assert result == {"status": "success"}
+        assert db.get_offer(7).status == OfferStatus.IMPORT.value
+        assert sent_to(telegram, GROUP_ID) == []
+        [confirmation] = sent_to(telegram, ADMIN_ID)  # the admin is still told
+        assert "Jan" in confirmation
+        assert len(sent_to(telegram, 101)) == 1  # and so is the customer
+
     def test_the_confirmation_is_in_the_admins_language(self, db, placement, telegram):
         jan = db.create_customer(
             Customer(telegram_user_id=101, first_name="Jan", language="en", authorization_status="approved")

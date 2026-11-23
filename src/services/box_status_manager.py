@@ -105,17 +105,19 @@ class BoxStatusManager:
             return self.db.get_box(box_id)
         return None
 
-    def update_offer_status_after_change(self, offer_id: int) -> str | None:
+    def update_offer_status_after_change(self, offer_id: int, finalizing_import: bool = False) -> str | None:
         """
         Check and update offer status based on box states
         Returns: new status if changed, None otherwise
+
+        An import offer keeps its status until /finalize_import (``finalizing_import``): an order placed for it in
+        the meantime (/order_for, the CSV import) does not make it active or sold out.
         """
         offer = self.db.get_offer(offer_id)
-        if not offer or offer.status not in [
-            OfferStatus.ACTIVE.value,
-            OfferStatus.SOLD_OUT.value,
-            OfferStatus.IMPORT.value,
-        ]:
+        statuses = [OfferStatus.ACTIVE.value, OfferStatus.SOLD_OUT.value]
+        if finalizing_import:
+            statuses.append(OfferStatus.IMPORT.value)
+        if not offer or offer.status not in statuses:
             return None
 
         boxes = self.db.get_boxes_by_offer(offer_id)

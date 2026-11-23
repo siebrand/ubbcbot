@@ -197,9 +197,11 @@ class OrderPlacement(BaseOrderHandler):
                 **CustomerOrderCommands.request_summary(orders),
             )
 
-            # Announce in the group (execute_order does not for orders the admin places)
-            placed = sum(order.quantity for order in orders)
-            order_handler.announce_order_for(customer, offer, placed)
+            # Announce in the group (execute_order does not for orders the admin places); an import offer is not
+            # announced at all until it is finalized
+            if offer.status != OfferStatus.IMPORT.value:
+                placed = sum(order.quantity for order in orders)
+                order_handler.announce_order_for(customer, offer, placed)
 
             # One confirmation for the admin, in the admin's language, with whether the customer was told
             message = self._order_for_confirmation(chat_id, customer, offer, orders, quantity, pm_result)

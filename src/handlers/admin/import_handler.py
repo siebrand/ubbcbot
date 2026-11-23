@@ -308,7 +308,7 @@ class ImportHandler(NotificationHandler):
                         self.db.update_order(order.order_id, {"status": OrderStatus.ORDERED.value})
 
         # Update offer status based on box states
-        new_status = self.box_status_manager.update_offer_status_after_change(offer.offer_id)
+        new_status = self.box_status_manager.update_offer_status_after_change(offer.offer_id, finalizing_import=True)
 
         if new_status == OfferStatus.SOLD_OUT.value:
             self._send_success(chat_id, "finalize_import_sold_out", "success", offer_id=offer.offer_id, name=offer.name)
