@@ -201,6 +201,39 @@ class TestCompletingTheTickedOffers:
         assert again["offers"] == 0 and again["skipped"] == 2
         assert "overgeslagen" in screen.last[1]
 
+    def test_cancelled_and_delivered_orders_in_the_box_are_not_expected_from_the_wholesaler(self, db, jan, delivery):
+        handler, screen = delivery
+        box = offer(db, jan, 9, "Stout", "ordered", "ordered", (2, 3))
+        for status, quantity in (("cancelled", 4), ("ready_for_labeling", 1)):
+            assert db.order_repo.create_order(
+                Order(
+                    customer_id=jan.customer_id,
+                    box_id=box.box_id,
+                    offer_id=9,
+                    quantity=quantity,
+                    unit_price=Decimal("3"),
+                    total_price=Decimal("3") * quantity,
+                    status=status,
+                )
+            )
+
+        assert handler._open_work(9) == (1, 5)
+        assert handler._ordered_units(box.box_id) == 5
+
+        handler.handle_checklist_toggle(ADMIN_ID, MESSAGE, None, 9, SUP)
+        handler.handle_checklist_bulk(ADMIN_ID, MESSAGE, screen.markup, SUP)
+        result = handler.handle_checklist_confirm(ADMIN_ID, MESSAGE, screen.markup, SUP)
+
+        assert result["failed"] == 0
+        assert db.get_box(box.box_id).status == "delivered"
+        assert sorted((o.status, o.quantity) for o in db.get_orders_by_box(box.box_id)) == [
+            ("cancelled", 4),
+            ("ready_for_labeling", 1),
+            ("ready_for_labeling", 2),
+            ("ready_for_labeling", 3),
+        ]
+        assert "1 aanbieding(en), 1 doos/dozen, 5 stuks" in screen.last[1]
+
     def test_an_offer_handled_box_by_box_meanwhile_completes_only_what_is_left(self, db, jan, delivery):
         handler, screen = delivery
         first = offer(db, jan, 9, "Stout", "ordered", "ordered", (3,))

@@ -30,14 +30,14 @@ class WholesaleDeliveryHandlerTestBase(unittest.TestCase):
 class TestHandleDeliveryAction(WholesaleDeliveryHandlerTestBase):
     def setUp(self):
         super().setUp()
-        self.orders = [SimpleNamespace(quantity=3)]
+        self.orders = [SimpleNamespace(quantity=3, status="ordered")]
         self.db.get_orders_by_box.return_value = self.orders
 
     def test_full_delivery_is_delegated(self):
         with patch.object(self.handler, "_handle_full_delivery", return_value={"status": "ok"}) as full:
             result = self.handler.handle_delivery_action(CHAT_ID, DeliveryAction.FULL.value, "abcdef12", 1, "sup")
 
-        full.assert_called_once_with(CHAT_ID, BOX_ID, self.orders)
+        full.assert_called_once_with(CHAT_ID, BOX_ID)
         self.assertEqual(result, {"status": "ok"})
 
     def test_unknown_box_is_reported(self):
