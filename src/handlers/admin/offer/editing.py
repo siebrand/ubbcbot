@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Any
 
 from models.entities import OfferStatus
+from utils.offer_name import clean_offer_name
 from utils.telegram_entities import entities_to_html
 
 from .base import OfferBaseHandler
@@ -64,7 +65,7 @@ class OfferEditingHandler(OfferBaseHandler):
 
         try:
             offer_id = int(args[0])
-            new_name = " ".join(args[1:]).strip()
+            new_name = clean_offer_name(" ".join(args[1:]))
 
             is_valid, error_key = self._validate_offer_name(new_name)
             if not is_valid:

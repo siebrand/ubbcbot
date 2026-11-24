@@ -20,6 +20,7 @@ from services.instant_order_input import (
     parse_instant_order,
     parse_price,
 )
+from utils.offer_name import clean_offer_name
 
 from .notifications import NotificationHandler
 
@@ -161,7 +162,7 @@ class InstantOrderHandler(NotificationHandler):  # an OfferBaseHandler that can 
         state = self._state(entity_id)
         if state is None:
             return self._expired(chat_id)
-        name = (text or "").strip()
+        name = clean_offer_name(text)
         valid, key = self._validate_offer_name(name) if name else (False, "enter_instant_order_name")
         if not valid:
             if key != "enter_instant_order_name":

@@ -29,6 +29,18 @@ def parse(line: str) -> InstantOrderInput:
         ("Brouwerij Tripel 8 2.50 12345678", ("Brouwerij", "Tripel 8", Decimal("2.50"), "12345678", 1)),
         ("Brouwerij Pils 2.50 12345678 2", ("Brouwerij", "Pils", Decimal("2.50"), "12345678", 2)),
         ('Brouwerij Pils 2.50 "4"', ("Brouwerij", "Pils", Decimal("2.50"), "4", 1)),  # a quoted customer is a name
+        # Quote marks at the ends of the name never end up in it: wrong-direction curly quotes, a lone opening quote
+        ("“Brew Your Mind“ Pils 5 Jan", ("Brew Your Mind", "Pils", Decimal("5"), "Jan", 1)),
+        ('Brouwerij "Hel & Verdoemenis 4.50 Jan', ("Brouwerij", "Hel & Verdoemenis", Decimal("4.50"), "Jan", 1)),
+        ("Brouwerij “Hel & Verdoemenis“ 4.50 Jan", ("Brouwerij", "Hel & Verdoemenis", Decimal("4.50"), "Jan", 1)),
+        (
+            '"De Molen" "Hel & Verdoemenis 4.50 "Jan Jansen"',
+            ("De Molen", "Hel & Verdoemenis", Decimal("4.50"), "Jan Jansen", 1),
+        ),
+        (
+            'Kaapse "Gozer Oak Aged (2014) (750ml)" 10 Jan',
+            ("Kaapse", "Gozer Oak Aged (2014) (750ml)", Decimal("10"), "Jan", 1),
+        ),
     ],
 )
 def test_valid_arguments(line, expected):

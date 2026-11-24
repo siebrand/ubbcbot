@@ -10,10 +10,14 @@ import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
+from utils.offer_name import clean_offer_name
+
 MIN_BOX_SIZE = 1
 MAX_BOX_SIZE = 6
 
-_TOKEN = re.compile(r'"([^"]*)"|“([^”]*)”|(\S+)')
+# A quoted token starts and ends at a space (or the ends of the text) and may be opened and closed with any double
+# quote mark, because clients mix up the curly ones ("name“). A lone quote stays part of a bare word.
+_TOKEN = re.compile(r"(?<!\S)[\"“”„‟]([^\"“”„‟]*)[\"“”„‟](?!\S)|(\S+)")
 _PRICE = re.compile(r"^\d+([.,]\d{1,2})?$")
 # A box size is a short bare number; a longer one (a customer ID prefix) is the customer
 _BOX_SIZE = re.compile(r"^\d{1,2}$")
@@ -44,9 +48,13 @@ class _Token:
 
 def _tokens(words: list[str]) -> list[_Token]:
     tokens = []
-    for straight, curly, bare in _TOKEN.findall(" ".join(words)):
-        quoted = bare == ""
-        tokens.append(_Token(straight or curly if quoted else bare, quoted))
+    for match in _TOKEN.finditer(" ".join(words)):
+        bare = match.group(2)
+        if bare is not None:
+            if clean_offer_name(bare):  # a lone quote mark is no word
+                tokens.append(_Token(clean_offer_name(bare), quoted=False))
+        else:
+            tokens.append(_Token(match.group(1), quoted=True))
     return tokens
 
 
@@ -86,7 +94,7 @@ def parse_instant_order(words: list[str]) -> InstantOrderInput:
     price = _price(price_token)
     if price is None:
         raise InstantOrderInputError("instant_order_price_invalid")
-    name = " ".join(token.text for token in name_tokens).strip()
+    name = clean_offer_name(" ".join(token.text for token in name_tokens))
     if not name or not tokens[0].text.strip() or not customer.text.strip():
         raise InstantOrderInputError("usage_instant_order")
     return InstantOrderInput(

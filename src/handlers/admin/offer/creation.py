@@ -5,6 +5,7 @@ from typing import Any
 
 from models.entities import Box, Offer, OfferStatus, Order
 from services.box_status_manager import BoxStatusManager
+from utils.offer_name import clean_offer_name
 
 from .base import OfferBaseHandler
 
@@ -30,7 +31,7 @@ class OfferCreationHandler(OfferBaseHandler):
             box_size = int(args[-1])
 
             # Validate and sanitize name
-            name = " ".join(args[1:-2]).strip()
+            name = clean_offer_name(" ".join(args[1:-2]))
             is_valid, error_key = self._validate_offer_name(name)
             if not is_valid:
                 self._send_message(chat_id, self._t(error_key))
