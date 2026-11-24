@@ -112,8 +112,8 @@ class TestTheChecklist:
         handler.handle_supplier_selection(ADMIN_ID, SUP)
 
         rows = screen.buttons()
-        assert ("⏹️ Bock · 1 doos/dozen · 6 st.", f"wd_tg:8:{SUP}") in rows
-        assert ("⏹️ Tripel · 1 doos/dozen · 6 st.", f"wd_tg:7:{SUP}") in rows
+        assert ("⏹️ Bock (1)", f"wd_tg:8:{SUP}") in rows
+        assert ("⏹️ Tripel (1)", f"wd_tg:7:{SUP}") in rows
         assert ("›", f"wd_off:7:{SUP}") in rows
         assert ("✅ Aangetikte afronden (0)", f"wd_bulk:{SUP}") in rows
 

@@ -406,7 +406,7 @@
   "no_ready_for_labeling_offers_for_supplier": "❌ No offers with READY_FOR_LABELING orders found for supplier '{supplier_name}'",
   "checklist_delivery_title": "🚚 {supplier_name}: tick the offers that were delivered in full ({count} ticked).\n› opens an offer box by box (incomplete, delayed, cancelled).",
   "checklist_labeling_title": "🏷️ {supplier_name}: tick the offers that are labeled ({count} ticked).\n› opens an offer box by box.",
-  "checklist_row": "{mark} {name} · {boxes} box(es) · {units} units",
+  "checklist_row": "{mark} {name} ({boxes})",
   "checklist_select_all": "✅ All",
   "checklist_select_none": "⏹️ None",
   "checklist_bulk_btn": "✅ Complete ticked ({count})",

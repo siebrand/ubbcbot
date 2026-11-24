@@ -406,7 +406,7 @@
   "no_ready_for_labeling_offers_for_supplier": "❌ Geen aanbiedingen met KLAAR_VOOR_LABELING bestellingen gevonden voor leverancier '{supplier_name}'",
   "checklist_delivery_title": "🚚 {supplier_name}: tik de aanbiedingen aan die volledig zijn geleverd ({count} aangetikt).\n› opent een aanbieding per doos (onvolledig, vertraagd, geannuleerd).",
   "checklist_labeling_title": "🏷️ {supplier_name}: tik de aanbiedingen aan die gelabeld zijn ({count} aangetikt).\n› opent een aanbieding per doos.",
-  "checklist_row": "{mark} {name} · {boxes} doos/dozen · {units} st.",
+  "checklist_row": "{mark} {name} ({boxes})",
   "checklist_select_all": "✅ Alles",
   "checklist_select_none": "⏹️✅ Niets",
   "checklist_bulk_btn": "✅ Aangetikte afronden ({count})",
